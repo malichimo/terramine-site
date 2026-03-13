@@ -55,7 +55,6 @@
     }
     nav a.back { color: var(--gray); text-decoration: none; font-size: 14px; transition: color 0.2s; }
     nav a.back:hover { color: var(--white); }
-
     .page {
       position: relative;
       z-index: 1;
@@ -63,7 +62,6 @@
       margin: 0 auto;
       padding: 64px 24px 96px;
     }
-
     .page-header { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
     .page-label {
       font-family: 'Bebas Neue', sans-serif;
@@ -81,7 +79,6 @@
       margin-bottom: 16px;
     }
     .page-meta { font-size: 14px; color: var(--gray); }
-
     .section { margin-bottom: 40px; }
     h2 {
       font-family: 'Bebas Neue', sans-serif;
@@ -92,9 +89,8 @@
       padding-top: 8px;
     }
     p { font-size: 15px; color: #C8D8E8; margin-bottom: 14px; }
-    ul { padding-left: 20px; margin-bottom: 14px; }
+    ul, ol { padding-left: 20px; margin-bottom: 14px; }
     li { font-size: 15px; color: #C8D8E8; margin-bottom: 8px; }
-
     .callout {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -104,10 +100,15 @@
       margin-bottom: 14px;
     }
     .callout p { margin: 0; font-size: 14px; color: var(--gray); }
-
+    .deletion-box {
+      background: rgba(79,195,247,0.05);
+      border: 1px solid rgba(79,195,247,0.2);
+      border-radius: 8px;
+      padding: 24px 24px 10px;
+      margin-bottom: 20px;
+    }
     a { color: var(--cyan); }
     a:hover { text-decoration: underline; }
-
     footer {
       border-top: 1px solid var(--border);
       padding: 32px 24px;
@@ -139,10 +140,8 @@
 
     <div class="section">
       <h2>1. Information We Collect</h2>
-
       <p><strong>Account Information</strong></p>
       <p>When you create an account, we collect your email address and a username/nickname you choose. This information is stored securely in Google Firebase.</p>
-
       <p><strong>Location Data</strong></p>
       <p>TerraMine is a location-based game. With your permission, we collect your precise GPS location to:</p>
       <ul>
@@ -151,13 +150,10 @@
         <li>Verify proximity when checking in to other players' properties</li>
       </ul>
       <p>Location is only accessed while the app is in use. We do not track your location in the background.</p>
-
       <p><strong>Photos</strong></p>
       <p>You may optionally attach a photo when checking in to a property. Photos are uploaded to Google Firebase Storage and are visible to the property owner and other visitors. Photo upload is always optional and user-initiated.</p>
-
       <p><strong>Gameplay Data</strong></p>
       <p>We collect data about your in-app activity, including properties you own, TerraBucks balance, check-in history, game results, and resource earnings. This data is stored in Google Firebase Firestore and is used to operate the game.</p>
-
       <p><strong>Device &amp; Usage Data</strong></p>
       <p>We may collect non-personal device information such as device type, operating system version, and app performance data to improve the App experience.</p>
     </div>
@@ -202,6 +198,45 @@
       <p>You can delete your account at any time from the Settings screen inside the App.</p>
     </div>
 
+    <!-- ACCOUNT DELETION — anchor linked from Google Play Store listing -->
+    <div class="section" id="account-deletion">
+      <h2>5a. Account &amp; Data Deletion</h2>
+      <p>You have the right to delete your TerraMine account and all associated personal data at any time. No data is retained after deletion except as noted below.</p>
+
+      <p><strong>How to delete your account in the app:</strong></p>
+      <div class="deletion-box">
+        <ol>
+          <li>Open the <strong>TerraMine</strong> app on your device</li>
+          <li>Tap your profile icon to open your <strong>Profile</strong></li>
+          <li>Tap the <strong>Settings</strong> icon (gear icon, top right)</li>
+          <li>Scroll down and tap <strong>"Delete Account"</strong></li>
+          <li>Confirm the deletion when prompted</li>
+        </ol>
+      </div>
+
+      <p><strong>What gets deleted:</strong></p>
+      <ul>
+        <li>Your account credentials and profile information</li>
+        <li>All properties you own and associated gameplay data</li>
+        <li>Your TerraBucks balance and transaction history</li>
+        <li>Your check-in history and visitor logs</li>
+        <li>Any photos you have uploaded</li>
+        <li>Game results, resource data, and upgrade history</li>
+      </ul>
+
+      <p><strong>What may be retained:</strong></p>
+      <ul>
+        <li>Anonymized visit records on other players' properties (no personal identifiers) for gameplay integrity</li>
+        <li>Aggregated analytics data that cannot be linked back to you</li>
+      </ul>
+
+      <p>All personal data is permanently deleted within <strong>30 days</strong> of your deletion request.</p>
+
+      <div class="callout">
+        <p>If you cannot access the app and need to request deletion, email us at <a href="mailto:support@terramine.app">support@terramine.app</a> with the subject line <strong>"Account Deletion Request"</strong> and include the email address associated with your account.</p>
+      </div>
+    </div>
+
     <div class="section">
       <h2>6. Children's Privacy</h2>
       <p>TerraMine is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has provided us with personal information, please contact us and we will delete it promptly.</p>
@@ -218,7 +253,6 @@
         <li><strong>Data portability:</strong> Request your data in a portable format</li>
       </ul>
       <p>To exercise any of these rights, contact us at the email below.</p>
-
       <div class="callout">
         <p><strong>California residents (CCPA):</strong> You have the right to know what personal information we collect, to request deletion, and to opt out of the sale of personal information. We do not sell personal information.</p>
       </div>
