@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraMine — The Real World is Your Mine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0D1B2A;
+      --blue: #1565C0;
+      --cyan: #4FC3F7;
+      --gold: #FFD54F;
+      --coal: #2A2A2A;
+      --white: #F0F4FF;
+      --gray: #8899AA;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,195,247,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,195,247,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      background: rgba(13,27,42,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(79,195,247,0.1);
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a {
+      color: var(--gray);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--white); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(79,195,247,0.1);
+      border: 1px solid rgba(79,195,247,0.3);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(64px, 12vw, 140px);
+      line-height: 0.95;
+      letter-spacing: 4px;
+      color: var(--white);
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+    .hero h1 span { color: var(--cyan); }
+
+    .hero-sub {
+      margin-top: 24px;
+      font-size: clamp(16px, 2.5vw, 22px);
+      color: var(--gray);
+      max-width: 520px;
+      line-height: 1.6;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .hero-cta {
+      margin-top: 48px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      border-radius: 4px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      letter-spacing: 0.5px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: var(--cyan);
+      color: var(--navy);
+      box-shadow: 0 0 32px rgba(79,195,247,0.3);
+    }
+    .btn-primary:hover { box-shadow: 0 0 48px rgba(79,195,247,0.5); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* ── MINE TYPES ── */
+    .mines {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 4px;
+      color: var(--cyan);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 6vw, 64px);
+      text-align: center;
+      letter-spacing: 2px;
+      margin-bottom: 56px;
+    }
+
+    .mine-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .mine-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      padding: 28px 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .mine-card:hover { transform: translateY(-4px); }
+    .mine-card.rock:hover  { border-color: #808080; }
+    .mine-card.coal:hover  { border-color: #555; }
+    .mine-card.gold:hover  { border-color: var(--gold); }
+    .mine-card.diamond:hover { border-color: var(--cyan); }
+
+    .mine-icon { font-size: 40px; margin-bottom: 16px; }
+    .mine-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .mine-card.rock .mine-name    { color: #aaa; }
+    .mine-card.coal .mine-name    { color: #bbb; }
+    .mine-card.gold .mine-name    { color: var(--gold); }
+    .mine-card.diamond .mine-name { color: var(--cyan); }
+
+    .mine-desc { font-size: 14px; color: var(--gray); line-height: 1.5; margin-bottom: 16px; }
+    .mine-rate {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .mine-card.rock .mine-rate    { background: rgba(128,128,128,0.15); color: #aaa; }
+    .mine-card.coal .mine-rate    { background: rgba(100,100,100,0.15); color: #bbb; }
+    .mine-card.gold .mine-rate    { background: rgba(255,213,79,0.15);  color: var(--gold); }
+    .mine-card.diamond .mine-rate { background: rgba(79,195,247,0.15);  color: var(--cyan); }
+
+    /* ── FEATURES ── */
+    .features {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-top: 56px;
+    }
+    .feature-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .feature-dot {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      border-radius: 8px;
+      background: rgba(79,195,247,0.1);
+      border: 1px solid rgba(79,195,247,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-top: 2px;
+    }
+    .feature-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .feature-text p  { font-size: 14px; color: var(--gray); line-height: 1.6; }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 40px 24px;
+      text-align: center;
+    }
+    footer .footer-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      margin-bottom: 16px;
+    }
+    footer nav { position: static; background: none; backdrop-filter: none; border: none; padding: 0; display: block; margin-bottom: 16px; }
+    footer nav a { color: var(--gray); text-decoration: none; font-size: 14px; margin: 0 12px; transition: color 0.2s; }
+    footer nav a:hover { color: var(--white); }
+    footer p { font-size: 13px; color: var(--gray); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/">⛏ TerraMine</a>
+    <div class="nav-links">
+      <a href="#mines">Mine Types</a>
+      <a href="#features">Features</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">⛏ Now Available on iOS &amp; Android</div>
+    <h1>The Real World<br/>Is Your <span>Mine</span></h1>
+    <p class="hero-sub">Buy virtual properties on a live map, run daily mining operations, and earn passive income — even when you're not playing.</p>
+    <div class="hero-cta">
+      <a href="#" class="btn btn-primary">📱 Download on iOS</a>
+      <a href="#" class="btn btn-secondary">▶ Google Play</a>
+    </div>
+  </section>
+
+  <section class="mines" id="mines">
+    <p class="section-label">Property Types</p>
+    <h2 class="section-title">Four Mines. One Map.</h2>
+    <div class="mine-grid">
+      <div class="mine-card rock">
+        <div class="mine-icon">🪨</div>
+        <div class="mine-name">Rock Mine</div>
+        <p class="mine-desc">The most common mine. Steady, reliable passive income. Found in 60% of properties.</p>
+        <span class="mine-rate">Base rate</span>
+      </div>
+      <div class="mine-card coal">
+        <div class="mine-icon">⚫</div>
+        <div class="mine-name">Coal Mine</div>
+        <p class="mine-desc">Dark and productive. Earns 1.5× a rock mine. Roughly 30% of all properties.</p>
+        <span class="mine-rate">1.5× rock</span>
+      </div>
+      <div class="mine-card gold">
+        <div class="mine-icon">🟡</div>
+        <div class="mine-name">Gold Mine</div>
+        <p class="mine-desc">Rare and lucrative. 2× the earnings of rock. Only 9% of properties strike gold.</p>
+        <span class="mine-rate">2× rock</span>
+      </div>
+      <div class="mine-card diamond">
+        <div class="mine-icon">💎</div>
+        <div class="mine-name">Diamond Mine</div>
+        <p class="mine-desc">Ultra-rare. 4× earnings. Just 1% of all properties are diamond mines.</p>
+        <span class="mine-rate">4× rock</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <p class="section-label">How It Works</p>
+    <h2 class="section-title">Buy. Mine. Earn.</h2>
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-dot">🗺</div>
+        <div class="feature-text">
+          <h3>Claim Your Territory</h3>
+          <p>The entire world is divided into a grid. Buy any unclaimed square near you for 100 TerraBucks — it's yours permanently.</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dot">💵</div>
+        <div class="feature-text">
+          <h3>Earn Real USD</h3>
+          <p>Every property you own generates a stream of real US dollars around the clock. Upgrade your mine to earn more.</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dot">📍</div>
+        <div class="feature-text">
+          <h3>Check In Anywhere</h3>
+          <p>Walk near another player's mine and check in to earn TerraBucks for yourself — and give the owner a bonus too.</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dot">⛏</div>
+        <div class="feature-text">
+          <h3>Daily Mining Games</h3>
+          <p>Each mine type has a unique daily mini-game — conveyor belts, coal piles, gold panning, and slot machines.</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dot">⚡</div>
+        <div class="feature-text">
+          <h3>Earning Boosts</h3>
+          <p>Activate a boost to double your passive income. Use free daily boosts or watch an ad to extend up to 8 hours.</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-dot">🏆</div>
+        <div class="feature-text">
+          <h3>Build Your Portfolio</h3>
+          <p>Track your properties, visitors, and total earnings across your entire mining empire in the Portfolio tab.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-logo">⛏ TerraMine</div>
+    <nav>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+    </nav>
+    <p>&copy; 2026 TerraMine. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — TerraMine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0D1B2A;
+      --blue: #1565C0;
+      --cyan: #4FC3F7;
+      --white: #F0F4FF;
+      --gray: #8899AA;
+      --surface: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.08);
+    }
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      line-height: 1.7;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,195,247,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,195,247,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 40px;
+      background: rgba(13,27,42,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-decoration: none;
+    }
+    nav a.back { color: var(--gray); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    nav a.back:hover { color: var(--white); }
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 64px 24px 96px;
+    }
+    .page-header { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+    .page-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 12px;
+      letter-spacing: 4px;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(40px, 8vw, 72px);
+      letter-spacing: 2px;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .page-meta { font-size: 14px; color: var(--gray); }
+    .section { margin-bottom: 40px; }
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      margin-bottom: 16px;
+      padding-top: 8px;
+    }
+    p { font-size: 15px; color: #C8D8E8; margin-bottom: 14px; }
+    ul, ol { padding-left: 20px; margin-bottom: 14px; }
+    li { font-size: 15px; color: #C8D8E8; margin-bottom: 8px; }
+    .callout {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--cyan);
+      border-radius: 4px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+    }
+    .callout p { margin: 0; font-size: 14px; color: var(--gray); }
+    .deletion-box {
+      background: rgba(79,195,247,0.05);
+      border: 1px solid rgba(79,195,247,0.2);
+      border-radius: 8px;
+      padding: 24px 24px 10px;
+      margin-bottom: 20px;
+    }
+    a { color: var(--cyan); }
+    a:hover { text-decoration: underline; }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+    }
+    footer nav { position: static; background: none; backdrop-filter: none; border: none; padding: 0; display: block; margin-bottom: 12px; }
+    footer nav a { color: var(--gray); text-decoration: none; font-size: 14px; margin: 0 12px; }
+    footer p { font-size: 13px; color: var(--gray); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="index.html">⛏ TerraMine</a>
+    <a class="back" href="index.html">← Back to Home</a>
+  </nav>
+
+  <div class="page">
+    <div class="page-header">
+      <p class="page-label">Legal</p>
+      <h1 class="page-title">Privacy Policy</h1>
+      <p class="page-meta">Effective Date: March 2026 &nbsp;·&nbsp; Last Updated: March 2026</p>
+    </div>
+
+    <div class="section">
+      <p>TerraMine ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and your rights regarding your data when you use the TerraMine mobile application ("the App").</p>
+      <p>By using TerraMine, you agree to the collection and use of information described in this policy.</p>
+    </div>
+
+    <div class="section">
+      <h2>1. Information We Collect</h2>
+      <p><strong>Account Information</strong></p>
+      <p>When you create an account, we collect your email address and a username/nickname you choose. This information is stored securely in Google Firebase.</p>
+      <p><strong>Location Data</strong></p>
+      <p>TerraMine is a location-based game. With your permission, we collect your precise GPS location to:</p>
+      <ul>
+        <li>Display the map grid and nearby properties</li>
+        <li>Enable you to purchase properties near your current location</li>
+        <li>Verify proximity when checking in to other players' properties</li>
+      </ul>
+      <p>Location is only accessed while the app is in use. We do not track your location in the background.</p>
+      <p><strong>Photos</strong></p>
+      <p>You may optionally attach a photo when checking in to a property. Photos are uploaded to Google Firebase Storage and are visible to the property owner and other visitors. Photo upload is always optional and user-initiated.</p>
+      <p><strong>Gameplay Data</strong></p>
+      <p>We collect data about your in-app activity, including properties you own, TerraBucks balance, check-in history, game results, and resource earnings. This data is stored in Google Firebase Firestore and is used to operate the game.</p>
+      <p><strong>Device &amp; Usage Data</strong></p>
+      <p>We may collect non-personal device information such as device type, operating system version, and app performance data to improve the App experience.</p>
+    </div>
+
+    <div class="section">
+      <h2>2. How We Use Your Information</h2>
+      <ul>
+        <li>To operate and provide the TerraMine game and its features</li>
+        <li>To display your profile and game statistics to you</li>
+        <li>To enable location-based features like property purchasing and check-ins</li>
+        <li>To calculate and display passive income earnings</li>
+        <li>To communicate with you about your account (e.g., password reset emails)</li>
+        <li>To comply with legal obligations</li>
+        <li>To improve app performance and diagnose technical issues</li>
+      </ul>
+      <p>We do not sell your personal information to third parties.</p>
+    </div>
+
+    <div class="section">
+      <h2>3. Advertising</h2>
+      <p>TerraMine displays optional rewarded video advertisements via Google AdMob. You may choose to watch an ad to earn in-game rewards such as extra attempts or earning boosts. Ads are never required to play the game.</p>
+      <p>Google AdMob may collect device identifiers and usage data to serve relevant ads. If you are located in the European Economic Area (EEA) or California, you will be shown a consent prompt before any personalized advertising is enabled. You may review or change your ad preferences at any time in the Settings screen.</p>
+      <p>For more information on how Google uses data from AdMob, see <a href="https://policies.google.com/privacy" target="_blank">Google's Privacy Policy</a>.</p>
+    </div>
+
+    <div class="section">
+      <h2>4. Data Sharing</h2>
+      <p>We share data only with the following trusted service providers who help us operate the App:</p>
+      <ul>
+        <li><strong>Google Firebase</strong> — Authentication, database (Firestore), and file storage</li>
+        <li><strong>Google AdMob</strong> — Optional rewarded video advertising</li>
+        <li><strong>Google Maps</strong> — Map display and location services</li>
+        <li><strong>Expo / EAS</strong> — App build and distribution infrastructure</li>
+      </ul>
+      <p>All service providers are contractually required to handle your data securely and only for the purposes we specify.</p>
+      <p>We may disclose your information if required by law or to protect the rights, property, or safety of TerraMine, our users, or the public.</p>
+    </div>
+
+    <div class="section">
+      <h2>5. Data Retention</h2>
+      <p>We retain your account and gameplay data for as long as your account is active. If you delete your account, your personal information and gameplay data will be permanently deleted from our systems within 30 days.</p>
+      <p>You can delete your account at any time from the Settings screen inside the App.</p>
+    </div>
+
+    <!-- ACCOUNT DELETION — anchor linked from Google Play Store listing -->
+    <div class="section" id="account-deletion">
+      <h2>5a. Account &amp; Data Deletion</h2>
+      <p>You have the right to delete your TerraMine account and all associated personal data at any time. No data is retained after deletion except as noted below.</p>
+
+      <p><strong>How to delete your account in the app:</strong></p>
+      <div class="deletion-box">
+        <ol>
+          <li>Open the <strong>TerraMine</strong> app on your device</li>
+          <li>Tap your profile icon to open your <strong>Profile</strong></li>
+          <li>Tap the <strong>Settings</strong> icon (gear icon, top right)</li>
+          <li>Scroll down and tap <strong>"Delete Account"</strong></li>
+          <li>Confirm the deletion when prompted</li>
+        </ol>
+      </div>
+
+      <p><strong>What gets deleted:</strong></p>
+      <ul>
+        <li>Your account credentials and profile information</li>
+        <li>All properties you own and associated gameplay data</li>
+        <li>Your TerraBucks balance and transaction history</li>
+        <li>Your check-in history and visitor logs</li>
+        <li>Any photos you have uploaded</li>
+        <li>Game results, resource data, and upgrade history</li>
+      </ul>
+
+      <p><strong>What may be retained:</strong></p>
+      <ul>
+        <li>Anonymized visit records on other players' properties (no personal identifiers) for gameplay integrity</li>
+        <li>Aggregated analytics data that cannot be linked back to you</li>
+      </ul>
+
+      <p>All personal data is permanently deleted within <strong>30 days</strong> of your deletion request.</p>
+
+      <div class="callout">
+        <p>If you cannot access the app and need to request deletion, email us at <a href="mailto:support@terramine.app">support@terramine.app</a> with the subject line <strong>"Account Deletion Request"</strong> and include the email address associated with your account.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>6. Children's Privacy</h2>
+      <p>TerraMine is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has provided us with personal information, please contact us and we will delete it promptly.</p>
+    </div>
+
+    <div class="section">
+      <h2>7. Your Rights</h2>
+      <p>Depending on where you live, you may have the following rights regarding your personal data:</p>
+      <ul>
+        <li><strong>Access:</strong> Request a copy of the data we hold about you</li>
+        <li><strong>Correction:</strong> Request correction of inaccurate data</li>
+        <li><strong>Deletion:</strong> Request deletion of your account and associated data</li>
+        <li><strong>Opt-out of personalized ads:</strong> Adjust ad consent in the Settings screen</li>
+        <li><strong>Data portability:</strong> Request your data in a portable format</li>
+      </ul>
+      <p>To exercise any of these rights, contact us at the email below.</p>
+      <div class="callout">
+        <p><strong>California residents (CCPA):</strong> You have the right to know what personal information we collect, to request deletion, and to opt out of the sale of personal information. We do not sell personal information.</p>
+      </div>
+      <div class="callout">
+        <p><strong>EEA/UK residents (GDPR):</strong> Our legal basis for processing your data is performance of a contract (operating the game) and, where applicable, your consent (personalized ads, location access). You may withdraw consent at any time.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>8. Security</h2>
+      <p>We use industry-standard security measures to protect your data, including encrypted connections (HTTPS/TLS) and Google Firebase's built-in security infrastructure. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
+    </div>
+
+    <div class="section">
+      <h2>9. Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. When we do, we will update the "Last Updated" date at the top of this page. We encourage you to review this policy periodically. Continued use of the App after changes are posted constitutes your acceptance of the updated policy.</p>
+    </div>
+
+    <div class="section">
+      <h2>10. Contact Us</h2>
+      <p>If you have questions about this Privacy Policy or your data, please contact us:</p>
+      <p><strong>Email:</strong> <a href="mailto:support@terramine.app">support@terramine.app</a><br/>
+      <strong>Website:</strong> <a href="https://terramine.app">terramine.app</a></p>
+    </div>
+
+  </div>
+
+  <footer>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+    </nav>
+    <p>&copy; 2026 TerraMine. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
