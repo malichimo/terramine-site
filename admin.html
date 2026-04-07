@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07;
+    --surface: #1a1208;
+    --surface2: #241a0d;
+    --gold: #c8922a;
+    --gold-light: #f0b84a;
+    --amber: #e07b20;
+    --text: #f0e6d0;
+    --text-muted: #8a7560;
+    --green: #4caf6e;
+    --red: #e05050;
+    --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    font-size: 28px;
+  }
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--gold-light);
+    letter-spacing: -0.5px;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .last-updated {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .refresh-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .refresh-btn:hover { background: var(--gold-light); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Layout */
+  .main { padding: 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* Section labels */
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 32px 0 16px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Stat cards grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: rgba(200,146,42,0.35); }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+    opacity: 0.4;
+  }
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .stat-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+  .badge-green { background: rgba(76,175,110,0.15); color: var(--green); }
+  .badge-amber { background: rgba(224,123,32,0.15); color: var(--amber); }
+  .badge-red { background: rgba(224,80,80,0.15); color: var(--red); }
+  .badge-blue { background: rgba(74,159,212,0.15); color: var(--blue); }
+
+  /* Tables */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .table-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  thead th {
+    padding: 10px 24px;
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(200,146,42,0.06);
+    transition: background 0.15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 12px 24px;
+    color: var(--text);
+  }
+  .td-muted { color: var(--text-muted); }
+  .td-gold { color: var(--gold-light); font-weight: 500; }
+  .td-green { color: var(--green); }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Mine type bar */
+  .mine-bar {
+    display: flex;
+    gap: 4px;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  .mine-bar-seg { border-radius: 3px; transition: flex 0.5s; }
+  .mine-type-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .mine-type-row:last-child { border-bottom: none; }
+  .mine-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+  }
+  .mine-details { padding: 20px 24px; }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    height: 32px;
+    width: 60%;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Error state */
+  .error-msg {
+    padding: 16px 24px;
+    color: var(--red);
+    font-size: 12px;
+  }
+
+  /* Spinner */
+  .spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main { padding: 16px; }
+    .two-col { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">⛏️</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Admin Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">Loading...</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PLAYERS -->
+  <div class="section-label">Players</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value" id="totalUsers"><div class="skeleton"></div></div>
+      <div class="stat-sub">All registered accounts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active (7 days)</div>
+      <div class="stat-value" id="active7d"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="active7dPct">of total users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active (30 days)</div>
+      <div class="stat-value" id="active30d"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="active30dPct">of total users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg TB Balance</div>
+      <div class="stat-value" id="avgTB"><div class="skeleton"></div></div>
+      <div class="stat-sub">Per player</div>
+    </div>
+  </div>
+
+  <!-- ECONOMY -->
+  <div class="section-label">Economy</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total TB in Circulation</div>
+      <div class="stat-value" id="totalTB"><div class="skeleton"></div></div>
+      <div class="stat-sub">Across all accounts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total USD Earned</div>
+      <div class="stat-value" id="totalUSD"><div class="skeleton"></div></div>
+      <div class="stat-sub">Accumulated all-time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Properties Sold</div>
+      <div class="stat-value" id="totalProps"><div class="skeleton"></div></div>
+      <div class="stat-sub">All-time purchases</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Check-ins</div>
+      <div class="stat-value" id="totalCheckIns"><div class="skeleton"></div></div>
+      <div class="stat-sub">All-time</div>
+    </div>
+  </div>
+
+  <!-- MINE TYPES + TOP PLAYERS -->
+  <div class="section-label">Properties & Players</div>
+  <div class="two-col">
+
+    <div class="table-card">
+      <div class="table-header">
+        Mine Type Breakdown
+        <span class="table-count" id="totalMinesCount">—</span>
+      </div>
+      <div class="mine-details" id="mineTypeDetails">
+        <div class="skeleton" style="margin-bottom:12px;"></div>
+        <div class="skeleton" style="width:80%;margin-bottom:12px;"></div>
+        <div class="skeleton" style="width:50%;"></div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        Top Players by TB
+        <span class="table-count" id="topPlayersCount">—</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>TB Balance</th>
+            <th>Properties</th>
+          </tr>
+        </thead>
+        <tbody id="topPlayersBody">
+          <tr><td colspan="4" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- RECENT ACTIVITY -->
+  <div class="section-label">Recent Check-ins</div>
+  <div class="table-card">
+    <div class="table-header">
+      Latest Check-ins
+      <span class="table-count" id="checkInsCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Visitor</th>
+          <th>Property ID</th>
+          <th>Message</th>
+          <th>Photo</th>
+        </tr>
+      </thead>
+      <tbody id="checkInsBody">
+        <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RECENT SIGNUPS -->
+  <div class="section-label">Recent Signups</div>
+  <div class="table-card">
+    <div class="table-header">
+      Newest Users
+      <span class="table-count" id="signupsCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Joined</th>
+          <th>Email</th>
+          <th>TB Balance</th>
+          <th>Properties</th>
+          <th>Check-ins</th>
+        </tr>
+      </thead>
+      <tbody id="signupsBody">
+        <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getFirestore, collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  function fmt(n) {
+    if (n === null || n === undefined) return '—';
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+    return n.toLocaleString();
+  }
+
+  function fmtUSD(n) {
+    if (!n) return '$0.000000';
+    return '$' + Number(n).toFixed(6);
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return Math.floor(diff) + 's ago';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  function shortDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
+  }
+
+  function truncate(s, n) {
+    if (!s) return '—';
+    return s.length > n ? s.substring(0, n) + '…' : s;
+  }
+
+  const MINE_COLORS = {
+    rock: '#888',
+    coal: '#444',
+    gold: '#c8922a',
+    diamond: '#4a9fd4',
+  };
+
+  window.loadAll = async function() {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">↻</span> Loading';
+
+    try {
+      // ── Load users ──────────────────────────────────────────────
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const total = users.length;
+
+      const now = Date.now();
+      const day7 = now - 7 * 86400000;
+      const day30 = now - 30 * 86400000;
+
+      let active7 = 0, active30 = 0, totalTB = 0, totalUSD = 0, totalCI = 0;
+      users.forEach(u => {
+        const last = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
+        if (last > day7) active7++;
+        if (last > day30) active30++;
+        totalTB += (u.tbBalance || 0);
+        totalUSD += (u.usdEarnings || 0);
+        totalCI += (u.totalCheckIns || 0);
+      });
+
+      document.getElementById('totalUsers').textContent = fmt(total);
+      document.getElementById('active7d').textContent = fmt(active7);
+      document.getElementById('active7dPct').textContent = total ? Math.round(active7/total*100) + '% of users' : '—';
+      document.getElementById('active30d').textContent = fmt(active30);
+      document.getElementById('active30dPct').textContent = total ? Math.round(active30/total*100) + '% of users' : '—';
+      document.getElementById('avgTB').textContent = fmt(total ? Math.round(totalTB/total) : 0);
+      document.getElementById('totalTB').textContent = fmt(totalTB);
+      document.getElementById('totalUSD').textContent = fmtUSD(totalUSD);
+      document.getElementById('totalCheckIns').textContent = fmt(totalCI);
+
+      // ── Load properties ─────────────────────────────────────────
+      const propsSnap = await getDocs(collection(db, 'properties'));
+      const props = propsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const propCount = props.length;
+
+      document.getElementById('totalProps').textContent = fmt(propCount);
+      document.getElementById('totalMinesCount').textContent = propCount + ' total';
+
+      // Mine type breakdown
+      const mines = { rock: 0, coal: 0, gold: 0, diamond: 0 };
+      const ownerPropCount = {};
+      props.forEach(p => {
+        if (mines[p.mineType] !== undefined) mines[p.mineType]++;
+        if (p.ownerId) ownerPropCount[p.ownerId] = (ownerPropCount[p.ownerId] || 0) + 1;
+      });
+
+      let mineHTML = '';
+      let barHTML = '<div class="mine-bar">';
+      ['rock','coal','gold','diamond'].forEach(type => {
+        const count = mines[type];
+        const pct = propCount ? Math.round(count/propCount*100) : 0;
+        const emojis = { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' };
+        mineHTML += `
+          <div class="mine-type-row">
+            <div><span class="mine-dot" style="background:${MINE_COLORS[type]}"></span>${emojis[type]} ${type.charAt(0).toUpperCase()+type.slice(1)}</div>
+            <div style="display:flex;align-items:center;gap:16px;">
+              <span class="td-muted">${pct}%</span>
+              <span class="td-gold">${fmt(count)}</span>
+            </div>
+          </div>`;
+        if (count > 0) barHTML += `<div class="mine-bar-seg" style="background:${MINE_COLORS[type]};flex:${count}"></div>`;
+      });
+      barHTML += '</div>';
+      document.getElementById('mineTypeDetails').innerHTML = mineHTML + barHTML;
+
+      // ── Top players ──────────────────────────────────────────────
+      const sorted = [...users].sort((a,b) => (b.tbBalance||0) - (a.tbBalance||0)).slice(0, 10);
+      document.getElementById('topPlayersCount').textContent = 'top 10';
+      document.getElementById('topPlayersBody').innerHTML = sorted.map((u, i) => `
+        <tr>
+          <td class="td-muted">${i+1}</td>
+          <td>${truncate(u.nickname || u.email?.split('@')[0] || u.id.substring(0,8), 20)}</td>
+          <td class="td-gold">${fmt(u.tbBalance || 0)}</td>
+          <td>${ownerPropCount[u.id] || 0}</td>
+        </tr>`).join('') || '<tr><td colspan="4" class="td-muted" style="padding:16px 24px;">No data</td></tr>';
+
+      // ── Recent check-ins ─────────────────────────────────────────
+      const ciQuery = query(collection(db, 'checkIns'), orderBy('timestamp', 'desc'), limit(20));
+      const ciSnap = await getDocs(ciQuery);
+      const checkIns = ciSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('checkInsCount').textContent = 'latest 20';
+      document.getElementById('checkInsBody').innerHTML = checkIns.map(ci => `
+        <tr>
+          <td class="td-muted">${timeAgo(ci.timestamp)}</td>
+          <td>${truncate(ci.visitorNickname || ci.userId?.substring(0,8) || '—', 18)}</td>
+          <td class="td-muted" style="font-size:10px;">${ci.propertyId?.substring(0,14) || '—'}</td>
+          <td>${truncate(ci.message, 30)}</td>
+          <td>${ci.hasPhoto ? '<span class="badge-blue stat-badge">📷 yes</span>' : '<span class="td-muted">—</span>'}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No check-ins yet</td></tr>';
+
+      // ── Recent signups ───────────────────────────────────────────
+      const recentUsers = [...users]
+        .filter(u => u.createdAt)
+        .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 15);
+      document.getElementById('signupsCount').textContent = 'latest 15';
+      document.getElementById('signupsBody').innerHTML = recentUsers.map(u => `
+        <tr>
+          <td class="td-muted">${shortDate(u.createdAt)}</td>
+          <td>${truncate(u.email || '—', 28)}</td>
+          <td class="td-gold">${fmt(u.tbBalance || 0)}</td>
+          <td>${ownerPropCount[u.id] || 0}</td>
+          <td>${u.totalCheckIns || 0}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No users yet</td></tr>';
+
+      // ── Timestamp ────────────────────────────────────────────────
+      document.getElementById('lastUpdated').textContent =
+        'Updated ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+
+    } catch (err) {
+      console.error(err);
+      document.getElementById('lastUpdated').textContent = 'Error loading data';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '↻ Refresh';
+  };
+
+  // Auto-load on open
+  loadAll();
+</script>
+</body>
+</html>
