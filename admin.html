@@ -273,6 +273,22 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Email list filter buttons */
+  .filter-btn {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--gold); color: var(--text); }
+  .filter-btn.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 500; }
+
   /* Responsive */
   @media (max-width: 768px) {
     .main { padding: 16px; }
@@ -433,9 +449,45 @@
     </table>
   </div>
 
+  <!-- EMAIL LISTS -->
+  <div class="section-label">Email Lists</div>
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      Build an Email List
+      <span class="table-count" id="emailListCount">—</span>
+    </div>
+
+    <!-- Filter buttons -->
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;">
+      <button class="filter-btn active" data-filter="all" onclick="applyFilter('all')">All Users</button>
+      <button class="filter-btn" data-filter="active7" onclick="applyFilter('active7')">Active 7 days</button>
+      <button class="filter-btn" data-filter="active30" onclick="applyFilter('active30')">Active 30 days</button>
+      <button class="filter-btn" data-filter="noprops" onclick="applyFilter('noprops')">No Properties</button>
+      <button class="filter-btn" data-filter="hasprops" onclick="applyFilter('hasprops')">Has Properties</button>
+      <button class="filter-btn" data-filter="powerusers" onclick="applyFilter('powerusers')">Power Users (5+ props)</button>
+      <button class="filter-btn" data-filter="newthisweek" onclick="applyFilter('newthisweek')">New This Week</button>
+      <button class="filter-btn" data-filter="inactive" onclick="applyFilter('inactive')">Inactive 30+ days</button>
+    </div>
+
+    <!-- Email output -->
+    <div style="padding:20px 24px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+        Copy and paste into Gmail BCC field — comma separated
+      </div>
+      <textarea id="emailListOutput" readonly
+        style="width:100%;min-height:100px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;resize:vertical;outline:none;line-height:1.6;"
+        placeholder="Load data first, then select a filter above..."></textarea>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+        <button onclick="copyEmails()" style="background:var(--gold);color:var(--bg);border:none;padding:10px 20px;border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;">
+          📋 Copy to Clipboard
+        </button>
+        <span id="copyConfirm" style="font-size:12px;color:var(--green);display:none;">✅ Copied!</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- Login overlay -->
 <div id="loginOverlay" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:360px;text-align:center;">
     <div style="font-size:36px;margin-bottom:16px;">⛏️</div>
@@ -648,6 +700,11 @@
           <td>${u.totalCheckIns || 0}</td>
         </tr>`).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No users yet</td></tr>';
 
+      // ── Store globally for email filters ────────────────────────
+      _allUsers = users;
+      _ownerPropCount = ownerPropCount;
+      applyFilter('all'); // populate email list with default filter
+
       // ── Timestamp ────────────────────────────────────────────────
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
@@ -659,6 +716,71 @@
 
     btn.disabled = false;
     btn.innerHTML = '↻ Refresh';
+  };
+
+  // ── Global user store for email filters ─────────────────────────
+  let _allUsers = [];
+  let _ownerPropCount = {};
+  const _now = () => Date.now();
+
+  window.applyFilter = function(filter) {
+    // Update active button
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === filter);
+    });
+
+    if (!_allUsers.length) {
+      document.getElementById('emailListOutput').value = 'Please wait for data to finish loading...';
+      return;
+    }
+
+    const now = _now();
+    const day7  = now - 7  * 86400000;
+    const day30 = now - 30 * 86400000;
+
+    let filtered = [];
+
+    switch(filter) {
+      case 'all':
+        filtered = _allUsers;
+        break;
+      case 'active7':
+        filtered = _allUsers.filter(u => u.lastActiveAt && new Date(u.lastActiveAt).getTime() > day7);
+        break;
+      case 'active30':
+        filtered = _allUsers.filter(u => u.lastActiveAt && new Date(u.lastActiveAt).getTime() > day30);
+        break;
+      case 'noprops':
+        filtered = _allUsers.filter(u => !_ownerPropCount[u.id]);
+        break;
+      case 'hasprops':
+        filtered = _allUsers.filter(u => !!_ownerPropCount[u.id]);
+        break;
+      case 'powerusers':
+        filtered = _allUsers.filter(u => (_ownerPropCount[u.id] || 0) >= 5);
+        break;
+      case 'newthisweek':
+        filtered = _allUsers.filter(u => u.createdAt && new Date(u.createdAt).getTime() > day7);
+        break;
+      case 'inactive':
+        filtered = _allUsers.filter(u => !u.lastActiveAt || new Date(u.lastActiveAt).getTime() < (now - 30 * 86400000));
+        break;
+    }
+
+    const emails = filtered.map(u => u.email).filter(Boolean);
+    document.getElementById('emailListOutput').value = emails.join(', ');
+    document.getElementById('emailListCount').textContent = emails.length + ' addresses';
+    document.getElementById('copyConfirm').style.display = 'none';
+  };
+
+  window.copyEmails = function() {
+    const ta = document.getElementById('emailListOutput');
+    if (!ta.value || ta.value.startsWith('Please')) return;
+    navigator.clipboard.writeText(ta.value).then(() => {
+      const confirm = document.getElementById('copyConfirm');
+      confirm.style.display = 'inline';
+      setTimeout(() => confirm.style.display = 'none', 2500);
+    });
   };
 
   // Auto-load triggered by onAuthStateChanged above
