@@ -126,31 +126,22 @@
       gap: 16px;
       flex-wrap: wrap;
       justify-content: center;
+      align-items: center;
       animation: fadeUp 0.6s 0.3s ease both;
     }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 32px;
-      border-radius: 4px;
-      font-size: 15px;
-      font-weight: 700;
-      text-decoration: none;
-      letter-spacing: 0.5px;
-      transition: transform 0.15s, box-shadow 0.15s;
+
+    .store-badge {
+      display: inline-block;
+      transition: transform 0.15s, opacity 0.15s;
     }
-    .btn:hover { transform: translateY(-2px); }
-    .btn-primary {
-      background: var(--cyan);
-      color: var(--navy);
-      box-shadow: 0 0 32px rgba(79,195,247,0.3);
+    .store-badge:hover {
+      transform: translateY(-2px);
+      opacity: 0.88;
     }
-    .btn-primary:hover { box-shadow: 0 0 48px rgba(79,195,247,0.5); }
-    .btn-secondary {
-      background: transparent;
-      color: var(--white);
-      border: 1px solid rgba(255,255,255,0.2);
+    .store-badge img {
+      height: 52px;
+      width: auto;
+      display: block;
     }
 
     /* ── MINE TYPES ── */
@@ -285,6 +276,7 @@
     @media (max-width: 600px) {
       nav { padding: 16px 20px; }
       .nav-links { display: none; }
+      .store-badge img { height: 44px; }
     }
   </style>
 </head>
@@ -305,8 +297,21 @@
     <h1>The Real World<br/>Is Your <span>Mine</span></h1>
     <p class="hero-sub">Buy virtual properties on a live map, run daily mining operations, and earn passive income — even when you're not playing.</p>
     <div class="hero-cta">
-      <a href="download-ios.html" class="btn btn-primary">🍎 Download on iOS</a>
-      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">▶ Google Play</a>
+      <!-- iOS — update href to App Store URL once Apple approves -->
+      <a href="download-ios.html" class="store-badge" aria-label="Download on the App Store">
+        <img
+          src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+          alt="Download on the App Store"
+        />
+      </a>
+      <!-- Android — live -->
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" class="store-badge" target="_blank" rel="noopener noreferrer" aria-label="Get it on Google Play">
+        <img
+          src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+          alt="Get it on Google Play"
+          style="height: 76px; margin-top: -12px;"
+        />
+      </a>
     </div>
   </section>
 
