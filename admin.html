@@ -383,7 +383,7 @@
 
     <div class="table-card">
       <div class="table-header">
-        Top Players by TB
+        Top Players by TA
         <span class="table-count" id="topPlayersCount">—</span>
       </div>
       <table>
@@ -391,8 +391,8 @@
           <tr>
             <th>#</th>
             <th>Player</th>
-            <th>TB Balance</th>
             <th>Properties</th>
+            <th>TB Balance</th>
           </tr>
         </thead>
         <tbody id="topPlayersBody">
@@ -661,14 +661,14 @@
       document.getElementById('mineTypeDetails').innerHTML = mineHTML + barHTML;
 
       // ── Top players ──────────────────────────────────────────────
-      const sorted = [...users].sort((a,b) => (b.tbBalance||0) - (a.tbBalance||0)).slice(0, 10);
+      const sorted = [...users].sort((a,b) => (ownerPropCount[b.id]||0) - (ownerPropCount[a.id]||0)).slice(0, 10);
       document.getElementById('topPlayersCount').textContent = 'top 10';
       document.getElementById('topPlayersBody').innerHTML = sorted.map((u, i) => `
         <tr>
           <td class="td-muted">${i+1}</td>
           <td>${truncate(u.nickname || u.email?.split('@')[0] || u.id.substring(0,8), 20)}</td>
-          <td class="td-gold">${fmt(u.tbBalance || 0)}</td>
-          <td>${ownerPropCount[u.id] || 0}</td>
+          <td class="td-gold">${ownerPropCount[u.id] || 0}</td>
+          <td>${fmt(u.tbBalance || 0)}</td>
         </tr>`).join('') || '<tr><td colspan="4" class="td-muted" style="padding:16px 24px;">No data</td></tr>';
 
       // ── Recent check-ins ─────────────────────────────────────────
