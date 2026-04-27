@@ -289,6 +289,94 @@
   .filter-btn:hover { border-color: var(--gold); color: var(--text); }
   .filter-btn.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 500; }
 
+  /* Notification editor */
+  .notif-editor {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .notif-editor label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+  .notif-editor label:first-of-type { margin-top: 0; }
+  .notif-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+  .notif-input:focus { border-color: var(--gold); }
+  .notif-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    font-size: 12px;
+  }
+  .notif-preview-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .notif-preview-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .notif-preview-body {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .notif-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .save-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .save-btn:hover { background: var(--gold-light); }
+  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .save-confirm {
+    font-size: 12px;
+    color: var(--green);
+    display: none;
+  }
+  .save-error {
+    font-size: 12px;
+    color: var(--red);
+    display: none;
+  }
+
   /* Responsive */
   @media (max-width: 768px) {
     .main { padding: 16px; }
@@ -426,6 +514,39 @@
     </table>
   </div>
 
+  <!-- DAILY NOTIFICATION -->
+  <div class="section-label">Daily Push Notification</div>
+  <div class="notif-editor">
+    <label for="notifTitle">Notification Title</label>
+    <input
+      id="notifTitle"
+      class="notif-input"
+      type="text"
+      maxlength="100"
+      placeholder="⛏️ Your mines are waiting!"
+    />
+    <label for="notifBody">Notification Body</label>
+    <textarea
+      id="notifBody"
+      class="notif-input"
+      rows="3"
+      maxlength="300"
+      placeholder="Log in to collect resources, run daily activities, and check on your properties."
+    ></textarea>
+
+    <div class="notif-preview">
+      <div class="notif-preview-label">📱 Preview</div>
+      <div class="notif-preview-title" id="notifPreviewTitle">⛏️ Your mines are waiting!</div>
+      <div class="notif-preview-body" id="notifPreviewBody">Log in to collect resources, run daily activities, and check on your properties.</div>
+    </div>
+
+    <div class="notif-actions">
+      <button class="save-btn" id="saveNotifBtn" onclick="saveNotification()">💾 Save Message</button>
+      <span class="save-confirm" id="saveConfirm">✓ Saved successfully</span>
+      <span class="save-error" id="saveError">✗ Save failed — check console</span>
+    </div>
+  </div>
+
   <!-- RECENT SIGNUPS -->
   <div class="section-label">Recent Signups</div>
   <div class="table-card">
@@ -503,7 +624,7 @@
 <!-- Firebase -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-  import { getFirestore, collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getFirestore, collection, getDocs, query, orderBy, limit, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
   const firebaseConfig = {
@@ -524,6 +645,7 @@
     if (user) {
       document.getElementById('loginOverlay').style.display = 'none';
       loadAll();
+      loadNotificationConfig();
     }
   });
 
@@ -784,6 +906,73 @@
   };
 
   // Auto-load triggered by onAuthStateChanged above
+
+  // ── Daily Notification Editor ────────────────────────────────────────────
+
+  async function loadNotificationConfig() {
+    try {
+      const docRef = doc(db, 'config', 'dailyNotification');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.title) document.getElementById('notifTitle').value = data.title;
+        if (data.body)  document.getElementById('notifBody').value  = data.body;
+        updateNotifPreview();
+      }
+    } catch (e) {
+      console.warn('Could not load notification config:', e);
+    }
+  }
+
+  function updateNotifPreview() {
+    const title = document.getElementById('notifTitle').value.trim()
+      || '⛏️ Your mines are waiting!';
+    const body  = document.getElementById('notifBody').value.trim()
+      || 'Log in to collect resources, run daily activities, and check on your properties.';
+    document.getElementById('notifPreviewTitle').textContent = title;
+    document.getElementById('notifPreviewBody').textContent  = body;
+  }
+
+  window.saveNotification = async function() {
+    const btn = document.getElementById('saveNotifBtn');
+    const confirm = document.getElementById('saveConfirm');
+    const errEl   = document.getElementById('saveError');
+    confirm.style.display = 'none';
+    errEl.style.display   = 'none';
+
+    const title = document.getElementById('notifTitle').value.trim();
+    const body  = document.getElementById('notifBody').value.trim();
+
+    if (!title || !body) {
+      errEl.textContent = '✗ Title and body cannot be empty';
+      errEl.style.display = 'inline';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const docRef = doc(db, 'config', 'dailyNotification');
+      await setDoc(docRef, { title, body, updatedAt: new Date().toISOString() });
+      confirm.style.display = 'inline';
+      updateNotifPreview();
+      setTimeout(() => confirm.style.display = 'none', 3000);
+    } catch (e) {
+      console.error('Failed to save notification config:', e);
+      errEl.textContent = '✗ Save failed — check console';
+      errEl.style.display = 'inline';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 Save Message';
+    }
+  };
+
+  // Live preview update on typing
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('notifTitle').addEventListener('input', updateNotifPreview);
+    document.getElementById('notifBody').addEventListener('input',  updateNotifPreview);
+  });
 </script>
 </body>
 </html>
