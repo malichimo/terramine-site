@@ -289,6 +289,53 @@
   .filter-btn:hover { border-color: var(--gold); color: var(--text); }
   .filter-btn.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 500; }
 
+  /* Inactivity monitor */
+  .inactivity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .inactivity-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .inactivity-stat.warn { border-color: rgba(224,123,32,0.4); }
+  .inactivity-stat.danger { border-color: rgba(224,80,80,0.4); }
+  .inactivity-stat .stat-label { margin-bottom: 8px; }
+  .inactivity-stat .stat-value { font-size: 40px; }
+  .inactivity-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .run-btn {
+    background: var(--amber);
+    color: var(--bg);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .run-btn:hover { background: var(--gold-light); }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .run-status {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .run-status.success { color: var(--green); }
+  .run-status.error { color: var(--red); }
+  .badge-warn { background: rgba(224,123,32,0.15); color: var(--amber); }
+  .badge-danger { background: rgba(224,80,80,0.15); color: var(--red); }
+
   /* Notification editor */
   .notif-editor {
     background: var(--surface);
@@ -545,6 +592,80 @@
       <span class="save-confirm" id="saveConfirm">✓ Saved successfully</span>
       <span class="save-error" id="saveError">✗ Save failed — check console</span>
     </div>
+  </div>
+
+  <!-- INACTIVITY MONITOR -->
+  <div class="section-label">Inactivity Monitor</div>
+
+  <!-- Summary stats -->
+  <div class="inactivity-grid">
+    <div class="inactivity-stat">
+      <div class="stat-label">Approaching Warning (4-5 mo)</div>
+      <div class="stat-value" id="inact-approaching">—</div>
+      <div class="stat-sub">accounts idle 120-150 days</div>
+    </div>
+    <div class="inactivity-stat warn">
+      <div class="stat-label">⚠️ Near Suspension (5-6 mo)</div>
+      <div class="stat-value" id="inact-warn">—</div>
+      <div class="stat-sub">accounts idle 150-180 days</div>
+    </div>
+    <div class="inactivity-stat danger">
+      <div class="stat-label">🚨 Suspended / Near Forfeiture</div>
+      <div class="stat-value" id="inact-danger">—</div>
+      <div class="stat-sub">accounts idle 180+ days</div>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="inactivity-actions">
+    <button class="run-btn" onclick="runInactivityCheck()">⚙️ Run Inactivity Check</button>
+    <span class="run-status" id="runStatus"></span>
+  </div>
+
+  <!-- At-risk accounts table -->
+  <div class="table-card" style="margin-bottom:16px;">
+    <div class="table-header">
+      At-Risk Accounts
+      <span class="table-count" id="atRiskCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Last Login</th>
+          <th>Days Idle</th>
+          <th>TAs</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="atRiskBody">
+        <tr><td colspan="6" class="td-muted" style="padding:16px 24px;">Run check to load</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- At-risk TAs table -->
+  <div class="table-card" style="margin-bottom:16px;">
+    <div class="table-header">
+      At-Risk TAs (No Activity)
+      <span class="table-count" id="atRiskTACount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Property ID</th>
+          <th>Owner</th>
+          <th>Mine Type</th>
+          <th>Last Activity</th>
+          <th>Days Idle</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="atRiskTABody">
+        <tr><td colspan="6" class="td-muted" style="padding:16px 24px;">Run check to load</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- RECENT SIGNUPS -->
@@ -903,6 +1024,146 @@
       confirm.style.display = 'inline';
       setTimeout(() => confirm.style.display = 'none', 2500);
     });
+  };
+
+  // ── Inactivity Monitor ──────────────────────────────────────────────────
+
+  const DAY_MS = 86400000;
+  const THRESHOLDS = {
+    APPROACHING: 120,   // 4 months — approaching warning zone
+    WARN_1:      150,   // 5 months — first warning
+    WARN_2:      179,   // day before suspension
+    SUSPENDED:   180,   // 6 months — suspended
+    WARN_3:      330,   // 11 months — second warning
+    WARN_4:      364,   // day before forfeiture
+    FORFEITED:   365,   // 12 months — forfeited
+  };
+
+  function daysIdle(lastActiveAt) {
+    if (!lastActiveAt) return 9999;
+    return Math.floor((Date.now() - new Date(lastActiveAt).getTime()) / DAY_MS);
+  }
+
+  function inactivityStatus(days) {
+    if (days >= THRESHOLDS.FORFEITED) return { label: '🔴 Forfeit', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_4)    return { label: '🔴 Forfeit Tomorrow', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_3)    return { label: '🟠 11mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.SUSPENDED) return { label: '🔴 Suspended', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_2)    return { label: '🟠 Suspend Tomorrow', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.WARN_1)    return { label: '🟡 5mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.APPROACHING) return { label: '🟡 Approaching', cls: 'badge-amber' };
+    return null;
+  }
+
+  function taInactivityStatus(days) {
+    if (days >= THRESHOLDS.FORFEITED) return { label: '🔴 TA Forfeit', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_4)    return { label: '🔴 Forfeit Tomorrow', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_3)    return { label: '🟠 11mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.SUSPENDED) return { label: '🔴 Earning Stopped', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_2)    return { label: '🟠 Stop Tomorrow', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.WARN_1)    return { label: '🟡 5mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.APPROACHING) return { label: '🟡 Approaching', cls: 'badge-amber' };
+    return null;
+  }
+
+  window.runInactivityCheck = async function() {
+    const btn = document.querySelector('.run-btn');
+    const status = document.getElementById('runStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ Running...';
+    status.textContent = '';
+    status.className = 'run-status';
+
+    try {
+      // ── Load users ──────────────────────────────────────────────
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // ── Load properties ─────────────────────────────────────────
+      const propsSnap = await getDocs(collection(db, 'properties'));
+      const props = propsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Build owner lookup
+      const ownerMap = {};
+      users.forEach(u => { ownerMap[u.id] = u; });
+
+      const ownerPropCount = {};
+      props.forEach(p => {
+        if (p.ownerId) ownerPropCount[p.ownerId] = (ownerPropCount[p.ownerId] || 0) + 1;
+      });
+
+      // ── Categorize at-risk accounts ──────────────────────────────
+      let approaching = 0, warned = 0, danger = 0;
+      const atRisk = [];
+
+      users.forEach(u => {
+        const days = daysIdle(u.lastActiveAt);
+        const st = inactivityStatus(days);
+        if (!st) return;
+        if (days >= THRESHOLDS.SUSPENDED) danger++;
+        else if (days >= THRESHOLDS.WARN_1) warned++;
+        else approaching++;
+        atRisk.push({ ...u, days, status: st });
+      });
+
+      atRisk.sort((a, b) => b.days - a.days);
+
+      document.getElementById('inact-approaching').textContent = approaching;
+      document.getElementById('inact-warn').textContent = warned;
+      document.getElementById('inact-danger').textContent = danger;
+      document.getElementById('atRiskCount').textContent = atRisk.length + ' accounts';
+
+      document.getElementById('atRiskBody').innerHTML = atRisk.length
+        ? atRisk.map(u => `
+          <tr>
+            <td>${truncate(u.nickname || u.id.substring(0,8), 16)}</td>
+            <td class="td-muted">${truncate(u.email || '—', 24)}</td>
+            <td class="td-muted">${u.lastActiveAt ? shortDate(u.lastActiveAt) : 'Never'}</td>
+            <td class="${u.days >= THRESHOLDS.SUSPENDED ? 'td-gold' : 'td-muted'}">${u.days === 9999 ? '∞' : u.days}d</td>
+            <td>${ownerPropCount[u.id] || 0}</td>
+            <td><span class="stat-badge ${u.status.cls}">${u.status.label}</span></td>
+          </tr>`).join('')
+        : '<tr><td colspan="6" class="td-muted" style="padding:16px 24px;">✓ No at-risk accounts</td></tr>';
+
+      // ── Categorize at-risk TAs ───────────────────────────────────
+      const atRiskTAs = [];
+
+      props.forEach(p => {
+        const lastActivity = p.lastActivityAt || p.purchasedAt || null;
+        const days = daysIdle(lastActivity);
+        const st = taInactivityStatus(days);
+        if (!st) return;
+        const owner = ownerMap[p.ownerId];
+        atRiskTAs.push({ ...p, days, status: st, ownerNickname: owner?.nickname || p.ownerId?.substring(0,8) || '—' });
+      });
+
+      atRiskTAs.sort((a, b) => b.days - a.days);
+      document.getElementById('atRiskTACount').textContent = atRiskTAs.length + ' TAs';
+
+      const mineEmoji = { rock: '🪨', coal: '⚫', gold: '🟡', diamond: '💎' };
+      document.getElementById('atRiskTABody').innerHTML = atRiskTAs.length
+        ? atRiskTAs.map(p => `
+          <tr>
+            <td class="td-muted" style="font-size:10px;">${p.id.substring(0,14)}</td>
+            <td>${truncate(p.ownerNickname, 16)}</td>
+            <td>${mineEmoji[p.mineType] || '⛏️'} ${p.mineType || '—'}</td>
+            <td class="td-muted">${p.lastActivityAt ? shortDate(p.lastActivityAt) : (p.purchasedAt ? shortDate(p.purchasedAt) : 'Unknown')}</td>
+            <td class="${p.days >= THRESHOLDS.SUSPENDED ? 'td-gold' : 'td-muted'}">${p.days === 9999 ? '∞' : p.days}d</td>
+            <td><span class="stat-badge ${p.status.cls}">${p.status.label}</span></td>
+          </tr>`).join('')
+        : '<tr><td colspan="6" class="td-muted" style="padding:16px 24px;">✓ No at-risk TAs</td></tr>';
+
+      status.textContent = '✓ Check complete — ' + new Date().toLocaleTimeString();
+      status.className = 'run-status success';
+
+    } catch (e) {
+      console.error('Inactivity check failed:', e);
+      status.textContent = '✗ Check failed — see console';
+      status.className = 'run-status error';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚙️ Run Inactivity Check';
+    }
   };
 
   // Auto-load triggered by onAuthStateChanged above
