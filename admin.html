@@ -85,6 +85,22 @@
   }
   .refresh-btn:hover { background: var(--gold-light); }
   .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .logout-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .logout-btn:hover { color: var(--red); border-color: var(--red); }
+  .admin-email {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
 
   /* Layout */
   .main { padding: 32px; max-width: 1400px; margin: 0 auto; }
@@ -443,8 +459,10 @@
     </div>
   </div>
   <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
     <span class="last-updated" id="lastUpdated">Loading...</span>
     <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
+    <button class="logout-btn" id="logoutBtn" onclick="doLogout()" style="display:none;">Sign Out</button>
   </div>
 </div>
 
@@ -746,7 +764,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import { getFirestore, collection, getDocs, query, orderBy, limit, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
@@ -769,6 +787,17 @@
       loadNotificationConfig();
     }
   });
+
+  window.doLogout = async function() {
+    try {
+      await signOut(auth);
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+      document.getElementById('refreshBtn').style.display = 'none';
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
+  };
 
   window.doLogin = async function() {
     const email = document.getElementById('loginEmail').value.trim();
