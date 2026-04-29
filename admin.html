@@ -783,8 +783,13 @@
   onAuthStateChanged(auth, (user) => {
     if (user) {
       document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
       loadAll();
       loadNotificationConfig();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
     }
   });
 
