@@ -352,6 +352,78 @@
   .badge-warn { background: rgba(224,123,32,0.15); color: var(--amber); }
   .badge-danger { background: rgba(224,80,80,0.15); color: var(--red); }
 
+  /* Feedback */
+  .feedback-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--gold);
+    color: var(--bg);
+    border-color: var(--gold);
+  }
+  .feedback-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+  }
+  .feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+  .feedback-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .feedback-message {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .feedback-type-badge {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .type-general  { background: rgba(74,159,212,0.15); color: var(--blue); }
+  .type-bug      { background: rgba(224,80,80,0.15);  color: var(--red); }
+  .type-feature  { background: rgba(200,146,42,0.15); color: var(--gold); }
+  .type-other    { background: rgba(138,117,96,0.15); color: var(--text-muted); }
+  .mark-read-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mark-read-btn:hover { border-color: var(--green); color: var(--green); }
+
   /* Notification editor */
   .notif-editor {
     background: var(--surface);
@@ -787,6 +859,7 @@
       document.getElementById('adminEmail').textContent = user.email;
       loadAll();
       loadNotificationConfig();
+      loadFeedback();
     } else {
       document.getElementById('logoutBtn').style.display = 'none';
       document.getElementById('adminEmail').textContent = '';
@@ -1197,6 +1270,79 @@
     } finally {
       btn.disabled = false;
       btn.textContent = '⚙️ Run Inactivity Check';
+    }
+  };
+
+  // ── Feedback ─────────────────────────────────────────────────────────────
+
+  let allFeedback = [];
+
+  async function loadFeedback() {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'feedback'), orderBy('createdAt', 'desc'), limit(50))
+      );
+      allFeedback = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('feedbackCount').textContent = allFeedback.length + ' submissions';
+      renderFeedback(allFeedback);
+    } catch (e) {
+      console.warn('Feedback load failed:', e);
+      document.getElementById('feedbackList').innerHTML =
+        '<div class="td-muted" style="padding:16px 0;">Failed to load feedback.</div>';
+    }
+  }
+
+  function filterFeedback(type, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = type === 'all' ? allFeedback
+      : type === 'new' ? allFeedback.filter(f => f.status === 'new')
+      : allFeedback.filter(f => f.type === type);
+    renderFeedback(filtered);
+  }
+
+  function renderFeedback(items) {
+    const typeEmoji = { general: '💬', bug: '🐛', feature: '✨', other: '📝' };
+    const typeLabel = { general: 'General', bug: 'Bug Report', feature: 'Feature Request', other: 'Other' };
+    document.getElementById('feedbackList').innerHTML = items.length
+      ? items.map(f => `
+        <div class="feedback-card" id="fb-${f.id}">
+          <div class="feedback-header">
+            <div>
+              <span class="feedback-type-badge type-${f.type}">
+                ${typeEmoji[f.type] || '📝'} ${typeLabel[f.type] || f.type}
+              </span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              ${f.status === 'new' ? '<span style="font-size:10px;color:var(--amber);">● NEW</span>' : ''}
+              <button class="mark-read-btn" onclick="markFeedbackRead('${f.id}')">
+                ${f.status === 'new' ? 'Mark read' : '✓ Read'}
+              </button>
+            </div>
+          </div>
+          <div class="feedback-meta">
+            ${f.userEmail || 'Anonymous'} &nbsp;·&nbsp; ${f.createdAt ? shortDate(f.createdAt) : '—'}
+          </div>
+          <div class="feedback-message">${f.message || '—'}</div>
+        </div>`).join('')
+      : '<div class="td-muted" style="padding:16px 0;">No feedback in this category.</div>';
+  }
+
+  window.markFeedbackRead = async function(feedbackId) {
+    try {
+      const ref = doc(db, 'feedback', feedbackId);
+      await setDoc(ref, { status: 'read' }, { merge: true });
+      const item = allFeedback.find(f => f.id === feedbackId);
+      if (item) item.status = 'read';
+      const card = document.getElementById('fb-' + feedbackId);
+      if (card) {
+        const btn = card.querySelector('.mark-read-btn');
+        const newBadge = card.querySelector('span[style*="amber"]');
+        if (btn) btn.textContent = '✓ Read';
+        if (newBadge) newBadge.remove();
+      }
+    } catch (e) {
+      console.error('Mark read failed:', e);
     }
   };
 
