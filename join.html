@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join TerraMine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #0D1B2A;
+      --blue: #1565C0;
+      --cyan: #4FC3F7;
+      --gold: #FFD54F;
+      --white: #F0F4FF;
+      --gray: #8899AA;
+    }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,195,247,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,195,247,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(79,195,247,0.2);
+      border-radius: 20px;
+      padding: 48px 32px;
+      max-width: 420px;
+      width: 100%;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      margin-bottom: 8px;
+    }
+
+    .invite-badge {
+      display: inline-block;
+      background: rgba(255,213,79,0.15);
+      border: 1px solid rgba(255,213,79,0.4);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      letter-spacing: 2px;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+
+    .referrer-line {
+      font-size: 16px;
+      color: var(--gray);
+      margin-bottom: 8px;
+    }
+    .referrer-name {
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .reward-box {
+      background: rgba(255,213,79,0.08);
+      border: 1px solid rgba(255,213,79,0.25);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 24px 0;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--white);
+    }
+    .reward-box strong { color: var(--gold); }
+
+    /* Code display — shown when app is not installed */
+    .code-section {
+      display: none; /* shown by JS if needed */
+      margin: 20px 0;
+      background: rgba(79,195,247,0.06);
+      border: 1px solid rgba(79,195,247,0.25);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .code-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .code-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 4px;
+      color: var(--cyan);
+      margin-bottom: 12px;
+    }
+    .copy-btn {
+      background: rgba(79,195,247,0.15);
+      border: 1px solid rgba(79,195,247,0.35);
+      border-radius: 8px;
+      color: var(--cyan);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 20px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover { background: rgba(79,195,247,0.25); }
+    .copy-hint {
+      font-size: 12px;
+      color: var(--gray);
+      margin-top: 10px;
+    }
+
+    .store-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 28px 0 16px;
+    }
+
+    .store-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px 24px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 700;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .store-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .btn-ios {
+      background: #fff;
+      color: #000;
+    }
+    .btn-android {
+      background: #01875F;
+      color: #fff;
+    }
+
+    .store-icon { font-size: 22px; }
+
+    /* Single button shown after JS detects OS */
+    .primary-btn {
+      display: none;
+      width: 100%;
+      padding: 18px 24px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .primary-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .primary-btn.ios-btn { background: #fff; color: #000; }
+    .primary-btn.android-btn { background: #01875F; color: #fff; }
+
+    .fallback-link {
+      font-size: 13px;
+      color: var(--gray);
+      margin-top: 8px;
+    }
+    .fallback-link a { color: var(--cyan); text-decoration: none; }
+    .fallback-link a:hover { text-decoration: underline; }
+
+    .footer-note {
+      position: relative;
+      z-index: 1;
+      margin-top: 32px;
+      font-size: 13px;
+      color: var(--gray);
+    }
+    .footer-note a { color: var(--cyan); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="logo">⛏ TerraMine</div>
+    <div class="invite-badge">You're Invited</div>
+
+    <h1>Join the<br/>Mining Rush</h1>
+
+    <p class="referrer-line" id="referrerLine" style="display:none">
+      Invited by <span class="referrer-name" id="referrerName"></span>
+    </p>
+
+    <div class="reward-box">
+      Download TerraMine free and sign up with the referral code below.<br/>
+      When you buy your first TerraAcre, <strong>you both get 1,000 TB</strong> instantly!
+    </div>
+
+    <!-- Code display — visible so user can enter it at sign-up -->
+    <div class="code-section" id="codeSection">
+      <div class="code-label">Your Referral Code</div>
+      <div class="code-value" id="codeDisplay"></div>
+      <button class="copy-btn" onclick="copyCode()">📋 Copy Code</button>
+      <p class="copy-hint">Enter this code when you sign up in the app</p>
+    </div>
+
+    <!-- Smart download button (JS fills in correct store) -->
+    <a class="primary-btn" id="primaryBtn" href="#"></a>
+
+    <!-- Fallback: both buttons shown on desktop or unknown OS -->
+    <div class="store-buttons" id="storeFallback">
+      <a class="store-btn btn-ios"
+         href="https://apps.apple.com/app/terramine/id6761272864"
+         id="iosBtn">
+        <span class="store-icon">🍎</span> Download on the App Store
+      </a>
+      <a class="store-btn btn-android"
+         href="https://play.google.com/store/apps/details?id=com.terramine.app"
+         id="androidBtn">
+        <span class="store-icon">▶</span> Get it on Google Play
+      </a>
+    </div>
+
+    <p class="fallback-link" id="altStoreLink" style="display:none"></p>
+  </div>
+
+  <p class="footer-note">
+    <a href="https://terramine.app">terramine.app</a> &nbsp;·&nbsp;
+    <a href="https://terramine.app/privacy.html">Privacy</a>
+  </p>
+
+  <script>
+    const IOS_URL     = 'https://apps.apple.com/app/terramine/id6761272864';
+    const ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.terramine.app';
+
+    // ── Parse query params ──────────────────────────────────────────────────
+    const params  = new URLSearchParams(window.location.search);
+    const refCode = (params.get('ref') || '').toUpperCase();
+    const refName = params.get('name') || '';   // optional display name
+
+    // Show referrer name if present
+    if (refName) {
+      document.getElementById('referrerName').textContent = decodeURIComponent(refName);
+      document.getElementById('referrerLine').style.display = 'block';
+    }
+
+    // Show code block if we have a code
+    if (refCode) {
+      document.getElementById('codeDisplay').textContent = refCode;
+      document.getElementById('codeSection').style.display = 'block';
+    }
+
+    // ── Copy to clipboard ───────────────────────────────────────────────────
+    function copyCode() {
+      navigator.clipboard.writeText(refCode).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy Code'; }, 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const el = document.createElement('textarea');
+        el.value = refCode;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      });
+    }
+
+    // ── OS detection & smart redirect ───────────────────────────────────────
+    const ua        = navigator.userAgent || '';
+    const isIOS     = /iPhone|iPad|iPod/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const primaryBtn    = document.getElementById('primaryBtn');
+    const storeFallback = document.getElementById('storeFallback');
+    const altStoreLink  = document.getElementById('altStoreLink');
+
+    if (isIOS || isAndroid) {
+      // Hide both-button fallback, show single primary button
+      storeFallback.style.display = 'none';
+      primaryBtn.style.display    = 'block';
+
+      if (isIOS) {
+        primaryBtn.href      = IOS_URL;
+        primaryBtn.textContent = '🍎  Download on the App Store';
+        primaryBtn.className   = 'primary-btn ios-btn';
+        altStoreLink.innerHTML = 'On Android? <a href="' + ANDROID_URL + '">Get it on Google Play</a>';
+        altStoreLink.style.display = 'block';
+      } else {
+        primaryBtn.href      = ANDROID_URL;
+        primaryBtn.textContent = '▶  Get it on Google Play';
+        primaryBtn.className   = 'primary-btn android-btn';
+        altStoreLink.innerHTML = 'On iPhone? <a href="' + IOS_URL + '">Download on the App Store</a>';
+        altStoreLink.style.display = 'block';
+      }
+
+      // ── Try to open the app directly (Universal Link fallback) ───────────
+      // If the app IS already installed, the OS intercepts the store link
+      // automatically via Universal Links / App Links — no JS needed.
+      // This deep-link attempt is just belt-and-suspenders for older OS versions.
+      if (refCode) {
+        const appDeepLink = 'terramine://join?ref=' + encodeURIComponent(refCode);
+        const timeout = setTimeout(() => {
+          // App didn't open — proceed to store (already set on primaryBtn)
+        }, 1500);
+
+        // Attempt deep link silently; if app is installed it opens automatically
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = appDeepLink;
+        document.body.appendChild(iframe);
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          clearTimeout(timeout);
+        }, 500);
+      }
+    }
+    // Desktop: both store buttons already visible via #storeFallback default
+  </script>
+
+</body>
+</html>
