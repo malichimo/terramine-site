@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.terramine.app",
+      "sha256_cert_fingerprints": [
+        "8E:0F:19:E4:65:C9:33:FA:8D:6C:BD:4C:A3:07:F6:4E:0A:F5:E0:B2:D7:D8:F1:AE:B5:EA:51:C9:38:8C:07:77"
+      ]
+    }
+  }
+]
