@@ -3,40 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TerraMine — The Real World is Your Mine</title>
+  <title>TerraMine — Stake a Claim. Visit Friends. Earn Money.</title>
+  <meta name="description" content="Buy virtual properties on a real-world map, visit other players' mines to earn TerraBucks, and watch your passive income grow around the clock." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --navy: #0D1B2A;
-      --blue: #1565C0;
-      --cyan: #4FC3F7;
-      --gold: #FFD54F;
-      --coal: #2A2A2A;
-      --white: #F0F4FF;
-      --gray: #8899AA;
+      --bg:     #080C10;
+      --surface:#0F1620;
+      --border: rgba(255,255,255,0.07);
+      --gold:   #F5C542;
+      --gold2:  #E89B1A;
+      --cyan:   #5BE5D0;
+      --white:  #EEF2F8;
+      --muted:  #6B7C93;
+      --rock:   #8A9BAE;
+      --coal:   #3D4F62;
+      --goldm:  #D4A017;
+      --diamond:#5BE5D0;
     }
 
     html { scroll-behavior: smooth; }
 
     body {
-      background: var(--navy);
+      background: var(--bg);
       color: var(--white);
       font-family: 'DM Sans', sans-serif;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* ── GRID BACKGROUND ── */
+    /* ── GRID TEXTURE ── */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       background-image:
-        linear-gradient(rgba(79,195,247,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(79,195,247,0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
+        linear-gradient(rgba(91,229,208,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,229,208,0.03) 1px, transparent 1px);
+      background-size: 56px 56px;
       pointer-events: none;
       z-index: 0;
     }
@@ -49,28 +56,42 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 20px 40px;
-      background: rgba(13,27,42,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(79,195,247,0.1);
+      padding: 18px 48px;
+      background: rgba(8,12,16,0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
     }
     .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 28px;
-      letter-spacing: 2px;
-      color: var(--cyan);
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: -0.5px;
+      color: var(--gold);
       text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .nav-links { display: flex; gap: 32px; }
+    .nav-logo span { color: var(--white); }
+    .nav-links { display: flex; gap: 36px; align-items: center; }
     .nav-links a {
-      color: var(--gray);
+      color: var(--muted);
       text-decoration: none;
       font-size: 14px;
       font-weight: 500;
-      letter-spacing: 0.5px;
-      transition: color 0.2s;
+      transition: color 0.18s;
     }
     .nav-links a:hover { color: var(--white); }
+    .nav-cta {
+      background: var(--gold);
+      color: #080C10 !important;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-weight: 500 !important;
+      transition: background 0.18s, color 0.18s !important;
+    }
+    .nav-cta:hover { background: var(--gold2) !important; color: #080C10 !important; }
 
     /* ── HERO ── */
     .hero {
@@ -82,263 +103,503 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 120px 24px 80px;
+      padding: 140px 24px 100px;
+      overflow: hidden;
     }
 
-    .hero-badge {
+    /* Glow blob */
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,197,66,0.07) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero > * { position: relative; z-index: 1; }
+
+    .hero-eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(79,195,247,0.1);
-      border: 1px solid rgba(79,195,247,0.3);
-      border-radius: 999px;
-      padding: 6px 16px;
-      font-size: 13px;
-      color: var(--cyan);
-      letter-spacing: 1px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 2.5px;
       text-transform: uppercase;
-      margin-bottom: 32px;
-      animation: fadeUp 0.6s ease both;
+      color: var(--cyan);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: rise 0.7s 0.1s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: '';
+      width: 28px;
+      height: 1px;
+      background: var(--cyan);
+      opacity: 0.5;
     }
 
     .hero h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(64px, 12vw, 140px);
-      line-height: 0.95;
-      letter-spacing: 4px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(52px, 10vw, 118px);
+      line-height: 1.0;
+      letter-spacing: -2px;
       color: var(--white);
-      animation: fadeUp 0.6s 0.1s ease both;
+      max-width: 900px;
+      opacity: 0;
+      animation: rise 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) forwards;
     }
-    .hero h1 span { color: var(--cyan); }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--gold);
+      position: relative;
+    }
 
     .hero-sub {
-      margin-top: 24px;
-      font-size: clamp(16px, 2.5vw, 22px);
-      color: var(--gray);
-      max-width: 520px;
-      line-height: 1.6;
-      animation: fadeUp 0.6s 0.2s ease both;
+      margin-top: 28px;
+      font-size: clamp(16px, 2vw, 19px);
+      color: var(--muted);
+      max-width: 500px;
+      line-height: 1.7;
+      opacity: 0;
+      animation: rise 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) forwards;
     }
 
-    .hero-cta {
-      margin-top: 48px;
+    .hero-stores {
+      margin-top: 52px;
       display: flex;
-      gap: 16px;
+      gap: 14px;
       flex-wrap: wrap;
       justify-content: center;
+      opacity: 0;
+      animation: rise 0.7s 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+
+    .store-btn {
+      display: inline-flex;
       align-items: center;
-      animation: fadeUp 0.6s 0.3s ease both;
+      gap: 10px;
+      padding: 13px 22px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: transform 0.18s, opacity 0.18s;
+      font-size: 14px;
+      font-weight: 500;
     }
+    .store-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    .store-btn-ios {
+      background: var(--white);
+      color: #080C10;
+    }
+    .store-btn-android {
+      background: var(--surface);
+      color: var(--white);
+      border: 1px solid var(--border);
+    }
+    .store-btn svg { flex-shrink: 0; }
 
-    .store-badge {
-      display: inline-block;
-      transition: transform 0.15s, opacity 0.15s;
-    }
-    .store-badge:hover {
-      transform: translateY(-2px);
-      opacity: 0.88;
-    }
-    .store-badge img {
-      height: 52px;
-      width: auto;
-      display: block;
-    }
-
-    /* ── MINE TYPES ── */
-    .mines {
-      position: relative;
-      z-index: 1;
-      padding: 80px 24px;
-      max-width: 960px;
-      margin: 0 auto;
-    }
-    .section-label {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 13px;
-      letter-spacing: 4px;
-      color: var(--cyan);
-      text-align: center;
-      margin-bottom: 16px;
-    }
-    .section-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(36px, 6vw, 64px);
-      text-align: center;
-      letter-spacing: 2px;
-      margin-bottom: 56px;
-    }
-
-    .mine-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-    }
-    .mine-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 8px;
-      padding: 28px 24px;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .mine-card:hover { transform: translateY(-4px); }
-    .mine-card.rock:hover  { border-color: #808080; }
-    .mine-card.coal:hover  { border-color: #555; }
-    .mine-card.gold:hover  { border-color: var(--gold); }
-    .mine-card.diamond:hover { border-color: var(--cyan); }
-
-    .mine-icon { font-size: 40px; margin-bottom: 16px; }
-    .mine-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 24px;
-      letter-spacing: 2px;
-      margin-bottom: 8px;
-    }
-    .mine-card.rock .mine-name    { color: #aaa; }
-    .mine-card.coal .mine-name    { color: #bbb; }
-    .mine-card.gold .mine-name    { color: var(--gold); }
-    .mine-card.diamond .mine-name { color: var(--cyan); }
-
-    .mine-desc { font-size: 14px; color: var(--gray); line-height: 1.5; margin-bottom: 16px; }
-    .mine-rate {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      padding: 4px 10px;
-      border-radius: 4px;
-      display: inline-block;
-    }
-    .mine-card.rock .mine-rate    { background: rgba(128,128,128,0.15); color: #aaa; }
-    .mine-card.coal .mine-rate    { background: rgba(100,100,100,0.15); color: #bbb; }
-    .mine-card.gold .mine-rate    { background: rgba(255,213,79,0.15);  color: var(--gold); }
-    .mine-card.diamond .mine-rate { background: rgba(79,195,247,0.15);  color: var(--cyan); }
-
-    /* ── FEATURES ── */
-    .features {
-      position: relative;
-      z-index: 1;
-      padding: 80px 24px;
-      max-width: 960px;
-      margin: 0 auto;
-    }
-    .feature-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 24px;
-      margin-top: 56px;
-    }
-    .feature-item {
+    .hero-stats {
+      margin-top: 72px;
       display: flex;
-      gap: 16px;
-      align-items: flex-start;
+      gap: 48px;
+      flex-wrap: wrap;
+      justify-content: center;
+      opacity: 0;
+      animation: rise 0.7s 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
     }
-    .feature-dot {
-      width: 40px;
+    .stat { text-align: center; }
+    .stat-val {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 32px;
+      color: var(--gold);
+      letter-spacing: -1px;
+    }
+    .stat-lbl {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .stat-divider {
+      width: 1px;
       height: 40px;
-      min-width: 40px;
-      border-radius: 8px;
-      background: rgba(79,195,247,0.1);
-      border: 1px solid rgba(79,195,247,0.2);
+      background: var(--border);
+      align-self: center;
+    }
+
+    /* ── TAGLINE STRIP ── */
+    .tagline-strip {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      margin-top: 2px;
+      gap: 40px;
+      flex-wrap: wrap;
+      overflow: hidden;
     }
-    .feature-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .feature-text p  { font-size: 14px; color: var(--gray); line-height: 1.6; }
+    .tagline-strip::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(245,197,66,0.04), transparent);
+      pointer-events: none;
+    }
+    .tagline-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(16px, 2.5vw, 22px);
+      letter-spacing: -0.3px;
+      color: var(--white);
+    }
+    .tagline-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+    }
+    .tagline-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+    }
+
+    /* ── SECTION COMMON ── */
+    section.content {
+      position: relative;
+      z-index: 1;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 100px 24px;
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(32px, 5vw, 56px);
+      letter-spacing: -1.5px;
+      line-height: 1.08;
+      margin-bottom: 56px;
+      max-width: 560px;
+    }
+
+    /* ── MINES ── */
+    .mine-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .mine-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 24px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .mine-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .mine-card:hover { transform: translateY(-3px); }
+    .mine-card:hover::before { opacity: 1; }
+    .mine-card.rock::before    { background: var(--rock); }
+    .mine-card.coal::before    { background: var(--coal); }
+    .mine-card.gold::before    { background: var(--gold); }
+    .mine-card.diamond::before { background: var(--cyan); }
+    .mine-card.rock:hover    { border-color: var(--rock); }
+    .mine-card.coal:hover    { border-color: var(--coal); }
+    .mine-card.gold:hover    { border-color: var(--gold); }
+    .mine-card.diamond:hover { border-color: var(--cyan); }
+
+    .mine-icon { font-size: 36px; margin-bottom: 18px; display: block; }
+    .mine-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+    .mine-card.rock .mine-name    { color: var(--rock); }
+    .mine-card.coal .mine-name    { color: #7B8FA1; }
+    .mine-card.gold .mine-name    { color: var(--gold); }
+    .mine-card.diamond .mine-name { color: var(--cyan); }
+    .mine-desc { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+    .mine-rate {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    .mine-card.rock .mine-rate    { background: rgba(138,155,174,0.12); color: var(--rock); }
+    .mine-card.coal .mine-rate    { background: rgba(61,79,98,0.3);     color: #7B8FA1; }
+    .mine-card.gold .mine-rate    { background: rgba(245,197,66,0.12);  color: var(--gold); }
+    .mine-card.diamond .mine-rate { background: rgba(91,229,208,0.12);  color: var(--cyan); }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .step {
+      padding: 36px 30px;
+      background: var(--surface);
+      position: relative;
+      transition: background 0.2s;
+    }
+    .step:hover { background: rgba(255,255,255,0.035); }
+    .step-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+    .step-icon { font-size: 28px; margin-bottom: 14px; display: block; }
+    .step h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -0.3px;
+      margin-bottom: 10px;
+    }
+    .step p { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+    /* ── REFERRAL CALLOUT ── */
+    .referral-band {
+      position: relative;
+      z-index: 1;
+      margin: 0 24px;
+      border-radius: 16px;
+      background: var(--surface);
+      border: 1px solid rgba(245,197,66,0.2);
+      padding: 56px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+      overflow: hidden;
+    }
+    .referral-band::before {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,197,66,0.06) 0%, transparent 70%);
+      right: -80px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .referral-text { position: relative; z-index: 1; max-width: 520px; }
+    .referral-text .section-label { margin-bottom: 12px; }
+    .referral-text h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .referral-text h2 em { font-style: normal; color: var(--gold); }
+    .referral-text p { font-size: 15px; color: var(--muted); line-height: 1.7; }
+    .referral-badge {
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+      background: rgba(245,197,66,0.08);
+      border: 1px solid rgba(245,197,66,0.25);
+      border-radius: 12px;
+      padding: 28px 36px;
+      text-align: center;
+    }
+    .referral-badge .tb-amount {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 48px;
+      color: var(--gold);
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+    .referral-badge .tb-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .referral-badge .tb-sub {
+      font-size: 12px;
+      color: var(--gold);
+      opacity: 0.7;
+      margin-top: 4px;
+    }
 
     /* ── FOOTER ── */
     footer {
       position: relative;
       z-index: 1;
-      border-top: 1px solid rgba(255,255,255,0.07);
-      padding: 40px 24px;
-      text-align: center;
+      border-top: 1px solid var(--border);
+      padding: 48px 48px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-top: 100px;
     }
-    footer .footer-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 24px;
-      letter-spacing: 2px;
-      color: var(--cyan);
-      margin-bottom: 16px;
+    .footer-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--gold);
+      text-decoration: none;
     }
-    footer nav { position: static; background: none; backdrop-filter: none; border: none; padding: 0; display: block; margin-bottom: 16px; }
-    footer nav a { color: var(--gray); text-decoration: none; font-size: 14px; margin: 0 12px; transition: color 0.2s; }
-    footer nav a:hover { color: var(--white); }
-    footer p { font-size: 13px; color: var(--gray); }
+    .footer-links { display: flex; gap: 28px; align-items: center; }
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.18s;
+    }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 13px; color: var(--muted); }
 
     /* ── ANIMATIONS ── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(22px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    @media (max-width: 600px) {
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
       nav { padding: 16px 20px; }
       .nav-links { display: none; }
-      .store-badge img { height: 44px; }
+      .hero-stats { gap: 28px; }
+      .stat-divider { display: none; }
+      .tagline-strip { gap: 20px; }
+      .tagline-sep { display: none; }
+      .referral-band { flex-direction: column; padding: 36px 28px; margin: 0 16px; }
+      .referral-badge { width: 100%; }
+      footer { flex-direction: column; align-items: flex-start; padding: 36px 20px 28px; }
     }
   </style>
 </head>
 <body>
 
   <nav>
-    <a class="nav-logo" href="/">⛏ TerraMine</a>
+    <a class="nav-logo" href="/">⛏ Terra<span>Mine</span></a>
     <div class="nav-links">
       <a href="#mines">Mine Types</a>
-      <a href="#features">Features</a>
+      <a href="#how">How It Works</a>
       <a href="privacy.html">Privacy</a>
       <a href="terms.html">Terms</a>
+      <a href="https://apps.apple.com/app/terramine/id6761272864" class="nav-cta" target="_blank" rel="noopener">Download</a>
     </div>
   </nav>
 
+  <!-- ── HERO ── -->
   <section class="hero">
-    <div class="hero-badge">⛏ Now Available on iOS &amp; Android</div>
-    <h1>The Real World<br/>Is Your <span>Mine</span></h1>
-    <p class="hero-sub">Buy virtual properties on a live map, run daily mining operations, and earn passive income — even when you're not playing.</p>
-    <div class="hero-cta">
-      <!-- iOS — live on App Store -->
-      <a href="https://apps.apple.com/app/terramine/id6761272864" class="store-badge" target="_blank" rel="noopener noreferrer" aria-label="Download on the App Store">
-        <img
-          src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
-          alt="Download on the App Store"
-        />
+    <p class="hero-eyebrow">Now Live on iOS &amp; Android</p>
+    <h1>Stake a Claim.<br/><em>Visit Friends.</em><br/>Earn Money.</h1>
+    <p class="hero-sub">Buy virtual properties on a real-world map, visit other players' mines to earn TerraBucks, and watch your passive income grow around the clock.</p>
+
+    <div class="hero-stores">
+      <a href="https://apps.apple.com/app/terramine/id6761272864" class="store-btn store-btn-ios" target="_blank" rel="noopener" aria-label="Download on the App Store">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        App Store
       </a>
-      <!-- Android — live -->
-      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" class="store-badge" target="_blank" rel="noopener noreferrer" aria-label="Get it on Google Play">
-        <img
-          src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
-          alt="Get it on Google Play"
-          style="height: 76px; margin-top: -12px;"
-        />
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" class="store-btn store-btn-android" target="_blank" rel="noopener" aria-label="Get it on Google Play">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.37.2.8.2 1.19-.01l12.14-6.96-2.64-2.64-10.69 9.61zM.44 1.6C.17 1.99.02 2.5.02 3.09v17.82c0 .59.15 1.1.42 1.49l.07.07 9.98-9.98v-.23L.51 1.53l-.07.07zM20.13 10.4l-2.72-1.56-2.96 2.96 2.96 2.96 2.74-1.57c.78-.45.78-1.34-.02-1.79zM4.37.24L16.51 7.2l-2.64 2.64L3.18.27C3.57.06 4 .05 4.37.24z"/></svg>
+        Google Play
       </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-val">1,278+</div>
+        <div class="stat-lbl">Properties claimed</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-val">63</div>
+        <div class="stat-lbl">Active miners</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-val">$0</div>
+        <div class="stat-lbl">Cost to start</div>
+      </div>
     </div>
   </section>
 
-  <section class="mines" id="mines">
+  <!-- ── TAGLINE STRIP ── -->
+  <div class="tagline-strip">
+    <div class="tagline-item"><div class="tagline-dot"></div> Stake a Claim</div>
+    <div class="tagline-sep"></div>
+    <div class="tagline-item"><div class="tagline-dot"></div> Visit Friends</div>
+    <div class="tagline-sep"></div>
+    <div class="tagline-item"><div class="tagline-dot"></div> Earn Money</div>
+  </div>
+
+  <!-- ── MINE TYPES ── -->
+  <section class="content" id="mines">
     <p class="section-label">Property Types</p>
-    <h2 class="section-title">Four Mines. One Map.</h2>
+    <h2 class="section-title">Four Mines.<br/>One Map.</h2>
     <div class="mine-grid">
       <div class="mine-card rock">
-        <div class="mine-icon">🪨</div>
+        <span class="mine-icon">🪨</span>
         <div class="mine-name">Rock Mine</div>
-        <p class="mine-desc">The most common mine. Steady, reliable passive income. Found in 60% of properties.</p>
+        <p class="mine-desc">The most common mine. Steady, reliable passive income. Found on 61% of all properties.</p>
         <span class="mine-rate">Base rate</span>
       </div>
       <div class="mine-card coal">
-        <div class="mine-icon">⚫</div>
+        <span class="mine-icon">⚫</span>
         <div class="mine-name">Coal Mine</div>
-        <p class="mine-desc">Dark and productive. Earns 1.5× a rock mine. Roughly 30% of all properties.</p>
+        <p class="mine-desc">Dark and productive. Earns 1.5× a rock mine. About 30% of all properties yield coal.</p>
         <span class="mine-rate">1.5× rock</span>
       </div>
       <div class="mine-card gold">
-        <div class="mine-icon">🟡</div>
+        <span class="mine-icon">🟡</span>
         <div class="mine-name">Gold Mine</div>
-        <p class="mine-desc">Rare and lucrative. 2× the earnings of rock. Only 9% of properties strike gold.</p>
+        <p class="mine-desc">Rare and lucrative. 2× the earnings of rock. Only 8% of properties strike gold.</p>
         <span class="mine-rate">2× rock</span>
       </div>
       <div class="mine-card diamond">
-        <div class="mine-icon">💎</div>
+        <span class="mine-icon">💎</span>
         <div class="mine-name">Diamond Mine</div>
         <p class="mine-desc">Ultra-rare. 4× earnings. Just 1% of all properties are diamond mines.</p>
         <span class="mine-rate">4× rock</span>
@@ -346,62 +607,74 @@
     </div>
   </section>
 
-  <section class="features" id="features">
+  <!-- ── HOW IT WORKS ── -->
+  <section class="content" id="how" style="padding-top: 0;">
     <p class="section-label">How It Works</p>
-    <h2 class="section-title">Buy. Mine. Earn.</h2>
-    <div class="feature-list">
-      <div class="feature-item">
-        <div class="feature-dot">🗺</div>
-        <div class="feature-text">
-          <h3>Claim Your Territory</h3>
-          <p>The entire world is divided into a grid. Buy any unclaimed square near you for 100 TerraBucks — it's yours permanently.</p>
-        </div>
+    <h2 class="section-title">Simple to start.<br/>Deep to master.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <span class="step-icon">🗺</span>
+        <h3>Claim Your Territory</h3>
+        <p>The entire world is divided into a grid. Buy any unclaimed square near you for 100 TerraBucks — it's yours permanently.</p>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot">💵</div>
-        <div class="feature-text">
-          <h3>Earn Real USD</h3>
-          <p>Every property you own generates a stream of real US dollars around the clock. Upgrade your mine to earn more.</p>
-        </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <span class="step-icon">💵</span>
+        <h3>Earn Passive Income</h3>
+        <p>Every property you own generates a stream of real US dollars around the clock — even when you're not playing.</p>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot">📍</div>
-        <div class="feature-text">
-          <h3>Check In Anywhere</h3>
-          <p>Walk near another player's mine and check in to earn TerraBucks for yourself — and give the owner a bonus too.</p>
-        </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <span class="step-icon">📍</span>
+        <h3>Visit Other Mines</h3>
+        <p>Walk near another player's mine and check in to earn TerraBucks for yourself — and give the owner a bonus too.</p>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot">⛏</div>
-        <div class="feature-text">
-          <h3>Daily Mining Games</h3>
-          <p>Each mine type has a unique daily mini-game — conveyor belts, coal piles, gold panning, and slot machines.</p>
-        </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <span class="step-icon">⛏</span>
+        <h3>Play Daily Games</h3>
+        <p>Each mine type has a unique daily mini-game — conveyor belts, coal piles, gold panning, and more.</p>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot">⚡</div>
-        <div class="feature-text">
-          <h3>Earning Boosts</h3>
-          <p>Activate a boost to multiply your passive income by 20x. Use free daily boosts or watch an ad to extend up to 8 hours.</p>
-        </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <span class="step-icon">⚡</span>
+        <h3>Activate Boosts</h3>
+        <p>Multiply your passive income by 20× with a boost. Use free daily boosts or watch an ad to extend up to 8 hours.</p>
       </div>
-      <div class="feature-item">
-        <div class="feature-dot">🏆</div>
-        <div class="feature-text">
-          <h3>Build Your Portfolio</h3>
-          <p>Track your properties, visitors, and total earnings across your entire mining empire in the Portfolio tab.</p>
-        </div>
+      <div class="step">
+        <div class="step-num">06</div>
+        <span class="step-icon">🏆</span>
+        <h3>Climb the Leaderboard</h3>
+        <p>Compete for the top 10 spots by property count. Every TerraAcre you claim moves you up the board.</p>
       </div>
     </div>
   </section>
 
+  <!-- ── REFERRAL CALLOUT ── -->
+  <div class="referral-band">
+    <div class="referral-text">
+      <p class="section-label">Referral Program</p>
+      <h2>Invite a friend.<br/>You <em>both</em> win.</h2>
+      <p>Share your referral link from the map screen. When your friend signs up and buys their first TerraAcre, you each receive 1,000 TerraBucks — automatically, no codes needed.</p>
+    </div>
+    <div class="referral-badge">
+      <div class="tb-amount">1,000</div>
+      <div class="tb-label">TerraBucks each</div>
+      <div class="tb-sub">You + your friend</div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
   <footer>
-    <div class="footer-logo">⛏ TerraMine</div>
-    <nav>
+    <a class="footer-logo" href="/">⛏ TerraMine</a>
+    <div class="footer-links">
       <a href="privacy.html">Privacy Policy</a>
       <a href="terms.html">Terms of Service</a>
-    </nav>
-    <p>&copy; 2026 TerraMine. All rights reserved.</p>
+      <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
   </footer>
 
 </body>
