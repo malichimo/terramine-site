@@ -684,6 +684,32 @@
     </div>
   </div>
 
+  <!-- FEEDBACK INBOX -->
+  <div class="section-label">Feedback Inbox</div>
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      User Feedback
+      <span class="table-count" id="feedbackCount">—</span>
+    </div>
+
+    <!-- Filter buttons -->
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+      <div class="feedback-filter">
+        <button class="filter-btn active" onclick="filterFeedback('all', this)">All</button>
+        <button class="filter-btn" onclick="filterFeedback('new', this)">🔴 New</button>
+        <button class="filter-btn" onclick="filterFeedback('bug', this)">🐛 Bug Reports</button>
+        <button class="filter-btn" onclick="filterFeedback('feature', this)">✨ Feature Requests</button>
+        <button class="filter-btn" onclick="filterFeedback('general', this)">💬 General</button>
+        <button class="filter-btn" onclick="filterFeedback('other', this)">📝 Other</button>
+      </div>
+    </div>
+
+    <!-- Feedback list -->
+    <div style="padding:16px 24px;" id="feedbackList">
+      <div style="color:var(--text-muted);font-size:12px;">Loading feedback...</div>
+    </div>
+  </div>
+
   <!-- INACTIVITY MONITOR -->
   <div class="section-label">Inactivity Monitor</div>
 
