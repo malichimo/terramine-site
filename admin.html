@@ -1081,6 +1081,17 @@
       _ownerPropCount = ownerPropCount;
       applyFilter('all'); // populate email list with default filter
 
+
+      // ── Sync public stats to adminStats/global ───────────────────
+      try {
+        await setDoc(doc(db, 'adminStats', 'global'), {
+          totalUsers: total,
+          totalPropertiesSold: propCount,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn('adminStats sync failed:', e);
+      }
       // ── Timestamp ────────────────────────────────────────────────
       document.getElementById('lastUpdated').textContent =
         'Updated ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
