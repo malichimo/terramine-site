@@ -550,13 +550,13 @@
 
     <div class="hero-stats">
       <div class="stat">
-        <div class="stat-val">1,278+</div>
+        <div class="stat-val" id="stat-properties">1,900+</div>
         <div class="stat-lbl">Properties claimed</div>
       </div>
       <div class="stat-divider"></div>
       <div class="stat">
-        <div class="stat-val">63</div>
-        <div class="stat-lbl">Active miners</div>
+        <div class="stat-val" id="stat-members">106</div>
+        <div class="stat-lbl">Members</div>
       </div>
       <div class="stat-divider"></div>
       <div class="stat">
@@ -565,6 +565,60 @@
       </div>
     </div>
   </section>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, collection, getCountFromServer, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+      authDomain: "terramine-5cda5.firebaseapp.com",
+      projectId: "terramine-5cda5",
+      storageBucket: "terramine-5cda5.appspot.com",
+      messagingSenderId: "183143680304",
+      appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+    };
+
+    function formatStat(n) {
+      if (n >= 1000) return n.toLocaleString() + '+';
+      return n.toString();
+    }
+
+    async function loadStats() {
+      try {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Total users
+        const usersSnap = await getCountFromServer(collection(db, 'users'));
+        const totalUsers = usersSnap.data().count;
+        document.getElementById('stat-members').textContent = formatStat(totalUsers);
+
+        // Total properties sold — reads from adminStats doc for efficiency
+        // Falls back to counting the properties collection directly
+        try {
+          const statsDoc = await getDoc(doc(db, 'adminStats', 'global'));
+          if (statsDoc.exists() && statsDoc.data().totalPropertiesSold) {
+            const props = statsDoc.data().totalPropertiesSold;
+            document.getElementById('stat-properties').textContent = formatStat(props);
+          } else {
+            const propsSnap = await getCountFromServer(collection(db, 'properties'));
+            document.getElementById('stat-properties').textContent = formatStat(propsSnap.data().count);
+          }
+        } catch {
+          const propsSnap = await getCountFromServer(collection(db, 'properties'));
+          document.getElementById('stat-properties').textContent = formatStat(propsSnap.data().count);
+        }
+
+      } catch (err) {
+        // Silently fail — fallback values already shown
+        console.warn('TerraMine stats load failed:', err);
+      }
+    }
+
+    loadStats();
+  </script>
 
   <!-- ── TAGLINE STRIP ── -->
   <div class="tagline-strip">
