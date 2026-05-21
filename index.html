@@ -568,8 +568,8 @@
 
   <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getFirestore, collection, getCountFromServer, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
@@ -590,27 +590,17 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Total users
-        const usersSnap = await getCountFromServer(collection(db, 'users'));
-        const totalUsers = usersSnap.data().count;
-        document.getElementById('stat-members').textContent = formatStat(totalUsers);
-
-        // Total properties sold — reads from adminStats doc for efficiency
-        // Falls back to counting the properties collection directly
-        try {
-          const statsDoc = await getDoc(doc(db, 'adminStats', 'global'));
-          if (statsDoc.exists() && statsDoc.data().totalPropertiesSold) {
-            const props = statsDoc.data().totalPropertiesSold;
-            document.getElementById('stat-properties').textContent = formatStat(props);
-          } else {
-            const propsSnap = await getCountFromServer(collection(db, 'properties'));
-            document.getElementById('stat-properties').textContent = formatStat(propsSnap.data().count);
+        // Read only from adminStats/global — public, no auth required
+        const statsDoc = await getDoc(doc(db, 'adminStats', 'global'));
+        if (statsDoc.exists()) {
+          const data = statsDoc.data();
+          if (data.totalUsers) {
+            document.getElementById('stat-members').textContent = formatStat(data.totalUsers);
           }
-        } catch {
-          const propsSnap = await getCountFromServer(collection(db, 'properties'));
-          document.getElementById('stat-properties').textContent = formatStat(propsSnap.data().count);
+          if (data.totalPropertiesSold) {
+            document.getElementById('stat-properties').textContent = formatStat(data.totalPropertiesSold);
+          }
         }
-
       } catch (err) {
         // Silently fail — fallback values already shown
         console.warn('TerraMine stats load failed:', err);
