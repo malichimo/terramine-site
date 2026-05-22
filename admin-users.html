@@ -513,11 +513,12 @@
           <th onclick="sortBy('totalCheckIns')">Check-ins ↕</th>
           <th onclick="sortBy('propCount')">Properties ↕</th>
           <th onclick="sortBy('lastActiveAt')">Last Active ↕</th>
+          <th onclick="sortBy('createdAt')">Account Age ↕</th>
           <th>Status</th>
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <tr><td colspan="7" style="padding:24px;color:var(--text-muted);font-size:12px;">Loading users...</td></tr>
+        <tr><td colspan="8" style="padding:24px;color:var(--text-muted);font-size:12px;">Loading users...</td></tr>
       </tbody>
     </table>
   </div>
@@ -671,7 +672,7 @@
     } catch(e) {
       console.error('loadUsers failed:', e);
       document.getElementById('userTableBody').innerHTML =
-        '<tr><td colspan="7" style="padding:24px;color:var(--red);font-size:12px;">Failed to load users — see console</td></tr>';
+        '<tr><td colspan="8" style="padding:24px;color:var(--red);font-size:12px;">Failed to load users — see console</td></tr>';
     }
   }
 
@@ -710,7 +711,7 @@
     // Sort
     filtered.sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey];
-      if (sortKey === 'lastActiveAt') {
+      if (sortKey === 'lastActiveAt' || sortKey === 'createdAt') {
         av = av ? new Date(av).getTime() : 0;
         bv = bv ? new Date(bv).getTime() : 0;
       }
@@ -734,7 +735,7 @@
   function renderTable(users) {
     if (!users.length) {
       document.getElementById('userTableBody').innerHTML =
-        '<tr><td colspan="7" style="padding:24px;color:var(--text-muted);font-size:12px;">No users match this filter.</td></tr>';
+        '<tr><td colspan="8" style="padding:24px;color:var(--text-muted);font-size:12px;">No users match this filter.</td></tr>';
       return;
     }
     document.getElementById('userTableBody').innerHTML = users.map(u => {
@@ -750,6 +751,7 @@
         <td ${ci > 500 ? 'class="td-red"' : ''}>${fmt(ci)}</td>
         <td>${u.propCount || 0}</td>
         <td class="td-muted">${timeAgo(u.lastActiveAt)}</td>
+        <td class="td-muted">${u.createdAt ? shortDate(u.createdAt) : '—'}</td>
         <td>${statusBadge}</td>
       </tr>`;
     }).join('');
