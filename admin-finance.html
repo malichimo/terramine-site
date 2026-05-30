@@ -21,6 +21,7 @@
     --blue: #4a9fd4;
     --border: rgba(200,146,42,0.15);
     --purple: #9b7fe8;
+    --orange: #e07b20;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
@@ -120,11 +121,13 @@
   }
   .stat-card.positive::before { background:var(--green); opacity:0.6; }
   .stat-card.negative::before { background:var(--red); opacity:0.6; }
+  .stat-card.liability::before { background:var(--orange); opacity:0.6; }
   .stat-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; }
   .stat-value { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--text); line-height:1; }
   .stat-value.green { color:var(--green); }
   .stat-value.red { color:var(--red); }
   .stat-value.gold { color:var(--gold-light); }
+  .stat-value.orange { color:var(--orange); }
   .stat-sub { font-size:11px; color:var(--text-muted); margin-top:6px; }
   .stat-badge { display:inline-block; font-size:10px; padding:2px 8px; border-radius:20px; margin-top:6px; font-weight:500; }
   .badge-green { background:rgba(76,175,110,0.15); color:var(--green); }
@@ -375,6 +378,16 @@
       <div class="stat-value gold" id="kpiAlltime"><div class="skeleton"></div></div>
       <div class="stat-sub">Since tracking began</div>
     </div>
+    <div class="stat-card liability">
+      <div class="stat-label">Player Earnings (Liability)</div>
+      <div class="stat-value orange" id="kpiLiability"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="kpiLiabilitySub">Unpaid usdEarnings — all users</div>
+    </div>
+    <div class="stat-card" id="kpiTrueNetCard">
+      <div class="stat-label">True Net Position</div>
+      <div class="stat-value" id="kpiTrueNet"><div class="skeleton"></div></div>
+      <div class="stat-sub">All-time gross − expenses − liability</div>
+    </div>
   </div>
 
   <!-- Revenue chart -->
@@ -575,9 +588,56 @@
     </table>
   </div>
 
-</div>
+  <!-- Player Earnings Liability -->
+  <div class="section-label">Player Earnings — Unpaid Liability</div>
+  <div class="stats-grid" style="margin-bottom:24px;">
+    <div class="stat-card liability">
+      <div class="stat-label">Total Owed to Players</div>
+      <div class="stat-value orange" id="liabTotal"><div class="skeleton"></div></div>
+      <div class="stat-sub">Sum of all usdEarnings balances</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Players with Earnings</div>
+      <div class="stat-value" id="liabUserCount"><div class="skeleton"></div></div>
+      <div class="stat-sub">Users with usdEarnings &gt; 0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg per User</div>
+      <div class="stat-value" id="liabAvg"><div class="skeleton"></div></div>
+      <div class="stat-sub">Among users with earnings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Largest Single Balance</div>
+      <div class="stat-value orange" id="liabMax"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="liabMaxUser">—</div>
+    </div>
+  </div>
 
-<!-- Login overlay -->
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      Top Player Earnings (Unpaid)
+      <span class="table-count" id="liabTableCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nickname</th>
+          <th>Email</th>
+          <th>USD Earnings</th>
+          <th>TB Balance</th>
+        </tr>
+      </thead>
+      <tbody id="liabBody">
+        <tr><td colspan="5" class="td-muted" style="padding:16px 24px;">Loading...</td></tr>
+      </tbody>
+    </table>
+    <div style="padding:12px 24px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">
+      ⚠️ These are real USD amounts shown to players in-app. They become payable obligations when USD→TB redemption launches.
+    </div>
+  </div>
+
+</div>
 <div id="loginOverlay" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:360px;text-align:center;">
     <div style="font-size:36px;margin-bottom:16px;">💰</div>
@@ -615,6 +675,8 @@
   // ── State ──────────────────────────────────────────────────────────────────
   let allRevenue = [];   // [{id, date, android, ios, iap, notes}]
   let allExpenses = [];  // [{id, name, amount, frequency, category, notes, active}]
+  let totalPlayerLiability = 0;
+  let topEarners = [];   // [{nickname, email, usdEarnings, tbBalance}]
   let currentPeriod = 'daily';
   let chartInstance = null;
   let editingRevId = null;
@@ -652,7 +714,7 @@
 
   // ── Load ───────────────────────────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([loadRevenue(), loadExpenses()]);
+    await Promise.all([loadRevenue(), loadExpenses(), loadPlayerLiability()]);
     renderAll();
   }
 
@@ -663,6 +725,27 @@
     } catch (e) {
       console.warn('Revenue load failed:', e);
       allRevenue = [];
+    }
+  }
+
+  async function loadPlayerLiability() {
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      totalPlayerLiability = users.reduce((s, u) => s + (parseFloat(u.usdEarnings) || 0), 0);
+      topEarners = users
+        .filter(u => (parseFloat(u.usdEarnings) || 0) > 0)
+        .map(u => ({
+          nickname: u.nickname || u.id.substring(0,8),
+          email: u.email || '—',
+          usdEarnings: parseFloat(u.usdEarnings) || 0,
+          tbBalance: u.tbBalance || 0,
+        }))
+        .sort((a, b) => b.usdEarnings - a.usdEarnings);
+    } catch(e) {
+      console.warn('Liability load failed:', e);
+      totalPlayerLiability = 0;
+      topEarners = [];
     }
   }
 
@@ -756,6 +839,7 @@
     renderRevenueTable();
     renderExpenseSummary();
     renderExpenseTable();
+    renderLiability();
   }
 
   function fmtUSD(n) {
@@ -770,6 +854,7 @@
     const net = currentPeriod === 'alltime' ? allTimeGross() : gross - exp;
     const alltime = allTimeGross();
     const monthly = totalMonthlyExpenses();
+    const trueNet = alltime - (totalMonthlyExpenses() * 12) - totalPlayerLiability;
 
     document.getElementById('kpiGross').textContent = fmtUSD(gross);
     document.getElementById('kpiExpenses').textContent = currentPeriod === 'alltime' ? '—' : fmtUSD(-exp);
@@ -780,6 +865,11 @@
     document.getElementById('kpiRunRate').textContent = fmtUSD(runRate()) + '/mo';
     document.getElementById('kpiBreakeven').textContent = fmtUSD(monthly) + '/mo';
     document.getElementById('kpiAlltime').textContent = fmtUSD(alltime);
+    document.getElementById('kpiLiability').textContent = fmtUSD(totalPlayerLiability);
+    document.getElementById('kpiLiabilitySub').textContent = `${topEarners.length} users with earnings`;
+    document.getElementById('kpiTrueNet').textContent = fmtUSD(trueNet);
+    document.getElementById('kpiTrueNet').className = 'stat-value' + (trueNet >= 0 ? ' green' : ' red');
+    document.getElementById('kpiTrueNetCard').className = 'stat-card' + (trueNet >= 0 ? ' positive' : ' negative');
     document.getElementById('periodLabel').textContent = {
       daily:'Today', weekly:'This Week', monthly:'Last 30 Days', alltime:'All Time'
     }[currentPeriod];
@@ -899,6 +989,30 @@
         </td>
       </tr>`;
     }).join('') : '<tr><td colspan="8" class="td-muted" style="padding:16px 24px;">No expenses yet.</td></tr>';
+  }
+
+  function renderLiability() {
+    const withEarnings = topEarners.length;
+    const avg = withEarnings > 0 ? totalPlayerLiability / withEarnings : 0;
+    const max = withEarnings > 0 ? topEarners[0] : null;
+
+    document.getElementById('liabTotal').textContent = fmtUSD(totalPlayerLiability);
+    document.getElementById('liabUserCount').textContent = withEarnings;
+    document.getElementById('liabAvg').textContent = fmtUSD(avg);
+    document.getElementById('liabMax').textContent = max ? fmtUSD(max.usdEarnings) : '$0.00';
+    document.getElementById('liabMaxUser').textContent = max ? max.nickname : '—';
+    document.getElementById('liabTableCount').textContent = `top ${Math.min(topEarners.length, 20)} of ${withEarnings}`;
+
+    const top20 = topEarners.slice(0, 20);
+    document.getElementById('liabBody').innerHTML = top20.length ? top20.map((u, i) => `
+      <tr>
+        <td class="td-muted">${i + 1}</td>
+        <td class="td-gold">${u.nickname}</td>
+        <td class="td-muted">${u.email}</td>
+        <td style="color:var(--orange);font-weight:500;">${fmtUSD(u.usdEarnings)}</td>
+        <td class="td-muted">${u.tbBalance.toLocaleString()} TB</td>
+      </tr>
+    `).join('') : '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No player earnings found.</td></tr>';
   }
 
   // ── Period toggle ─────────────────────────────────────────────────────────
