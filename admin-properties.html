@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Admin — Properties</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07;
+    --surface: #1a1208;
+    --surface2: #241a0d;
+    --gold: #c8922a;
+    --gold-light: #f0b84a;
+    --amber: #e07b20;
+    --text: #f0e6d0;
+    --text-muted: #8a7560;
+    --green: #4caf6e;
+    --red: #e05050;
+    --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* Header */
+  .header {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:20px 32px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { font-size:28px; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); letter-spacing:-0.5px; }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:16px; }
+  .admin-email { font-size:11px; color:var(--text-muted); }
+  .nav-btn {
+    background:var(--surface2); color:var(--text-muted); border:1px solid var(--border);
+    padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px;
+    cursor:pointer; text-decoration:none; display:inline-block; transition:color 0.2s, border-color 0.2s;
+  }
+  .nav-btn:hover { color:var(--gold-light); border-color:var(--gold); }
+  .logout-btn {
+    background:transparent; color:var(--text-muted); border:1px solid var(--border);
+    padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px;
+    cursor:pointer; transition:color 0.2s, border-color 0.2s;
+  }
+  .logout-btn:hover { color:var(--red); border-color:var(--red); }
+
+  /* Layout */
+  .main { padding:32px; max-width:1400px; margin:0 auto; }
+  .section-label {
+    font-family:'Syne',sans-serif; font-size:11px; font-weight:700;
+    letter-spacing:3px; text-transform:uppercase; color:var(--gold); margin:32px 0 16px;
+  }
+  .section-label:first-child { margin-top:0; }
+
+  /* Stat cards */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:8px; }
+  .stat-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:20px 24px; position:relative; overflow:hidden; transition:border-color 0.2s;
+  }
+  .stat-card:hover { border-color:rgba(200,146,42,0.35); }
+  .stat-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:var(--gold); opacity:0.4;
+  }
+  .stat-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; }
+  .stat-value { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--text); line-height:1; }
+  .stat-sub { font-size:11px; color:var(--text-muted); margin-top:6px; }
+
+  /* Mine type breakdown */
+  .mine-type-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:8px; }
+  .mine-type-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:16px 18px; text-align:center; transition:border-color 0.2s;
+  }
+  .mine-type-card:hover { border-color:rgba(200,146,42,0.3); }
+  .mine-emoji { font-size:28px; margin-bottom:8px; }
+  .mine-name { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  .mine-count { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; }
+  .mine-pct { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .count-rock { color:#9e9e9e; }
+  .count-coal { color:#78909c; }
+  .count-gold { color:var(--gold-light); }
+  .count-diamond { color:var(--blue); }
+
+  /* Table */
+  .table-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .table-header {
+    padding:16px 24px; border-bottom:1px solid var(--border);
+    font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--gold-light);
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  }
+  .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th {
+    padding:10px 20px; text-align:left; font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--surface2); cursor:pointer;
+    user-select:none; white-space:nowrap;
+  }
+  thead th:hover { color:var(--gold); }
+  tbody tr { border-bottom:1px solid rgba(200,146,42,0.06); transition:background 0.15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); cursor:pointer; }
+  tbody td { padding:11px 20px; color:var(--text); }
+  .td-muted { color:var(--text-muted); }
+  .td-gold { color:var(--gold-light); font-weight:500; }
+  .td-green { color:var(--green); }
+  .td-red { color:var(--red); }
+  .td-blue { color:var(--blue); }
+
+  /* Mine badge */
+  .mine-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 9px; border-radius:20px; font-size:10px; font-weight:500;
+  }
+  .mine-rock    { background:rgba(158,158,158,0.12); color:#bdbdbd; }
+  .mine-coal    { background:rgba(120,144,156,0.12); color:#90a4ae; }
+  .mine-gold    { background:rgba(240,184,74,0.12);  color:var(--gold-light); }
+  .mine-diamond { background:rgba(74,159,212,0.12);  color:var(--blue); }
+
+  /* Orphan badge */
+  .orphan-badge {
+    display:inline-block; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:600;
+    background:rgba(224,80,80,0.15); color:var(--red); letter-spacing:0.5px;
+  }
+
+  /* Search bar */
+  .search-bar {
+    display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;
+  }
+  .search-input {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-family:'DM Mono',monospace; font-size:12px;
+    padding:9px 14px; outline:none; flex:1; min-width:240px; transition:border-color 0.2s;
+  }
+  .search-input:focus { border-color:var(--gold); }
+  .filter-btn {
+    background:var(--surface); border:1px solid var(--border); color:var(--text-muted);
+    padding:7px 13px; border-radius:20px; font-family:'DM Mono',monospace; font-size:11px;
+    cursor:pointer; transition:all 0.15s; white-space:nowrap;
+  }
+  .filter-btn:hover, .filter-btn.active { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
+  .prop-count-label { font-size:11px; color:var(--text-muted); white-space:nowrap; margin-left:4px; }
+
+  /* Orphan cleanup section */
+  .orphan-section {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-bottom:0;
+  }
+  .orphan-header {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; flex-wrap:wrap;
+  }
+  .orphan-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--gold-light); }
+  .orphan-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .run-btn {
+    background:var(--amber); color:var(--bg); border:none; padding:10px 22px; border-radius:6px;
+    font-family:'DM Mono',monospace; font-size:12px; font-weight:500; cursor:pointer; transition:background 0.2s; white-space:nowrap;
+  }
+  .run-btn:hover { background:var(--gold-light); }
+  .run-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .delete-btn {
+    background:#c03030; color:white; border:none; padding:10px 22px; border-radius:6px;
+    font-family:'DM Mono',monospace; font-size:12px; font-weight:500; cursor:pointer; transition:background 0.2s;
+    display:none; white-space:nowrap;
+  }
+  .delete-btn:hover { background:#e04040; }
+  .delete-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .orphan-status {
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    padding:11px 16px; font-size:12px; color:var(--text-muted); margin-bottom:14px;
+    display:flex; align-items:center; gap:8px; min-height:42px;
+  }
+  .orphan-toolbar {
+    display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;
+  }
+  .sel-btn {
+    background:transparent; border:1px solid var(--border); color:var(--text-muted);
+    padding:5px 12px; border-radius:6px; font-family:'DM Mono',monospace; font-size:10px; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .sel-btn:hover { border-color:var(--gold); color:var(--text); }
+  .orphan-count-label { font-size:12px; color:var(--text-muted); margin-right:auto; }
+  .delete-log {
+    background:rgba(0,0,0,0.25); border-radius:8px; padding:12px; font-size:11px;
+    color:var(--text-muted); margin-top:12px; max-height:160px; overflow-y:auto; display:none;
+  }
+  .log-ok  { color:var(--green); }
+  .log-err { color:var(--red); }
+  .log-head { color:var(--gold); font-weight:600; margin-bottom:4px; }
+  .log-done { color:var(--gold); font-weight:600; border-top:1px solid var(--border); padding-top:8px; margin-top:8px; }
+
+  /* Skeleton */
+  .skeleton {
+    background:linear-gradient(90deg,var(--surface2) 25%,var(--surface) 50%,var(--surface2) 75%);
+    background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:4px; height:32px; width:55%;
+  }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* Login overlay */
+  .login-overlay {
+    position:fixed; inset:0; background:rgba(13,10,7,0.97);
+    display:flex; align-items:center; justify-content:center; z-index:999;
+  }
+  .login-box {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:40px; width:340px;
+  }
+  .login-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); margin-bottom:24px; }
+  .login-input {
+    width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-family:'DM Mono',monospace; font-size:13px; padding:12px 14px;
+    outline:none; margin-bottom:12px; transition:border-color 0.2s;
+  }
+  .login-input:focus { border-color:var(--gold); }
+
+  @media (max-width:768px) {
+    .main { padding:16px; }
+    .mine-type-grid { grid-template-columns:repeat(2,1fr); }
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-title">⛏️ TerraMine Admin</div>
+    <input class="login-input" id="loginEmail" type="email" placeholder="Admin email">
+    <input class="login-input" id="loginPass" type="password" placeholder="Password">
+    <button onclick="doLogin()" style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;">Sign In</button>
+    <div id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;display:none;"></div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">⛏️</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Property Management</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="admin.html" class="nav-btn">← Dashboard</a>
+    <a href="admin-users.html" class="nav-btn">👥 Users</a>
+    <a href="admin-finance.html" class="nav-btn">💰 Finance</a>
+    <button class="logout-btn" id="logoutBtn" onclick="doLogout()" style="display:none;">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- OVERVIEW STATS -->
+  <div class="section-label">Overview</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Properties</div>
+      <div class="stat-value" id="statTotal"><div class="skeleton"></div></div>
+      <div class="stat-sub">All purchased mines</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unique Owners</div>
+      <div class="stat-value" id="statOwners"><div class="skeleton"></div></div>
+      <div class="stat-sub">Players with ≥1 mine</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Per Owner</div>
+      <div class="stat-value" id="statAvg"><div class="skeleton"></div></div>
+      <div class="stat-sub">Mines per player</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Orphaned</div>
+      <div class="stat-value" id="statOrphans" style="color:var(--red);"><div class="skeleton"></div></div>
+      <div class="stat-sub">No matching user</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Purchased This Week</div>
+      <div class="stat-value" id="statWeek"><div class="skeleton"></div></div>
+      <div class="stat-sub">Last 7 days</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Purchased This Month</div>
+      <div class="stat-value" id="statMonth"><div class="skeleton"></div></div>
+      <div class="stat-sub">Last 30 days</div>
+    </div>
+  </div>
+
+  <!-- MINE TYPE BREAKDOWN -->
+  <div class="section-label">Mine Type Breakdown</div>
+  <div class="mine-type-grid">
+    <div class="mine-type-card">
+      <div class="mine-emoji">🪨</div>
+      <div class="mine-name">Rock</div>
+      <div class="mine-count count-rock" id="countRock"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
+      <div class="mine-pct" id="pctRock">—</div>
+    </div>
+    <div class="mine-type-card">
+      <div class="mine-emoji">⚫</div>
+      <div class="mine-name">Coal</div>
+      <div class="mine-count count-coal" id="countCoal"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
+      <div class="mine-pct" id="pctCoal">—</div>
+    </div>
+    <div class="mine-type-card">
+      <div class="mine-emoji">🟡</div>
+      <div class="mine-name">Gold</div>
+      <div class="mine-count count-gold" id="countGold"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
+      <div class="mine-pct" id="pctGold">—</div>
+    </div>
+    <div class="mine-type-card">
+      <div class="mine-emoji">💎</div>
+      <div class="mine-name">Diamond</div>
+      <div class="mine-count count-diamond" id="countDiamond"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
+      <div class="mine-pct" id="pctDiamond">—</div>
+    </div>
+  </div>
+
+  <!-- ALL PROPERTIES TABLE -->
+  <div class="section-label">All Properties</div>
+
+  <div class="search-bar">
+    <input class="search-input" id="searchInput" type="text" placeholder="Search by property ID, owner UID, or mine type…" oninput="applyFilters()">
+    <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-f="rock" onclick="setFilter('rock',this)">🪨 Rock</button>
+    <button class="filter-btn" data-f="coal" onclick="setFilter('coal',this)">⚫ Coal</button>
+    <button class="filter-btn" data-f="gold" onclick="setFilter('gold',this)">🟡 Gold</button>
+    <button class="filter-btn" data-f="diamond" onclick="setFilter('diamond',this)">💎 Diamond</button>
+    <button class="filter-btn" data-f="orphan" onclick="setFilter('orphan',this)">🔴 Orphaned</button>
+    <span class="prop-count-label" id="propCountLabel">Loading…</span>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      Properties
+      <span class="table-count" id="tableCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('id')">Property ID ↕</th>
+          <th onclick="sortBy('mineType')">Mine ↕</th>
+          <th onclick="sortBy('ownerId')">Owner UID ↕</th>
+          <th onclick="sortBy('ownerNickname')">Owner ↕</th>
+          <th onclick="sortBy('purchasedAt')">Purchased ↕</th>
+          <th onclick="sortBy('lastActivityAt')">Last Activity ↕</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="propTableBody">
+        <tr><td colspan="7" style="padding:24px;color:var(--text-muted);font-size:12px;">Loading properties…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ORPHAN CLEANUP TOOL -->
+  <div class="section-label">Orphan Cleanup</div>
+  <div class="orphan-section">
+    <div class="orphan-header">
+      <div>
+        <div class="orphan-title">🔍 Orphaned Property Cleanup</div>
+        <div class="orphan-sub">Properties whose ownerId has no matching user document — blocks other players from purchasing those grid squares.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="run-btn" id="scanBtn" onclick="scanOrphans()">⚙ Scan for Orphans</button>
+        <button class="delete-btn" id="deleteBtn" onclick="deleteSelectedOrphans()">🗑 Delete Selected</button>
+      </div>
+    </div>
+
+    <div class="orphan-status" id="orphanStatus">
+      <span id="orphanStatusIcon">○</span>
+      <span id="orphanStatusText">Click "Scan for Orphans" to find properties with no matching user.</span>
+    </div>
+
+    <div id="orphanResults" style="display:none;">
+      <div class="orphan-toolbar">
+        <span class="orphan-count-label">
+          <span id="orphanCount" style="color:var(--red);font-weight:700;">0</span>
+          orphaned propert<span id="orphanPlural">ies</span> found
+          <span id="orphanUidCount" style="color:var(--text-muted);font-size:11px;margin-left:6px;"></span>
+        </span>
+        <button class="sel-btn" onclick="selectAllOrphans(true)">Select All</button>
+        <button class="sel-btn" onclick="selectAllOrphans(false)">Deselect All</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);cursor:pointer;">
+          <input type="checkbox" id="groupToggle" onchange="renderOrphanTable()" checked style="accent-color:var(--gold);"> Group by UID
+        </label>
+      </div>
+
+      <div class="table-card" style="max-height:420px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px;">✓</th>
+              <th>Property ID</th>
+              <th>Owner UID</th>
+              <th>Mine</th>
+              <th>Purchased</th>
+              <th>Lat / Lng</th>
+            </tr>
+          </thead>
+          <tbody id="orphanTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="delete-log" id="deleteLog"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import {
+    getFirestore, collection, getDocs, doc, deleteDoc, getDoc
+  } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      loadAll();
+    }
+  });
+
+  window.doLogout = async () => {
+    await signOut(auth);
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('adminEmail').textContent = '';
+  };
+
+  window.doLogin = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch(e) {
+      errEl.textContent = 'Invalid email or password.';
+      errEl.style.display = 'block';
+    }
+  };
+  document.getElementById('loginPass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.doLogin();
+  });
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  function fmt(n) {
+    if (n == null) return '—';
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+    return Number(n).toLocaleString();
+  }
+  function shortDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
+  }
+  function timeAgo(iso) {
+    if (!iso) return '—';
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return Math.floor(diff) + 's ago';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    if (diff < 2592000) return Math.floor(diff/86400) + 'd ago';
+    return Math.floor(diff/2592000) + 'mo ago';
+  }
+  function truncate(s, n) { if (!s) return '—'; return s.length > n ? s.substring(0,n) + '…' : s; }
+  function mineEmoji(t) { return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[t] || '⛏️'; }
+  function mineBadge(t) {
+    const cls = { rock:'mine-rock', coal:'mine-coal', gold:'mine-gold', diamond:'mine-diamond' }[t] || 'mine-rock';
+    return `<span class="mine-badge ${cls}">${mineEmoji(t)} ${t || '—'}</span>`;
+  }
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let allProps = [];
+  let userMap  = {}; // uid → { nickname, email }
+  let userIds  = new Set();
+  let activeFilter = 'all';
+  let sortKey  = 'purchasedAt';
+  let sortDir  = -1;
+  let orphanData = [];
+
+  // ── Load ────────────────────────────────────────────────────────────────────
+  async function loadAll() {
+    try {
+      const [propsSnap, usersSnap] = await Promise.all([
+        getDocs(collection(db, 'properties')),
+        getDocs(collection(db, 'users'))
+      ]);
+
+      // Build user lookup
+      userMap = {};
+      userIds = new Set();
+      usersSnap.docs.forEach(d => {
+        userIds.add(d.id);
+        userMap[d.id] = { nickname: d.data().nickname || null, email: d.data().email || null };
+      });
+
+      // Build property list
+      const now = Date.now();
+      const week7  = now - 7  * 86400000;
+      const month30 = now - 30 * 86400000;
+
+      let totalByType = { rock:0, coal:0, gold:0, diamond:0 };
+      let weekCount = 0, monthCount = 0;
+      let orphanCount = 0;
+      const ownerSet = new Set();
+
+      allProps = propsSnap.docs.map(d => {
+        const data = d.data();
+        const isOrphan = data.ownerId && !userIds.has(data.ownerId);
+        const purchasedMs = data.purchasedAt ? new Date(data.purchasedAt).getTime() : 0;
+
+        if (data.mineType) totalByType[data.mineType] = (totalByType[data.mineType] || 0) + 1;
+        if (data.ownerId) ownerSet.add(data.ownerId);
+        if (isOrphan) orphanCount++;
+        if (purchasedMs > week7)   weekCount++;
+        if (purchasedMs > month30) monthCount++;
+
+        const user = userMap[data.ownerId] || {};
+        return {
+          id: d.id,
+          ownerId: data.ownerId || '',
+          ownerNickname: user.nickname || user.email?.split('@')[0] || null,
+          mineType: data.mineType || '',
+          purchasedAt: data.purchasedAt || '',
+          lastActivityAt: data.lastActivityAt || '',
+          centerLat: data.centerLat,
+          centerLng: data.centerLng,
+          isOrphan,
+        };
+      });
+
+      // Stat cards
+      const total = allProps.length;
+      document.getElementById('statTotal').textContent  = fmt(total);
+      document.getElementById('statOwners').textContent = fmt(ownerSet.size);
+      document.getElementById('statAvg').textContent    = ownerSet.size ? (total / ownerSet.size).toFixed(1) : '—';
+      document.getElementById('statOrphans').textContent = orphanCount || '0';
+      document.getElementById('statWeek').textContent   = fmt(weekCount);
+      document.getElementById('statMonth').textContent  = fmt(monthCount);
+
+      // Mine type breakdown
+      ['rock','coal','gold','diamond'].forEach(t => {
+        const c = totalByType[t] || 0;
+        document.getElementById('count' + t.charAt(0).toUpperCase() + t.slice(1)).textContent = fmt(c);
+        document.getElementById('pct'   + t.charAt(0).toUpperCase() + t.slice(1)).textContent =
+          total ? ((c / total) * 100).toFixed(1) + '% of total' : '—';
+      });
+
+      applyFilters();
+    } catch(e) {
+      console.error('loadAll failed:', e);
+      document.getElementById('propTableBody').innerHTML =
+        '<tr><td colspan="7" style="padding:24px;color:var(--red);font-size:12px;">Failed to load — see console</td></tr>';
+    }
+  }
+
+  // ── Filter / Sort ───────────────────────────────────────────────────────────
+  window.setFilter = (f, btn) => {
+    activeFilter = f;
+    document.querySelectorAll('[data-f]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  };
+
+  window.applyFilters = () => {
+    const q = (document.getElementById('searchInput').value || '').toLowerCase();
+
+    let filtered = allProps.filter(p => {
+      if (activeFilter === 'orphan' && !p.isOrphan) return false;
+      if (['rock','coal','gold','diamond'].includes(activeFilter) && p.mineType !== activeFilter) return false;
+      if (q) {
+        if (!p.id.toLowerCase().includes(q) &&
+            !p.ownerId.toLowerCase().includes(q) &&
+            !(p.mineType || '').toLowerCase().includes(q) &&
+            !(p.ownerNickname || '').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === 'purchasedAt' || sortKey === 'lastActivityAt') {
+        av = av ? new Date(av).getTime() : 0;
+        bv = bv ? new Date(bv).getTime() : 0;
+      }
+      av = av ?? ''; bv = bv ?? '';
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      return av < bv ? -sortDir : av > bv ? sortDir : 0;
+    });
+
+    document.getElementById('tableCount').textContent = filtered.length + ' properties';
+    document.getElementById('propCountLabel').textContent = filtered.length + ' of ' + allProps.length + ' properties';
+    renderTable(filtered);
+  };
+
+  window.sortBy = (key) => {
+    if (sortKey === key) sortDir *= -1;
+    else { sortKey = key; sortDir = -1; }
+    applyFilters();
+  };
+
+  function renderTable(props) {
+    if (!props.length) {
+      document.getElementById('propTableBody').innerHTML =
+        '<tr><td colspan="7" style="padding:24px;color:var(--text-muted);font-size:12px;">No properties match this filter.</td></tr>';
+      return;
+    }
+    document.getElementById('propTableBody').innerHTML = props.map(p => `
+      <tr>
+        <td class="td-muted" style="font-size:11px;">${truncate(p.id, 22)}</td>
+        <td>${mineBadge(p.mineType)}</td>
+        <td class="td-muted" style="font-size:10px;">${truncate(p.ownerId, 20)}</td>
+        <td class="td-gold">${truncate(p.ownerNickname || '(deleted)', 18)}</td>
+        <td class="td-muted">${shortDate(p.purchasedAt)}</td>
+        <td class="td-muted">${timeAgo(p.lastActivityAt)}</td>
+        <td>${p.isOrphan ? '<span class="orphan-badge">ORPHAN</span>' : '<span style="color:var(--green);font-size:11px;">✓ OK</span>'}</td>
+      </tr>`).join('');
+  }
+
+  // ── Orphan Cleanup ──────────────────────────────────────────────────────────
+  window.scanOrphans = async () => {
+    const btn = document.getElementById('scanBtn');
+    const statusIcon = document.getElementById('orphanStatusIcon');
+    const statusText = document.getElementById('orphanStatusText');
+    const results    = document.getElementById('orphanResults');
+    const deleteLog  = document.getElementById('deleteLog');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Scanning…';
+    statusIcon.textContent = '⏳';
+    statusText.textContent = 'Loading properties and users…';
+    results.style.display = 'none';
+    deleteLog.style.display = 'none';
+    orphanData = [];
+
+    try {
+      const [propsSnap, usersSnap] = await Promise.all([
+        getDocs(collection(db, 'properties')),
+        getDocs(collection(db, 'users'))
+      ]);
+      const uids = new Set(usersSnap.docs.map(d => d.id));
+
+      orphanData = propsSnap.docs
+        .filter(d => { const o = d.data().ownerId; return o && !uids.has(o); })
+        .map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ownerId: data.ownerId || '—',
+            mineType: data.mineType || '—',
+            purchasedAt: data.purchasedAt ? data.purchasedAt.slice(0,10) : '—',
+            centerLat: typeof data.centerLat === 'number' ? data.centerLat.toFixed(4) : '—',
+            centerLng: typeof data.centerLng === 'number' ? data.centerLng.toFixed(4) : '—',
+          };
+        });
+
+      const uidSet = new Set(orphanData.map(o => o.ownerId));
+      document.getElementById('orphanCount').textContent = orphanData.length;
+      document.getElementById('orphanPlural').textContent = orphanData.length === 1 ? 'y' : 'ies';
+      document.getElementById('orphanUidCount').textContent =
+        `across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}`;
+
+      if (orphanData.length === 0) {
+        statusIcon.textContent = '✅';
+        statusText.textContent = 'No orphaned properties found — database is clean.';
+        results.style.display = 'none';
+      } else {
+        statusIcon.textContent = '⚠️';
+        statusText.textContent =
+          `${orphanData.length} orphaned propert${orphanData.length !== 1 ? 'ies' : 'y'} found across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}.`;
+        results.style.display = 'block';
+        renderOrphanTable();
+      }
+    } catch(e) {
+      statusIcon.textContent = '❌';
+      statusText.textContent = 'Scan failed — ' + e.message;
+      console.error(e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚙ Scan for Orphans';
+    }
+  };
+
+  window.renderOrphanTable = () => {
+    const body    = document.getElementById('orphanTableBody');
+    const grouped = document.getElementById('groupToggle').checked;
+    body.innerHTML = '';
+
+    const rows = [...orphanData];
+    if (grouped) rows.sort((a,b) => a.ownerId.localeCompare(b.ownerId));
+
+    let lastUid = null;
+    rows.forEach((o, i) => {
+      if (grouped && o.ownerId !== lastUid) {
+        lastUid = o.ownerId;
+        const groupCount = rows.filter(r => r.ownerId === o.ownerId).length;
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'background:rgba(200,146,42,0.05);';
+        tr.innerHTML = `<td colspan="6" style="padding:8px 20px;color:var(--gold);font-size:10px;font-weight:700;letter-spacing:0.5px;border-top:1px solid var(--border);">
+          UID: ${o.ownerId}
+          <span style="color:var(--text-muted);font-weight:400;margin-left:8px;">(${groupCount} propert${groupCount !== 1 ? 'ies' : 'y'})</span>
+          <button onclick="selectByUid('${o.ownerId}',true)" style="margin-left:10px;background:transparent;border:1px solid rgba(200,146,42,0.3);color:var(--gold);border-radius:4px;padding:2px 8px;font-size:9px;cursor:pointer;">Select all</button>
+          <button onclick="selectByUid('${o.ownerId}',false)" style="margin-left:4px;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:4px;padding:2px 8px;font-size:9px;cursor:pointer;">Deselect</button>
+        </td>`;
+        body.appendChild(tr);
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:9px 20px;"><input type="checkbox" id="ochk-${i}" data-idx="${i}" onchange="updateDeleteBtn()" style="cursor:pointer;accent-color:var(--red);"></td>
+        <td class="td-muted" style="font-size:11px;">${o.id}</td>
+        <td class="td-muted" style="font-size:10px;color:var(--red);">${grouped ? '↳' : o.ownerId}</td>
+        <td>${mineBadge(o.mineType)}</td>
+        <td class="td-muted">${o.purchasedAt}</td>
+        <td class="td-muted">${o.centerLat}, ${o.centerLng}</td>`;
+      body.appendChild(tr);
+    });
+    updateDeleteBtn();
+  };
+
+  window.selectAllOrphans = (checked) => {
+    document.querySelectorAll('[id^="ochk-"]').forEach(cb => cb.checked = checked);
+    updateDeleteBtn();
+  };
+
+  window.selectByUid = (uid, checked) => {
+    orphanData.forEach((o,i) => {
+      if (o.ownerId === uid) {
+        const cb = document.getElementById(`ochk-${i}`);
+        if (cb) cb.checked = checked;
+      }
+    });
+    updateDeleteBtn();
+  };
+
+  window.updateDeleteBtn = () => {
+    const n = document.querySelectorAll('[id^="ochk-"]:checked').length;
+    const btn = document.getElementById('deleteBtn');
+    btn.style.display = n > 0 ? 'inline-block' : 'none';
+    btn.textContent = `🗑 Delete ${n} Selected`;
+  };
+
+  window.deleteSelectedOrphans = async () => {
+    const checked = [...document.querySelectorAll('[id^="ochk-"]:checked')];
+    if (!checked.length) return;
+    if (!confirm(`⚠️ Permanently delete ${checked.length} orphaned propert${checked.length !== 1 ? 'ies' : 'y'} from Firestore?\n\nThis also deletes matching propertyDetails documents.\nThis cannot be undone.`)) return;
+
+    const log = document.getElementById('deleteLog');
+    log.style.display = 'block';
+    log.innerHTML = `<div class="log-head">Deleting ${checked.length} propert${checked.length !== 1 ? 'ies' : 'y'}…</div>`;
+
+    const deleteBtn = document.getElementById('deleteBtn');
+    deleteBtn.disabled = true;
+
+    let ok = 0, fail = 0;
+    const deletedIdxs = new Set();
+
+    for (const cb of checked) {
+      const idx = parseInt(cb.dataset.idx);
+      const o = orphanData[idx];
+      try {
+        await deleteDoc(doc(db, 'properties', o.id));
+        try { await deleteDoc(doc(db, 'propertyDetails', o.id)); } catch {}
+        log.innerHTML += `<div class="log-ok">✅ ${o.id} (${o.mineType}, UID: ${o.ownerId.slice(0,8)}…)</div>`;
+        document.getElementById(`ochk-${idx}`)?.closest('tr')?.remove();
+        deletedIdxs.add(idx);
+        ok++;
+      } catch(e) {
+        log.innerHTML += `<div class="log-err">❌ ${o.id}: ${e.message}</div>`;
+        fail++;
+      }
+      log.scrollTop = log.scrollHeight;
+    }
+
+    orphanData = orphanData.filter((_,i) => !deletedIdxs.has(i));
+    document.getElementById('orphanCount').textContent = orphanData.length;
+
+    log.innerHTML += `<div class="log-done">Done — ${ok} deleted${fail > 0 ? `, ${fail} failed` : ''}. ${orphanData.length} orphan${orphanData.length !== 1 ? 's' : ''} remaining.</div>`;
+    log.scrollTop = log.scrollHeight;
+
+    const statusIcon = document.getElementById('orphanStatusIcon');
+    const statusText = document.getElementById('orphanStatusText');
+    statusIcon.textContent = orphanData.length === 0 ? '✅' : '⚠️';
+    statusText.textContent = orphanData.length === 0
+      ? 'All orphans deleted — database is clean.'
+      : `${orphanData.length} orphaned propert${orphanData.length !== 1 ? 'ies' : 'y'} remaining.`;
+
+    deleteBtn.disabled = false;
+    updateDeleteBtn();
+
+    // Refresh main stats
+    await loadAll();
+  };
+
+  // Expose mineBadge for orphan table
+  window.mineBadge = function(t) {
+    const cls = { rock:'mine-rock', coal:'mine-coal', gold:'mine-gold', diamond:'mine-diamond' }[t] || 'mine-rock';
+    return `<span class="mine-badge ${cls}">${mineEmoji(t)} ${t || '—'}</span>`;
+  };
+  function mineEmoji(t) { return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[t] || '⛏️'; }
+</script>
+</body>
+</html>
