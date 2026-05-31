@@ -818,12 +818,8 @@
     await loadAll();
   };
 
-  // Expose mineBadge for orphan table
-  window.mineBadge = function(t) {
-    const cls = { rock:'mine-rock', coal:'mine-coal', gold:'mine-gold', diamond:'mine-diamond' }[t] || 'mine-rock';
-    return `<span class="mine-badge ${cls}">${mineEmoji(t)} ${t || '—'}</span>`;
-  };
-  function mineEmoji(t) { return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[t] || '⛏️'; }
+  // Expose mineBadge for orphan table (mineEmoji already defined above)
+  window.mineBadge = mineBadge;
 </script>
 </body>
 </html>
