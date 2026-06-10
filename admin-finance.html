@@ -415,17 +415,17 @@
         </tbody>
       </table>
     </div>
-    <div class="table-card">
-      <div class="table-header">AdMob 28-Day Snapshot <span class="table-count">from project docs</span></div>
+    <div class="table-card" id="liabilityDeltaCard">
+      <div class="table-header">Daily Liability Change <span class="table-count" id="liabDeltaDate">—</span></div>
       <table>
-        <thead><tr><th>Platform</th><th>Revenue</th><th>Avg eCPM</th></tr></thead>
-        <tbody>
-          <tr><td>Android</td><td class="td-green">$20.99</td><td class="td-muted">$6.22</td></tr>
-          <tr><td>iOS</td><td class="td-green">$13.62</td><td class="td-muted">$7.74</td></tr>
-          <tr><td class="td-gold">Combined</td><td class="td-gold">$34.61</td><td class="td-muted">—</td></tr>
+        <thead><tr><th>Metric</th><th>Value</th><th>Status</th></tr></thead>
+        <tbody id="liabDeltaBody">
+          <tr><td colspan="3" class="td-muted" style="padding:16px 24px;">Loading...</td></tr>
         </tbody>
       </table>
-      <div style="padding:12px 24px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">⚠️ Ad serving limited since May 29 — traffic review in progress. Auto-resolves in 1–4 weeks.</div>
+      <div style="padding:12px 24px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">
+        📊 Compares today's player liability against yesterday's snapshot. Green = liability shrinking or revenue exceeding growth. Red = liability growing faster than revenue.
+      </div>
     </div>
   </div>
 
@@ -832,6 +832,108 @@
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  // ── Daily liability snapshot (localStorage) ─────────────────────────────
+  // Stores liability total keyed by date so we can show day-over-day change.
+  const LIAB_SNAPSHOT_KEY = 'terramine_liab_snapshot';
+
+  function saveLiabilitySnapshot(total) {
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const existing = JSON.parse(localStorage.getItem(LIAB_SNAPSHOT_KEY) || '{}');
+      // Keep last 7 days only
+      const keys = Object.keys(existing).sort();
+      if (keys.length >= 7) delete existing[keys[0]];
+      existing[today] = total;
+      localStorage.setItem(LIAB_SNAPSHOT_KEY, JSON.stringify(existing));
+    } catch(e) { /* localStorage not available */ }
+  }
+
+  function getYesterdayLiability() {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const key = yesterday.toISOString().slice(0, 10);
+      const stored = JSON.parse(localStorage.getItem(LIAB_SNAPSHOT_KEY) || '{}');
+      return stored[key] !== undefined ? stored[key] : null;
+    } catch(e) { return null; }
+  }
+
+  function renderLiabilityDelta() {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayRevenue = grossForPeriod('daily');
+    const yesterdayLiab = getYesterdayLiability();
+    const delta = yesterdayLiab !== null ? totalPlayerLiability - yesterdayLiab : null;
+
+    document.getElementById('liabDeltaDate').textContent = today;
+
+    const rows = [];
+
+    // Today's total liability
+    rows.push(`<tr>
+      <td>Today's Total Liability</td>
+      <td class="td-gold">${fmtUSD(totalPlayerLiability)}</td>
+      <td><span class="stat-badge badge-amber">live</span></td>
+    </tr>`);
+
+    // Yesterday's liability
+    if (yesterdayLiab !== null) {
+      rows.push(`<tr>
+        <td>Yesterday's Liability</td>
+        <td class="td-muted">${fmtUSD(yesterdayLiab)}</td>
+        <td><span class="stat-badge badge-gray">snapshot</span></td>
+      </tr>`);
+    }
+
+    // Daily change in liability
+    if (delta !== null) {
+      const deltaPositive = delta > 0;
+      const deltaClass = deltaPositive ? 'td-red' : 'td-green';
+      const badge = deltaPositive
+        ? '<span class="stat-badge badge-red">↑ growing</span>'
+        : delta < 0
+          ? '<span class="stat-badge badge-green">↓ shrinking</span>'
+          : '<span class="stat-badge badge-gray">unchanged</span>';
+      rows.push(`<tr>
+        <td>Liability Change (24h)</td>
+        <td class="${deltaClass}">${delta >= 0 ? '+' : ''}${fmtUSD(delta)}</td>
+        <td>${badge}</td>
+      </tr>`);
+    } else {
+      rows.push(`<tr>
+        <td>Liability Change (24h)</td>
+        <td class="td-muted">—</td>
+        <td><span class="stat-badge badge-gray">no prior snapshot</span></td>
+      </tr>`);
+    }
+
+    // Today's revenue vs liability growth
+    rows.push(`<tr>
+      <td>Today's Revenue</td>
+      <td class="td-green">${fmtUSD(todayRevenue)}</td>
+      <td><span class="stat-badge badge-blue">logged</span></td>
+    </tr>`);
+
+    // Coverage check — is today's revenue covering today's liability growth?
+    if (delta !== null) {
+      const covered = todayRevenue >= delta;
+      const surplus = todayRevenue - delta;
+      const coverClass = covered ? 'td-green' : 'td-red';
+      const coverBadge = covered
+        ? '<span class="stat-badge badge-green">✓ covered</span>'
+        : '<span class="stat-badge badge-red">✗ shortfall</span>';
+      rows.push(`<tr>
+        <td>Revenue vs Liability Growth</td>
+        <td class="${coverClass}">${surplus >= 0 ? '+' : ''}${fmtUSD(surplus)}</td>
+        <td>${coverBadge}</td>
+      </tr>`);
+    }
+
+    document.getElementById('liabDeltaBody').innerHTML = rows.join('');
+
+    // Save today's snapshot for tomorrow's comparison
+    saveLiabilitySnapshot(totalPlayerLiability);
+  }
+
   function renderAll() {
     renderKPIs();
     renderChart();
@@ -840,6 +942,7 @@
     renderExpenseSummary();
     renderExpenseTable();
     renderLiability();
+    renderLiabilityDelta();
   }
 
   function fmtUSD(n) {
