@@ -339,7 +339,8 @@
 
   <!-- Period selector -->
   <div class="period-tabs">
-    <button class="period-tab active" onclick="setPeriod('daily',this)">Today</button>
+    <button class="period-tab" onclick="setPeriod('daily',this)">Today</button>
+    <button class="period-tab active" onclick="setPeriod('yesterday',this)">Yesterday</button>
     <button class="period-tab" onclick="setPeriod('weekly',this)">This Week</button>
     <button class="period-tab" onclick="setPeriod('monthly',this)">Last 30 Days</button>
     <button class="period-tab" onclick="setPeriod('alltime',this)">All Time</button>
@@ -677,7 +678,7 @@
   let allExpenses = [];  // [{id, name, amount, frequency, category, notes, active}]
   let totalPlayerLiability = 0;
   let topEarners = [];   // [{nickname, email, usdEarnings, tbBalance}]
-  let currentPeriod = 'daily';
+  let currentPeriod = 'yesterday';
   let chartInstance = null;
   let editingRevId = null;
 
@@ -783,6 +784,11 @@
     const today = new Date();
     const end = today.toISOString().slice(0,10);
     if (period === 'daily') return { start: end, end };
+    if (period === 'yesterday') {
+      const y = new Date(today); y.setDate(y.getDate() - 1);
+      const yStr = y.toISOString().slice(0,10);
+      return { start: yStr, end: yStr };
+    }
     if (period === 'weekly') {
       const s = new Date(today); s.setDate(s.getDate() - 6);
       return { start: s.toISOString().slice(0,10), end };
@@ -817,6 +823,7 @@
   function expensesForPeriod(period) {
     const monthly = totalMonthlyExpenses();
     if (period === 'daily') return monthly / 30;
+    if (period === 'yesterday') return monthly / 30;
     if (period === 'weekly') return monthly / 30 * 7;
     if (period === 'monthly') return monthly;
     return 0; // alltime — don't prorate
@@ -974,7 +981,7 @@
     document.getElementById('kpiTrueNet').className = 'stat-value' + (trueNet >= 0 ? ' green' : ' red');
     document.getElementById('kpiTrueNetCard').className = 'stat-card' + (trueNet >= 0 ? ' positive' : ' negative');
     document.getElementById('periodLabel').textContent = {
-      daily:'Today', weekly:'This Week', monthly:'Last 30 Days', alltime:'All Time'
+      daily:'Today', yesterday:'Yesterday', weekly:'This Week', monthly:'Last 30 Days', alltime:'All Time'
     }[currentPeriod];
   }
 
