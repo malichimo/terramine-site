@@ -579,7 +579,7 @@
     <div class="stat-card">
       <div class="stat-label">Total USD Earned</div>
       <div class="stat-value" id="totalUSD"><div class="skeleton"></div></div>
-      <div class="stat-sub">Accumulated all-time</div>
+      <div class="stat-sub">Balance + redeemed TB + withdrawn</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Properties Sold</div>
@@ -990,7 +990,7 @@
         if (last > day7) active7++;
         if (last > day30) active30++;
         totalTB += (u.tbBalance || 0);
-        totalUSD += (u.usdEarnings || 0);
+        totalUSD += (u.usdEarnings || 0) + (u.usdEarnedFromTB || 0) + (u.usdWithdrawn || 0);
         totalCI += (u.totalCheckIns || 0);
       });
 
