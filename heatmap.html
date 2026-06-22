@@ -293,8 +293,8 @@
         allProperties = snap.docs.map(d => {
           const data = d.data();
           return {
-            lat:  data.latitude  ?? data.lat  ?? null,
-            lng:  data.longitude ?? data.lng  ?? null,
+            lat:  data.centerLat ?? data.latitude  ?? data.lat  ?? null,
+            lng:  data.centerLng ?? data.longitude ?? data.lng  ?? null,
             type: data.mineType  ?? 'rock',
           };
         }).filter(p => p.lat !== null && p.lng !== null);
