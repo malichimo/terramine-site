@@ -213,7 +213,7 @@
         this._canvas.style.left   = Math.min(ne.x, sw.x) + 'px';
         this._canvas.style.top    = Math.min(ne.y, sw.y) + 'px';
 
-        const ctx   = this._canvas.getContext('2d');
+        const ctx   = this._canvas.getContext('2d', { willReadFrequently: true });
         const zoom  = this._map.getZoom();
         const r     = Math.max(8, Math.min(60, zoom * 3.5));
 
