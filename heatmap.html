@@ -158,7 +158,7 @@
       messagingSenderId: "183143680304",
       appId:             "1:183143680304:web:16bcd69f0c33d690e8e0f5"
     });
-    const db = firebase.firestore();
+    window.db = firebase.firestore();
 
     // ── State ──────────────────────────────────────────────────────────────
     let map, canvasOverlay;
@@ -289,7 +289,7 @@
 
       // Load data
       try {
-        const snap = await db.collection('properties').get();
+        const snap = await window.db.collection('properties').get();
         allProperties = snap.docs.map(d => {
           const data = d.data();
           return {
