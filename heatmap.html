@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Map — TerraMine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+      authDomain: "terramine-5cda5.firebaseapp.com",
+      projectId: "terramine-5cda5",
+      storageBucket: "terramine-5cda5.firebasestorage.app",
+      messagingSenderId: "183143680304",
+      appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+    };
+      apiKey: "AIzaSyExample",
+      authDomain: "terramine-5cda5.firebaseapp.com",
+      projectId: "terramine-5cda5",
+      storageBucket: "terramine-5cda5.appspot.com",
+      messagingSenderId: "000000000000",
+      appId: "1:000000000000:web:000000"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    window.__loadProperties = async function() {
+      const snap = await getDocs(collection(db, 'properties'));
+      return snap.docs.map(d => {
+        const data = d.data();
+        return {
+          lat:  data.latitude  ?? data.lat  ?? null,
+          lng:  data.longitude ?? data.lng  ?? null,
+          type: data.mineType  ?? 'rock',
+        };
+      }).filter(p => p.lat !== null && p.lng !== null);
+    };
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0D1B2A;
+      --cyan:   #4FC3F7;
+      --white:  #F0F4FF;
+      --gray:   #8899AA;
+      --amber:  #E07B20;
+      --surface: rgba(255,255,255,0.03);
+      --border:  rgba(255,255,255,0.08);
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── NAV ── */
+    nav {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: rgba(13,27,42,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 20;
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-decoration: none;
+    }
+    .nav-right { display: flex; align-items: center; gap: 20px; }
+    nav a.back { color: var(--gray); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+    nav a.back:hover { color: var(--white); }
+    .nav-cta {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14px;
+      letter-spacing: 1.5px;
+      color: var(--navy);
+      background: var(--cyan);
+      padding: 7px 16px;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(13,27,42,0.9);
+      border-bottom: 1px solid var(--border);
+      z-index: 15;
+    }
+    .toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .toolbar-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+    }
+
+    /* stat pills */
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--gray);
+    }
+    .stat-pill strong { color: var(--white); font-size: 13px; }
+
+    /* filter toggles */
+    .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--gray);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover { border-color: var(--cyan); color: var(--white); }
+    .filter-btn.active { background: rgba(79,195,247,0.15); border-color: var(--cyan); color: var(--cyan); }
+    .filter-btn .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-rock    { background: #90CAF9; }
+    .dot-coal    { background: #B0BEC5; }
+    .dot-gold    { background: #FFD54F; }
+    .dot-diamond { background: #80DEEA; }
+
+    /* view mode toggle */
+    .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .view-btn {
+      padding: 5px 14px;
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--surface);
+      color: var(--gray);
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .view-btn.active { background: rgba(79,195,247,0.2); color: var(--cyan); }
+
+    /* ── MAP ── */
+    #map {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+    }
+
+    /* ── LOADING OVERLAY ── */
+    #loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 50;
+      transition: opacity 0.4s;
+    }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loading-icon {
+      font-size: 40px;
+      animation: spin 1.5s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 3px;
+      color: var(--cyan);
+    }
+    .loading-sub { font-size: 13px; color: var(--gray); }
+
+    /* ── LEGEND ── */
+    #legend {
+      position: absolute;
+      bottom: 28px;
+      left: 16px;
+      background: rgba(13,27,42,0.92);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      z-index: 10;
+      min-width: 160px;
+    }
+    .legend-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      margin-bottom: 10px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--gray);
+      margin-bottom: 6px;
+    }
+    .legend-swatch {
+      width: 28px;
+      height: 8px;
+      border-radius: 4px;
+    }
+    /* heatmap legend gradient */
+    .legend-gradient {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #0000ff, #00ff00, #ffff00, #ff0000);
+      margin-bottom: 4px;
+    }
+    .legend-gradient-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--gray);
+    }
+
+    /* ── TOOLTIP ── */
+    #tooltip {
+      position: absolute;
+      background: rgba(13,27,42,0.95);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--white);
+      pointer-events: none;
+      display: none;
+      z-index: 30;
+      max-width: 180px;
+    }
+
+    /* ── ERROR BANNER ── */
+    #error-banner {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      background: rgba(224,80,80,0.15);
+      border-bottom: 1px solid rgba(224,80,80,0.3);
+      padding: 10px 20px;
+      font-size: 13px;
+      color: #F48FB1;
+      z-index: 40;
+      text-align: center;
+    }
+
+    /* ── FOOTER ── */
+    .map-footer {
+      flex-shrink: 0;
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+      color: var(--gray);
+      background: rgba(13,27,42,0.9);
+      border-top: 1px solid var(--border);
+    }
+    .map-footer a { color: var(--cyan); text-decoration: none; }
+
+    /* mobile */
+    @media (max-width: 600px) {
+      nav { padding: 12px 16px; }
+      .toolbar { padding: 8px 12px; }
+      .toolbar-title { font-size: 15px; }
+      #legend { bottom: 48px; left: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="index.html">⛏ TerraMine</a>
+    <div class="nav-right">
+      <a class="back" href="index.html">← Home</a>
+      <a class="nav-cta" href="https://terramine.app">Play Free</a>
+    </div>
+  </nav>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="toolbar-title">World Map</span>
+      <div class="stat-pill">⛏ <strong id="stat-total">—</strong> properties</div>
+      <div class="stat-pill">📍 <strong id="stat-cities">—</strong> cities</div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <!-- Mine type filters -->
+      <div class="filters" id="filters">
+        <button class="filter-btn active" data-type="all">All</button>
+        <button class="filter-btn" data-type="rock"><span class="dot dot-rock"></span>Rock</button>
+        <button class="filter-btn" data-type="coal"><span class="dot dot-coal"></span>Coal</button>
+        <button class="filter-btn" data-type="gold"><span class="dot dot-gold"></span>Gold</button>
+        <button class="filter-btn" data-type="diamond"><span class="dot dot-diamond"></span>Diamond</button>
+      </div>
+      <!-- View mode -->
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-heat">Heatmap</button>
+        <button class="view-btn" id="btn-dots">Dots</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP WRAPPER -->
+  <div style="position:relative; flex:1; min-height:0; display:flex; flex-direction:column;">
+    <div id="map"></div>
+
+    <!-- loading -->
+    <div id="loading-overlay">
+      <span class="loading-icon">⛏</span>
+      <div class="loading-text">Loading Claims</div>
+      <div class="loading-sub">Fetching property data…</div>
+    </div>
+
+    <!-- error -->
+    <div id="error-banner"></div>
+
+    <!-- legend -->
+    <div id="legend">
+      <div class="legend-title">Density</div>
+      <div class="legend-gradient"></div>
+      <div class="legend-gradient-labels"><span>Low</span><span>High</span></div>
+    </div>
+
+    <!-- tooltip for dot mode -->
+    <div id="tooltip"></div>
+  </div>
+
+  <div class="map-footer">
+    Live data from TerraMine &nbsp;·&nbsp; <a href="index.html">terramine.app</a>
+  </div>
+
+  <!-- Google Maps (heatmap requires visualization library) -->
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    let map, heatmapLayer;
+    let allProperties = [];
+    let activeFilter = 'all';
+    let viewMode = 'heat'; // 'heat' | 'dots'
+    let dotMarkers = [];
+
+    const MINE_COLORS = {
+      rock:    '#90CAF9',
+      coal:    '#B0BEC5',
+      gold:    '#FFD54F',
+      diamond: '#80DEEA',
+    };
+
+    // ── Map init ───────────────────────────────────────────────────────────
+    async function initMap() {
+      const { Map } = await google.maps.importLibrary('maps');
+      const { HeatmapLayer } = await google.maps.importLibrary('visualization');
+      const { LatLng } = await google.maps.importLibrary('core');
+
+      map = new Map(document.getElementById('map'), {
+        center: { lat: 39.5, lng: -98.35 },
+        zoom: 4,
+        mapTypeId: 'roadmap',
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+        styles: [
+          { elementType: 'geometry',        stylers: [{ color: '#0D1B2A' }] },
+          { elementType: 'labels.text.fill',stylers: [{ color: '#8899AA' }] },
+          { elementType: 'labels.text.stroke', stylers: [{ color: '#0D1B2A' }] },
+          { featureType: 'road',            elementType: 'geometry',      stylers: [{ color: '#1A2D40' }] },
+          { featureType: 'road',            elementType: 'geometry.stroke',stylers: [{ color: '#0D1B2A' }] },
+          { featureType: 'road.highway',    elementType: 'geometry',      stylers: [{ color: '#1F3850' }] },
+          { featureType: 'water',           elementType: 'geometry',      stylers: [{ color: '#0A1520' }] },
+          { featureType: 'poi',             stylers: [{ visibility: 'off' }] },
+          { featureType: 'transit',         stylers: [{ visibility: 'off' }] },
+          { featureType: 'administrative',  elementType: 'geometry.stroke', stylers: [{ color: '#1E3048' }] },
+          { featureType: 'landscape',       elementType: 'geometry',      stylers: [{ color: '#111F2E' }] },
+        ],
+      });
+
+      heatmapLayer = new HeatmapLayer({
+        map,
+        radius: 25,
+        opacity: 0.8,
+        gradient: [
+          'rgba(0,0,0,0)',
+          'rgba(0,100,255,0.6)',
+          'rgba(0,200,100,0.7)',
+          'rgba(255,220,0,0.8)',
+          'rgba(255,100,0,0.9)',
+          'rgba(255,0,0,1)',
+        ],
+      });
+
+      // ── Load data ──────────────────────────────────────────────────────
+      try {
+        allProperties = await window.__loadProperties();
+        renderMap();
+        updateStats();
+        document.getElementById('loading-overlay').classList.add('hidden');
+      } catch(e) {
+        console.error(e);
+        showError('Could not load property data. Please try refreshing.');
+        document.getElementById('loading-overlay').classList.add('hidden');
+      }
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────
+    function filteredProperties() {
+      if (activeFilter === 'all') return allProperties;
+      return allProperties.filter(p => p.type === activeFilter);
+    }
+
+    function renderMap() {
+      const props = filteredProperties();
+      clearDots();
+
+      if (viewMode === 'heat') {
+        heatmapLayer.setMap(map);
+        const points = props.map(p => new google.maps.LatLng(p.lat, p.lng));
+        heatmapLayer.setData(points);
+      } else {
+        heatmapLayer.setMap(null);
+        renderDots(props);
+      }
+    }
+
+    function renderDots(props) {
+      props.forEach(p => {
+        const color = MINE_COLORS[p.type] || '#4FC3F7';
+        const marker = new google.maps.Marker({
+          position: { lat: p.lat, lng: p.lng },
+          map,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 5,
+            fillColor: color,
+            fillOpacity: 0.85,
+            strokeColor: 'rgba(0,0,0,0.3)',
+            strokeWeight: 1,
+          },
+          title: p.type,
+        });
+        dotMarkers.push(marker);
+      });
+    }
+
+    function clearDots() {
+      dotMarkers.forEach(m => m.setMap(null));
+      dotMarkers = [];
+    }
+
+    // ── Stats ──────────────────────────────────────────────────────────────
+    function updateStats() {
+      const props = filteredProperties();
+      document.getElementById('stat-total').textContent = props.length.toLocaleString();
+
+      // Rough city count: cluster points within ~0.5 degree
+      const grid = new Set(props.map(p => `${Math.round(p.lat)},${Math.round(p.lng)}`));
+      document.getElementById('stat-cities').textContent = grid.size;
+    }
+
+    // ── Filter buttons ─────────────────────────────────────────────────────
+    document.getElementById('filters').addEventListener('click', e => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.type;
+      renderMap();
+      updateStats();
+    });
+
+    // ── View toggle ────────────────────────────────────────────────────────
+    document.getElementById('btn-heat').addEventListener('click', () => {
+      viewMode = 'heat';
+      document.getElementById('btn-heat').classList.add('active');
+      document.getElementById('btn-dots').classList.remove('active');
+      updateLegend();
+      renderMap();
+    });
+    document.getElementById('btn-dots').addEventListener('click', () => {
+      viewMode = 'dots';
+      document.getElementById('btn-dots').classList.add('active');
+      document.getElementById('btn-heat').classList.remove('active');
+      updateLegend();
+      renderMap();
+    });
+
+    function updateLegend() {
+      const legend = document.getElementById('legend');
+      if (viewMode === 'heat') {
+        legend.innerHTML = `
+          <div class="legend-title">Density</div>
+          <div class="legend-gradient"></div>
+          <div class="legend-gradient-labels"><span>Low</span><span>High</span></div>`;
+      } else {
+        legend.innerHTML = `
+          <div class="legend-title">Mine Type</div>
+          <div class="legend-row"><span class="dot dot-rock" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span> Rock</div>
+          <div class="legend-row"><span class="dot dot-coal" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span> Coal</div>
+          <div class="legend-row"><span class="dot dot-gold" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span> Gold</div>
+          <div class="legend-row"><span class="dot dot-diamond" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span> Diamond</div>`;
+      }
+    }
+
+    // ── Error ──────────────────────────────────────────────────────────────
+    function showError(msg) {
+      const el = document.getElementById('error-banner');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    window.initMap = initMap;
+  </script>
+
+  <!-- Replace YOUR_GOOGLE_MAPS_API_KEY with your actual key -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y&callback=initMap&libraries=visualization&loading=async"
+    async defer>
+  </script>
+
+</body>
+</html>
