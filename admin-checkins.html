@@ -215,7 +215,49 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(240,184,74,0.3);
+    text-underline-offset: 3px;
+    transition: color 0.15s;
   }
+  .photo-nickname:hover { color: #fff; text-decoration-color: var(--gold-light); }
+
+  /* User filter bar */
+  .filter-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: rgba(200,146,42,0.08);
+    border: 1px solid rgba(200,146,42,0.3);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-bar.active { display: flex; }
+  .filter-bar-label { font-size: 11px; color: var(--text-muted); }
+  .filter-bar-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+  .filter-bar-count { font-size: 11px; color: var(--text-muted); }
+  .clear-filter-btn {
+    margin-left: auto;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .clear-filter-btn:hover { color: var(--red); border-color: var(--red); }
   .photo-date {
     font-size: 10px;
     color: var(--text-muted);
@@ -478,6 +520,14 @@
     </div>
   </div>
 
+  <!-- User filter bar -->
+  <div class="filter-bar" id="filterBar">
+    <span class="filter-bar-label">Showing photos from</span>
+    <span class="filter-bar-name" id="filterName"></span>
+    <span class="filter-bar-count" id="filterCount"></span>
+    <button class="clear-filter-btn" onclick="clearUserFilter()">✕ Show All</button>
+  </div>
+
   <div class="photo-grid" id="photoGrid">
     <div class="empty-state">
       <div class="icon">📷</div>
@@ -558,6 +608,8 @@
   let pendingDeletePhotoURL = null;
   let lightboxDocId = null;
   let lightboxPhotoURL = null;
+  let activeFilterUserId = null;
+  let activeFilterNickname = null;
 
   // ── Auth ─────────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
@@ -634,6 +686,35 @@
     showToast('Cursor reset — will load all photos from newest', 'success');
   };
 
+  // ── User filter ───────────────────────────────────────────────────
+  window.filterByUser = function(userId, nickname) {
+    activeFilterUserId = userId;
+    activeFilterNickname = nickname;
+    lastDoc = null;
+    sessionLoaded = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = '';
+    document.getElementById('filterName').textContent = nickname;
+    document.getElementById('filterCount').textContent = '';
+    document.getElementById('filterBar').classList.add('active');
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    loadPhotos(false);
+  };
+
+  window.clearUserFilter = function() {
+    activeFilterUserId = null;
+    activeFilterNickname = null;
+    lastDoc = null;
+    sessionLoaded = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = '';
+    document.getElementById('filterBar').classList.remove('active');
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    loadPhotos(false);
+  };
+
   // ── Load photos ───────────────────────────────────────────────────
   window.loadPhotos = async function(isLoadMore = false) {
     const btn = document.getElementById('loadBtn');
@@ -644,48 +725,68 @@
 
     try {
       const cursor = getCursor();
-
-      // Query checkIns where hasPhoto == true, ordered by timestamp desc
       let q;
-      if (isLoadMore && lastDoc) {
-        q = query(
-          collection(db, 'checkIns'),
-          where('hasPhoto', '==', true),
-          orderBy('timestamp', 'desc'),
-          startAfter(lastDoc),
-          limit(PAGE_SIZE)
-        );
-      } else if (!isLoadMore && cursor) {
-        // Only load newer than cursor
-        q = query(
-          collection(db, 'checkIns'),
-          where('hasPhoto', '==', true),
-          where('timestamp', '>', cursor),
-          orderBy('timestamp', 'desc'),
-          limit(PAGE_SIZE)
-        );
+
+      if (activeFilterUserId) {
+        // ── User filter mode ──────────────────────────────────────
+        if (isLoadMore && lastDoc) {
+          q = query(
+            collection(db, 'checkIns'),
+            where('userId', '==', activeFilterUserId),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            startAfter(lastDoc),
+            limit(PAGE_SIZE)
+          );
+        } else {
+          q = query(
+            collection(db, 'checkIns'),
+            where('userId', '==', activeFilterUserId),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            limit(PAGE_SIZE)
+          );
+        }
       } else {
-        // No cursor — load newest
-        q = query(
-          collection(db, 'checkIns'),
-          where('hasPhoto', '==', true),
-          orderBy('timestamp', 'desc'),
-          limit(PAGE_SIZE)
-        );
+        // ── Normal mode ───────────────────────────────────────────
+        if (isLoadMore && lastDoc) {
+          q = query(
+            collection(db, 'checkIns'),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            startAfter(lastDoc),
+            limit(PAGE_SIZE)
+          );
+        } else if (!isLoadMore && cursor) {
+          q = query(
+            collection(db, 'checkIns'),
+            where('hasPhoto', '==', true),
+            where('timestamp', '>', cursor),
+            orderBy('timestamp', 'desc'),
+            limit(PAGE_SIZE)
+          );
+        } else {
+          q = query(
+            collection(db, 'checkIns'),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            limit(PAGE_SIZE)
+          );
+        }
       }
 
       const snap = await getDocs(q);
 
       if (snap.empty && !isLoadMore) {
-        if (!cursor) {
-          document.getElementById('photoGrid').innerHTML = `
-            <div class="empty-state">
-              <div class="icon">✅</div>
-              <div>No check-in photos found in the database.</div>
-            </div>`;
-        } else {
-          showToast('No new photos since last session', 'success');
-        }
+        const msg = activeFilterUserId
+          ? `No photos found for ${activeFilterNickname}.`
+          : (cursor ? 'No new photos since last session.' : 'No check-in photos found in the database.');
+        document.getElementById('photoGrid').innerHTML = `
+          <div class="empty-state">
+            <div class="icon">${activeFilterUserId ? '👤' : '✅'}</div>
+            <div>${msg}</div>
+          </div>`;
+        if (!activeFilterUserId && cursor) showToast('No new photos since last session', 'success');
         btn.disabled = false;
         btn.textContent = '📥 Load Latest Photos';
         moreBtn.disabled = false;
@@ -694,8 +795,7 @@
 
       if (!snap.empty) {
         lastDoc = snap.docs[snap.docs.length - 1];
-        // Save newest timestamp as cursor (first doc, since desc order)
-        if (!isLoadMore) {
+        if (!isLoadMore && !activeFilterUserId) {
           const newestTs = snap.docs[0].data().timestamp;
           if (newestTs) saveCursor(newestTs);
         }
@@ -703,7 +803,6 @@
 
       const grid = document.getElementById('photoGrid');
       if (!isLoadMore) {
-        // Clear skeleton/empty state on first load
         const existingEmpty = grid.querySelector('.empty-state');
         if (existingEmpty) existingEmpty.remove();
       }
@@ -716,9 +815,13 @@
       });
 
       document.getElementById('sessionCount').textContent = sessionLoaded;
-      document.getElementById('shownCount').textContent = grid.querySelectorAll('.photo-card').length;
+      const shown = grid.querySelectorAll('.photo-card').length;
+      document.getElementById('shownCount').textContent = shown;
 
-      // Show Load More if we got a full page
+      if (activeFilterUserId) {
+        document.getElementById('filterCount').textContent = `— ${shown} photo${shown !== 1 ? 's' : ''}`;
+      }
+
       moreBtn.style.display = snap.docs.length === PAGE_SIZE ? 'inline-block' : 'none';
 
     } catch(e) {
@@ -758,7 +861,7 @@
       >
       <div class="photo-info">
         <div class="photo-meta-row">
-          <div class="photo-nickname">${escHtml(nickname)}</div>
+          <div class="photo-nickname" onclick="filterByUser('${escHtml(userId)}', '${escHtml(nickname)}')" title="Click to see all photos from ${escHtml(nickname)}">${escHtml(nickname)}</div>
           <div class="photo-date">${dateStr}</div>
         </div>
         ${message ? `<div class="photo-message">${escHtml(message)}</div>` : ''}
