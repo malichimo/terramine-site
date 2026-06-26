@@ -522,10 +522,10 @@
 
   <!-- User filter bar -->
   <div class="filter-bar" id="filterBar">
+    <button class="clear-filter-btn" onclick="clearUserFilter()">← Back to All Photos</button>
     <span class="filter-bar-label">Showing photos from</span>
     <span class="filter-bar-name" id="filterName"></span>
     <span class="filter-bar-count" id="filterCount"></span>
-    <button class="clear-filter-btn" onclick="clearUserFilter()">✕ Show All</button>
   </div>
 
   <div class="photo-grid" id="photoGrid">
@@ -712,7 +712,14 @@
     document.getElementById('photoGrid').innerHTML = '';
     document.getElementById('filterBar').classList.remove('active');
     document.getElementById('loadMoreBtn').style.display = 'none';
-    loadPhotos(false);
+    // Clear cursor temporarily so we always get results on return
+    const savedCursor = getCursor();
+    localStorage.removeItem(CURSOR_KEY);
+    loadPhotos(false).then(() => {
+      // Restore cursor after load so future sessions still work
+      if (savedCursor) localStorage.setItem(CURSOR_KEY, savedCursor);
+      updateCursorDisplay();
+    });
   };
 
   // ── Load photos ───────────────────────────────────────────────────
