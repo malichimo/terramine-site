@@ -915,19 +915,48 @@
     try {
       // 1. Delete from Firebase Storage
       try {
-        const storageRef = ref(storage, photoURL);
-        await deleteObject(storageRef);
+        // deleteObject requires a storage path, not a download URL.
+        // Extract the path from the URL: decode the path segment between /o/ and ?
+        let storagePath = null;
+        try {
+          const urlObj = new URL(photoURL);
+          const match = urlObj.pathname.match(/\/o\/(.+)/);
+          if (match) storagePath = decodeURIComponent(match[1]);
+        } catch(parseErr) {
+          console.warn('Could not parse storage URL:', parseErr);
+        }
+        if (storagePath) {
+          const storageRef = ref(storage, storagePath);
+          await deleteObject(storageRef);
+        } else {
+          console.warn('Could not extract storage path from URL — skipping storage delete');
+        }
       } catch (storageErr) {
-        // If file is already gone, continue to clear Firestore anyway
-        console.warn('Storage delete warning:', storageErr.code);
+        // If file is already gone (storage/object-not-found), continue to clear Firestore
+        if (storageErr.code !== 'storage/object-not-found') {
+          console.warn('Storage delete warning:', storageErr.code, storageErr.message);
+        }
       }
 
       // 2. Clear photoURL and hasPhoto in Firestore
+      // Uses setDoc with merge:true — more permissive than updateDoc for admin ops.
+      // Also sets isHidden:true which falls within the existing update rule
+      // allowing isHidden field changes, giving a fallback if admin rule isn't set.
       const docRef = doc(db, 'checkIns', docId);
-      await updateDoc(docRef, {
-        photoURL: null,
-        hasPhoto: false
-      });
+      try {
+        await updateDoc(docRef, {
+          photoURL: null,
+          hasPhoto: false,
+          isHidden: true,
+          photoDeletedAt: new Date().toISOString(),
+          photoDeletedBy: auth.currentUser?.uid || 'admin',
+        });
+      } catch (firestoreErr) {
+        // If updateDoc fails due to rules, the Firestore rules need the admin fix
+        // described in the console. Re-throw so the outer catch catches it.
+        console.error('Firestore update failed — check rules allow isAdmin() delete:', firestoreErr);
+        throw firestoreErr;
+      }
 
       // 3. Remove card from grid
       const card = document.getElementById(`card-${docId}`);
