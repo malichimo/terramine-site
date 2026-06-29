@@ -299,24 +299,28 @@
     #toast.success { border-color: var(--green); }
     #toast.error   { border-color: var(--red); }
 
-    /* Login */
-    #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--navy); padding: 24px; }
-    .login-card { width: 100%; max-width: 380px; background: #111F30; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 36px 32px; }
-    .login-logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--cyan); margin-bottom: 4px; }
-    .login-sub { font-size: 13px; color: #556070; margin-bottom: 28px; }
-    .input-group { margin-bottom: 14px; }
-    .input-label { font-size: 11px; color: #8899AA; margin-bottom: 5px; display: block; }
-    .input-field { width: 100%; background: var(--navy); border: 1px solid rgba(255,255,255,0.07); border-radius: 6px; padding: 10px 12px; font-size: 14px; color: white; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s; }
-    .input-field:focus { border-color: var(--cyan); }
-    .input-field::placeholder { color: #556070; }
-    .btn-primary { width: 100%; padding: 11px; background: var(--cyan); color: var(--navy); border: none; border-radius: 6px; font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1.5px; cursor: pointer; margin-top: 4px; }
-    .btn-google { width: 100%; padding: 10px; background: rgba(255,255,255,0.04); color: white; border: 1px solid rgba(255,255,255,0.07); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: border-color 0.15s; }
-    .btn-google:hover { border-color: #8899AA; }
-    .login-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; font-size: 11px; color: #556070; }
-    .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
-    .login-error { font-size: 12px; color: #EF5350; margin-top: 8px; min-height: 16px; }
-    .login-toggle { text-align: center; font-size: 12px; color: #556070; margin-top: 16px; }
-    .login-toggle a { color: var(--cyan); text-decoration: none; cursor: pointer; }
+    /* Login — brown app style */
+    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:24px; }
+    .login-card { width:100%; max-width:380px; background:white; border:3px solid var(--brown-mid); border-radius:15px; overflow:hidden; box-shadow:0 4px 20px rgba(139,69,19,0.2); }
+    .login-card-header { background:var(--brown); padding:24px 28px 20px; text-align:center; border-bottom:3px solid var(--brown-dark); }
+    .login-card-body { padding:24px 28px 28px; }
+    .login-logo { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; color:var(--gold); margin-bottom:4px; }
+    .login-sub { font-size:13px; color:rgba(255,215,0,0.7); }
+    .input-group { margin-bottom:14px; }
+    .input-label { font-size:11px; color:var(--text-mid); margin-bottom:5px; display:block; font-weight:600; }
+    .input-field { width:100%; background:var(--off-white); border:2px solid var(--brown-mid); border-radius:8px; padding:10px 12px; font-size:14px; color:var(--text-dark); font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s; }
+    .input-field:focus { border-color:var(--brown); }
+    .input-field::placeholder { color:var(--text-light); }
+    .btn-primary { width:100%; padding:12px; background:var(--brown); color:var(--gold); border:none; border-radius:8px; font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; cursor:pointer; margin-top:4px; transition:background 0.15s; }
+    .btn-primary:hover { background:var(--brown-dark); }
+    .btn-primary:disabled { background:var(--brown-mid); cursor:not-allowed; }
+    .btn-google { width:100%; padding:10px; background:var(--off-white); color:var(--text-dark); border:2px solid var(--brown-mid); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:border-color 0.15s; }
+    .btn-google:hover { border-color:var(--brown); }
+    .login-divider { display:flex; align-items:center; gap:12px; margin:16px 0; font-size:11px; color:var(--text-light); }
+    .login-divider::before, .login-divider::after { content:''; flex:1; height:1px; background:var(--brown-mid); opacity:0.4; }
+    .login-error { font-size:12px; color:var(--red); margin-top:8px; min-height:16px; }
+    .login-toggle { text-align:center; font-size:12px; color:var(--text-mid); margin-top:16px; }
+    .login-toggle a { color:var(--brown); text-decoration:none; cursor:pointer; font-weight:700; }
 
     /* ── Boost panel ── */
     .boost-active-banner { background: #FF9800; padding: 10px 16px; text-align: center; font-weight: 700; font-size: 13px; color: white; }
@@ -382,8 +386,11 @@
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo">⛏ TerraMine</div>
-    <div class="login-sub">Sign in to manage your mines</div>
+    <div class="login-card-header">
+      <div class="login-logo">⛏ TERRAMINE</div>
+      <div class="login-sub">Sign in to manage your mines</div>
+    </div>
+    <div class="login-card-body">
     <button class="btn-google" id="btn-google-signin">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
       Continue with Google
@@ -394,6 +401,7 @@
     <div class="login-error" id="login-error"></div>
     <button class="btn-primary" id="btn-email-signin">Sign In</button>
     <div class="login-toggle">Forgot password? <a id="btn-reset">Send reset email</a></div>
+    </div><!-- login-card-body -->
   </div>
 </div>
 
@@ -1163,9 +1171,7 @@
     const d = mine._details || {};
     const adUsed = d.adAttemptsUsedToday || 0;
     if (6 - adUsed < 2) { showToast('Daily ad limit reached (3 ads/day). Resets at 4 AM EST.', 'error'); return; }
-    if (!confirm('On mobile, a rewarded video ad plays here.
-
-Click OK to simulate the reward (web preview only).')) return;
+    if (!confirm('On mobile, a rewarded video ad plays here. Click OK to simulate the reward (web preview only).')) return;
     try {
       await db.collection('propertyDetails').doc(mineId).set({
         dailyActivitiesRemaining: firebase.firestore.FieldValue.increment(2),
