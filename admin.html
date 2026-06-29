@@ -1337,12 +1337,12 @@
     }
   }
 
-  function filterFeedback(type, btn) {
+  window.filterFeedback = function(type, btn) {
     // Scope to feedback filter bar only — avoids clobbering user-list filter buttons
     btn.closest('.feedback-filter').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const filtered = type === 'all' ? allFeedback
-      : type === 'new' ? allFeedback.filter(f => f.status === 'new')
+      : type === 'new' ? allFeedback.filter(f => !f.status || f.status === 'new')
       : allFeedback.filter(f => f.type === type);
     renderFeedback(filtered);
   }
