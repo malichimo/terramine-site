@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visitors — TerraMine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:          #e8d5b7;
+      --bg2:         #d4b896;
+      --brown-dark:  #5C3317;
+      --brown:       #8B4513;
+      --brown-mid:   #8B7355;
+      --brown-light: #D2B48C;
+      --chocolate:   #D2691E;
+      --gold:        #FFD700;
+      --amber:       #FF9800;
+      --white:       #ffffff;
+      --off-white:   #f5f5f5;
+      --text-dark:   #333333;
+      --text-mid:    #666666;
+      --text-light:  #999999;
+      --green:       #4CAF50;
+      --red:         #f44336;
+      --blue:        #2196F3;
+      --navy:        #0D1B2A;
+      --navy2:       #111F30;
+      --cyan:        #4FC3F7;
+      --border:      rgba(255,255,255,0.07);
+    }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
+    body { background: var(--bg); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Top Nav ── */
+    .top-nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(13,27,42,0.97); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
+    .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--cyan); text-decoration:none; }
+    .nav-user { display:flex; align-items:center; gap:12px; }
+    .nav-avatar { width:32px; height:32px; border-radius:50%; background:var(--navy2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--cyan); overflow:hidden; }
+    .nav-avatar img { width:100%; height:100%; object-fit:cover; }
+    .nav-nickname { font-size:13px; color:#8899AA; }
+    .nav-signout { font-size:12px; color:#556070; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; }
+    .nav-signout:hover { color:white; }
+
+    /* ── Layout ── */
+    .layout { display:flex; flex:1; min-height:0; }
+
+    /* ── Sidebar ── */
+    .sidebar { width:220px; flex-shrink:0; background:var(--navy2); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 0 16px; }
+    .tb-readout { margin:0 16px 28px; background:linear-gradient(135deg,rgba(79,195,247,0.08),rgba(79,195,247,0.03)); border:1px solid rgba(79,195,247,0.2); border-radius:8px; padding:14px 16px; }
+    .tb-label { font-size:10px; letter-spacing:2px; color:var(--cyan); font-family:'Bebas Neue',sans-serif; margin-bottom:4px; }
+    .tb-amount { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:1px; color:white; line-height:1; }
+    .tb-sub { font-size:11px; color:#556070; margin-top:4px; }
+    .usd-row { margin:0 16px 20px; display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:6px; }
+    .usd-label { font-size:11px; color:#556070; }
+    .usd-amount { font-size:14px; font-weight:700; color:#F59E0B; }
+    .sidebar-section { font-size:10px; letter-spacing:2px; color:#556070; font-family:'Bebas Neue',sans-serif; padding:0 20px; margin-bottom:6px; }
+    .sidebar-nav { list-style:none; margin-bottom:20px; }
+    .sidebar-nav a { display:flex; align-items:center; gap:10px; padding:9px 20px; font-size:13px; color:#8899AA; text-decoration:none; border-left:2px solid transparent; transition:all 0.15s; }
+    .sidebar-nav a:hover { color:white; background:rgba(255,255,255,0.04); }
+    .sidebar-nav a.active { color:var(--cyan); border-left-color:var(--cyan); background:rgba(79,195,247,0.05); }
+    .sidebar-nav .icon { font-size:16px; width:20px; text-align:center; }
+    .sidebar-footer { margin-top:auto; padding:12px 20px; font-size:11px; color:#556070; border-top:1px solid var(--border); }
+    .sidebar-footer a { color:#556070; text-decoration:none; }
+
+    /* ── Main ── */
+    .main { flex:1; overflow-y:auto; background:var(--off-white); }
+
+    /* ── Page header (brown app-style) ── */
+    .page-header { background:var(--brown); padding:16px 20px; border-bottom:3px solid var(--brown-dark); position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .page-header-left { display:flex; align-items:center; gap:10px; }
+    .page-header-icon { font-size:22px; }
+    .page-header-title { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--gold); }
+    .page-header-sub { font-size:12px; color:rgba(255,215,0,0.6); margin-top:1px; }
+
+    /* ── Toolbar ── */
+    .toolbar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--bg2); border-bottom:2px solid var(--brown-mid); flex-wrap:wrap; }
+    .search-input { flex:1; min-width:160px; padding:8px 12px; border:2px solid var(--brown-mid); border-radius:8px; font-size:13px; font-family:'DM Sans',sans-serif; color:var(--text-dark); background:white; outline:none; }
+    .search-input:focus { border-color:var(--brown); }
+    .filter-select { padding:8px 10px; border:2px solid var(--brown-mid); border-radius:8px; font-size:12px; font-family:'DM Sans',sans-serif; background:white; color:var(--text-dark); outline:none; cursor:pointer; }
+    .filter-btn { padding:7px 14px; border-radius:8px; border:2px solid var(--brown-mid); background:white; color:var(--text-mid); font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+    .filter-btn.active { background:var(--brown); color:var(--gold); border-color:var(--brown); font-weight:700; }
+    .result-count { font-size:12px; color:var(--text-mid); margin-left:auto; white-space:nowrap; }
+
+    /* ── Visit cards ── */
+    .visits-container { padding:16px; }
+    .visit-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; margin-bottom:12px; overflow:hidden; transition:border-color 0.15s; }
+    .visit-card:hover { border-color:var(--brown); }
+
+    .visit-card-header { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--bg); border-bottom:1px solid #e0d0c0; }
+    .visitor-avatar { width:40px; height:40px; border-radius:50%; background:var(--brown-light); border:2px solid var(--brown-mid); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--brown); flex-shrink:0; overflow:hidden; }
+    .visitor-avatar img { width:100%; height:100%; object-fit:cover; }
+    .visitor-info { flex:1; min-width:0; }
+    .visitor-name { font-size:14px; font-weight:700; color:var(--text-dark); }
+    .visitor-time { font-size:11px; color:var(--text-light); margin-top:1px; }
+    .visit-mine-badge { display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:700; background:rgba(139,69,19,0.1); color:var(--brown); border:1px solid var(--brown-mid); flex-shrink:0; }
+
+    .visit-card-body { padding:12px 14px; }
+    .visit-message { font-size:13px; color:var(--text-dark); font-style:italic; margin-bottom:10px; line-height:1.5; }
+    .visit-message::before { content:'"'; }
+    .visit-message::after  { content:'"'; }
+    .visit-no-message { font-size:12px; color:var(--text-light); font-style:italic; }
+
+    .visit-photo { width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid #e0d0c0; }
+
+    .visit-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .visit-prop-id { font-size:11px; color:var(--text-light); font-family:monospace; }
+    .hidden-badge { background:#ffebee; color:var(--red); border:1px solid #ffcdd2; border-radius:4px; font-size:10px; padding:2px 6px; font-weight:700; }
+    .adult-badge  { background:#fff3e0; color:var(--amber); border:1px solid #ffe0b2; border-radius:4px; font-size:10px; padding:2px 6px; font-weight:700; }
+    .reported-badge { background:#fce4ec; color:#c2185b; border:1px solid #f48fb1; border-radius:4px; font-size:10px; padding:2px 6px; font-weight:700; }
+
+    /* ── Photo lightbox ── */
+    #lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; }
+    #lightbox.open { display:flex; }
+    #lightbox img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; }
+    #lightbox-close { position:absolute; top:20px; right:24px; color:white; font-size:28px; cursor:pointer; background:none; border:none; }
+
+    /* ── Empty / loading ── */
+    .empty-state { text-align:center; padding:60px 20px; color:var(--text-light); }
+    .empty-icon { font-size:48px; margin-bottom:12px; }
+    .empty-text { font-size:14px; }
+    .skeleton { background:linear-gradient(90deg,#ddd 25%,#eee 50%,#ddd 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:4px; }
+    @keyframes shimmer { to { background-position:-200% 0; } }
+
+    /* ── Load more ── */
+    .load-more-btn { display:block; width:calc(100% - 32px); margin:0 16px 20px; padding:12px; background:var(--brown-mid); color:white; border:none; border-radius:8px; font-size:14px; font-weight:700; font-family:'DM Sans',sans-serif; cursor:pointer; text-align:center; transition:background 0.15s; }
+    .load-more-btn:hover { background:var(--brown); }
+
+    /* ── Toast ── */
+    #toast { position:fixed; bottom:24px; right:24px; background:var(--brown-dark); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:12px 18px; font-size:13px; color:white; z-index:200; transform:translateY(80px); opacity:0; transition:all 0.25s; pointer-events:none; }
+    #toast.show { transform:none; opacity:1; }
+    #toast.success { border-color:var(--green); }
+    #toast.error { border-color:var(--red); }
+
+    /* ── Login ── */
+    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--navy); padding:24px; }
+    .login-card { width:100%; max-width:380px; background:#111F30; border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:36px 32px; }
+    .login-logo { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:3px; color:var(--cyan); margin-bottom:4px; }
+    .login-sub { font-size:13px; color:#556070; margin-bottom:28px; }
+    .input-group { margin-bottom:14px; }
+    .input-label { font-size:11px; color:#8899AA; margin-bottom:5px; display:block; }
+    .input-field { width:100%; background:var(--navy); border:1px solid rgba(255,255,255,0.07); border-radius:6px; padding:10px 12px; font-size:14px; color:white; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s; }
+    .input-field:focus { border-color:var(--cyan); }
+    .input-field::placeholder { color:#556070; }
+    .btn-primary { width:100%; padding:11px; background:var(--cyan); color:var(--navy); border:none; border-radius:6px; font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1.5px; cursor:pointer; margin-top:4px; }
+    .btn-google { width:100%; padding:10px; background:rgba(255,255,255,0.04); color:white; border:1px solid rgba(255,255,255,0.07); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .btn-google:hover { border-color:#8899AA; }
+    .login-divider { display:flex; align-items:center; gap:12px; margin:20px 0; font-size:11px; color:#556070; }
+    .login-divider::before,.login-divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.07); }
+    .login-error { font-size:12px; color:#EF5350; margin-top:8px; min-height:16px; }
+    .login-toggle { text-align:center; font-size:12px; color:#556070; margin-top:16px; }
+    .login-toggle a { color:var(--cyan); text-decoration:none; cursor:pointer; }
+
+    @media (max-width:700px) { .sidebar { display:none; } }
+    @media (max-width:500px) { .toolbar { gap:6px; } .filter-btn { padding:6px 10px; } }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⛏ TerraMine</div>
+    <div class="login-sub">Sign in to view your visitors</div>
+    <button class="btn-google" id="btn-google-signin">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+      Continue with Google
+    </button>
+    <div class="login-divider">or</div>
+    <div class="input-group"><label class="input-label">Email</label><input class="input-field" type="email" id="input-email" placeholder="you@example.com" /></div>
+    <div class="input-group"><label class="input-label">Password</label><input class="input-field" type="password" id="input-password" placeholder="••••••••" /></div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn-primary" id="btn-email-signin">Sign In</button>
+    <div class="login-toggle">Forgot password? <a id="btn-reset">Send reset email</a></div>
+  </div>
+</div>
+
+<!-- PORTAL -->
+<div id="portal" style="display:none; flex-direction:column; min-height:100vh;">
+
+  <nav class="top-nav">
+    <a class="nav-logo" href="index.html">⛏ TerraMine</a>
+    <div class="nav-user">
+      <div class="nav-avatar" id="nav-avatar">—</div>
+      <span class="nav-nickname" id="nav-nickname"></span>
+      <button class="nav-signout" id="btn-signout">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="tb-readout">
+        <div class="tb-label">TerraBucks</div>
+        <div class="tb-amount" id="sb-tb">—</div>
+        <div class="tb-sub">Your balance</div>
+      </div>
+      <div class="usd-row">
+        <span class="usd-label">USD Earnings</span>
+        <span class="usd-amount" id="sb-usd">$—</span>
+      </div>
+      <div class="sidebar-section">My Portal</div>
+      <ul class="sidebar-nav">
+        <li><a href="portal.html"><span class="icon">📊</span> Dashboard</a></li>
+        <li><a href="mines.html"><span class="icon">⛏</span> My Mines</a></li>
+        <li><a href="visitors.html" class="active"><span class="icon">👥</span> Visitors</a></li>
+        <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
+      </ul>
+      <div class="sidebar-section">Games</div>
+      <ul class="sidebar-nav">
+        <li><a href="game-memory.html"><span class="icon">🧠</span> Memory Match</a></li>
+        <li><a href="game-maze.html"><span class="icon">🪨</span> Miner Maze</a></li>
+        <li><a href="game-goldrush.html"><span class="icon">🥇</span> Gold Rush</a></li>
+        <li><a href="game-laser.html"><span class="icon">💎</span> Laser Blast</a></li>
+      </ul>
+      <div class="sidebar-footer"><a href="index.html">← Back to site</a></div>
+    </aside>
+
+    <main class="main">
+      <div class="page-header">
+        <div class="page-header-left">
+          <span class="page-header-icon">👥</span>
+          <div>
+            <div class="page-header-title">Visitor Log</div>
+            <div class="page-header-sub" id="header-sub">Loading check-ins…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <input class="search-input" type="search" id="search-input" placeholder="Search visitor name or message…" />
+        <select class="filter-select" id="mine-filter">
+          <option value="all">All Mines</option>
+        </select>
+        <button class="filter-btn active" data-filter="all" onclick="setTypeFilter('all', this)">All</button>
+        <button class="filter-btn" data-filter="message" onclick="setTypeFilter('message', this)">💬 With Message</button>
+        <button class="filter-btn" data-filter="photo" onclick="setTypeFilter('photo', this)">📸 With Photo</button>
+        <button class="filter-btn" data-filter="hidden" onclick="setTypeFilter('hidden', this)">🚫 Hidden</button>
+        <span class="result-count" id="result-count">—</span>
+      </div>
+
+      <div class="visits-container" id="visits-container">
+        <!-- Skeletons while loading -->
+        ${[1,2,3,4,5].map(() => `
+          <div class="visit-card">
+            <div class="visit-card-header">
+              <div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;"></div>
+              <div style="flex:1"><div class="skeleton" style="height:14px;width:120px;margin-bottom:6px;"></div><div class="skeleton" style="height:11px;width:80px;"></div></div>
+            </div>
+            <div class="visit-card-body"><div class="skeleton" style="height:13px;width:200px;"></div></div>
+          </div>`).join('')}
+      </div>
+
+      <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMore()">Load More Visitors</button>
+    </main>
+  </div>
+</div>
+
+<!-- Photo lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="Check-in photo" />
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  firebase.initializeApp({
+    apiKey:            "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain:        "terramine-5cda5.firebaseapp.com",
+    projectId:         "terramine-5cda5",
+    storageBucket:     "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId:             "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  });
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentUser   = null;
+  let allVisits     = [];       // all loaded check-ins
+  let filteredVisits= [];       // after filters
+  let displayedCount= 0;
+  let myPropertyIds = new Set();
+  let myPropertyMap = {};       // id → { customName, mineType }
+  const PAGE_SIZE   = 20;
+
+  let activeTypeFilter = 'all';
+  let activeMineFilter = 'all';
+  let searchQuery      = '';
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  function showToast(msg, type='') { const t=$('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',3000); }
+  function fmtNum(n) { if(!n)return'0'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return Math.round(n).toLocaleString(); }
+  function fmtUSD(n) { return '$'+(parseFloat(n)||0).toFixed(2); }
+  function initials(name) { if(!name)return'?'; return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+  function mineIcon(type) { return{rock:'🪨',coal:'⚫',gold:'🟡',diamond:'💎'}[type]||'⛏'; }
+
+  function timeAgo(ts) {
+    if (!ts) return '';
+    const d = typeof ts === 'string' ? new Date(ts) : ts.toDate ? ts.toDate() : new Date(ts);
+    const s = Math.floor((Date.now() - d) / 1000);
+    if (s < 60)    return 'just now';
+    if (s < 3600)  return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    if (s < 86400*7) return Math.floor(s/86400) + 'd ago';
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function fullDate(ts) {
+    if (!ts) return '';
+    const d = typeof ts === 'string' ? new Date(ts) : ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      $('login-screen').style.display = 'none';
+      $('portal').style.display = 'flex';
+      loadPortal(user);
+    } else {
+      $('login-screen').style.display = 'flex';
+      $('portal').style.display = 'none';
+    }
+  });
+  $('btn-google-signin').addEventListener('click', async () => {
+    try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    catch(e) { $('login-error').textContent = e.message; }
+  });
+  $('btn-email-signin').addEventListener('click', async () => {
+    const email=$('input-email').value.trim(), pass=$('input-password').value;
+    $('login-error').textContent='';
+    if(!email||!pass){$('login-error').textContent='Enter email and password.';return;}
+    $('btn-email-signin').disabled=true;
+    try { await auth.signInWithEmailAndPassword(email,pass); }
+    catch(e){ $('login-error').textContent=e.code==='auth/wrong-password'||e.code==='auth/user-not-found'?'Incorrect email or password.':e.message; }
+    finally { $('btn-email-signin').disabled=false; }
+  });
+  $('input-password').addEventListener('keydown', e => { if(e.key==='Enter') $('btn-email-signin').click(); });
+  $('btn-reset').addEventListener('click', async () => {
+    const email=$('input-email').value.trim();
+    if(!email){$('login-error').textContent='Enter your email first.';return;}
+    try { await auth.sendPasswordResetEmail(email); $('login-error').style.color='#66BB6A'; $('login-error').textContent='Reset email sent!'; }
+    catch(e){ $('login-error').textContent=e.message; }
+  });
+  $('btn-signout').addEventListener('click', () => auth.signOut());
+
+  // ── Load portal ────────────────────────────────────────────────────────────
+  async function loadPortal(user) {
+    const uSnap = await db.collection('users').doc(user.uid).get();
+    const ud = uSnap.data() || {};
+    const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
+    $('nav-nickname').textContent = nick;
+    $('sb-tb').textContent  = fmtNum(ud.tbBalance || 0);
+    $('sb-usd').textContent = fmtUSD(ud.usdEarnings || 0);
+    if (user.photoURL?.startsWith('https://'))
+      $('nav-avatar').innerHTML = `<img src="${user.photoURL}" alt="${nick}">`;
+    else $('nav-avatar').textContent = initials(nick);
+
+    // Load properties
+    const propsSnap = await db.collection('properties').where('ownerId','==',user.uid).get();
+    const props = propsSnap.docs.map(d => ({ id:d.id, ...d.data() }));
+    myPropertyIds = new Set(props.map(p => p.id));
+
+    // Fetch custom names from propertyDetails
+    const detSnaps = await Promise.all(props.map(p => db.collection('propertyDetails').doc(p.id).get()));
+    props.forEach((p,i) => {
+      const det = detSnaps[i].exists ? detSnaps[i].data() : {};
+      myPropertyMap[p.id] = { customName: det.customName || p.id, mineType: p.mineType || 'rock' };
+    });
+
+    // Populate mine filter dropdown
+    const sel = $('mine-filter');
+    props.sort((a,b) => (myPropertyMap[a.id]?.customName||'').localeCompare(myPropertyMap[b.id]?.customName||'')).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${mineIcon(p.mineType||'rock')} ${myPropertyMap[p.id]?.customName || p.id}`;
+      sel.appendChild(opt);
+    });
+
+    // Open mine from URL hash
+    const hash = location.hash.replace('#','');
+    if (hash && myPropertyIds.has(hash)) {
+      sel.value = hash;
+      activeMineFilter = hash;
+    }
+
+    await loadVisits(user.uid);
+  }
+
+  // ── Load check-ins ─────────────────────────────────────────────────────────
+  async function loadVisits(uid) {
+    try {
+      let snap;
+      if (activeMineFilter !== 'all') {
+        snap = await db.collection('checkIns')
+          .where('propertyId','==', activeMineFilter)
+          .orderBy('timestamp','desc')
+          .limit(200)
+          .get();
+      } else {
+        snap = await db.collection('checkIns')
+          .where('propertyOwnerId','==', uid)
+          .orderBy('timestamp','desc')
+          .limit(200)
+          .get();
+      }
+
+      allVisits = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      $('header-sub').textContent = `${allVisits.length} total check-ins across your mines`;
+      applyFilters();
+    } catch(e) {
+      console.error('Load visits error:', e);
+      $('visits-container').innerHTML = `<div class="empty-state"><div class="empty-text">Error loading visitors: ${e.message}</div></div>`;
+    }
+  }
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+  function applyFilters() {
+    const q = searchQuery.toLowerCase();
+    filteredVisits = allVisits.filter(v => {
+      // Type filter
+      if (activeTypeFilter === 'message' && !v.message) return false;
+      if (activeTypeFilter === 'photo'   && !(v.hasPhoto || v.photoURL || v.photoUrl)) return false;
+      if (activeTypeFilter === 'hidden'  && !v.isHidden) return false;
+      // Mine filter
+      if (activeMineFilter !== 'all' && v.propertyId !== activeMineFilter) return false;
+      // Search
+      if (q) {
+        const name = (v.visitorNickname || v.nickname || '').toLowerCase();
+        const msg  = (v.message || '').toLowerCase();
+        if (!name.includes(q) && !msg.includes(q)) return false;
+      }
+      return true;
+    });
+
+    displayedCount = 0;
+    renderPage();
+  }
+
+  function renderPage() {
+    const toShow = filteredVisits.slice(0, displayedCount + PAGE_SIZE);
+    displayedCount = toShow.length;
+
+    $('result-count').textContent = `${filteredVisits.length} visit${filteredVisits.length !== 1 ? 's' : ''}`;
+
+    if (!filteredVisits.length) {
+      $('visits-container').innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No check-ins match your filters.</div></div>`;
+      $('load-more-btn').style.display = 'none';
+      return;
+    }
+
+    $('visits-container').innerHTML = toShow.map(v => renderVisitCard(v)).join('');
+    $('load-more-btn').style.display = displayedCount < filteredVisits.length ? 'block' : 'none';
+  }
+
+  function renderVisitCard(v) {
+    const name     = v.visitorNickname || v.nickname || 'Anonymous Miner';
+    const photoURL = v.photoURL || v.photoUrl || null;
+    const mine     = myPropertyMap[v.propertyId] || { customName: v.propertyId, mineType: 'rock' };
+    const badges   = [
+      v.isHidden  ? '<span class="hidden-badge">🚫 HIDDEN</span>'  : '',
+      v.isAdult   ? '<span class="adult-badge">🔞 ADULT</span>'    : '',
+      (v.reportCount||0) > 0 ? `<span class="reported-badge">⚠️ ${v.reportCount} REPORT${v.reportCount>1?'S':''}</span>` : '',
+    ].filter(Boolean).join('');
+
+    return `<div class="visit-card">
+      <div class="visit-card-header">
+        <div class="visitor-avatar">${initials(name)}</div>
+        <div class="visitor-info">
+          <div class="visitor-name">${name}</div>
+          <div class="visitor-time" title="${fullDate(v.timestamp)}">${timeAgo(v.timestamp)}</div>
+        </div>
+        <div class="visit-mine-badge">${mineIcon(mine.mineType)} ${mine.customName}</div>
+      </div>
+      <div class="visit-card-body">
+        ${photoURL
+          ? `<img class="visit-photo" src="${photoURL}" alt="Check-in photo" onclick="openLightbox('${photoURL}')" loading="lazy" onerror="this.style.display='none'" />`
+          : ''}
+        ${v.message
+          ? `<div class="visit-message">${v.message}</div>`
+          : `<div class="visit-no-message">No message left</div>`}
+        <div class="visit-meta-row">
+          <span class="visit-prop-id">${v.propertyId}</span>
+          ${badges}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function loadMore() {
+    renderPage();
+  }
+
+  // ── Filter controls ────────────────────────────────────────────────────────
+  window.setTypeFilter = function(type, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTypeFilter = type;
+    applyFilters();
+  };
+
+  $('mine-filter').addEventListener('change', async e => {
+    activeMineFilter = e.target.value;
+    $('visits-container').innerHTML = '<div class="empty-state"><div class="empty-text">Loading…</div></div>';
+    await loadVisits(currentUser.uid);
+  });
+
+  $('search-input').addEventListener('input', e => {
+    searchQuery = e.target.value;
+    applyFilters();
+  });
+
+  // ── Lightbox ───────────────────────────────────────────────────────────────
+  window.openLightbox = function(url) {
+    $('lightbox-img').src = url;
+    $('lightbox').classList.add('open');
+  };
+  window.closeLightbox = function() {
+    $('lightbox').classList.remove('open');
+    $('lightbox-img').src = '';
+  };
+  $('lightbox').addEventListener('click', e => { if(e.target === $('lightbox')) closeLightbox(); });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeLightbox(); });
+</script>
+</body>
+</html>
