@@ -161,6 +161,42 @@
     .detail-header-icon { font-size: 22px; }
     .detail-header-title { font-size: 16px; font-weight: 700; color: white; flex: 1; }
 
+    /* Mine profile picture */
+    .mine-pfp-wrap { display:flex; justify-content:center; margin-bottom:10px; }
+    .mine-pfp {
+      width: 84px; height: 84px; border-radius: 50%;
+      border: 3px solid var(--brown); object-fit: cover;
+      cursor: pointer; transition: opacity 0.15s;
+      background: white;
+    }
+    .mine-pfp:hover { opacity: 0.85; }
+    .mine-pfp-empty {
+      width: 84px; height: 84px; border-radius: 50%;
+      border: 3px dashed var(--brown-mid); background: rgba(255,255,255,0.5);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: opacity 0.15s;
+      font-size: 11px; color: var(--text-mid); text-align: center; line-height: 1.3;
+    }
+    .mine-pfp-empty:hover { opacity: 0.85; border-color: var(--brown); }
+
+    /* Photo picker modal */
+    #pfp-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:600; align-items:center; justify-content:center; padding:20px; }
+    #pfp-modal.open { display:flex; }
+    .pfp-modal-card { background:white; border-radius:15px; max-width:560px; width:100%; max-height:80vh; overflow-y:auto; border:3px solid var(--brown-mid); }
+    .pfp-modal-header { background:var(--brown); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .pfp-modal-title { font-family:'Bebas Neue', sans-serif; font-size:16px; letter-spacing:1px; color:var(--gold); }
+    .pfp-modal-close { background:none; border:none; color:var(--gold); font-size:20px; cursor:pointer; }
+    .pfp-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(110px,1fr)); gap:10px; padding:18px; }
+    .pfp-option { position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; cursor:pointer; border:3px solid transparent; transition:border-color 0.15s; }
+    .pfp-option:hover { border-color: var(--brown); }
+    .pfp-option.selected { border-color: var(--green); }
+    .pfp-option img { width:100%; height:100%; object-fit:cover; display:block; }
+    .pfp-option-check { position:absolute; top:4px; right:4px; background:var(--green); color:white; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:12px; }
+    .pfp-empty-state { padding:40px 20px; text-align:center; color:var(--text-light); font-size:13px; }
+    .pfp-modal-footer { padding:12px 18px; border-top:1px solid #e0d0c0; display:flex; justify-content:space-between; align-items:center; }
+    .pfp-remove-btn { background:none; border:1px solid var(--red); color:var(--red); border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer; }
+    .pfp-remove-btn:hover { background:#ffebee; }
+
     /* Name section */
     .name-section {
       background: var(--brown-light);
@@ -438,10 +474,10 @@
       </ul>
       <div class="sidebar-section">Games</div>
       <ul class="sidebar-nav">
-        <li><a href="game-memory.html"><span class="icon">🧠</span> Memory Match</a></li>
-        <li><a href="game-maze.html"><span class="icon">🪨</span> Miner Maze</a></li>
-        <li><a href="game-goldrush.html"><span class="icon">🥇</span> Gold Rush</a></li>
-        <li><a href="game-laser.html"><span class="icon">💎</span> Laser Blast</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🧠</span> Memory Match</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🪨</span> Miner Maze</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🥇</span> Gold Rush</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">💎</span> Laser Blast</a></li>
       </ul>
       <div class="sidebar-footer"><a href="index.html">← Back to site</a></div>
     </aside>
@@ -472,6 +508,23 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- Profile picture picker modal -->
+<div id="pfp-modal">
+  <div class="pfp-modal-card">
+    <div class="pfp-modal-header">
+      <span class="pfp-modal-title">📷 CHOOSE MINE PHOTO</span>
+      <button class="pfp-modal-close" onclick="closePfpPicker()">✕</button>
+    </div>
+    <div class="pfp-grid" id="pfp-grid">
+      <div class="pfp-empty-state">Loading check-in photos…</div>
+    </div>
+    <div class="pfp-modal-footer">
+      <span style="font-size:11px;color:var(--text-light);">Only photos from check-ins at this mine</span>
+      <button class="pfp-remove-btn" id="pfp-remove-btn" onclick="removePfp()" style="display:none;">Remove Photo</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -816,9 +869,15 @@
 
       <!-- Name section -->
       <div class="name-section" id="name-section">
+        <div class="mine-pfp-wrap" id="mine-pfp-wrap">
+          ${d.profilePhotoURL
+            ? `<img class="mine-pfp" src="${d.profilePhotoURL}" alt="${name}" onclick="openPfpPicker('${mine.id}')" />`
+            : `<div class="mine-pfp-empty" onclick="openPfpPicker('${mine.id}')">No photo<br/>set</div>`}
+        </div>
         <div class="mine-name-display" id="mine-name-display">${name}</div>
         <div class="mine-id-display">${mine.id}</div>
         <button class="btn-edit" onclick="startEditName()">✏️ Edit Name</button>
+        <button class="btn-edit" onclick="openPfpPicker('${mine.id}')" style="margin-left:8px;">📷 Set Photo</button>
       </div>
 
       <!-- Greeting card -->
@@ -887,7 +946,7 @@
           <div class="game-title-web">${gameType(type)}</div>
           <div class="game-level-web">Level ${glevel}</div>
           <div class="game-diff-web">${diff}</div>
-          <a class="enter-btn" href="${gamePage(type)}#${mine.id}">⛏️ ENTER MINE</a>
+          <button class="enter-btn" onclick="showGameComingSoon(event)">⛏️ ENTER MINE</button>
         </div>
       </div>
 
@@ -1169,6 +1228,15 @@
 
   // Boost is app-only — no web boost functions
 
+  function showGameComingSoon(e) {
+    e.preventDefault();
+    const btn = e.currentTarget;
+    const orig = btn.textContent;
+    btn.textContent = '🚧 Coming Soon!';
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  }
+
   function showActivityComingSoon(e) {
     e.preventDefault();
     const btn = e.currentTarget;
@@ -1260,6 +1328,100 @@
       showToast('Trade failed: ' + e.message, 'error');
       btn.disabled = false; btn.textContent = 'Trade $' + val.toFixed(2) + ' → ' + tb + ' TB';
     }
+  }
+
+  // ── Mine profile picture picker ──────────────────────────────────────────
+  let pfpCurrentMineId = null;
+  let pfpSelectedURL = null;
+
+  window.openPfpPicker = async function(mineId) {
+    pfpCurrentMineId = mineId;
+    pfpSelectedURL = null;
+    const mine = allMines.find(p => p.id === mineId);
+    const currentPhoto = mine?._details?.profilePhotoURL || null;
+
+    $('pfp-modal').classList.add('open');
+    $('pfp-grid').innerHTML = '<div class="pfp-empty-state">Loading check-in photos…</div>';
+    $('pfp-remove-btn').style.display = currentPhoto ? 'inline-block' : 'none';
+
+    try {
+      const snap = await db.collection('checkIns')
+        .where('propertyId', '==', mineId)
+        .orderBy('timestamp', 'desc')
+        .limit(50)
+        .get();
+
+      const photos = snap.docs
+        .map(d => d.data())
+        .filter(c => !c.isHidden)
+        .map(c => c.photoURL || c.photoUrl)
+        .filter(Boolean);
+
+      if (!photos.length) {
+        $('pfp-grid').innerHTML = '<div class="pfp-empty-state">No check-in photos at this mine yet. Encourage visitors to share photos when they check in!</div>';
+        return;
+      }
+
+      $('pfp-grid').innerHTML = photos.map(url => `
+        <div class="pfp-option${url === currentPhoto ? ' selected' : ''}" onclick="selectPfp('${url}', this)">
+          <img src="${url}" alt="Check-in photo" loading="lazy" onerror="this.closest('.pfp-option').style.display='none'" />
+          ${url === currentPhoto ? '<div class="pfp-option-check">✓</div>' : ''}
+        </div>`).join('');
+    } catch(e) {
+      console.error('Load check-in photos error:', e);
+      $('pfp-grid').innerHTML = `<div class="pfp-empty-state">Could not load photos: ${e.message}</div>`;
+    }
+  };
+
+  window.closePfpPicker = function() {
+    $('pfp-modal').classList.remove('open');
+    pfpCurrentMineId = null;
+  };
+
+  window.selectPfp = async function(url, el) {
+    if (!pfpCurrentMineId) return;
+    document.querySelectorAll('.pfp-option').forEach(o => {
+      o.classList.remove('selected');
+      const chk = o.querySelector('.pfp-option-check');
+      if (chk) chk.remove();
+    });
+    el.classList.add('selected');
+    el.insertAdjacentHTML('beforeend', '<div class="pfp-option-check">✓</div>');
+
+    try {
+      await db.collection('propertyDetails').doc(pfpCurrentMineId).set({ profilePhotoURL: url }, { merge: true });
+      const mine = allMines.find(p => p.id === pfpCurrentMineId);
+      if (mine) mine._details = { ...mine._details, profilePhotoURL: url };
+      showToast('Mine photo updated!', 'success');
+      closePfpPicker();
+      if (selectedMineId === pfpCurrentMineId) await selectMine(pfpCurrentMineId);
+    } catch(e) {
+      showToast('Failed to save photo: ' + e.message, 'error');
+    }
+  };
+
+  window.removePfp = async function() {
+    if (!pfpCurrentMineId) return;
+    try {
+      await db.collection('propertyDetails').doc(pfpCurrentMineId).set({ profilePhotoURL: firebase.firestore.FieldValue.delete() }, { merge: true });
+      const mine = allMines.find(p => p.id === pfpCurrentMineId);
+      if (mine && mine._details) delete mine._details.profilePhotoURL;
+      showToast('Mine photo removed.', 'success');
+      closePfpPicker();
+      if (selectedMineId === pfpCurrentMineId) await selectMine(pfpCurrentMineId);
+    } catch(e) {
+      showToast('Failed to remove photo: ' + e.message, 'error');
+    }
+  };
+
+  $('pfp-modal').addEventListener('click', e => { if (e.target === $('pfp-modal')) closePfpPicker(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePfpPicker(); });
+
+  function sidebarGameComingSoon(e, link) {
+    e.preventDefault();
+    const orig = link.innerHTML;
+    link.innerHTML = '<span class="icon">🚧</span> Coming Soon!';
+    setTimeout(() => { link.innerHTML = orig; }, 2000);
   }
 </script>
 </body>
