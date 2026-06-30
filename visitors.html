@@ -234,6 +234,10 @@
         <select class="filter-select" id="mine-filter">
           <option value="all">All Mines</option>
         </select>
+        <select class="filter-select" id="sort-select" onchange="setSortOrder(this.value)">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+        </select>
         <button class="filter-btn active" data-filter="all" onclick="setTypeFilter('all', this)">All</button>
         <button class="filter-btn" data-filter="message" onclick="setTypeFilter('message', this)">💬 With Message</button>
         <button class="filter-btn" data-filter="photo" onclick="setTypeFilter('photo', this)">📸 With Photo</button>
@@ -294,6 +298,7 @@
   let activeTypeFilter = 'all';
   let activeMineFilter = 'all';
   let searchQuery      = '';
+  let sortOrder        = 'newest';
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -443,9 +448,28 @@
       return true;
     });
 
+    // Sort
+    filteredVisits.sort((a, b) => {
+      const tA = toMillis(a.timestamp);
+      const tB = toMillis(b.timestamp);
+      return sortOrder === 'newest' ? tB - tA : tA - tB;
+    });
+
     displayedCount = 0;
     renderPage();
   }
+
+  function toMillis(ts) {
+    if (!ts) return 0;
+    if (typeof ts === 'string') return new Date(ts).getTime();
+    if (ts.toDate) return ts.toDate().getTime();
+    return new Date(ts).getTime();
+  }
+
+  window.setSortOrder = function(order) {
+    sortOrder = order;
+    applyFilters();
+  };
 
   function renderPage() {
     const toShow = filteredVisits.slice(0, displayedCount + PAGE_SIZE);
