@@ -206,13 +206,14 @@
         <li><a href="mines.html"><span class="icon">⛏</span> My Mines</a></li>
         <li><a href="visitors.html" class="active"><span class="icon">👥</span> Visitors</a></li>
         <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
+        <li><a href="account.html"><span class="icon">⚙️</span> Account</a></li>
       </ul>
       <div class="sidebar-section">Games</div>
       <ul class="sidebar-nav">
-        <li><a href="game-memory.html"><span class="icon">🧠</span> Memory Match</a></li>
-        <li><a href="game-maze.html"><span class="icon">🪨</span> Miner Maze</a></li>
-        <li><a href="game-goldrush.html"><span class="icon">🥇</span> Gold Rush</a></li>
-        <li><a href="game-laser.html"><span class="icon">💎</span> Laser Blast</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🧠</span> Memory Match</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🪨</span> Miner Maze</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🥇</span> Gold Rush</a></li>
+        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">💎</span> Laser Blast</a></li>
       </ul>
       <div class="sidebar-footer"><a href="index.html">← Back to site</a></div>
     </aside>
@@ -555,6 +556,13 @@
   };
   $('lightbox').addEventListener('click', e => { if(e.target === $('lightbox')) closeLightbox(); });
   document.addEventListener('keydown', e => { if(e.key==='Escape') closeLightbox(); });
+
+  function sidebarGameComingSoon(e, link) {
+    e.preventDefault();
+    const orig = link.innerHTML;
+    link.innerHTML = '<span class="icon">🚧</span> Coming Soon!';
+    setTimeout(() => { link.innerHTML = orig; }, 2000);
+  }
 </script>
 </body>
 </html>
