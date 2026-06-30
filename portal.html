@@ -921,7 +921,7 @@
           </div>
           <div class="mine-action-row">
             <a class="mine-btn primary" href="mines.html#${p.id}">Maintain</a>
-            <a class="mine-btn" href="game-${type === 'rock' ? 'memory' : type === 'coal' ? 'maze' : type === 'gold' ? 'goldrush' : 'laser'}.html#${p.id}">Play Game</a>
+            <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
           </div>
         </div>`;
     }).join('');
@@ -978,6 +978,20 @@
       list.innerHTML = `<div class="empty-state"><div class="empty-text">Could not load visitors.</div></div>`;
       console.error('Visitors error:', e);
     }
+  }
+
+  function showComingSoon(e) {
+    e.preventDefault();
+    const btn = e.currentTarget;
+    const orig = btn.textContent;
+    btn.textContent = '🚧 Coming Soon!';
+    btn.style.color = 'var(--brown)';
+    btn.style.borderColor = 'var(--brown)';
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
   }
 </script>
 </body>
