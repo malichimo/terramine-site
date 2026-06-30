@@ -608,9 +608,6 @@
     return { rock:'Memory Matching', coal:'Miner Maze', gold:'Gold Rush', diamond:'Laser Blast' }[type] || 'Game';
   }
 
-  function gamePage(type) {
-    return { rock:'game-memory.html', coal:'game-maze.html', gold:'game-goldrush.html', diamond:'game-laser.html' }[type] || 'game-memory.html';
-  }
 
   function gameDifficulty(type, level) {
     if (type === 'coal') {
