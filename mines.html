@@ -906,17 +906,15 @@
         </div>
       </div>
 
-      <!-- Ad attempts for daily activity -->
+      <!-- Ad attempts for daily activity — disabled until web ads are live -->
       ${(()=>{
         const adUsed = d.adAttemptsUsedToday || 0;
         const MAX_AD = 6; // 3 ad watches × 2 attempts each
         const adRem = Math.max(0, MAX_AD - adUsed);
-        const actReady2 = (d.dailyActivitiesRemaining ?? 1) > 0;
         return `<div class="ad-attempts-row">
-          <div class="ad-attempts-info">📺 Ad attempts: ${adRem}/${MAX_AD} remaining today</div>
-          <button class="ad-attempts-btn" id="ad-attempt-btn" onclick="watchAdForAttempts('${mine.id}')"
-            ${adRem < 2 || (d.dailyActivitiesRemaining ?? 1) >= 3 ? 'disabled' : ''}>
-            📺 Watch Ad (+2 attempts)
+          <div class="ad-attempts-info">📺 Watch an ad for +2 extra Daily Activity attempts (used above)</div>
+          <button class="ad-attempts-btn" id="ad-attempt-btn" disabled title="Ads coming soon to the web portal">
+            🚧 Coming Soon
           </button>
         </div>`;
       })()}
