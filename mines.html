@@ -222,7 +222,8 @@
     .activity-card-header { background: var(--gray-header); }
     .activity-card-title  { color: var(--gold); }
     .attempts-badge { background: var(--amber); color: white; font-weight: 700; font-size: 13px; padding: 4px 12px; border-radius: 14px; }
-    .activity-emoji-display { background: #f5f5f5; padding: 20px; text-align: center; font-size: 80px; line-height: 1; }
+    .activity-emoji-display { background: #f5f5f5; padding: 16px; text-align: center; line-height: 1; }
+    .activity-img { width: 100%; max-width: 280px; height: 180px; object-fit: contain; display: block; margin: 0 auto; }
     .double-banner { background: var(--amber); padding: 10px; text-align: center; font-weight: 700; font-size: 13px; color: white; }
     .activity-info { padding: 12px 16px; text-align: center; background: #f9f9f9; }
     .activity-info-text { font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
@@ -536,8 +537,14 @@
     return { rock:'⚙️ CONVEYOR BELT', coal:'⛏️ COAL PILE', gold:'💧 SLUICE BOX', diamond:'🎰 SLOT MACHINE' }[type] || '⚙️ DAILY ACTIVITY';
   }
 
-  function activityEmoji(type) {
-    return { rock:'🏭', coal:'⛰️', gold:'💧', diamond:'🎰' }[type] || '⛏';
+  function activityImage(type) {
+    const imgs = {
+      rock:    'images/conveyor-belt-clear.png',
+      coal:    'images/coal-pile.png',
+      gold:    'images/sluice-box.png',
+      diamond: 'images/slot-machine.png',
+    };
+    return imgs[type] || imgs.rock;
   }
 
   function activityInstruction(type) {
@@ -859,13 +866,13 @@
           <span class="app-card-title activity-card-title">${activityTitle(type)}</span>
           <span class="attempts-badge">${actCount}/3</span>
         </div>
-        <div class="activity-emoji-display">${activityEmoji(type)}</div>
+        <div class="activity-emoji-display"><img class="activity-img" src="${activityImage(type)}" alt="${activityTitle(type)}" /></div>
         ${doubleAvail ? '<div class="double-banner">⭐ DOUBLE REWARD AVAILABLE!</div>' : ''}
         <div class="activity-info">
           <div class="activity-info-text">${activityInstruction(type)}</div>
           <div class="reset-text" id="reset-countdown">Resets in: ${formatResetTime()}</div>
         </div>
-        <button class="activity-btn${actReady?'':' done'}" id="activity-btn" onclick="doActivity('${mine.id}')" ${actReady?'':'disabled'}>
+        <button class="activity-btn${actReady?'':' done'}" id="activity-btn" onclick="${actReady ? 'showActivityComingSoon(event)' : ''}" ${actReady?'':'disabled'}>
           ${actReady ? activityInstruction(type) : '✓ Done for today — resets at 4 AM EST'}
         </button>
       </div>
@@ -1163,6 +1170,22 @@
   }
 
   // Boost is app-only — no web boost functions
+
+  function showActivityComingSoon(e) {
+    e.preventDefault();
+    const btn = e.currentTarget;
+    const orig = btn.textContent;
+    const origClass = btn.className;
+    btn.textContent = '🚧 Coming Soon — Play in the App!';
+    btn.style.background = '#5C3317';
+    btn.style.color = '#FFD700';
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.className = origClass;
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 2500);
+  }
 
   // ── Watch Ad for Activity Attempts ─────────────────────────────────────────
   async function watchAdForAttempts(mineId) {
