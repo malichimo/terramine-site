@@ -516,6 +516,7 @@
           <th onclick="sortBy('propCount')">Properties ↕</th>
           <th onclick="sortBy('lastActiveAt')">Last Active ↕</th>
           <th onclick="sortBy('createdAt')">Account Age ↕</th>
+          <th onclick="sortBy('referralCount')">Referrals ↕</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -737,7 +738,7 @@
   function renderTable(users) {
     if (!users.length) {
       document.getElementById('userTableBody').innerHTML =
-        '<tr><td colspan="8" style="padding:24px;color:var(--text-muted);font-size:12px;">No users match this filter.</td></tr>';
+        '<tr><td colspan="9" style="padding:24px;color:var(--text-muted);font-size:12px;">No users match this filter.</td></tr>';
       return;
     }
     document.getElementById('userTableBody').innerHTML = users.map(u => {
@@ -754,6 +755,7 @@
         <td>${u.propCount || 0}</td>
         <td class="td-muted">${timeAgo(u.lastActiveAt)}</td>
         <td class="td-muted">${u.createdAt ? shortDate(u.createdAt) : '—'}</td>
+        <td class="td-gold">${u.referralCount || 0}</td>
         <td>${statusBadge}</td>
       </tr>`;
     }).join('');
