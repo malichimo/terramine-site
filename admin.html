@@ -882,7 +882,7 @@
   const auth = getAuth(app);
 
   // ── Auth ────────────────────────────────────────────────────────
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'inline-block';
