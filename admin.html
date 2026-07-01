@@ -887,7 +887,9 @@
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'inline-block';
       document.getElementById('adminEmail').textContent = user.email;
-      loadAll();
+      // Load from cache first (fast), then let user hit Refresh for full scan
+      const cached = await loadFromCache();
+      if (!cached) loadAll(); // first time or cache miss — do full load
       loadNotificationConfig();
       loadFeedback();
     } else {
@@ -969,6 +971,41 @@
     gold: '#c8922a',
     diamond: '#4a9fd4',
   };
+
+  // ── Fast initial load from adminStats/global ─────────────────────────────
+  async function loadFromCache() {
+    try {
+      const snap = await getDoc(doc(db, 'adminStats', 'global'));
+      if (!snap.exists()) return false;
+      const s = snap.data();
+      const fmt2 = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(Math.round(n));
+      const fmtUSD2 = n => '$' + (parseFloat(n)||0).toFixed(2);
+      const total = s.totalUsers || 0;
+      const active7 = s.active7d || 0;
+      const active30 = s.active30d || 0;
+      document.getElementById('totalUsers').textContent     = fmt2(total);
+      document.getElementById('active7d').textContent       = fmt2(active7);
+      document.getElementById('active7dPct').textContent    = total ? Math.round(active7/total*100)+'% of users' : '—';
+      document.getElementById('active30d').textContent      = fmt2(active30);
+      document.getElementById('active30dPct').textContent   = total ? Math.round(active30/total*100)+'% of users' : '—';
+      document.getElementById('totalTB').textContent        = fmt2(s.totalTB || 0);
+      document.getElementById('avgTB').textContent          = total ? fmt2(Math.round((s.totalTB||0)/total)) : '0';
+      document.getElementById('totalUSD').textContent       = fmtUSD2(s.totalUSD || 0);
+      document.getElementById('totalCheckIns').textContent  = fmt2(s.totalCheckIns || 0);
+      document.getElementById('totalProps').textContent     = fmt2(s.totalPropertiesSold || 0);
+      document.getElementById('totalMinesCount').textContent = (s.totalPropertiesSold || 0) + ' total';
+      if (s.updatedAt) {
+        const d = new Date(s.updatedAt);
+        document.getElementById('lastUpdated').textContent =
+          'Cached ' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
+          d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+      }
+      return true;
+    } catch(e) {
+      console.warn('Cache load failed:', e);
+      return false;
+    }
+  }
 
   window.loadAll = async function() {
     const btn = document.getElementById('refreshBtn');
@@ -1090,12 +1127,17 @@
       applyFilter('all'); // populate email list with default filter
 
 
-      // ── Sync public stats to adminStats/global ───────────────────
+      // ── Sync full stats to adminStats/global ───────────────────
       try {
         await setDoc(doc(db, 'adminStats', 'global'), {
-          totalUsers: total,
+          totalUsers:          total,
           totalPropertiesSold: propCount,
-          updatedAt: new Date().toISOString()
+          active7d:            active7,
+          active30d:           active30,
+          totalTB:             totalTB,
+          totalUSD:            totalUSD,
+          totalCheckIns:       totalCI,
+          updatedAt:           new Date().toISOString()
         });
       } catch (e) {
         console.warn('adminStats sync failed:', e);
