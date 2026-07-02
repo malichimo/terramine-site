@@ -293,11 +293,19 @@
         allProperties = snap.docs.map(d => {
           const data = d.data();
           return {
-            lat:  data.centerLat ?? data.latitude  ?? data.lat  ?? null,
-            lng:  data.centerLng ?? data.longitude ?? data.lng  ?? null,
-            type: data.mineType  ?? 'rock',
+            lat:           data.centerLat      ?? data.latitude  ?? data.lat  ?? null,
+            lng:           data.centerLng      ?? data.longitude ?? data.lng  ?? null,
+            type:          data.mineType       ?? 'rock',
+            isNullIsland:  data.isNullIsland   ?? false,
+            isSuspended:   data.earningsSuspended ?? false,
           };
-        }).filter(p => p.lat !== null && p.lng !== null);
+        }).filter(p =>
+          p.lat !== null && p.lng !== null &&
+          // Exclude flagged/suspended properties (GPS spoofers, Null Island)
+          !p.isNullIsland && !p.isSuspended &&
+          // Exclude coordinates implausibly close to (0,0) even if not yet flagged
+          !(Math.abs(p.lat) < 1.0 && Math.abs(p.lng) < 1.0)
+        );
 
         renderMap();
         updateStats();
