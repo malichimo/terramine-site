@@ -417,7 +417,12 @@
       </table>
     </div>
     <div class="table-card" id="liabilityDeltaCard">
-      <div class="table-header">Daily Liability Change <span class="table-count" id="liabDeltaDate">—</span></div>
+      <div class="table-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Daily Liability Change <span class="table-count" id="liabDeltaDate">—</span></span>
+        <button id="snapshot-btn" onclick="handleTakeSnapshot()" style="background:var(--amber);color:#0a1628;border:none;border-radius:5px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📸 Take Snapshot
+        </button>
+      </div>
       <table>
         <thead><tr><th>Metric</th><th>Value</th><th>Status</th></tr></thead>
         <tbody id="liabDeltaBody">
@@ -425,7 +430,7 @@
         </tbody>
       </table>
       <div style="padding:12px 24px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">
-        📊 Compares today's player liability against yesterday's snapshot. Green = liability shrinking or yesterday's revenue exceeding growth. Red = liability growing faster than yesterday's revenue.
+        📊 Compares today's player liability against yesterday's snapshot. Green = liability shrinking or revenue exceeding growth. Red = liability growing faster than revenue.
       </div>
     </div>
   </div>
@@ -612,25 +617,6 @@
       <div class="stat-value orange" id="liabMax"><div class="skeleton"></div></div>
       <div class="stat-sub" id="liabMaxUser">—</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Active Users Yesterday</div>
-      <div class="stat-value" id="liabActiveUsers"><div class="skeleton"></div></div>
-      <div class="stat-sub">Checked in or earned TB</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Earnings / Active User</div>
-      <div class="stat-value" id="liabEarnPerUser"><div class="skeleton"></div></div>
-      <div class="stat-sub">Liability growth ÷ active users</div>
-    </div>
-  </div>
-
-  <!-- Earnings per active user trend chart -->
-  <div class="chart-card" style="margin-bottom:24px;">
-    <div class="chart-title">Earnings per Active User — Daily Trend</div>
-    <div class="chart-sub">Liability delta ÷ active users. Tracks how much USD the average active player earns each day.</div>
-    <div class="chart-wrap">
-      <canvas id="earnPerUserChart" role="img" aria-label="Line chart showing daily earnings per active user over the last 30 days"></canvas>
-    </div>
   </div>
 
   <div class="table-card" style="margin-bottom:32px;">
@@ -697,10 +683,8 @@
   let allExpenses = [];  // [{id, name, amount, frequency, category, notes, active}]
   let totalPlayerLiability = 0;
   let topEarners = [];   // [{nickname, email, usdEarnings, tbBalance}]
-  let activeUsersYesterday = 0;
   let currentPeriod = 'yesterday';
   let chartInstance = null;
-  let earnPerUserChartInstance = null;
   let editingRevId = null;
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -764,19 +748,10 @@
           tbBalance: u.tbBalance || 0,
         }))
         .sort((a, b) => b.usdEarnings - a.usdEarnings);
-
-      // Count users active yesterday (lastActiveAt within yesterday's date range)
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-      const yStr = yesterday.toISOString().slice(0, 10);
-      activeUsersYesterday = users.filter(u => {
-        const la = u.lastActiveAt || u.lastCheckinAt || u.updatedAt || '';
-        return typeof la === 'string' ? la.startsWith(yStr) : false;
-      }).length;
     } catch(e) {
       console.warn('Liability load failed:', e);
       totalPlayerLiability = 0;
       topEarners = [];
-      activeUsersYesterday = 0;
     }
   }
 
@@ -871,52 +846,81 @@
   // ── Render ────────────────────────────────────────────────────────────────
   // ── Daily liability snapshot (localStorage) ─────────────────────────────
   // Stores liability total keyed by date so we can show day-over-day change.
-  const LIAB_SNAPSHOT_KEY = 'terramine_liab_snapshot';
-  const EARN_PER_USER_KEY  = 'terramine_earn_per_user';
+  // ── Daily snapshot helpers ─────────────────────────────────────────────────
+  // Snapshot is now written to Firestore finance_snapshots/{YYYY-MM-DD}
+  // for cross-device persistence. localStorage is kept as a lightweight fallback.
+
+  async function takeSnapshot(manual = true) {
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+    // Read yesterday's Firestore snapshot for delta
+    let yesterdayLiab = null;
+    try {
+      const ySnap = await getDoc(doc(db, 'finance_snapshots', yesterday));
+      if (ySnap.exists()) yesterdayLiab = ySnap.data().totalLiability ?? null;
+    } catch(e) {
+      // Fallback to localStorage
+      try { yesterdayLiab = parseFloat(localStorage.getItem('tm_liab_' + yesterday)) || null; } catch(e2) {}
+    }
+
+    // Get yesterday's logged revenue
+    const yRev = allRevenue.find(r => r.date === yesterday) || {};
+    const androidRev = yRev.android || 0;
+    const iosRev     = yRev.ios     || 0;
+    const iapRev     = yRev.iap     || 0;
+    const totalRev   = androidRev + iosRev + iapRev;
+    const delta      = yesterdayLiab !== null ? totalPlayerLiability - yesterdayLiab : null;
+    const earnPerUser = (delta !== null && activeUsersYesterday > 0)
+      ? parseFloat((delta / activeUsersYesterday).toFixed(4)) : null;
+
+    const snapData = {
+      date:              today,
+      totalLiability:    totalPlayerLiability,
+      liabilityDelta:    delta,
+      yesterdayLiab:     yesterdayLiab,
+      activeUsers:       activeUsersYesterday || 0,
+      earnPerActiveUser: earnPerUser,
+      androidRevenue:    androidRev,
+      iosRevenue:        iosRev,
+      iapRevenue:        iapRev,
+      totalRevenue:      totalRev,
+      netPosition:       delta !== null ? totalRev - delta : null,
+      snapshotWrittenAt: new Date().toISOString(),
+      manual:            manual,
+    };
+
+    await setDoc(doc(db, 'finance_snapshots', today), snapData, { merge: true });
+    // Also cache in localStorage as fallback
+    try { localStorage.setItem('tm_liab_' + today, totalPlayerLiability.toString()); } catch(e) {}
+    return snapData;
+  }
 
   function saveLiabilitySnapshot(total) {
-    const today = new Date().toISOString().slice(0, 10);
-    try {
-      const existing = JSON.parse(localStorage.getItem(LIAB_SNAPSHOT_KEY) || '{}');
-      // Keep last 7 days only
-      const keys = Object.keys(existing).sort();
-      if (keys.length >= 7) delete existing[keys[0]];
-      existing[today] = total;
-      localStorage.setItem(LIAB_SNAPSHOT_KEY, JSON.stringify(existing));
-    } catch(e) { /* localStorage not available */ }
+    // Keep localStorage write for immediate in-session use
+    try { localStorage.setItem('tm_liab_' + new Date().toISOString().slice(0,10), total.toString()); } catch(e) {}
+    // Non-blocking auto-snapshot to Firestore
+    takeSnapshot(false).catch(e => console.warn('Auto-snapshot failed:', e));
   }
 
-  function saveEarnPerUserSnapshot(earnPerUser) {
-    const today = new Date().toISOString().slice(0, 10);
+  async function getYesterdayLiability() {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    // Try Firestore first
     try {
-      const existing = JSON.parse(localStorage.getItem(EARN_PER_USER_KEY) || '{}');
-      const keys = Object.keys(existing).sort();
-      if (keys.length >= 35) delete existing[keys[0]];
-      existing[today] = earnPerUser;
-      localStorage.setItem(EARN_PER_USER_KEY, JSON.stringify(existing));
-    } catch(e) {}
-  }
-
-  function getEarnPerUserHistory() {
+      const snap = await getDoc(doc(db, 'finance_snapshots', yesterday));
+      if (snap.exists()) return snap.data().totalLiability ?? null;
+    } catch(e) { console.warn('getYesterdayLiability Firestore error:', e); }
+    // Fallback to localStorage
     try {
-      return JSON.parse(localStorage.getItem(EARN_PER_USER_KEY) || '{}');
-    } catch(e) { return {}; }
-  }
-
-  function getYesterdayLiability() {
-    try {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const key = yesterday.toISOString().slice(0, 10);
-      const stored = JSON.parse(localStorage.getItem(LIAB_SNAPSHOT_KEY) || '{}');
-      return stored[key] !== undefined ? stored[key] : null;
+      const cached = localStorage.getItem('tm_liab_' + yesterday);
+      return cached ? parseFloat(cached) : null;
     } catch(e) { return null; }
   }
 
-  function renderLiabilityDelta() {
+  async function renderLiabilityDelta() {
     const today = new Date().toISOString().slice(0, 10);
-    const yesterdayRevenue = grossForPeriod('yesterday');
-    const yesterdayLiab = getYesterdayLiability();
+    const todayRevenue = grossForPeriod('daily');
+    const yesterdayLiab = await getYesterdayLiability();
     const delta = yesterdayLiab !== null ? totalPlayerLiability - yesterdayLiab : null;
 
     document.getElementById('liabDeltaDate').textContent = today;
@@ -961,23 +965,23 @@
       </tr>`);
     }
 
-    // Yesterday's revenue vs liability growth
+    // Today's revenue vs liability growth
     rows.push(`<tr>
-      <td>Yesterday's Revenue</td>
-      <td class="td-green">${fmtUSD(yesterdayRevenue)}</td>
+      <td>Today's Revenue</td>
+      <td class="td-green">${fmtUSD(todayRevenue)}</td>
       <td><span class="stat-badge badge-blue">logged</span></td>
     </tr>`);
 
-    // Coverage check — is yesterday's revenue covering today's liability growth?
+    // Coverage check — is today's revenue covering today's liability growth?
     if (delta !== null) {
-      const covered = yesterdayRevenue >= delta;
-      const surplus = yesterdayRevenue - delta;
+      const covered = todayRevenue >= delta;
+      const surplus = todayRevenue - delta;
       const coverClass = covered ? 'td-green' : 'td-red';
       const coverBadge = covered
         ? '<span class="stat-badge badge-green">✓ covered</span>'
         : '<span class="stat-badge badge-red">✗ shortfall</span>';
       rows.push(`<tr>
-        <td>Revenue vs Liability Growth — Yesterday</td>
+        <td>Revenue vs Liability Growth</td>
         <td class="${coverClass}">${surplus >= 0 ? '+' : ''}${fmtUSD(surplus)}</td>
         <td>${coverBadge}</td>
       </tr>`);
@@ -987,14 +991,9 @@
 
     // Save today's snapshot for tomorrow's comparison
     saveLiabilitySnapshot(totalPlayerLiability);
-
-    // Save earnings-per-active-user for trend chart
-    if (delta !== null && activeUsersYesterday > 0) {
-      saveEarnPerUserSnapshot(parseFloat((delta / activeUsersYesterday).toFixed(4)));
-    }
   }
 
-  function renderAll() {
+  async function renderAll() {
     renderKPIs();
     renderChart();
     renderSourceBreakdown();
@@ -1002,7 +1001,7 @@
     renderExpenseSummary();
     renderExpenseTable();
     renderLiability();
-    renderLiabilityDelta();
+    await renderLiabilityDelta();
     renderEarnPerUserChart();
   }
 
@@ -1155,77 +1154,16 @@
     }).join('') : '<tr><td colspan="8" class="td-muted" style="padding:16px 24px;">No expenses yet.</td></tr>';
   }
 
-  function renderEarnPerUserChart() {
-    const ctx = document.getElementById('earnPerUserChart');
-    if (!ctx) return;
-    if (earnPerUserChartInstance) { earnPerUserChartInstance.destroy(); earnPerUserChartInstance = null; }
-
-    const history = getEarnPerUserHistory();
-    const today = new Date();
-    const pts = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today); d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
-      pts.push({
-        label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        value: history[dateStr] !== undefined ? history[dateStr] : null,
-      });
-    }
-
-    const hasData = pts.some(p => p.value !== null);
-    if (!hasData) {
-      ctx.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:12px;">Data accumulates day-by-day — check back tomorrow.</div>';
-      return;
-    }
-
-    earnPerUserChartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: pts.map(p => p.label),
-        datasets: [{
-          label: 'Earnings / Active User',
-          data: pts.map(p => p.value),
-          borderColor: '#EF9F27',
-          backgroundColor: 'rgba(239,159,39,0.12)',
-          pointBackgroundColor: '#EF9F27',
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: true,
-          tension: 0.35,
-          spanGaps: true,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: c => ' $' + (c.parsed.y || 0).toFixed(4) + ' / active user' } }
-        },
-        scales: {
-          x: { ticks: { color: '#8a7560', maxTicksLimit: 10, maxRotation: 0 }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } },
-          y: { ticks: { color: '#8a7560', callback: v => '$' + v.toFixed(3) }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } }
-        }
-      }
-    });
-  }
-
   function renderLiability() {
     const withEarnings = topEarners.length;
     const avg = withEarnings > 0 ? totalPlayerLiability / withEarnings : 0;
     const max = withEarnings > 0 ? topEarners[0] : null;
-
-    // Earnings per active user = yesterday's liability delta / active users yesterday
-    const yesterdayLiab = getYesterdayLiability();
-    const delta = yesterdayLiab !== null ? totalPlayerLiability - yesterdayLiab : null;
-    const earnPerUser = (delta !== null && activeUsersYesterday > 0) ? delta / activeUsersYesterday : null;
 
     document.getElementById('liabTotal').textContent = fmtUSD(totalPlayerLiability);
     document.getElementById('liabUserCount').textContent = withEarnings;
     document.getElementById('liabAvg').textContent = fmtUSD(avg);
     document.getElementById('liabMax').textContent = max ? fmtUSD(max.usdEarnings) : '$0.00';
     document.getElementById('liabMaxUser').textContent = max ? max.nickname : '—';
-    document.getElementById('liabActiveUsers').textContent = activeUsersYesterday > 0 ? activeUsersYesterday.toLocaleString() : '—';
-    document.getElementById('liabEarnPerUser').textContent = earnPerUser !== null ? fmtUSD(earnPerUser) : '—';
     document.getElementById('liabTableCount').textContent = `top ${Math.min(topEarners.length, 20)} of ${withEarnings}`;
 
     const top20 = topEarners.slice(0, 20);
@@ -1436,6 +1374,37 @@
       renderAll();
     } catch(e) { alert('Delete failed: ' + e.message); }
   };
+  window.handleTakeSnapshot = async function() {
+    const btn = document.getElementById('snapshot-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
+    try {
+      const data = await takeSnapshot(true);
+      const deltaStr = data.liabilityDelta !== null
+        ? (data.liabilityDelta >= 0 ? '+' : '') + '$' + Math.abs(data.liabilityDelta).toFixed(2)
+        : '—';
+      showSnapshotToast('✅ Snapshot saved — ' + data.date + ' | Liability: $' + data.totalLiability.toFixed(2) + ' | Delta: ' + deltaStr + ' | Revenue: $' + data.totalRevenue.toFixed(2));
+    } catch(e) {
+      console.error('Snapshot failed:', e);
+      showSnapshotToast('❌ Snapshot failed: ' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '📸 Take Snapshot'; }
+    }
+  };
+
+  function showSnapshotToast(msg) {
+    let el = document.getElementById('snapshot-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'snapshot-toast';
+      el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a2535;border:1px solid var(--amber);border-radius:8px;padding:14px 18px;font-size:13px;color:var(--text-primary);z-index:9999;max-width:420px;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 6000);
+  }
+
 </script>
 </body>
 </html>
