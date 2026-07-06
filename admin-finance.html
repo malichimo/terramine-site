@@ -1383,6 +1383,64 @@
       renderAll();
     } catch(e) { alert('Delete failed: ' + e.message); }
   };
+  function renderEarnPerUserChart() {
+    // Renders earn-per-user trend from localStorage snapshot data
+    // Data accumulates as snapshots are taken — shows nothing until first snapshot
+    try {
+      const ctx = document.getElementById('earnPerUserChart');
+      if (!ctx) return;
+
+      const history = JSON.parse(localStorage.getItem('terramine_earn_per_user') || '{}');
+      const today = new Date();
+      const pts = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        pts.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          value: history[dateStr] !== undefined ? history[dateStr] : null,
+        });
+      }
+
+      const hasData = pts.some(p => p.value !== null);
+      if (!hasData) {
+        ctx.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:12px;">Data accumulates day-by-day — check back after taking snapshots for a few days.</div>';
+        return;
+      }
+
+      if (window._earnPerUserChart) { window._earnPerUserChart.destroy(); }
+      window._earnPerUserChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: pts.map(p => p.label),
+          datasets: [{
+            label: 'Earnings / Active User',
+            data: pts.map(p => p.value),
+            borderColor: '#EF9F27',
+            backgroundColor: 'rgba(239,159,39,0.12)',
+            pointBackgroundColor: '#EF9F27',
+            pointRadius: 3,
+            fill: true,
+            tension: 0.35,
+            spanGaps: true,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: c => ' $' + (c.parsed.y || 0).toFixed(4) + ' / active user' } }
+          },
+          scales: {
+            x: { ticks: { color: '#8a7560', maxTicksLimit: 10, maxRotation: 0 }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } },
+            y: { ticks: { color: '#8a7560', callback: v => '$' + v.toFixed(3) }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } }
+          }
+        }
+      });
+    } catch(e) {
+      console.warn('renderEarnPerUserChart error:', e);
+    }
+  }
+
   window.handleTakeSnapshot = async function() {
     const btn = document.getElementById('snapshot-btn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
