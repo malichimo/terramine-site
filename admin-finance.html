@@ -680,6 +680,7 @@
 
   // ── State ──────────────────────────────────────────────────────────────────
   let allRevenue = [];   // [{id, date, android, ios, iap, notes}]
+  let activeUsersYesterday = 0; // Set by loadPlayerLiability
   let allExpenses = [];  // [{id, name, amount, frequency, category, notes, active}]
   let totalPlayerLiability = 0;
   let topEarners = [];   // [{nickname, email, usdEarnings, tbBalance}]
@@ -748,10 +749,18 @@
           tbBalance: u.tbBalance || 0,
         }))
         .sort((a, b) => b.usdEarnings - a.usdEarnings);
+
+      // Count users active yesterday (lastActiveAt within yesterday's date)
+      const yStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      activeUsersYesterday = users.filter(u => {
+        const la = u.lastActiveAt || u.lastCheckinAt || u.updatedAt || '';
+        return typeof la === 'string' ? la.startsWith(yStr) : false;
+      }).length;
     } catch(e) {
       console.warn('Liability load failed:', e);
       totalPlayerLiability = 0;
       topEarners = [];
+      activeUsersYesterday = 0;
     }
   }
 
