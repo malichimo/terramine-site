@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Player's Guide — TerraMine</title>
+  <meta name="description" content="Your complete guide to getting started with TerraMine — mines, currencies, mini-games, boosts, check-ins, and referrals." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080C10;
+      --surface: #0F1620;
+      --border:  rgba(255,255,255,0.07);
+      --gold:    #F5C542;
+      --gold2:   #E89B1A;
+      --cyan:    #5BE5D0;
+      --white:   #EEF2F8;
+      --muted:   #6B7C93;
+      --rock:    #8A9BAE;
+      --coal:    #3D4F62;
+      --goldm:   #D4A017;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID TEXTURE ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91,229,208,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,229,208,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(8,12,16,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--white); }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-login {
+      border: 1px solid var(--cyan);
+      color: var(--cyan) !important;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .nav-cta {
+      background: var(--gold);
+      color: #080C10 !important;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 72px 40px 56px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(44px, 7vw, 80px);
+      letter-spacing: 2px;
+      line-height: 1.0;
+      color: var(--white);
+      margin-bottom: 18px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--gold);
+    }
+    .hero-desc {
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 560px;
+      margin-bottom: 28px;
+    }
+    .hero-credit {
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+    .hero-credit strong { color: var(--muted); opacity: 1; }
+
+    /* ── LAYOUT ── */
+    .guide-layout {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    /* ── STICKY TOC ── */
+    .toc {
+      position: sticky;
+      top: 88px;
+    }
+    .toc-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .toc-list { list-style: none; }
+    .toc-list li { margin-bottom: 2px; }
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 7px 10px;
+      border-left: 2px solid transparent;
+      border-radius: 0 4px 4px 0;
+      text-decoration: none;
+      font-size: 13px;
+      color: var(--muted);
+      transition: all 0.2s;
+      line-height: 1.4;
+    }
+    .toc-list a:hover { color: var(--white); border-left-color: rgba(91,229,208,0.3); }
+    .toc-list a.active { color: var(--cyan); border-left-color: var(--cyan); background: rgba(91,229,208,0.06); }
+    .toc-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14px;
+      color: var(--gold);
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .toc-list a.active .toc-num { opacity: 1; }
+
+    /* ── CHAPTERS ── */
+    .chapters { min-width: 0; }
+
+    .chapter {
+      margin-bottom: 64px;
+      padding-top: 8px;
+      scroll-margin-top: 100px;
+    }
+
+    .chapter-header {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .chapter-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      color: var(--gold);
+      line-height: 1;
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+    .chapter-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 1px;
+      color: var(--white);
+      line-height: 1.1;
+    }
+
+    .chapter p {
+      font-size: 15px;
+      line-height: 1.8;
+      color: rgba(238,242,248,0.82);
+      margin-bottom: 16px;
+    }
+    .chapter p:last-child { margin-bottom: 0; }
+
+    /* ── CALLOUT CARDS ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .mine-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      border-top: 2px solid transparent;
+    }
+    .mine-card.rock    { border-top-color: var(--rock); }
+    .mine-card.coal    { border-top-color: #6B8BA4; }
+    .mine-card.gold    { border-top-color: var(--gold); }
+    .mine-card.diamond { border-top-color: var(--cyan); }
+    .mine-icon { font-size: 24px; margin-bottom: 8px; }
+    .mine-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .mine-card.rock    .mine-name { color: var(--rock); }
+    .mine-card.coal    .mine-name { color: #6B8BA4; }
+    .mine-card.gold    .mine-name { color: var(--gold); }
+    .mine-card.diamond .mine-name { color: var(--cyan); }
+    .mine-game { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .mine-rate { font-size: 13px; color: var(--white); font-weight: 600; }
+
+    /* ── TIP BOX ── */
+    .tip {
+      background: rgba(245,197,66,0.06);
+      border: 1px solid rgba(245,197,66,0.2);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 16px;
+      margin: 20px 0;
+      font-size: 14px;
+      color: rgba(238,242,248,0.85);
+      line-height: 1.7;
+    }
+    .tip strong { color: var(--gold); }
+
+    /* ── STEPS ── */
+    .steps { margin: 20px 0; }
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    .step-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      color: var(--gold);
+      background: rgba(245,197,66,0.1);
+      border: 1px solid rgba(245,197,66,0.2);
+      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .step-text {
+      font-size: 14px;
+      color: rgba(238,242,248,0.85);
+      line-height: 1.7;
+      padding-top: 6px;
+    }
+
+    /* ── SOCIAL GRID ── */
+    .social-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .social-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .social-card-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 6px;
+    }
+    .social-card p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
+
+    /* ── BOOST BAR ── */
+    .boost-display {
+      background: linear-gradient(135deg, rgba(245,197,66,0.08), rgba(245,197,66,0.03));
+      border: 1px solid rgba(245,197,66,0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .boost-icon { font-size: 32px; flex-shrink: 0; }
+    .boost-label { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--gold); letter-spacing: 1px; margin-bottom: 2px; }
+    .boost-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── REFERRAL CALLOUT ── */
+    .referral-box {
+      background: var(--surface);
+      border: 1px solid rgba(91,229,208,0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .referral-icon { font-size: 28px; flex-shrink: 0; }
+    .referral-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--cyan); letter-spacing: 1px; margin-bottom: 6px; }
+    .referral-desc { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .referral-desc strong { color: var(--white); }
+
+    /* ── CTA BANNER ── */
+    .cta-banner {
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, rgba(245,197,66,0.08), rgba(91,229,208,0.05));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 36px 40px;
+      margin: 0 40px 60px;
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .cta-text h2 { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1px; color: var(--white); margin-bottom: 4px; }
+    .cta-text p { font-size: 14px; color: var(--muted); }
+    .cta-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-app {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--gold); color: #080C10;
+      padding: 10px 20px; border-radius: 8px;
+      font-weight: 700; font-size: 14px; text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-app:hover { background: var(--gold2); }
+    .btn-app.secondary { background: var(--surface); color: var(--white); border: 1px solid var(--border); }
+    .btn-app.secondary:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 36px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--gold); text-decoration: none; }
+    .footer-links { display: flex; gap: 28px; align-items: center; }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 13px; color: var(--muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 48px 20px 36px; }
+      .guide-layout { grid-template-columns: 1fr; padding: 0 20px 60px; gap: 0; }
+      .toc { display: none; }
+      .cta-banner { margin: 0 20px 48px; padding: 24px 20px; }
+      footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; }
+      .social-grid { grid-template-columns: 1fr; }
+      .card-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">⛏ Terra<span>Mine</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="heatmap.html">World Map</a>
+    <a href="portal.html" class="nav-login">My Portal</a>
+    <a href="index.html#download" class="nav-cta">Download</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Official Player's Guide</div>
+  <h1>Master<br /><em>TerraMine</em></h1>
+  <p class="hero-desc">Everything you need to go from first install to building a thriving network of mines — currencies, mini-games, boosts, check-ins, and referrals.</p>
+  <p class="hero-credit">Community guide by <strong>Adam M</strong> · Reviewed by the TerraMine team</p>
+</div>
+
+<!-- GUIDE -->
+<div class="guide-layout">
+
+  <!-- TOC -->
+  <aside class="toc">
+    <div class="toc-label">Chapters</div>
+    <ul class="toc-list">
+      <li><a href="#ch1" class="active"><span class="toc-num">01</span> What Is TerraMine?</a></li>
+      <li><a href="#ch2"><span class="toc-num">02</span> Currencies, Mines & Odds</a></li>
+      <li><a href="#ch3"><span class="toc-num">03</span> Your First Session</a></li>
+      <li><a href="#ch4"><span class="toc-num">04</span> Daily Mini-Games</a></li>
+      <li><a href="#ch5"><span class="toc-num">05</span> Boosts & Passive Income</a></li>
+      <li><a href="#ch6"><span class="toc-num">06</span> Friends & Check-ins</a></li>
+      <li><a href="#ch7"><span class="toc-num">07</span> Referrals & Early Growth</a></li>
+    </ul>
+  </aside>
+
+  <!-- CHAPTERS -->
+  <div class="chapters">
+
+    <!-- CH 1 -->
+    <section class="chapter" id="ch1">
+      <div class="chapter-header">
+        <span class="chapter-num">01</span>
+        <h2 class="chapter-title">What Is TerraMine?</h2>
+      </div>
+      <p>TerraMine is a GPS-based mobile game where every property you buy is tied to a real-world location. Each property generates TerraBucks (TB) — the in-game currency — and a trickle of passive USD income over time.</p>
+      <p>You walk around, stake unclaimed grid squares near you for 100 TB each, and every square you claim becomes a mine. Mines come in four types — Rock, Coal, Gold, and Diamond — each with its own earning rate and unique daily mini-game.</p>
+      <div class="tip"><strong>The core loop:</strong> claim squares near places you already go, run their daily mini-games to level them up, and watch your passive earnings grow while you live your life.</div>
+    </section>
+
+    <!-- CH 2 -->
+    <section class="chapter" id="ch2">
+      <div class="chapter-header">
+        <span class="chapter-num">02</span>
+        <h2 class="chapter-title">Currencies, Mines & Odds</h2>
+      </div>
+      <p>Every TerraAcre (TA) you claim is assigned a mine type at random when you purchase it. Mine type determines your earning rate and which mini-game you play.</p>
+
+      <div class="card-grid">
+        <div class="mine-card rock">
+          <div class="mine-icon">🪨</div>
+          <div class="mine-name">Rock</div>
+          <div class="mine-game">Memory Match</div>
+          <div class="mine-rate">Baseline rate · Most common</div>
+        </div>
+        <div class="mine-card coal">
+          <div class="mine-icon">⚫</div>
+          <div class="mine-name">Coal</div>
+          <div class="mine-game">Miner Maze</div>
+          <div class="mine-rate">1.5× Rock rate</div>
+        </div>
+        <div class="mine-card gold">
+          <div class="mine-icon">⭐</div>
+          <div class="mine-name">Gold</div>
+          <div class="mine-game">Gold Rush</div>
+          <div class="mine-rate">2× Rock rate</div>
+        </div>
+        <div class="mine-card diamond">
+          <div class="mine-icon">💎</div>
+          <div class="mine-name">Diamond</div>
+          <div class="mine-game">Laser Blast</div>
+          <div class="mine-rate">4× Rock rate · ~1% chance</div>
+        </div>
+      </div>
+
+      <p>You start with <strong>1,000 TerraBucks</strong> — enough for roughly 10 properties at 100 TB each. Mine types are assigned randomly, so most of your early properties will be Rock. Treat Rock mines as your "rent base," and prioritize Coal, Gold, and Diamond for daily mini-games and boosts.</p>
+      <div class="tip"><strong>Strategy note:</strong> because Diamond is rare (roughly 1%), every Diamond mine you find is significantly more valuable than anything else. Upgrade these first, play their daily game without fail, and protect them during boosts.</div>
+    </section>
+
+    <!-- CH 3 -->
+    <section class="chapter" id="ch3">
+      <div class="chapter-header">
+        <span class="chapter-num">03</span>
+        <h2 class="chapter-title">Your First Session</h2>
+      </div>
+      <p>Getting from zero to your first cluster of producing mines takes about 10–15 minutes. Here's exactly what to do.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Install TerraMine from the <a href="https://apps.apple.com/app/terramine/id6761272864" style="color:var(--cyan)">App Store</a> or <a href="https://play.google.com/store/apps/details?id=com.terramine.app" style="color:var(--cyan)">Google Play</a> and allow location access when prompted. Location is how the game knows which squares are near you.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Check your starting balance — you have 1,000 TerraBucks. Plan to spend most of it immediately; the goal is to get mines producing income as fast as possible.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Open the map and move or zoom to find unclaimed squares near your home, work, school, or any spot you visit regularly. Gray squares are unclaimed; colored squares belong to other players.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">Tap an unclaimed square and confirm the 100 TB purchase. Repeat until you've built your first cluster. Squares near busy, high-traffic areas tend to get more visitor check-ins, which earns you extra TB.</div>
+        </div>
+      </div>
+
+      <div class="tip"><strong>Location strategy:</strong> your home and workplace are the two highest-value anchors because you'll physically be near them every day, which lets you check in on neighbors' mines and makes you discoverable to players passing through.</div>
+    </section>
+
+    <!-- CH 4 -->
+    <section class="chapter" id="ch4">
+      <div class="chapter-header">
+        <span class="chapter-num">04</span>
+        <h2 class="chapter-title">Daily Mini-Games</h2>
+      </div>
+      <p>Each mine type has a unique daily mini-game. Playing these is central to leveling up your mines — higher levels unlock harder challenges and bigger TB rewards. You get a limited number of free attempts each day, with the option to watch a short ad for extra tries.</p>
+
+      <div class="card-grid">
+        <div class="mine-card rock">
+          <div class="mine-icon">🧠</div>
+          <div class="mine-name">Memory Match</div>
+          <div class="mine-game">Rock Mines</div>
+          <div class="mine-rate">Match pairs of tiles before time runs out</div>
+        </div>
+        <div class="mine-card coal">
+          <div class="mine-icon">🌀</div>
+          <div class="mine-name">Miner Maze</div>
+          <div class="mine-game">Coal Mines</div>
+          <div class="mine-rate">Navigate tunnels to reach the exit</div>
+        </div>
+        <div class="mine-card gold">
+          <div class="mine-icon">🔗</div>
+          <div class="mine-name">Gold Rush</div>
+          <div class="mine-game">Gold Mines</div>
+          <div class="mine-rate">Connect a path to the pot of gold</div>
+        </div>
+        <div class="mine-card diamond">
+          <div class="mine-icon">🔦</div>
+          <div class="mine-name">Laser Blast</div>
+          <div class="mine-game">Diamond Mines</div>
+          <div class="mine-rate">Bounce a laser beam onto the diamond</div>
+        </div>
+      </div>
+
+      <p>Prioritize your rarer mines (Coal, Gold, Diamond) for daily play — the TB rewards scale with mine level, so a high-level Coal mine pays out far more than a Level 1 Diamond mine that you've neglected. Consistent daily play is what separates active players from passive ones.</p>
+    </section>
+
+    <!-- CH 5 -->
+    <section class="chapter" id="ch5">
+      <div class="chapter-header">
+        <span class="chapter-num">05</span>
+        <h2 class="chapter-title">Boosts & Passive Income</h2>
+      </div>
+      <p>Your mines passively generate USD earnings around the clock — even when you're not playing. The Earning Boost is the single biggest lever for accelerating those earnings.</p>
+
+      <div class="boost-display">
+        <div class="boost-icon">⚡</div>
+        <div>
+          <div class="boost-label">Earning Boost — Up to 20×</div>
+          <div class="boost-desc">Multiplies your passive income by up to 20× for a limited time window. Stack free daily boosts and ad-reward boosts up to a maximum of 8 hours total.</div>
+        </div>
+      </div>
+
+      <p>You receive a set of free boosts each day, which reset at 4 AM EST. Each boost adds 30 minutes to your active boost window. You can extend your total boost time further by watching short rewarded ads in the app — boost duration stacks up to an 8-hour cap.</p>
+      <div class="tip"><strong>Best practice:</strong> activate your boosts when you know you'll be near your mines and physically active — you earn a 2× bonus on check-ins too while a boost is running, so combine boosts with a walk through your property cluster for maximum yield. The Earning Boost is only available in the TerraMine app.</div>
+    </section>
+
+    <!-- CH 6 -->
+    <section class="chapter" id="ch6">
+      <div class="chapter-header">
+        <span class="chapter-num">06</span>
+        <h2 class="chapter-title">Friends & Check-ins</h2>
+      </div>
+      <p>TerraMine rewards real-world movement. When you physically walk near another player's mine and check in, both of you benefit — and the social layer is where much of the game's long-term depth lives.</p>
+
+      <div class="social-grid">
+        <div class="social-card">
+          <div class="social-card-label">Visitor earns</div>
+          <p>Bonus TB for checking in, with an optional message or photo that earns extra rewards on top.</p>
+        </div>
+        <div class="social-card">
+          <div class="social-card-label">Owner earns</div>
+          <p>TB every time a player checks in on your mine — high-traffic locations pay out without you lifting a finger.</p>
+        </div>
+      </div>
+
+      <p>Check-ins work on proximity — you need to be physically near the property to check in. This is by design: the game rewards players who actually visit the places they're playing from.</p>
+      <div class="tip"><strong>Friend strategy:</strong> coordinate with friends so each of you claims different "anchor" spots (your homes, workplaces, a park). Then plan occasional walks that loop through each other's clusters to farm mutual check-ins. It's the fastest way to accumulate TB in the early game without spending anything.</div>
+    </section>
+
+    <!-- CH 7 -->
+    <section class="chapter" id="ch7">
+      <div class="chapter-header">
+        <span class="chapter-num">07</span>
+        <h2 class="chapter-title">Referrals & Early Growth</h2>
+      </div>
+      <p>The referral system is one of the biggest injections of early TB available to a new player — and it pays out for both sides of the deal.</p>
+
+      <div class="referral-box">
+        <div class="referral-icon">🎁</div>
+        <div>
+          <div class="referral-title">How Referrals Work</div>
+          <div class="referral-desc">Share your personal referral code with a friend. When they sign up and claim their first TerraAcre, <strong>both of you receive 1,000 bonus TerraBucks</strong> — effectively doubling the new player's starting budget and rewarding you for growing the community.</div>
+        </div>
+      </div>
+
+      <p>A simple growth plan for a new player:</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>Join with a friend's referral code</strong> right away. You'll enter the game with 2,000 TB instead of 1,000 — enough for 20 properties on day one.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text"><strong>Spend your starting TB quickly</strong> to get mines generating passive income from the very beginning. Don't sit on it.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Refer one or two friends yourself.</strong> Each friend who buys land earns you 1,000 TB — fuel for your next expansion, and they start with the bonus too.</div>
+        </div>
+      </div>
+
+      <div class="tip"><strong>Find your referral code</strong> in the app under your Profile. Share it via Discord, text, or social media. You can find TerraMine's community on <a href="https://discord.gg/QTSJuT2GgP" style="color:var(--cyan)" target="_blank">Discord</a>.</div>
+    </section>
+
+  </div><!-- /chapters -->
+</div><!-- /guide-layout -->
+
+<!-- CTA -->
+<div class="cta-banner">
+  <div class="cta-text">
+    <h2>Ready to Start Mining?</h2>
+    <p>Download TerraMine free on iOS and Android — your first 10 mines are waiting.</p>
+  </div>
+  <div class="cta-buttons">
+    <a class="btn-app" href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">🍎 App Store</a>
+    <a class="btn-app" href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">🤖 Google Play</a>
+    <a class="btn-app secondary" href="portal.html">My Portal →</a>
+  </div>
+</div>
+
+<footer>
+  <a class="footer-logo" href="index.html">⛏ TerraMine</a>
+  <div class="footer-links">
+    <a href="guide.html">Player's Guide</a>
+    <a href="heatmap.html">World Map</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+    <a href="portal.html">My Portal</a>
+    <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+    <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+  </div>
+  <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+</footer>
+
+<script>
+  // Scrollspy — highlight active chapter in TOC
+  const chapters = document.querySelectorAll('.chapter');
+  const tocLinks  = document.querySelectorAll('.toc-list a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        tocLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+  chapters.forEach(ch => observer.observe(ch));
+</script>
+</body>
+</html>
