@@ -430,7 +430,7 @@
         </tbody>
       </table>
       <div style="padding:12px 24px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">
-        📊 Compares today's player liability against yesterday's snapshot. Green = liability shrinking or revenue exceeding growth. Red = liability growing faster than revenue.
+        📊 Compares today's player liability against yesterday's snapshot. Green = liability shrinking or unchanged. Red = liability growing. Take a snapshot daily so tomorrow has a baseline to compare against.
       </div>
     </div>
   </div>
@@ -928,7 +928,6 @@
 
   async function renderLiabilityDelta() {
     const today = new Date().toISOString().slice(0, 10);
-    const todayRevenue = grossForPeriod('daily');
     const yesterdayLiab = await getYesterdayLiability();
     const delta = yesterdayLiab !== null ? totalPlayerLiability - yesterdayLiab : null;
 
@@ -971,28 +970,6 @@
         <td>Liability Change (24h)</td>
         <td class="td-muted">—</td>
         <td><span class="stat-badge badge-gray">no prior snapshot</span></td>
-      </tr>`);
-    }
-
-    // Today's revenue vs liability growth
-    rows.push(`<tr>
-      <td>Today's Revenue</td>
-      <td class="td-green">${fmtUSD(todayRevenue)}</td>
-      <td><span class="stat-badge badge-blue">logged</span></td>
-    </tr>`);
-
-    // Coverage check — is today's revenue covering today's liability growth?
-    if (delta !== null) {
-      const covered = todayRevenue >= delta;
-      const surplus = todayRevenue - delta;
-      const coverClass = covered ? 'td-green' : 'td-red';
-      const coverBadge = covered
-        ? '<span class="stat-badge badge-green">✓ covered</span>'
-        : '<span class="stat-badge badge-red">✗ shortfall</span>';
-      rows.push(`<tr>
-        <td>Revenue vs Liability Growth</td>
-        <td class="${coverClass}">${surplus >= 0 ? '+' : ''}${fmtUSD(surplus)}</td>
-        <td>${coverBadge}</td>
       </tr>`);
     }
 
@@ -1449,10 +1426,13 @@
       const deltaStr = data.liabilityDelta !== null
         ? (data.liabilityDelta >= 0 ? '+' : '') + '$' + Math.abs(data.liabilityDelta).toFixed(2)
         : '—';
-      showSnapshotToast('✅ Snapshot saved — ' + data.date + ' | Liability: $' + data.totalLiability.toFixed(2) + ' | Delta: ' + deltaStr + ' | Revenue: $' + data.totalRevenue.toFixed(2));
+      showSnapshotToast('✅ Snapshot saved — ' + data.date + ' | Liability: $' + data.totalLiability.toFixed(2) + ' | Delta: ' + deltaStr);
+      // Refresh the on-page table immediately instead of waiting for a reload —
+      // previously the write succeeded silently and the table looked unchanged.
+      await renderLiabilityDelta();
     } catch(e) {
       console.error('Snapshot failed:', e);
-      showSnapshotToast('❌ Snapshot failed: ' + e.message);
+      showSnapshotToast('❌ Snapshot failed: ' + (e && e.message ? e.message : e));
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '📸 Take Snapshot'; }
     }
@@ -1463,7 +1443,7 @@
     if (!el) {
       el = document.createElement('div');
       el.id = 'snapshot-toast';
-      el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a2535;border:1px solid var(--amber);border-radius:8px;padding:14px 18px;font-size:13px;color:var(--text-primary);z-index:9999;max-width:420px;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+      el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--amber);border-radius:8px;padding:14px 18px;font-size:13px;color:var(--text);z-index:9999;max-width:420px;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
       document.body.appendChild(el);
     }
     el.textContent = msg;
