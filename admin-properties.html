@@ -325,7 +325,7 @@
   <div class="section-label">All Properties</div>
 
   <div class="search-bar">
-    <input class="search-input" id="searchInput" type="text" placeholder="Search by property ID, owner UID, or mine type…" oninput="applyFilters()">
+    <input class="search-input" id="searchInput" type="text" placeholder="Search by property ID, owner UID, or mine type…" oninput="debouncedApplyFilters()">
     <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">All</button>
     <button class="filter-btn" data-f="rock" onclick="setFilter('rock',this)">🪨 Rock</button>
     <button class="filter-btn" data-f="coal" onclick="setFilter('coal',this)">⚫ Coal</button>
@@ -356,6 +356,7 @@
         <tr><td colspan="7" style="padding:24px;color:var(--text-muted);font-size:12px;">Loading properties…</td></tr>
       </tbody>
     </table>
+    <div id="propPagination" style="display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 24px;border-top:1px solid var(--border);flex-wrap:wrap;"></div>
   </div>
 
   <!-- ORPHAN CLEANUP TOOL -->
@@ -368,6 +369,7 @@
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="run-btn" id="scanBtn" onclick="scanOrphans()">⚙ Scan for Orphans</button>
+        <button class="sel-btn" id="refreshBtn" onclick="refreshAndScan()">🔄 Refresh from Firestore</button>
         <button class="delete-btn" id="deleteBtn" onclick="deleteSelectedOrphans()">🗑 Delete Selected</button>
       </div>
     </div>
@@ -406,6 +408,7 @@
           <tbody id="orphanTableBody"></tbody>
         </table>
       </div>
+      <div id="orphanPagination" style="display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 4px;flex-wrap:wrap;"></div>
 
       <div class="delete-log" id="deleteLog"></div>
     </div>
@@ -500,7 +503,18 @@
   let activeFilter = 'all';
   let sortKey  = 'purchasedAt';
   let sortDir  = -1;
+
+  // Rendering ~80k <tr> elements in one innerHTML write is what was hanging/
+  // crashing the tab — everything below is paginated client-side instead.
+  let filteredProps = [];
+  let currentPage = 1;
+  const PAGE_SIZE = 100;
+  let searchDebounceTimer = null;
+
   let orphanData = [];
+  let selectedOrphanIds = new Set(); // persists selection across orphan pages
+  let orphanPage = 1;
+  const ORPHAN_PAGE_SIZE = 100;
 
   // ── Load ────────────────────────────────────────────────────────────────────
   async function loadAll() {
@@ -518,27 +532,9 @@
         userMap[d.id] = { nickname: d.data().nickname || null, email: d.data().email || null };
       });
 
-      // Build property list
-      const now = Date.now();
-      const week7  = now - 7  * 86400000;
-      const month30 = now - 30 * 86400000;
-
-      let totalByType = { rock:0, coal:0, gold:0, diamond:0 };
-      let weekCount = 0, monthCount = 0;
-      let orphanCount = 0;
-      const ownerSet = new Set();
-
       allProps = propsSnap.docs.map(d => {
         const data = d.data();
-        const isOrphan = data.ownerId && !userIds.has(data.ownerId);
-        const purchasedMs = data.purchasedAt ? new Date(data.purchasedAt).getTime() : 0;
-
-        if (data.mineType) totalByType[data.mineType] = (totalByType[data.mineType] || 0) + 1;
-        if (data.ownerId) ownerSet.add(data.ownerId);
-        if (isOrphan) orphanCount++;
-        if (purchasedMs > week7)   weekCount++;
-        if (purchasedMs > month30) monthCount++;
-
+        const isOrphan = !!(data.ownerId && !userIds.has(data.ownerId));
         const user = userMap[data.ownerId] || {};
         return {
           id: d.id,
@@ -553,23 +549,8 @@
         };
       });
 
-      // Stat cards
-      const total = allProps.length;
-      document.getElementById('statTotal').textContent  = fmt(total);
-      document.getElementById('statOwners').textContent = fmt(ownerSet.size);
-      document.getElementById('statAvg').textContent    = ownerSet.size ? (total / ownerSet.size).toFixed(1) : '—';
-      document.getElementById('statOrphans').textContent = orphanCount || '0';
-      document.getElementById('statWeek').textContent   = fmt(weekCount);
-      document.getElementById('statMonth').textContent  = fmt(monthCount);
-
-      // Mine type breakdown
-      ['rock','coal','gold','diamond'].forEach(t => {
-        const c = totalByType[t] || 0;
-        document.getElementById('count' + t.charAt(0).toUpperCase() + t.slice(1)).textContent = fmt(c);
-        document.getElementById('pct'   + t.charAt(0).toUpperCase() + t.slice(1)).textContent =
-          total ? ((c / total) * 100).toFixed(1) + '% of total' : '—';
-      });
-
+      currentPage = 1;
+      computeAndRenderStats();
       applyFilters();
     } catch(e) {
       console.error('loadAll failed:', e);
@@ -578,12 +559,57 @@
     }
   }
 
-  // ── Filter / Sort ───────────────────────────────────────────────────────────
+  // Stat cards + mine type breakdown, split out of loadAll() so it can be
+  // recomputed from the in-memory allProps after a delete without doing
+  // another full ~80k-document Firestore fetch.
+  function computeAndRenderStats() {
+    const now = Date.now();
+    const week7   = now - 7  * 86400000;
+    const month30 = now - 30 * 86400000;
+
+    let totalByType = { rock:0, coal:0, gold:0, diamond:0 };
+    let weekCount = 0, monthCount = 0, orphanCount = 0;
+    const ownerSet = new Set();
+
+    allProps.forEach(p => {
+      if (p.mineType) totalByType[p.mineType] = (totalByType[p.mineType] || 0) + 1;
+      if (p.ownerId) ownerSet.add(p.ownerId);
+      if (p.isOrphan) orphanCount++;
+      const purchasedMs = p.purchasedAt ? new Date(p.purchasedAt).getTime() : 0;
+      if (purchasedMs > week7)   weekCount++;
+      if (purchasedMs > month30) monthCount++;
+    });
+
+    const total = allProps.length;
+    document.getElementById('statTotal').textContent  = fmt(total);
+    document.getElementById('statOwners').textContent = fmt(ownerSet.size);
+    document.getElementById('statAvg').textContent    = ownerSet.size ? (total / ownerSet.size).toFixed(1) : '—';
+    document.getElementById('statOrphans').textContent = orphanCount || '0';
+    document.getElementById('statWeek').textContent   = fmt(weekCount);
+    document.getElementById('statMonth').textContent  = fmt(monthCount);
+
+    ['rock','coal','gold','diamond'].forEach(t => {
+      const c = totalByType[t] || 0;
+      document.getElementById('count' + t.charAt(0).toUpperCase() + t.slice(1)).textContent = fmt(c);
+      document.getElementById('pct'   + t.charAt(0).toUpperCase() + t.slice(1)).textContent =
+        total ? ((c / total) * 100).toFixed(1) + '% of total' : '—';
+    });
+  }
+
+  // ── Filter / Sort / Pagination ─────────────────────────────────────────────
   window.setFilter = (f, btn) => {
     activeFilter = f;
+    currentPage = 1;
     document.querySelectorAll('[data-f]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     applyFilters();
+  };
+
+  // Typing in the search box used to re-filter/re-sort/re-render all ~80k
+  // rows on every keystroke. Debounce so it only runs once typing pauses.
+  window.debouncedApplyFilters = () => {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => { currentPage = 1; applyFilters(); }, 220);
   };
 
   window.applyFilters = () => {
@@ -614,15 +640,58 @@
       return av < bv ? -sortDir : av > bv ? sortDir : 0;
     });
 
-    document.getElementById('tableCount').textContent = filtered.length + ' properties';
-    document.getElementById('propCountLabel').textContent = filtered.length + ' of ' + allProps.length + ' properties';
-    renderTable(filtered);
+    filteredProps = filtered;
+    const totalPages = Math.max(1, Math.ceil(filteredProps.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    document.getElementById('tableCount').textContent = filteredProps.length + ' properties';
+    document.getElementById('propCountLabel').textContent = filteredProps.length + ' of ' + allProps.length + ' properties';
+
+    // Only ever render one page's worth of rows — rendering all ~80k <tr>
+    // elements in a single innerHTML write is what was hanging the tab.
+    const start = (currentPage - 1) * PAGE_SIZE;
+    renderTable(filteredProps.slice(start, start + PAGE_SIZE));
+    renderPropPagination(totalPages);
   };
 
   window.sortBy = (key) => {
     if (sortKey === key) sortDir *= -1;
     else { sortKey = key; sortDir = -1; }
+    currentPage = 1;
     applyFilters();
+  };
+
+  function renderPropPagination(totalPages) {
+    const el = document.getElementById('propPagination');
+    if (!el) return;
+    if (filteredProps.length <= PAGE_SIZE) { el.innerHTML = ''; return; }
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = Math.min(currentPage * PAGE_SIZE, filteredProps.length);
+    el.innerHTML = `
+      <button class="sel-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="goToPropPage(${currentPage - 1})">← Prev</button>
+      <span style="font-size:11px;color:var(--text-muted);">Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${filteredProps.length.toLocaleString()} · Page ${currentPage} of ${totalPages}</span>
+      <button class="sel-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goToPropPage(${currentPage + 1})">Next →</button>
+      <span style="display:flex;align-items:center;gap:4px;margin-left:8px;">
+        <input type="number" id="propPageJump" min="1" max="${totalPages}" placeholder="page #" style="width:64px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:4px 6px;">
+        <button class="sel-btn" onclick="jumpToPropPage(${totalPages})">Go</button>
+      </span>
+    `;
+  }
+
+  window.goToPropPage = (p) => {
+    const totalPages = Math.max(1, Math.ceil(filteredProps.length / PAGE_SIZE));
+    currentPage = Math.max(1, Math.min(totalPages, p));
+    const start = (currentPage - 1) * PAGE_SIZE;
+    renderTable(filteredProps.slice(start, start + PAGE_SIZE));
+    renderPropPagination(totalPages);
+  };
+
+  window.jumpToPropPage = (totalPages) => {
+    const input = document.getElementById('propPageJump');
+    let val = parseInt(input && input.value);
+    if (isNaN(val)) return;
+    goToPropPage(val);
   };
 
   function renderTable(props) {
@@ -644,6 +713,10 @@
   }
 
   // ── Orphan Cleanup ──────────────────────────────────────────────────────────
+  // Scans the properties already loaded for the main table (in-memory
+  // isOrphan flag computed in loadAll()) instead of re-fetching all ~80k
+  // property docs a second time — that duplicate fetch, combined with
+  // rendering every row in one shot, was what hung the page.
   window.scanOrphans = async () => {
     const btn = document.getElementById('scanBtn');
     const statusIcon = document.getElementById('orphanStatusIcon');
@@ -654,49 +727,31 @@
     btn.disabled = true;
     btn.textContent = '⏳ Scanning…';
     statusIcon.textContent = '⏳';
-    statusText.textContent = 'Loading properties and users…';
+    statusText.textContent = 'Checking loaded properties…';
     results.style.display = 'none';
     deleteLog.style.display = 'none';
     orphanData = [];
+    selectedOrphanIds = new Set();
+    orphanPage = 1;
 
     try {
-      const [propsSnap, usersSnap] = await Promise.all([
-        getDocs(collection(db, 'properties')),
-        getDocs(collection(db, 'users'))
-      ]);
-      const uids = new Set(usersSnap.docs.map(d => d.id));
-
-      orphanData = propsSnap.docs
-        .filter(d => { const o = d.data().ownerId; return o && !uids.has(o); })
-        .map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            ownerId: data.ownerId || '—',
-            mineType: data.mineType || '—',
-            purchasedAt: data.purchasedAt ? data.purchasedAt.slice(0,10) : '—',
-            centerLat: typeof data.centerLat === 'number' ? data.centerLat.toFixed(4) : '—',
-            centerLng: typeof data.centerLng === 'number' ? data.centerLng.toFixed(4) : '—',
-          };
-        });
-
-      const uidSet = new Set(orphanData.map(o => o.ownerId));
-      document.getElementById('orphanCount').textContent = orphanData.length;
-      document.getElementById('orphanPlural').textContent = orphanData.length === 1 ? 'y' : 'ies';
-      document.getElementById('orphanUidCount').textContent =
-        `across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}`;
-
-      if (orphanData.length === 0) {
-        statusIcon.textContent = '✅';
-        statusText.textContent = 'No orphaned properties found — database is clean.';
-        results.style.display = 'none';
-      } else {
-        statusIcon.textContent = '⚠️';
-        statusText.textContent =
-          `${orphanData.length} orphaned propert${orphanData.length !== 1 ? 'ies' : 'y'} found across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}.`;
-        results.style.display = 'block';
-        renderOrphanTable();
+      if (!allProps.length) {
+        statusText.textContent = 'Loading properties and users…';
+        await loadAll();
       }
+
+      orphanData = allProps
+        .filter(p => p.isOrphan)
+        .map(p => ({
+          id: p.id,
+          ownerId: p.ownerId || '—',
+          mineType: p.mineType || '—',
+          purchasedAt: p.purchasedAt ? p.purchasedAt.slice(0,10) : '—',
+          centerLat: typeof p.centerLat === 'number' ? p.centerLat.toFixed(4) : '—',
+          centerLng: typeof p.centerLng === 'number' ? p.centerLng.toFixed(4) : '—',
+        }));
+
+      renderOrphanSummary(statusIcon, statusText, results);
     } catch(e) {
       statusIcon.textContent = '❌';
       statusText.textContent = 'Scan failed — ' + e.message;
@@ -707,19 +762,63 @@
     }
   };
 
+  // Forces a fresh ~80k-doc pull (properties + users) before scanning —
+  // for when data may have changed elsewhere and the cached copy is stale.
+  window.refreshAndScan = async () => {
+    const refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '⏳ Refreshing…';
+    try {
+      await loadAll();
+      await scanOrphans();
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = '🔄 Refresh from Firestore';
+    }
+  };
+
+  function renderOrphanSummary(statusIcon, statusText, results) {
+    const uidSet = new Set(orphanData.map(o => o.ownerId));
+    document.getElementById('orphanCount').textContent = orphanData.length;
+    document.getElementById('orphanPlural').textContent = orphanData.length === 1 ? 'y' : 'ies';
+    document.getElementById('orphanUidCount').textContent =
+      `across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}`;
+
+    if (orphanData.length === 0) {
+      statusIcon.textContent = '✅';
+      statusText.textContent = 'No orphaned properties found — database is clean.';
+      results.style.display = 'none';
+    } else {
+      statusIcon.textContent = '⚠️';
+      statusText.textContent =
+        `${orphanData.length} orphaned propert${orphanData.length !== 1 ? 'ies' : 'y'} found across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}.`;
+      results.style.display = 'block';
+      renderOrphanTable();
+    }
+  }
+
+  // Orphan table is paginated too — some UID cleanups here run into the
+  // thousands, and selection state lives in a Set keyed by property id so
+  // it survives moving between pages (checkboxes alone wouldn't).
   window.renderOrphanTable = () => {
     const body    = document.getElementById('orphanTableBody');
     const grouped = document.getElementById('groupToggle').checked;
     body.innerHTML = '';
 
-    const rows = [...orphanData];
+    let rows = [...orphanData];
     if (grouped) rows.sort((a,b) => a.ownerId.localeCompare(b.ownerId));
 
+    const totalPages = Math.max(1, Math.ceil(rows.length / ORPHAN_PAGE_SIZE));
+    if (orphanPage > totalPages) orphanPage = totalPages;
+    if (orphanPage < 1) orphanPage = 1;
+    const start = (orphanPage - 1) * ORPHAN_PAGE_SIZE;
+    const pageRows = rows.slice(start, start + ORPHAN_PAGE_SIZE);
+
     let lastUid = null;
-    rows.forEach((o, i) => {
+    pageRows.forEach((o) => {
       if (grouped && o.ownerId !== lastUid) {
         lastUid = o.ownerId;
-        const groupCount = rows.filter(r => r.ownerId === o.ownerId).length;
+        const groupCount = orphanData.filter(r => r.ownerId === o.ownerId).length;
         const tr = document.createElement('tr');
         tr.style.cssText = 'background:rgba(200,146,42,0.05);';
         tr.innerHTML = `<td colspan="6" style="padding:8px 20px;color:var(--gold);font-size:10px;font-weight:700;letter-spacing:0.5px;border-top:1px solid var(--border);">
@@ -732,8 +831,9 @@
       }
 
       const tr = document.createElement('tr');
+      const checked = selectedOrphanIds.has(o.id);
       tr.innerHTML = `
-        <td style="padding:9px 20px;"><input type="checkbox" id="ochk-${i}" data-idx="${i}" onchange="updateDeleteBtn()" style="cursor:pointer;accent-color:var(--red);"></td>
+        <td style="padding:9px 20px;"><input type="checkbox" data-id="${o.id}" ${checked ? 'checked' : ''} onchange="toggleOrphanSelect('${o.id}', this.checked)" style="cursor:pointer;accent-color:var(--red);"></td>
         <td class="td-muted" style="font-size:11px;">${o.id}</td>
         <td class="td-muted" style="font-size:10px;color:var(--red);">${grouped ? '↳' : o.ownerId}</td>
         <td>${mineBadge(o.mineType)}</td>
@@ -741,65 +841,97 @@
         <td class="td-muted">${o.centerLat}, ${o.centerLng}</td>`;
       body.appendChild(tr);
     });
+
+    renderOrphanPagination(totalPages, rows.length);
     updateDeleteBtn();
   };
 
-  window.selectAllOrphans = (checked) => {
-    document.querySelectorAll('[id^="ochk-"]').forEach(cb => cb.checked = checked);
+  function renderOrphanPagination(totalPages, totalRows) {
+    const el = document.getElementById('orphanPagination');
+    if (!el) return;
+    if (totalRows <= ORPHAN_PAGE_SIZE) { el.innerHTML = ''; return; }
+    const start = (orphanPage - 1) * ORPHAN_PAGE_SIZE + 1;
+    const end = Math.min(orphanPage * ORPHAN_PAGE_SIZE, totalRows);
+    el.innerHTML = `
+      <button class="sel-btn" ${orphanPage <= 1 ? 'disabled' : ''} onclick="goToOrphanPage(${orphanPage - 1})">← Prev</button>
+      <span style="font-size:11px;color:var(--text-muted);">Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${totalRows.toLocaleString()} · Page ${orphanPage} of ${totalPages}</span>
+      <button class="sel-btn" ${orphanPage >= totalPages ? 'disabled' : ''} onclick="goToOrphanPage(${orphanPage + 1})">Next →</button>
+    `;
+  }
+
+  window.goToOrphanPage = (p) => {
+    orphanPage = p;
+    renderOrphanTable();
+  };
+
+  window.toggleOrphanSelect = (id, checked) => {
+    if (checked) selectedOrphanIds.add(id); else selectedOrphanIds.delete(id);
     updateDeleteBtn();
+  };
+
+  // Select All / Deselect All apply to every orphan found, not just the
+  // ones currently visible on this page.
+  window.selectAllOrphans = (checked) => {
+    if (checked) orphanData.forEach(o => selectedOrphanIds.add(o.id));
+    else selectedOrphanIds.clear();
+    renderOrphanTable();
   };
 
   window.selectByUid = (uid, checked) => {
-    orphanData.forEach((o,i) => {
+    orphanData.forEach(o => {
       if (o.ownerId === uid) {
-        const cb = document.getElementById(`ochk-${i}`);
-        if (cb) cb.checked = checked;
+        if (checked) selectedOrphanIds.add(o.id); else selectedOrphanIds.delete(o.id);
       }
     });
-    updateDeleteBtn();
+    renderOrphanTable();
   };
 
   window.updateDeleteBtn = () => {
-    const n = document.querySelectorAll('[id^="ochk-"]:checked').length;
+    const n = selectedOrphanIds.size;
     const btn = document.getElementById('deleteBtn');
     btn.style.display = n > 0 ? 'inline-block' : 'none';
     btn.textContent = `🗑 Delete ${n} Selected`;
   };
 
   window.deleteSelectedOrphans = async () => {
-    const checked = [...document.querySelectorAll('[id^="ochk-"]:checked')];
-    if (!checked.length) return;
-    if (!confirm(`⚠️ Permanently delete ${checked.length} orphaned propert${checked.length !== 1 ? 'ies' : 'y'} from Firestore?\n\nThis also deletes matching propertyDetails documents.\nThis cannot be undone.`)) return;
+    const ids = [...selectedOrphanIds];
+    if (!ids.length) return;
+    if (!confirm(`⚠️ Permanently delete ${ids.length} orphaned propert${ids.length !== 1 ? 'ies' : 'y'} from Firestore?\n\nThis also deletes matching propertyDetails documents.\nThis cannot be undone.`)) return;
 
     const log = document.getElementById('deleteLog');
     log.style.display = 'block';
-    log.innerHTML = `<div class="log-head">Deleting ${checked.length} propert${checked.length !== 1 ? 'ies' : 'y'}…</div>`;
+    log.innerHTML = `<div class="log-head">Deleting ${ids.length} propert${ids.length !== 1 ? 'ies' : 'y'}…</div>`;
 
     const deleteBtn = document.getElementById('deleteBtn');
     deleteBtn.disabled = true;
 
+    const byId = new Map(orphanData.map(o => [o.id, o]));
+    const succeeded = new Set();
     let ok = 0, fail = 0;
-    const deletedIdxs = new Set();
+    const CHUNK = 20; // concurrency-limited batches, same pattern used elsewhere
+                      // in TerraMine for large deletes/reads — avoids hammering
+                      // Firestore or freezing the tab on big cleanups
 
-    for (const cb of checked) {
-      const idx = parseInt(cb.dataset.idx);
-      const o = orphanData[idx];
-      try {
-        await deleteDoc(doc(db, 'properties', o.id));
-        try { await deleteDoc(doc(db, 'propertyDetails', o.id)); } catch {}
-        log.innerHTML += `<div class="log-ok">✅ ${o.id} (${o.mineType}, UID: ${o.ownerId.slice(0,8)}…)</div>`;
-        document.getElementById(`ochk-${idx}`)?.closest('tr')?.remove();
-        deletedIdxs.add(idx);
-        ok++;
-      } catch(e) {
-        log.innerHTML += `<div class="log-err">❌ ${o.id}: ${e.message}</div>`;
-        fail++;
-      }
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const chunk = ids.slice(i, i + CHUNK);
+      await Promise.all(chunk.map(async (id) => {
+        const o = byId.get(id);
+        try {
+          await deleteDoc(doc(db, 'properties', id));
+          try { await deleteDoc(doc(db, 'propertyDetails', id)); } catch {}
+          log.innerHTML += `<div class="log-ok">✅ ${id} (${o?.mineType || '?'}, UID: ${(o?.ownerId || '').slice(0,8)}…)</div>`;
+          succeeded.add(id);
+          ok++;
+        } catch(e) {
+          log.innerHTML += `<div class="log-err">❌ ${id}: ${e.message}</div>`;
+          fail++;
+        }
+      }));
       log.scrollTop = log.scrollHeight;
     }
 
-    orphanData = orphanData.filter((_,i) => !deletedIdxs.has(i));
-    document.getElementById('orphanCount').textContent = orphanData.length;
+    orphanData = orphanData.filter(o => !succeeded.has(o.id));
+    succeeded.forEach(id => selectedOrphanIds.delete(id));
 
     log.innerHTML += `<div class="log-done">Done — ${ok} deleted${fail > 0 ? `, ${fail} failed` : ''}. ${orphanData.length} orphan${orphanData.length !== 1 ? 's' : ''} remaining.</div>`;
     log.scrollTop = log.scrollHeight;
@@ -812,10 +944,13 @@
       : `${orphanData.length} orphaned propert${orphanData.length !== 1 ? 'ies' : 'y'} remaining.`;
 
     deleteBtn.disabled = false;
-    updateDeleteBtn();
+    renderOrphanTable();
 
-    // Refresh main stats
-    await loadAll();
+    // Drop the deleted docs from the in-memory property list + stats
+    // directly instead of re-fetching all ~80k property docs again.
+    allProps = allProps.filter(p => !succeeded.has(p.id));
+    computeAndRenderStats();
+    applyFilters();
   };
 
   // Expose mineBadge for orphan table (mineEmoji already defined above)
