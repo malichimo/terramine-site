@@ -177,7 +177,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 86px 24px 100px;
+      padding: clamp(72px, 10vh, 86px) 24px clamp(64px, 9vh, 100px);
       overflow: hidden;
     }
 
@@ -207,7 +207,7 @@
       letter-spacing: 2.5px;
       text-transform: uppercase;
       color: var(--cyan);
-      margin-bottom: 28px;
+      margin-bottom: clamp(14px, 4vw, 28px);
       opacity: 0;
       animation: rise 0.7s 0.1s cubic-bezier(0.22,1,0.36,1) forwards;
     }
@@ -222,11 +222,11 @@
     .hero h1 {
       font-family: 'Syne', sans-serif;
       font-weight: 800;
-      font-size: clamp(38px, 6.8vw, 84px);
+      font-size: clamp(30px, 6.8vw, 84px);
       line-height: 1.0;
       letter-spacing: -2px;
       color: var(--white);
-      max-width: 700px;
+      max-width: 660px;
       opacity: 0;
       animation: rise 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) forwards;
     }
@@ -237,17 +237,17 @@
     }
 
     .hero-sub {
-      margin-top: 28px;
-      font-size: clamp(18px, 2vw, 21px);
+      margin-top: clamp(18px, 3vw, 28px);
+      font-size: clamp(16px, 2vw, 21px);
       color: var(--muted);
       max-width: 500px;
-      line-height: 1.7;
+      line-height: 1.6;
       opacity: 0;
       animation: rise 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) forwards;
     }
 
     .hero-stores {
-      margin-top: 52px;
+      margin-top: clamp(24px, 5vw, 52px);
       display: flex;
       gap: 14px;
       flex-wrap: wrap;
@@ -280,7 +280,7 @@
     .store-btn svg { flex-shrink: 0; }
 
     .hero-stats {
-      margin-top: 72px;
+      margin-top: clamp(36px, 7vw, 72px);
       display: flex;
       gap: 48px;
       flex-wrap: wrap;
@@ -405,7 +405,7 @@
       z-index: 1;
       max-width: 920px;
       margin: 0 auto;
-      padding: 84px 24px;
+      padding: clamp(60px, 8vw, 84px) 24px;
     }
     #how {
       padding-top: 0;
@@ -421,10 +421,10 @@
     .section-title {
       font-family: 'Syne', sans-serif;
       font-weight: 800;
-      font-size: clamp(32px, 5vw, 56px);
+      font-size: clamp(28px, 5vw, 56px);
       letter-spacing: -1.5px;
       line-height: 1.08;
-      margin-bottom: 56px;
+      margin-bottom: clamp(36px, 5vw, 56px);
       max-width: 520px;
     }
 
@@ -532,11 +532,11 @@
     .referral-band {
       position: relative;
       z-index: 1;
-      margin: 24px auto;
+      margin: clamp(16px, 3vw, 24px) auto;
       border-radius: 16px;
       background: var(--surface);
       border: 1px solid rgba(245,197,66,0.2);
-      padding: 48px 44px;
+      padding: clamp(32px, 5vw, 48px) clamp(28px, 4vw, 44px);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -604,7 +604,7 @@
       color: var(--muted);
       font-size: 16px;
       line-height: 1.7;
-      margin-bottom: 40px;
+      margin-bottom: clamp(24px, 4vw, 40px);
     }
     #community .section-title {
       font-size: clamp(24px, 3.8vw, 42px);
@@ -622,7 +622,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 20px;
+      padding: 18px;
     }
     .community-panel {
       display: flex;
@@ -792,7 +792,7 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 24px;
-      margin-top: 100px;
+      margin-top: clamp(72px, 10vw, 100px);
     }
     .footer-logo {
       font-family: 'Syne', sans-serif;
@@ -843,22 +843,70 @@
         font-size: 12px;
         padding: 5px 10px;
       }
-      .hero-stats { gap: 28px; }
+      .hero {
+        min-height: calc(100svh - 88px);
+        padding: 64px 16px 56px;
+      }
+      .hero-eyebrow {
+        margin-bottom: 12px;
+        font-size: 11px;
+        letter-spacing: 2px;
+      }
+      .hero h1 {
+        font-size: clamp(30px, 10.4vw, 46px);
+        line-height: 0.95;
+        max-width: 360px;
+      }
+      .hero-sub {
+        margin-top: 16px;
+        font-size: 15px;
+        line-height: 1.55;
+        max-width: 360px;
+      }
+      .hero-stores {
+        margin-top: 22px;
+      }
+      .store-btn {
+        padding: 11px 16px;
+        font-size: 14px;
+      }
+      .hero-stats {
+        margin-top: 28px;
+        gap: 20px;
+      }
+      .stat-val {
+        font-size: 26px;
+      }
+      .stat-lbl {
+        font-size: 13px;
+      }
       .stat-divider { display: none; }
       .tagline-strip { gap: 20px; }
       .tagline-sep { display: none; }
+      section.content {
+        padding: 52px 16px;
+      }
+      .section-title {
+        font-size: clamp(24px, 7vw, 34px);
+        margin-bottom: 28px;
+      }
       .mine-grid { grid-template-columns: 1fr; }
+      .mine-grid { gap: 10px; }
       .mine-card { padding: 24px 20px 20px; }
       .mine-icon { font-size: 30px; margin-bottom: 14px; }
       .mine-name { font-size: 18px; }
       .mine-desc { font-size: 14px; }
       .mine-rate { font-size: 13px; }
-      .referral-band { flex-direction: column; padding: 36px 28px; margin: 0 16px; }
+      .step { padding: 28px 22px; }
+      .step h3 { font-size: 16px; }
+      .step p { font-size: 14px; }
+      .referral-band { flex-direction: column; padding: 28px 20px; margin: 0 12px; }
       .referral-badge { width: 100%; }
       .community-shell { grid-template-columns: 1fr; }
       .community-panel,
-      .community-card { padding: 20px; }
-      footer { flex-direction: column; align-items: flex-start; padding: 36px 20px 28px; }
+      .community-card { padding: 16px; }
+      .community-copy { font-size: 15px; margin-bottom: 18px; }
+      footer { flex-direction: column; align-items: flex-start; padding: 32px 16px 24px; }
     }
   </style>
 </head>
