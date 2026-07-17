@@ -471,6 +471,7 @@
         <li><a href="mines.html" class="active"><span class="icon">⛏</span> My Mines</a></li>
         <li><a href="visitors.html"><span class="icon">👥</span> Visitors</a></li>
         <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
+        <li><a href="account.html"><span class="icon">⚙️</span> Account</a></li>
       </ul>
       <div class="sidebar-section">Games</div>
       <ul class="sidebar-nav">
@@ -562,6 +563,67 @@
   }
 
   function fmtUSD(n) { return '$' + (parseFloat(n)||0).toFixed(2); }
+
+  // ── Daily-reset self-heal (Jul 17, 2026) ────────────────────────────────────
+  // dailyActivitiesRemaining only resets to 1 lazily, client-side, when
+  // something actually checks — in the app that's checkAndResetDailyActivity()
+  // in DatabaseServicePhase2.ts, run whenever a player opens that mine's
+  // detail screen. This page had no equivalent, so any mine played today (or
+  // not reopened in-app since the last 4 AM EST boundary) showed a stale
+  // "used up" state here — misread by a few Discord reporters as the mine
+  // name-change feature "breaking" mines, when it's actually unrelated:
+  // mines with recent play activity are just the ones most likely to
+  // currently be sitting at 0 remaining. Ported directly from
+  // utils/TimeUtils.ts (getESTOffset/getLastPassed4AMEST/shouldResetDailyActivity)
+  // so both surfaces agree on exactly the same reset boundary.
+  function getESTOffsetMin(date) {
+    const year = date.getUTCFullYear();
+    const marchStart = new Date(Date.UTC(year, 2, 1));
+    const marchDay = marchStart.getUTCDay();
+    const dstStart = new Date(Date.UTC(year, 2, (14 - marchDay) % 7 + 1, 7));
+    const novStart = new Date(Date.UTC(year, 10, 1));
+    const novDay = novStart.getUTCDay();
+    const dstEnd = new Date(Date.UTC(year, 10, (7 - novDay) % 7 + 1, 6));
+    const isDST = date >= dstStart && date < dstEnd;
+    return isDST ? -4 * 60 : -5 * 60;
+  }
+
+  function getLastPassed4AMEST() {
+    const now = new Date();
+    const estOffset = getESTOffsetMin(now);
+    const estNow = new Date(now.getTime() + estOffset * 60 * 1000);
+    const today4AM = new Date(estNow);
+    today4AM.setHours(4, 0, 0, 0);
+    if (estNow.getHours() < 4) today4AM.setDate(today4AM.getDate() - 1);
+    return new Date(today4AM.getTime() - estOffset * 60 * 1000);
+  }
+
+  function shouldResetDailyActivity(lastResetTime) {
+    if (!lastResetTime) return true; // never initialized — treat as due for reset
+    const lastReset = new Date(lastResetTime);
+    return lastReset < getLastPassed4AMEST();
+  }
+
+  // Resets dailyActivitiesRemaining/doubleRewardAvailable if stale, both in
+  // Firestore and on the passed-in mine's local _details cache. Safe to call
+  // for every loaded mine — a no-op (no write) when not actually stale.
+  async function checkAndResetIfStale(mine) {
+    const d = mine._details || {};
+    if (!shouldResetDailyActivity(d.lastDailyReset)) return;
+    const now = new Date().toISOString();
+    try {
+      await db.collection('propertyDetails').doc(mine.id).set({
+        dailyActivitiesRemaining: 1,
+        doubleRewardAvailable: true,
+        lastDailyReset: now,
+        lastUpdated: now,
+      }, { merge: true });
+      mine._details = { ...d, dailyActivitiesRemaining: 1, doubleRewardAvailable: true, lastDailyReset: now, lastUpdated: now };
+    } catch (e) {
+      // Non-fatal — worst case the mine still shows stale until next load/visit.
+      console.warn('Daily reset self-heal failed for', mine.id, e);
+    }
+  }
 
   function timeAgo(ts) {
     if (!ts) return '';
@@ -710,6 +772,14 @@
 
     $('list-count').textContent = `${allMines.length} mines`;
     renderList(allMines);
+
+    // Self-heal any stale daily-reset state in the background — render first
+    // with whatever we already have so the list isn't blocked behind
+    // potentially dozens of Firestore writes for power users with large
+    // portfolios. checkAndResetIfStale() is a no-op (no write) for any mine
+    // that isn't actually stale, so this is cheap in the common case.
+    await Promise.all(allMines.map(p => checkAndResetIfStale(p)));
+    renderList(allMines);
   }
 
   function renderList(mines) {
@@ -770,6 +840,12 @@
     const d = detSnap.exists ? detSnap.data() : {};
     mine._details = d;
 
+    // Self-heal stale daily-reset state for this mine specifically, same as
+    // the app does when opening PropertyDetailScreen — mine._details is
+    // updated in place by checkAndResetIfStale() if a reset was needed.
+    await checkAndResetIfStale(mine);
+    renderList(allMines);
+
     // Fetch recent visitors
     let visitors = [];
     try {
@@ -781,7 +857,7 @@
       visitors = vSnap.docs.map(doc => ({id:doc.id,...doc.data()}));
     } catch(e) { console.warn('Visitors query:', e); }
 
-    renderDetail(mine, d, visitors);
+    renderDetail(mine, mine._details, visitors);
   }
 
   // ── Boost & trade-in constants ──────────────────────────────────────────
