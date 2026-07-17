@@ -141,28 +141,28 @@
   </div>
 
   <div class="map-footer">
-    Live data from TerraMine &nbsp;·&nbsp; <a href="index.html">terramine.app</a>
+    <span id="freshness-note">Loading…</span> &nbsp;·&nbsp; <a href="index.html">terramine.app</a>
   </div>
 
-  <!-- Firebase CDN (compat — no ES module needed) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
   <script>
-    // ── Firebase init ──────────────────────────────────────────────────────
-    firebase.initializeApp({
-      apiKey:            "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
-      authDomain:        "terramine-5cda5.firebaseapp.com",
-      projectId:         "terramine-5cda5",
-      storageBucket:     "terramine-5cda5.firebasestorage.app",
-      messagingSenderId: "183143680304",
-      appId:             "1:183143680304:web:16bcd69f0c33d690e8e0f5"
-    });
-    window.db = firebase.firestore();
+    // ── Data source ────────────────────────────────────────────────────────
+    // Jul 17, 2026: this used to run a live Firestore collection scan
+    // (window.db.collection('properties').get()) directly from the browser —
+    // 100K+ document reads on EVERY page load, by EVERY visitor, no auth
+    // wall. Replaced with a fetch to a Cloud Function that serves a small
+    // precomputed/grid-bucketed cache, regenerated server-side every 30 min.
+    // See functions/src/index.ts: refreshHeatmapCache + getHeatmapData.
+    //
+    // ⚠️ REPLACE with the real URL after running `firebase deploy --only
+    // functions` — the Firebase CLI prints each function's URL at the end of
+    // the deploy. It'll look like https://getheatmapdata-xxxxxxxxxx-uc.a.run.app
+    // or https://us-central1-terramine-5cda5.cloudfunctions.net/getHeatmapData.
+    const HEATMAP_DATA_URL = 'https://us-central1-terramine-5cda5.cloudfunctions.net/getHeatmapData';
 
     // ── State ──────────────────────────────────────────────────────────────
     let map, canvasOverlay;
-    let allProperties = [];
+    let heatCells     = [];   // grid-bucketed points: { lat, lng, rock, coal, gold, diamond }
+    let heatmapMeta   = null;  // { generatedAt, totalsByType, cellSizeDegrees }
     let activeFilter  = 'all';
     let viewMode      = 'heat';
     let dotMarkers    = [];
@@ -219,14 +219,20 @@
 
         ctx.clearRect(0, 0, w, h);
 
-        // Draw radial blobs per point
+        // Points are now grid cells with a `weight` (property count in that
+        // cell), not individual properties — so each blob's intensity scales
+        // with how many properties are in that cell instead of every blob
+        // being identical. Capped + sqrt'd so one huge outlier cell doesn't
+        // wash out everywhere else on the map (diminishing visual returns
+        // past a point, same as real heatmap libraries do).
         this._points.forEach(p => {
           const px = proj.fromLatLngToDivPixel(new google.maps.LatLng(p.lat, p.lng));
           const x  = px.x - Math.min(ne.x, sw.x);
           const y  = px.y - Math.min(ne.y, sw.y);
+          const intensity = Math.min(1, Math.sqrt(p.weight) / Math.sqrt(40));
           const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-          grad.addColorStop(0,   'rgba(255,60,0,0.35)');
-          grad.addColorStop(0.4, 'rgba(255,180,0,0.18)');
+          grad.addColorStop(0,   `rgba(255,60,0,${0.15 + intensity * 0.35})`);
+          grad.addColorStop(0.4, `rgba(255,180,0,${0.08 + intensity * 0.18})`);
           grad.addColorStop(1,   'rgba(0,0,0,0)');
           ctx.fillStyle = grad;
           ctx.beginPath();
@@ -287,66 +293,81 @@
         if (viewMode === 'heat' && canvasOverlay) canvasOverlay._overlay.draw();
       });
 
-      // Load data
+      // Load data — one small fetch instead of a 100K-document Firestore scan.
       try {
-        const snap = await window.db.collection('properties').get();
-        allProperties = snap.docs.map(d => {
-          const data = d.data();
-          return {
-            lat:           data.centerLat      ?? data.latitude  ?? data.lat  ?? null,
-            lng:           data.centerLng      ?? data.longitude ?? data.lng  ?? null,
-            type:          data.mineType       ?? 'rock',
-            isNullIsland:  data.isNullIsland   ?? false,
-            isSuspended:   data.earningsSuspended ?? false,
-          };
-        }).filter(p =>
-          p.lat !== null && p.lng !== null &&
-          // Exclude flagged/suspended properties (GPS spoofers, Null Island)
-          !p.isNullIsland && !p.isSuspended &&
-          // Exclude coordinates implausibly close to (0,0) even if not yet flagged
-          !(Math.abs(p.lat) < 1.0 && Math.abs(p.lng) < 1.0)
-        );
+        const res = await fetch(HEATMAP_DATA_URL);
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const data = await res.json();
+
+        heatCells = data.cells || [];
+        heatmapMeta = {
+          generatedAt:  data.generatedAt,
+          totalsByType: data.totalsByType,
+          totalProperties: data.totalProperties,
+        };
 
         renderMap();
         updateStats();
+        updateFreshnessNote();
         document.getElementById('loading-overlay').classList.add('hidden');
       } catch(e) {
-        console.error('Firestore error:', e);
+        console.error('Heatmap data fetch error:', e);
         showError('Could not load property data: ' + e.message);
         document.getElementById('loading-overlay').classList.add('hidden');
       }
     }
 
     // ── Render ─────────────────────────────────────────────────────────────
-    function filteredProperties() {
-      if (activeFilter === 'all') return allProperties;
-      return allProperties.filter(p => p.type === activeFilter);
+    // Each cell already carries per-type counts (rock/coal/gold/diamond) from
+    // the server-side bucketing — filtering by type is just picking which
+    // count(s) contribute to a cell's weight, no per-property data needed.
+    function filteredCells() {
+      return heatCells
+        .map(c => {
+          const weight = activeFilter === 'all'
+            ? c.rock + c.coal + c.gold + c.diamond
+            : (c[activeFilter] || 0);
+          return { lat: c.lat, lng: c.lng, weight, cell: c };
+        })
+        .filter(c => c.weight > 0);
     }
 
     function renderMap() {
-      const props = filteredProperties();
+      const cells = filteredCells();
       clearDots();
       if (canvasOverlay) { canvasOverlay.remove(); canvasOverlay = null; }
 
       if (viewMode === 'heat') {
         canvasOverlay = new HeatCanvas(map);
-        canvasOverlay.setPoints(props);
+        canvasOverlay.setPoints(cells);
       } else {
-        renderDots(props);
+        renderDots(cells);
       }
     }
 
-    function renderDots(props) {
-      props.forEach(p => {
-        const color = MINE_COLORS[p.type] || '#4FC3F7';
+    // Jul 17, 2026: one marker per occupied grid cell (dozens-to-thousands,
+    // even at 100K+ properties) instead of one marker per property (which
+    // would mean up to 100K native google.maps.Marker DOM objects — enough
+    // to hang the browser well before Firestore read cost was ever the
+    // bottleneck). Marker size now reflects how many properties are in that
+    // cell rather than representing one exact property location.
+    function renderDots(cells) {
+      cells.forEach(c => {
+        const dominant = activeFilter !== 'all'
+          ? activeFilter
+          : Object.entries({ rock: c.cell.rock, coal: c.cell.coal, gold: c.cell.gold, diamond: c.cell.diamond })
+              .sort((a, b) => b[1] - a[1])[0][0];
+        const color = MINE_COLORS[dominant] || '#4FC3F7';
+        const scale = Math.max(4, Math.min(16, 4 + Math.sqrt(c.weight) * 1.5));
         const marker = new google.maps.Marker({
-          position: { lat: p.lat, lng: p.lng },
+          position: { lat: c.lat, lng: c.lng },
           map,
+          title: `${c.weight.toLocaleString()} propert${c.weight === 1 ? 'y' : 'ies'} in this area`,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 5,
+            scale,
             fillColor: color,
-            fillOpacity: 0.85,
+            fillOpacity: 0.75,
             strokeColor: 'rgba(0,0,0,0.3)',
             strokeWeight: 1,
           },
@@ -362,10 +383,19 @@
 
     // ── Stats ──────────────────────────────────────────────────────────────
     function updateStats() {
-      const props = filteredProperties();
-      document.getElementById('stat-total').textContent = props.length.toLocaleString();
-      const grid = new Set(props.map(p => `${Math.round(p.lat)},${Math.round(p.lng)}`));
-      document.getElementById('stat-cities').textContent = grid.size;
+      const cells = filteredCells();
+      const total = activeFilter === 'all'
+        ? (heatmapMeta?.totalProperties ?? cells.reduce((sum, c) => sum + c.weight, 0))
+        : (heatmapMeta?.totalsByType?.[activeFilter] ?? cells.reduce((sum, c) => sum + c.weight, 0));
+      document.getElementById('stat-total').textContent = total.toLocaleString();
+      document.getElementById('stat-cities').textContent = cells.length.toLocaleString();
+    }
+
+    function updateFreshnessNote() {
+      const el = document.getElementById('freshness-note');
+      if (!el || !heatmapMeta?.generatedAt) return;
+      const mins = Math.max(0, Math.round((Date.now() - new Date(heatmapMeta.generatedAt).getTime()) / 60000));
+      el.textContent = mins < 1 ? 'Updated just now' : `Updated ${mins}m ago`;
     }
 
     // ── Filters ────────────────────────────────────────────────────────────
