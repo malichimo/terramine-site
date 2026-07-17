@@ -159,10 +159,22 @@
     // or https://us-central1-terramine-5cda5.cloudfunctions.net/getHeatmapData.
     const HEATMAP_DATA_URL = 'https://us-central1-terramine-5cda5.cloudfunctions.net/getHeatmapData';
 
+    // Jul 17, 2026: once a player zooms in close enough to see individual
+    // TerraAcres, the aggregate cache is too coarse to be useful — this
+    // fetches exact properties within the current viewport instead, scoped
+    // to whatever's on screen (never the whole dataset). See
+    // functions/src/index.ts: getPropertiesInViewport.
+    const VIEWPORT_DATA_URL = 'https://us-central1-terramine-5cda5.cloudfunctions.net/getPropertiesInViewport';
+    const VIEWPORT_QUERY_MIN_ZOOM = 16; // roughly block/building-level zoom
+
     // ── State ──────────────────────────────────────────────────────────────
     let map, canvasOverlay;
-    let heatCells     = [];   // grid-bucketed points: { lat, lng, rock, coal, gold, diamond }
-    let heatmapMeta   = null;  // { generatedAt, totalsByType, cellSizeDegrees }
+    let heatCells      = [];    // active points being rendered: { lat, lng, rock, coal, gold, diamond }
+    let aggregateCells = [];    // the cached, grid-bucketed points — kept around so switching zoom back out doesn't need a re-fetch
+    let heatmapMeta    = null;  // { generatedAt, totalsByType, cellSizeDegrees, totalProperties }
+    let dataMode       = 'aggregate'; // 'aggregate' (cached, whole-world) | 'viewport' (live, precise, close zoom only)
+    let viewportFetchTimer = null;
+    let viewportFetchToken = 0; // guards against a slower, older request overwriting a newer one
     let activeFilter  = 'all';
     let viewMode      = 'heat';
     let dotMarkers    = [];
@@ -288,9 +300,12 @@
         ],
       });
 
-      // Redraw heatmap on pan/zoom
+      // Redraw heatmap on pan/zoom, and check whether we've crossed into/out
+      // of close-zoom precise viewport mode (debounced — bounds_changed
+      // fires repeatedly during a drag/zoom gesture).
       map.addListener('bounds_changed', () => {
         if (viewMode === 'heat' && canvasOverlay) canvasOverlay._overlay.draw();
+        scheduleViewportCheck();
       });
 
       // Load data — one small fetch instead of a 100K-document Firestore scan.
@@ -300,6 +315,7 @@
         const data = await res.json();
 
         heatCells = data.cells || [];
+        aggregateCells = heatCells;
         heatmapMeta = {
           generatedAt:  data.generatedAt,
           totalsByType: data.totalsByType,
@@ -314,6 +330,55 @@
         console.error('Heatmap data fetch error:', e);
         showError('Could not load property data: ' + e.message);
         document.getElementById('loading-overlay').classList.add('hidden');
+      }
+    }
+
+    // ── Close-zoom precise viewport mode ──────────────────────────────────────
+    function scheduleViewportCheck() {
+      clearTimeout(viewportFetchTimer);
+      viewportFetchTimer = setTimeout(handleViewportCheck, 400);
+    }
+
+    async function handleViewportCheck() {
+      const zoom = map.getZoom();
+
+      if (zoom >= VIEWPORT_QUERY_MIN_ZOOM) {
+        const bounds = map.getBounds();
+        if (!bounds) return;
+        const ne = bounds.getNorthEast(), sw = bounds.getSouthWest();
+        const token = ++viewportFetchToken;
+
+        try {
+          const url = `${VIEWPORT_DATA_URL}?minLat=${sw.lat()}&maxLat=${ne.lat()}&minLng=${sw.lng()}&maxLng=${ne.lng()}`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`Server returned ${res.status}`);
+          const data = await res.json();
+
+          if (token !== viewportFetchToken) return; // a newer request has already superseded this one
+
+          heatCells = (data.properties || []).map(p => ({
+            lat: p.lat, lng: p.lng,
+            rock:    p.type === 'rock'    ? 1 : 0,
+            coal:    p.type === 'coal'    ? 1 : 0,
+            gold:    p.type === 'gold'    ? 1 : 0,
+            diamond: p.type === 'diamond' ? 1 : 0,
+          }));
+          dataMode = 'viewport';
+          renderMap();
+          updateStats();
+          updateFreshnessNote(!!data.truncated);
+        } catch(e) {
+          // Non-fatal — this is a background precision upgrade, not the
+          // primary load path. Leave whatever's currently showing in place
+          // rather than surfacing an error banner over it.
+          console.error('Viewport data fetch error:', e);
+        }
+      } else if (dataMode !== 'aggregate') {
+        heatCells = aggregateCells;
+        dataMode = 'aggregate';
+        renderMap();
+        updateStats();
+        updateFreshnessNote();
       }
     }
 
@@ -384,16 +449,28 @@
     // ── Stats ──────────────────────────────────────────────────────────────
     function updateStats() {
       const cells = filteredCells();
-      const total = activeFilter === 'all'
-        ? (heatmapMeta?.totalProperties ?? cells.reduce((sum, c) => sum + c.weight, 0))
-        : (heatmapMeta?.totalsByType?.[activeFilter] ?? cells.reduce((sum, c) => sum + c.weight, 0));
+      // In viewport mode the global totalsByType/totalProperties figures
+      // describe the whole world, not what's currently visible — always
+      // derive the total from the actual points we have in that mode.
+      const total = dataMode === 'viewport'
+        ? cells.reduce((sum, c) => sum + c.weight, 0)
+        : activeFilter === 'all'
+          ? (heatmapMeta?.totalProperties ?? cells.reduce((sum, c) => sum + c.weight, 0))
+          : (heatmapMeta?.totalsByType?.[activeFilter] ?? cells.reduce((sum, c) => sum + c.weight, 0));
       document.getElementById('stat-total').textContent = total.toLocaleString();
       document.getElementById('stat-cities').textContent = cells.length.toLocaleString();
     }
 
-    function updateFreshnessNote() {
+    function updateFreshnessNote(truncated) {
       const el = document.getElementById('freshness-note');
-      if (!el || !heatmapMeta?.generatedAt) return;
+      if (!el) return;
+      if (dataMode === 'viewport') {
+        el.textContent = truncated
+          ? 'Live view — zoom in further for full precision'
+          : 'Live view (zoomed in)';
+        return;
+      }
+      if (!heatmapMeta?.generatedAt) return;
       const mins = Math.max(0, Math.round((Date.now() - new Date(heatmapMeta.generatedAt).getTime()) / 60000));
       el.textContent = mins < 1 ? 'Updated just now' : `Updated ${mins}m ago`;
     }
