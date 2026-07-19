@@ -51,6 +51,10 @@
       flex-direction: column;
       min-height: 100vh;
     }
+    body.auth-pending #login-screen,
+    body.auth-pending #portal {
+      visibility: hidden;
+    }
 
     /* ═══════════════════════════════════════════
        TOP NAV
@@ -747,6 +751,9 @@
 
   const auth = firebase.auth();
   const db   = firebase.firestore();
+  let authResolved = false;
+
+  document.body.classList.add('auth-pending');
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -794,7 +801,14 @@
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+
   auth.onAuthStateChanged(user => {
+    if (!authResolved) {
+      document.body.classList.remove('auth-pending');
+      authResolved = true;
+    }
+
     if (user) {
       $('login-screen').style.display = 'none';
       $('portal').style.display = 'flex';
