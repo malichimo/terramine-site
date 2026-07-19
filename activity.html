@@ -32,6 +32,8 @@
     }
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
     body { background: var(--bg); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; }
+    body.auth-pending #login-screen,
+    body.auth-pending #portal { visibility: hidden; }
 
     .top-nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(13,27,42,0.97); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
     .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--cyan); text-decoration:none; }
@@ -287,6 +289,10 @@
   });
   const auth = firebase.auth();
   const db   = firebase.firestore();
+  let authResolved = false;
+
+  document.body.classList.add('auth-pending');
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
   const $ = id => document.getElementById(id);
   let currentUser = null;
@@ -320,6 +326,11 @@
   }
 
   auth.onAuthStateChanged(user => {
+    if (!authResolved) {
+      document.body.classList.remove('auth-pending');
+      authResolved = true;
+    }
+
     if (user) {
       currentUser = user;
       $('login-screen').style.display = 'none';
