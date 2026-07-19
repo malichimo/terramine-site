@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="0; url=/" />
+  <title>TerraMine</title>
+  <script>
+    window.location.replace('/' + window.location.search + window.location.hash);
+  </script>
+</head>
+<body>
+  <p>Redirecting to <a href="/">TerraMine</a>...</p>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraMine — Stake a Claim. Visit Friends. Earn Money.</title>
+  <meta name="description" content="Buy virtual properties on a real-world map, visit other players' mines to earn TerraBucks, and watch your passive income grow around the clock." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="../index.html">⛏ Terra<span>Mine</span></a>
+    <div class="nav-links" id="nav-links-menu">
+      <a href="#mines">Mine Types</a>
+      <a href="#how">How It Works</a>
+      <a href="#community">Community</a>
+      <a href="../heatmap.html">World Map</a>
+      <a href="../guide.html">Player's Guide</a>
+      <a href="../privacy.html">Privacy</a>
+      <a href="../terms.html">Terms</a>
+    </div>
+    <div class="nav-actions">
+      <a href="../portal.html" class="nav-login">My Portal</a>
+      <a href="#download" class="nav-cta">Download</a>
+      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <p class="hero-eyebrow">Now Live on iOS &amp; Android</p>
+    <h1>Stake a Claim.<br/><em>Visit Friends.</em><br/>Earn Money.</h1>
+    <p class="hero-sub">Buy virtual properties on a real-world map, visit other players' mines to earn TerraBucks, and watch your passive income grow around the clock.</p>
+
+    <div class="hero-stores" id="download">
+      <a href="https://apps.apple.com/app/terramine/id6761272864" class="store-btn store-btn-ios" target="_blank" rel="noopener" aria-label="Download on the App Store">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        App Store
+      </a>
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" class="store-btn store-btn-android" target="_blank" rel="noopener" aria-label="Get it on Google Play">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.37.2.8.2 1.19-.01l12.14-6.96-2.64-2.64-10.69 9.61zM.44 1.6C.17 1.99.02 2.5.02 3.09v17.82c0 .59.15 1.1.42 1.49l.07.07 9.98-9.98v-.23L.51 1.53l-.07.07zM20.13 10.4l-2.72-1.56-2.96 2.96 2.96 2.96 2.74-1.57c.78-.45.78-1.34-.02-1.79zM4.37.24L16.51 7.2l-2.64 2.64L3.18.27C3.57.06 4 .05 4.37.24z"/></svg>
+        Google Play
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-val" id="stat-properties">3,000+</div>
+        <div class="stat-lbl">Properties claimed</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-val" id="stat-members">133+</div>
+        <div class="stat-lbl">Members</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-val">$0</div>
+        <div class="stat-lbl">Cost to start</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+      authDomain: "terramine-5cda5.firebaseapp.com",
+      projectId: "terramine-5cda5",
+      storageBucket: "terramine-5cda5.firebasestorage.app",
+      messagingSenderId: "183143680304",
+      appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+    };
+
+    function formatStat(n) {
+      if (n >= 1000) return n.toLocaleString() + '+';
+      return n.toString();
+    }
+
+    async function loadStats() {
+      try {
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Read only from adminStats/global — public, no auth required
+        const statsDoc = await getDoc(doc(db, 'adminStats', 'global'));
+        if (statsDoc.exists()) {
+          const data = statsDoc.data();
+          if (data.totalUsers) {
+            document.getElementById('stat-members').textContent = formatStat(data.totalUsers);
+          }
+          if (data.totalPropertiesSold) {
+            document.getElementById('stat-properties').textContent = formatStat(data.totalPropertiesSold);
+          }
+        }
+      } catch (err) {
+        // Silently fail — fallback values already shown
+        console.warn('TerraMine stats load failed:', err);
+      }
+    }
+
+    function getMemberInitials(username) {
+      return username
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0])
+        .join('')
+        .toUpperCase();
+    }
+
+    function statusClass(status) {
+      if (status === 'online') return 'status-online';
+      if (status === 'idle') return 'status-idle';
+      if (status === 'dnd') return 'status-dnd';
+      return 'status-offline';
+    }
+
+    function setupMobileNav() {
+      const nav = document.querySelector('nav');
+      const toggle = document.getElementById('nav-menu-toggle');
+      const links = document.getElementById('nav-links-menu');
+
+      if (!nav || !toggle || !links) return;
+
+      const closeMenu = () => {
+        nav.classList.remove('nav-open');
+        toggle.setAttribute('aria-expanded', 'false');
+      };
+
+      const openMenu = () => {
+        nav.classList.add('nav-open');
+        toggle.setAttribute('aria-expanded', 'true');
+      };
+
+      toggle.addEventListener('click', () => {
+        const isOpen = nav.classList.contains('nav-open');
+        if (isOpen) closeMenu();
+        else openMenu();
+      });
+
+      links.addEventListener('click', (event) => {
+        if (event.target.closest('a')) closeMenu();
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!nav.contains(event.target)) closeMenu();
+      });
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth > 1024) closeMenu();
+      });
+    }
+
+    async function loadDiscordCommunity() {
+      const inviteLink = document.getElementById('discord-invite-link');
+      const onlineCount = document.getElementById('discord-online-count');
+      const serverName = document.getElementById('discord-server-name');
+      const guildName = document.getElementById('discord-guild-name');
+      const presencePill = document.getElementById('discord-presence-pill');
+      const membersList = document.getElementById('discord-members-list');
+
+      try {
+        const response = await fetch('https://discord.com/api/guilds/1504648274135617576/widget.json');
+        if (!response.ok) throw new Error(`Discord API returned ${response.status}`);
+
+        const data = await response.json();
+        const memberCount = Number(data.presence_count || 0);
+        const members = Array.isArray(data.members) ? data.members.slice(0, 8) : [];
+
+        if (inviteLink && data.instant_invite) inviteLink.href = data.instant_invite;
+        if (guildName && data.name) guildName.textContent = data.name;
+        if (serverName && data.name) serverName.textContent = data.name;
+        if (onlineCount) onlineCount.textContent = memberCount.toLocaleString();
+        if (presencePill) presencePill.textContent = `${memberCount.toLocaleString()} online`;
+
+        if (membersList) {
+          membersList.innerHTML = members.map(member => {
+            const avatarUrl = member.avatar_url || '';
+            const initials = getMemberInitials(member.username || 'Member');
+            const status = member.status || 'offline';
+            const activity = member.game && member.game.name ? member.game.name : 'Active now';
+
+            return `
+              <div class="community-member" title="${member.username || 'Member'}">
+                ${avatarUrl
+                  ? `<img class="community-member-avatar" src="${avatarUrl}" alt="${member.username || 'Member'} avatar" loading="lazy" />`
+                  : `<span class="community-member-fallback">${initials}</span>`}
+                <div class="community-member-info">
+                  <div class="community-member-name">${member.username || 'Member'}</div>
+                  <div class="community-member-status ${statusClass(status)}">${activity}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          if (!members.length) {
+            membersList.innerHTML = '<div class="community-fallback">No members are currently visible in the widget feed.</div>';
+          }
+        }
+      } catch (err) {
+        console.warn('Discord community load failed:', err);
+        if (presencePill) presencePill.textContent = 'Unavailable';
+        if (onlineCount) onlineCount.textContent = '--';
+        if (membersList) {
+          membersList.innerHTML = '<div class="community-fallback">The Discord feed is unavailable right now. Use the Join Discord button to open the server directly.</div>';
+        }
+      }
+    }
+
+    loadStats();
+    loadDiscordCommunity();
+    setupMobileNav();
+  </script>
+
+  <!-- ── MINE TYPES ── -->
+  <section class="content" id="mines">
+    <p class="section-label">Property Types</p>
+    <h2 class="section-title">Four Mines.<br/>One Map.</h2>
+    <div class="mine-grid">
+      <div class="mine-card rock">
+        <span class="mine-icon">🪨</span>
+        <div class="mine-name">Rock Mine</div>
+        <p class="mine-desc">The most common mine. Steady, reliable passive income. Found on 60% of all properties.</p>
+        <span class="mine-rate">Base rate</span>
+      </div>
+      <div class="mine-card coal">
+        <span class="mine-icon">⚫</span>
+        <div class="mine-name">Coal Mine</div>
+        <p class="mine-desc">Dark and productive. Earns 1.5× a rock mine. About 30% of all properties yield coal.</p>
+        <span class="mine-rate">1.5× rock</span>
+      </div>
+      <div class="mine-card gold">
+        <span class="mine-icon">🟡</span>
+        <div class="mine-name">Gold Mine</div>
+        <p class="mine-desc">Rare and lucrative. 2× the earnings of rock. Only 9% of properties strike gold.</p>
+        <span class="mine-rate">2× rock</span>
+      </div>
+      <div class="mine-card diamond">
+        <span class="mine-icon">💎</span>
+        <div class="mine-name">Diamond Mine</div>
+        <p class="mine-desc">Ultra-rare. 4× earnings. Just 1% of all properties are diamond mines.</p>
+        <span class="mine-rate">4× rock</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ── -->
+  <section class="content" id="how">
+    <p class="section-label">How It Works</p>
+    <h2 class="section-title">Simple to start.<br/>Deep to master.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <span class="step-icon">🗺</span>
+        <h3>Claim Your Territory</h3>
+        <p>The entire world is divided into a grid. Buy any unclaimed square near you for 100 TerraBucks — it's yours permanently.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <span class="step-icon">💵</span>
+        <h3>Earn Passive Income</h3>
+        <p>Every property you own generates a stream of real US dollars around the clock — even when you're not playing.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <span class="step-icon">📍</span>
+        <h3>Visit Other Mines</h3>
+        <p>Walk near another player's mine and check in to earn TerraBucks for yourself — and give the owner a bonus too.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <span class="step-icon">⛏</span>
+        <h3>Play Daily Games</h3>
+        <p>Each mine type has a unique daily mini-game — conveyor belts, coal piles, gold panning, and more.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <span class="step-icon">⚡</span>
+        <h3>Activate Boosts</h3>
+        <p>Multiply your passive income by 20× with a boost. Use free daily boosts or watch an ad to extend up to 8 hours.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">06</div>
+        <span class="step-icon">🏆</span>
+        <h3>Climb the Leaderboard</h3>
+        <p>Compete for the top 10 spots by property count. Every TerraAcre you claim moves you up the board.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── REFERRAL CALLOUT ── -->
+  <div class="referral-band">
+    <div class="referral-text">
+      <p class="section-label">Referral Program</p>
+      <h2>Invite a friend.<br/>You <em>both</em> win.</h2>
+      <p>Share your referral link from the map screen. When your friend signs up and buys their first TerraAcre, you each receive 1,000 TerraBucks — automatically, no codes needed.</p>
+    </div>
+    <div class="referral-badge">
+      <div class="tb-amount">1,000</div>
+      <div class="tb-label">TerraBucks each</div>
+      <div class="tb-sub">You + your friend</div>
+    </div>
+  </div>
+
+  <section class="content" id="community">
+    <p class="section-label">Community</p>
+    <h2 class="section-title">Join the conversation.<br/>Meet other players.</h2>
+    <div class="community-shell">
+      <div class="community-panel">
+        <p class="community-copy">Our Discord server is the best place to ask questions, share tips, and connect with other TerraMine players. Join us today.</p>
+        <a class="community-join" id="discord-invite-link" href="https://discord.com/invite/YHzzvzwb" target="_blank" rel="noopener">Join Discord</a>
+        <div class="community-metrics">
+          <div class="community-metric">
+            <span class="community-metric-label">Online now</span>
+            <div class="community-metric-value" id="discord-online-count">--</div>
+          </div>
+          <div class="community-metric">
+            <span class="community-metric-label">Server</span>
+            <div class="community-metric-value" id="discord-server-name">Terramine</div>
+          </div>
+        </div>
+      </div>
+      <div class="community-card">
+        <div class="community-card-header">
+          <div>
+            <p class="section-label community-discord-label">Discord</p>
+            <h3 id="discord-guild-name">Terramine</h3>
+          </div>
+          <div class="community-online" id="discord-presence-pill">Loading...</div>
+        </div>
+        <div class="community-members" id="discord-members-list">
+          <div class="community-fallback">Loading community members...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <a class="footer-logo" href="../index.html">⛏ TerraMine</a>
+    <div class="footer-links">
+      <a href="../heatmap.html">World Map</a>
+      <a href="../privacy.html">Privacy Policy</a>
+      <a href="../terms.html">Terms of Service</a>
+      <a href="../portal.html">My Portal</a>
+      <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>
