@@ -50,6 +50,8 @@
       flex-direction: column;
       min-height: 100vh;
     }
+      body.auth-pending #login-screen,
+      body.auth-pending #portal { visibility: hidden; }
 
     /* ═══ TOP NAV (portal style) ═══ */
     .top-nav {
@@ -421,6 +423,7 @@
 <body>
 
 <!-- LOGIN -->
+  <link rel="icon" type="image/png" href="/logo.png" />
 <div id="login-screen">
   <div class="login-card">
     <div class="login-card-header">
@@ -541,6 +544,10 @@
   });
   const auth = firebase.auth();
   const db   = firebase.firestore();
+    let authResolved = false;
+
+    document.body.classList.add('auth-pending');
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -708,6 +715,11 @@
 
   // ── Auth ───────────────────────────────────────────────────────────────────
   auth.onAuthStateChanged(user => {
+      if (!authResolved) {
+        document.body.classList.remove('auth-pending');
+        authResolved = true;
+      }
+
     if (user) {
       currentUser = user;
       $('login-screen').style.display = 'none';
