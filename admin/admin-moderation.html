@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine — Content Moderation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07;
+    --surface: #1a1208;
+    --surface2: #241a0d;
+    --gold: #c8922a;
+    --gold-light: #f0b84a;
+    --amber: #e07b20;
+    --text: #f0e6d0;
+    --text-muted: #8a7560;
+    --green: #4caf6e;
+    --red: #e05050;
+    --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { font-size: 28px; }
+  .logo-text { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--gold-light); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .admin-email { font-size: 11px; color: var(--text-muted); }
+  .nav-link {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .nav-link:hover { color: var(--text); border-color: var(--gold); }
+  .logout-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .logout-btn:hover { color: var(--red); border-color: var(--red); }
+
+  /* Main */
+  .main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 32px 0 16px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .load-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .load-btn:hover { background: var(--gold-light); }
+  .load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .load-more-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .load-more-btn:hover { border-color: var(--gold); color: var(--gold-light); }
+  .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Type filter pills */
+  .type-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .type-pill {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .type-pill:hover { border-color: var(--gold); color: var(--text); }
+  .type-pill.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 500; }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .mini-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    min-width: 130px;
+  }
+  .mini-stat.flagged { border-color: rgba(224,80,80,0.4); }
+  .mini-stat.unavailable { border-color: rgba(224,177,32,0.4); }
+  .mini-stat.blur_rejected { border-color: rgba(74,159,212,0.4); }
+  .mini-stat-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .mini-stat-value { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+
+  /* Event list */
+  .event-list { display: flex; flex-direction: column; gap: 10px; }
+  .event-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .event-card.flagged { border-left-color: var(--red); }
+  .event-card.unavailable { border-left-color: var(--amber); }
+  .event-card.blur_rejected { border-left-color: var(--blue); }
+
+  .event-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .event-type-badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    text-transform: uppercase;
+  }
+  .event-type-badge.flagged { background: rgba(224,80,80,0.15); color: var(--red); }
+  .event-type-badge.unavailable { background: rgba(224,177,32,0.15); color: #e0b120; }
+  .event-type-badge.blur_rejected { background: rgba(74,159,212,0.15); color: var(--blue); }
+  .event-date { font-size: 11px; color: var(--text-muted); }
+
+  .event-detail { font-size: 12px; color: var(--text); line-height: 1.7; }
+  .event-detail .k { color: var(--text-muted); }
+  .category-chip {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 8px;
+    margin: 2px 4px 2px 0;
+    font-size: 11px;
+  }
+  .category-chip.tripped { border-color: var(--red); color: var(--red); }
+  .err-text {
+    display: block;
+    margin-top: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .event-ids {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+
+  /* Empty / loading states */
+  .empty-state {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* Login overlay */
+  #loginOverlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    .main { padding: 16px; }
+    .header { padding: 16px; flex-wrap: wrap; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">🛡️</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Content Moderation Log</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/" class="nav-link">📊 Dashboard</a>
+    <a href="/admin/admin-users.html" class="nav-link">👥 Users</a>
+    <a href="/admin/admin-properties.html" class="nav-link">🏔 Properties</a>
+    <a href="/admin/admin-finance.html" class="nav-link">💰 Finance</a>
+    <a href="/admin/admin-checkins.html" class="nav-link">📸 Check-ins</a>
+    <button class="logout-btn" id="logoutBtn" onclick="doLogout()" style="display:none;">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="section-label">Content Moderation Log</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">
+    Every moderation outcome from <code>moderateCheckInPhoto</code> that isn't a clean approval: photos
+    actually flagged by Azure Content Safety, photos rejected as too blurry, and — most importantly —
+    any stretch where Azure itself was unreachable (quota exhausted, outage, bad key) and photos were
+    auto-approved with no real review. Added Jul 20, 2026 after an Azure F0-tier quota exhaustion went
+    undetected for a while with no visibility except raw Cloud Logging.
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left type-filters">
+      <button class="type-pill active" data-type="all" onclick="setFilter('all')">All</button>
+      <button class="type-pill" data-type="unavailable" onclick="setFilter('unavailable')">⚠️ Unavailable (fail-open)</button>
+      <button class="type-pill" data-type="flagged" onclick="setFilter('flagged')">🚫 Flagged</button>
+      <button class="type-pill" data-type="blur_rejected" onclick="setFilter('blur_rejected')">🌫️ Blurry</button>
+    </div>
+    <button class="load-btn" id="loadBtn" onclick="resetAndLoad()">🔄 Refresh</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="mini-stat unavailable">
+      <div class="mini-stat-label">Unavailable (loaded)</div>
+      <div class="mini-stat-value" id="countUnavailable">0</div>
+    </div>
+    <div class="mini-stat flagged">
+      <div class="mini-stat-label">Flagged (loaded)</div>
+      <div class="mini-stat-value" id="countFlagged">0</div>
+    </div>
+    <div class="mini-stat blur_rejected">
+      <div class="mini-stat-label">Blurry (loaded)</div>
+      <div class="mini-stat-value" id="countBlur">0</div>
+    </div>
+  </div>
+
+  <div class="event-list" id="eventList">
+    <div class="empty-state">
+      <div class="icon">🛡️</div>
+      <div>Sign in to load moderation events</div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:20px;">
+    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()" style="display:none;">Load More</button>
+  </div>
+
+</div>
+
+<!-- Login overlay -->
+<div id="loginOverlay">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:360px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:16px;">🛡️</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gold-light);margin-bottom:4px;">TerraMine Admin</div>
+    <div style="font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:32px;">Sign in to continue</div>
+    <input id="loginEmail" type="email" placeholder="Email" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:12px;outline:none;">
+    <input id="loginPass" type="password" placeholder="Password" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:20px;outline:none;" onkeydown="if(event.key==='Enter')doLogin()">
+    <button id="loginBtn" onclick="doLogin()" style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;">Sign In</button>
+    <div id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;display:none;"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import {
+    getFirestore, collection, query, where, orderBy, limit,
+    startAfter, getDocs
+  } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  const PAGE_SIZE = 40;
+
+  let lastDoc = null;
+  let activeType = 'all';
+  let counts = { unavailable: 0, flagged: 0, blur_rejected: 0 };
+
+  // ── Auth ─────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      resetAndLoad();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+    }
+  });
+
+  window.doLogin = async function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn');
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    btn.textContent = 'Signing in...';
+    btn.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch(e) {
+      errEl.textContent = 'Invalid credentials. Try again.';
+      errEl.style.display = 'block';
+      btn.textContent = 'Sign In';
+      btn.disabled = false;
+    }
+  };
+
+  window.doLogout = async function() {
+    await signOut(auth);
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('adminEmail').textContent = '';
+  };
+
+  // ── Filters ──────────────────────────────────────────────────────
+  window.setFilter = function(type) {
+    activeType = type;
+    document.querySelectorAll('.type-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.type === type);
+    });
+    resetAndLoad();
+  };
+
+  window.resetAndLoad = function() {
+    lastDoc = null;
+    counts = { unavailable: 0, flagged: 0, blur_rejected: 0 };
+    updateCounts();
+    document.getElementById('eventList').innerHTML = '';
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    loadEvents(false);
+  };
+
+  function updateCounts() {
+    document.getElementById('countUnavailable').textContent = counts.unavailable;
+    document.getElementById('countFlagged').textContent = counts.flagged;
+    document.getElementById('countBlur').textContent = counts.blur_rejected;
+  }
+
+  // ── Load events ──────────────────────────────────────────────────
+  window.loadEvents = async function(isLoadMore) {
+    const btn = document.getElementById('loadBtn');
+    const moreBtn = document.getElementById('loadMoreBtn');
+    btn.disabled = true;
+    moreBtn.disabled = true;
+
+    try {
+      let q;
+      const base = activeType === 'all'
+        ? [collection(db, 'contentModerationLog'), orderBy('timestamp', 'desc')]
+        : [collection(db, 'contentModerationLog'), where('type', '==', activeType), orderBy('timestamp', 'desc')];
+
+      if (isLoadMore && lastDoc) {
+        q = query(...base, startAfter(lastDoc), limit(PAGE_SIZE));
+      } else {
+        q = query(...base, limit(PAGE_SIZE));
+      }
+
+      const snap = await getDocs(q);
+      const list = document.getElementById('eventList');
+
+      if (snap.empty && !isLoadMore) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">✅</div>
+            <div>No moderation events found${activeType !== 'all' ? ' for this filter' : ''}.</div>
+          </div>`;
+        moreBtn.style.display = 'none';
+        return;
+      }
+
+      if (!snap.empty) {
+        lastDoc = snap.docs[snap.docs.length - 1];
+      }
+
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        if (counts[data.type] !== undefined) counts[data.type]++;
+        renderEventCard(docSnap.id, data, list);
+      });
+
+      updateCounts();
+      moreBtn.style.display = snap.docs.length === PAGE_SIZE ? 'inline-block' : 'none';
+
+    } catch(e) {
+      console.error('Load failed:', e);
+      const list = document.getElementById('eventList');
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">⚠️</div>
+          <div>Load failed — check console. You may need a Firestore composite index (Firestore will print a direct link the first time this query runs).</div>
+        </div>`;
+    } finally {
+      btn.disabled = false;
+      moreBtn.disabled = false;
+    }
+  };
+
+  window.loadMore = function() {
+    loadEvents(true);
+  };
+
+  function renderEventCard(docId, data, list) {
+    const card = document.createElement('div');
+    card.className = `event-card ${data.type}`;
+
+    const ts = data.timestamp?.toDate ? data.timestamp.toDate() : (data.timestamp ? new Date(data.timestamp) : null);
+    const dateStr = ts ? ts.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit' }) : '—';
+
+    const typeLabel = { unavailable: '⚠️ Unavailable', flagged: '🚫 Flagged', blur_rejected: '🌫️ Blurry' }[data.type] || data.type;
+
+    let detail = '';
+    if (data.type === 'unavailable') {
+      detail = `
+        <div class="event-detail">
+          <span class="k">Azure status:</span> ${escHtml(String(data.errorStatus ?? '—'))} —
+          every check-in photo during this window was auto-approved with no real review.
+        </div>
+        ${data.errorText ? `<span class="err-text">${escHtml(data.errorText)}</span>` : ''}`;
+    } else if (data.type === 'flagged') {
+      const cats = Array.isArray(data.categories) ? data.categories : [];
+      const chips = cats.map(c => {
+        const tripped = c.category === data.category;
+        return `<span class="category-chip ${tripped ? 'tripped' : ''}">${escHtml(c.category)}: ${c.severity}${tripped ? ' ← rejected on this' : ''}</span>`;
+      }).join('');
+      detail = `
+        <div class="event-detail">
+          <span class="k">Rejected on:</span> ${escHtml(data.category || '—')} (severity ${data.severity ?? '—'})
+        </div>
+        <div style="margin-top:8px;">${chips || '<span class="event-detail">No category breakdown recorded.</span>'}</div>`;
+    } else if (data.type === 'blur_rejected') {
+      detail = `
+        <div class="event-detail">
+          <span class="k">Blur score:</span> ${data.blurScore !== undefined ? Number(data.blurScore).toFixed(1) : '—'}
+        </div>`;
+    }
+
+    card.innerHTML = `
+      <div class="event-top">
+        <span class="event-type-badge ${data.type}">${typeLabel}</span>
+        <span class="event-date">${dateStr}</span>
+      </div>
+      ${detail}
+      <div class="event-ids">
+        <span>User:</span> ${escHtml(data.userId || '—')} &nbsp;·&nbsp;
+        <span>Path:</span> ${escHtml(data.storagePath || '—')}
+      </div>`;
+
+    list.appendChild(card);
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+</script>
+</body>
+</html>

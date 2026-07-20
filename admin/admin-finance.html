@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0a07;
+    --surface: #1a1208;
+    --surface2: #241a0d;
+    --gold: #c8922a;
+    --gold-light: #f0b84a;
+    --amber: #e07b20;
+    --text: #f0e6d0;
+    --text-muted: #8a7560;
+    --green: #4caf6e;
+    --red: #e05050;
+    --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+    --purple: #9b7fe8;
+    --orange: #e07b20;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* Header */
+  .header {
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:20px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky;
+    top:0;
+    z-index:100;
+  }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { font-size:28px; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); letter-spacing:-0.5px; }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .admin-email { font-size:11px; color:var(--text-muted); }
+  .nav-btn {
+    background:var(--surface2);
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:8px 14px;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    text-decoration:none;
+    cursor:pointer;
+    transition:color 0.2s,border-color 0.2s;
+    display:inline-block;
+  }
+  .nav-btn:hover { color:var(--text); border-color:var(--gold); }
+  .logout-btn { background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; transition:color 0.2s,border-color 0.2s; }
+  .logout-btn:hover { color:var(--red); border-color:var(--red); }
+
+  /* Layout */
+  .main { padding:32px; max-width:1400px; margin:0 auto; }
+
+  /* Period tabs */
+  .period-tabs { display:flex; gap:6px; margin-bottom:24px; }
+  .period-tab {
+    background:var(--surface2);
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:8px 20px;
+    border-radius:20px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .period-tab:hover { border-color:var(--gold); color:var(--text); }
+  .period-tab.active { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
+
+  /* Section labels */
+  .section-label {
+    font-family:'Syne',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:32px 0 16px;
+  }
+  .section-label:first-child { margin-top:0; }
+  .section-label-row {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin:32px 0 16px;
+  }
+  .section-label-row .section-label { margin:0; }
+
+  /* Stat cards */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:8px; }
+  .stat-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px 24px;
+    position:relative;
+    overflow:hidden;
+    transition:border-color 0.2s;
+  }
+  .stat-card:hover { border-color:rgba(200,146,42,0.35); }
+  .stat-card::before {
+    content:'';
+    position:absolute;
+    top:0; left:0; right:0;
+    height:2px;
+    background:var(--gold);
+    opacity:0.4;
+  }
+  .stat-card.positive::before { background:var(--green); opacity:0.6; }
+  .stat-card.negative::before { background:var(--red); opacity:0.6; }
+  .stat-card.liability::before { background:var(--orange); opacity:0.6; }
+  .stat-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; }
+  .stat-value { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--text); line-height:1; }
+  .stat-value.green { color:var(--green); }
+  .stat-value.red { color:var(--red); }
+  .stat-value.gold { color:var(--gold-light); }
+  .stat-value.orange { color:var(--orange); }
+  .stat-sub { font-size:11px; color:var(--text-muted); margin-top:6px; }
+  .stat-badge { display:inline-block; font-size:10px; padding:2px 8px; border-radius:20px; margin-top:6px; font-weight:500; }
+  .badge-green { background:rgba(76,175,110,0.15); color:var(--green); }
+  .badge-amber { background:rgba(224,123,32,0.15); color:var(--amber); }
+  .badge-red { background:rgba(224,80,80,0.15); color:var(--red); }
+  .badge-blue { background:rgba(74,159,212,0.15); color:var(--blue); }
+  .badge-purple { background:rgba(155,127,232,0.15); color:var(--purple); }
+  .badge-gray { background:rgba(138,117,96,0.15); color:var(--text-muted); }
+
+  /* Table card */
+  .table-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .table-header {
+    padding:16px 24px;
+    border-bottom:1px solid var(--border);
+    font-family:'Syne',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    color:var(--gold-light);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th {
+    padding:10px 24px;
+    text-align:left;
+    font-size:9px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    border-bottom:1px solid var(--border);
+    background:var(--surface2);
+  }
+  tbody tr { border-bottom:1px solid rgba(200,146,42,0.06); transition:background 0.15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  tbody td { padding:11px 24px; color:var(--text); }
+  .td-muted { color:var(--text-muted); }
+  .td-green { color:var(--green); }
+  .td-red { color:var(--red); }
+  .td-gold { color:var(--gold-light); font-weight:500; }
+
+  /* Chart container */
+  .chart-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:24px;
+    margin-bottom:0;
+  }
+  .chart-title {
+    font-family:'Syne',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    color:var(--gold-light);
+    margin-bottom:6px;
+  }
+  .chart-sub { font-size:11px; color:var(--text-muted); margin-bottom:16px; }
+  .chart-legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); }
+  .legend-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+  .chart-wrap { position:relative; width:100%; height:220px; }
+
+  /* Two col */
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  /* Forms */
+  .form-panel {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:24px;
+    margin-bottom:16px;
+  }
+  .form-title { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--gold-light); margin-bottom:20px; }
+  .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:16px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+  .form-label { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); }
+  .form-input {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    font-family:'DM Mono',monospace;
+    font-size:13px;
+    padding:10px 12px;
+    outline:none;
+    transition:border-color 0.2s;
+    width:100%;
+  }
+  .form-input:focus { border-color:var(--gold); }
+  select.form-input option { background:var(--surface2); }
+  .form-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .btn-primary {
+    background:var(--gold);
+    color:var(--bg);
+    border:none;
+    padding:10px 22px;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    transition:background 0.2s;
+  }
+  .btn-primary:hover { background:var(--gold-light); }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-secondary {
+    background:transparent;
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:10px 18px;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .btn-secondary:hover { border-color:var(--gold); color:var(--text); }
+  .btn-danger {
+    background:transparent;
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:5px 10px;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:10px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .btn-danger:hover { color:var(--red); border-color:var(--red); }
+  .btn-edit {
+    background:transparent;
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:5px 10px;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:10px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .btn-edit:hover { color:var(--gold); border-color:var(--gold); }
+  .save-confirm { font-size:12px; color:var(--green); display:none; }
+  .save-error { font-size:12px; color:var(--red); display:none; }
+
+  /* Toggle add-form button */
+  .toggle-add-btn {
+    background:transparent;
+    color:var(--text-muted);
+    border:1px dashed rgba(200,146,42,0.3);
+    padding:10px 20px;
+    border-radius:8px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    cursor:pointer;
+    transition:all 0.15s;
+    width:100%;
+    text-align:left;
+    margin-bottom:16px;
+  }
+  .toggle-add-btn:hover { border-color:var(--gold); color:var(--gold); }
+
+  /* Disabled expense row */
+  .expense-disabled td { opacity:0.4; }
+
+  /* Skeleton */
+  .skeleton {
+    background:linear-gradient(90deg,var(--surface2) 25%,var(--surface) 50%,var(--surface2) 75%);
+    background-size:200% 100%;
+    animation:shimmer 1.5s infinite;
+    border-radius:4px;
+    height:28px;
+    width:60%;
+  }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* Responsive */
+  @media(max-width:768px) {
+    .main { padding:16px; }
+    .two-col { grid-template-columns:1fr; }
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+    .header { padding:16px; flex-wrap:wrap; gap:10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+<link rel="icon" type="image/png" href="/logo.png" />
+  <div class="logo">
+    <span class="logo-icon">💰</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Finance Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/" class="nav-btn">⛏️ Main</a>
+    <a href="/admin/admin-users.html" class="nav-btn">👥 Users</a>
+    <a href="/admin/admin-moderation.html" class="nav-btn">🛡 Moderation</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Period selector -->
+  <div class="period-tabs">
+    <button class="period-tab" onclick="setPeriod('daily',this)">Today</button>
+    <button class="period-tab active" onclick="setPeriod('yesterday',this)">Yesterday</button>
+    <button class="period-tab" onclick="setPeriod('weekly',this)">This Week</button>
+    <button class="period-tab" onclick="setPeriod('monthly',this)">Last 30 Days</button>
+    <button class="period-tab" onclick="setPeriod('alltime',this)">All Time</button>
+  </div>
+
+  <!-- KPI Summary -->
+  <div class="section-label">Summary — <span id="periodLabel">Today</span></div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Gross Revenue</div>
+      <div class="stat-value gold" id="kpiGross"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="kpiGrossSub">AdMob + IAP</div>
+    </div>
+    <div class="stat-card negative">
+      <div class="stat-label">Expenses</div>
+      <div class="stat-value red" id="kpiExpenses"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="kpiExpensesSub">Prorated for period</div>
+    </div>
+    <div class="stat-card" id="kpiNetCard">
+      <div class="stat-label">Net Profit</div>
+      <div class="stat-value" id="kpiNet"><div class="skeleton"></div></div>
+      <div class="stat-sub">Gross minus expenses</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Monthly Run Rate</div>
+      <div class="stat-value gold" id="kpiRunRate"><div class="skeleton"></div></div>
+      <div class="stat-sub">Based on last 30 days</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Break-even</div>
+      <div class="stat-value" id="kpiBreakeven"><div class="skeleton"></div></div>
+      <div class="stat-sub">Monthly revenue needed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">All-time Gross</div>
+      <div class="stat-value gold" id="kpiAlltime"><div class="skeleton"></div></div>
+      <div class="stat-sub">Since tracking began</div>
+    </div>
+    <div class="stat-card liability">
+      <div class="stat-label">Player Earnings (Liability)</div>
+      <div class="stat-value orange" id="kpiLiability"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="kpiLiabilitySub">Unpaid usdEarnings — all users</div>
+    </div>
+    <div class="stat-card" id="kpiTrueNetCard">
+      <div class="stat-label">True Net Position</div>
+      <div class="stat-value" id="kpiTrueNet"><div class="skeleton"></div></div>
+      <div class="stat-sub">All-time gross − expenses − liability</div>
+    </div>
+  </div>
+
+  <!-- Revenue chart -->
+  <div class="section-label">Revenue — Last 30 Days</div>
+  <div class="chart-card" style="margin-bottom:16px;">
+    <div class="chart-title">Daily revenue by source</div>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#5DCAA5;"></span>Android AdMob</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#7F77DD;"></span>iOS AdMob</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#EF9F27;"></span>In-app purchases</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="revenueChart" role="img" aria-label="Stacked bar chart showing daily revenue over the last 30 days broken down by Android AdMob, iOS AdMob, and in-app purchases">No chart data yet.</canvas>
+    </div>
+  </div>
+
+  <!-- Source breakdown table -->
+  <div class="two-col" style="margin-bottom:0;">
+    <div class="table-card">
+      <div class="table-header">Source Breakdown <span class="table-count" id="breakdownPeriodLabel">—</span></div>
+      <table>
+        <thead><tr><th>Source</th><th>Revenue</th><th>Share</th></tr></thead>
+        <tbody id="sourceBreakdownBody">
+          <tr><td colspan="3" class="td-muted" style="padding:16px 24px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-card" id="liabilityDeltaCard">
+      <div class="table-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Daily Liability Change <span class="table-count" id="liabDeltaDate">—</span></span>
+        <button id="snapshot-btn" onclick="handleTakeSnapshot()" style="background:var(--amber);color:#0a1628;border:none;border-radius:5px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📸 Take Snapshot
+        </button>
+      </div>
+      <table>
+        <thead><tr><th>Metric</th><th>Value</th><th>Status</th></tr></thead>
+        <tbody id="liabDeltaBody">
+          <tr><td colspan="3" class="td-muted" style="padding:16px 24px;">Loading...</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:12px 24px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">
+        📊 Compares today's player liability against yesterday's snapshot. Green = liability shrinking or unchanged. Red = liability growing. Take a snapshot daily so tomorrow has a baseline to compare against.
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue log -->
+  <div class="section-label-row" style="margin-top:32px;">
+    <div class="section-label" style="margin:0;">Revenue Log</div>
+  </div>
+
+  <button class="toggle-add-btn" id="toggleRevBtn" onclick="toggleRevForm()">+ Log revenue entry</button>
+
+  <div id="revFormPanel" style="display:none;">
+    <div class="form-panel">
+      <div class="form-title" id="revFormTitle">Log Revenue Entry</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-input" type="date" id="revDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Android AdMob ($)</label>
+          <input class="form-input" type="number" id="revAndroid" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">iOS AdMob ($)</label>
+          <input class="form-input" type="number" id="revIos" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">In-app Purchases ($)</label>
+          <input class="form-input" type="number" id="revIap" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes (optional)</label>
+          <input class="form-input" type="text" id="revNotes" placeholder="e.g. ad serving restored">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" id="saveRevBtn" onclick="saveRevenue()">💾 Save Entry</button>
+        <button class="btn-secondary" onclick="cancelRevForm()">Cancel</button>
+        <span class="save-confirm" id="revConfirm">✓ Saved</span>
+        <span class="save-error" id="revError"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      Daily Revenue Entries
+      <span class="table-count" id="revCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Android</th>
+          <th>iOS</th>
+          <th>IAP</th>
+          <th>Total</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="revenueBody">
+        <tr><td colspan="7" class="td-muted" style="padding:16px 24px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Expenses -->
+  <div class="section-label-row">
+    <div class="section-label" style="margin:0;">Expenses</div>
+  </div>
+
+  <div class="stats-grid" style="margin-bottom:24px;">
+    <div class="stat-card negative">
+      <div class="stat-label">Monthly Total</div>
+      <div class="stat-value red" id="expMonthly"><div class="skeleton"></div></div>
+      <div class="stat-sub">Recurring only</div>
+    </div>
+    <div class="stat-card negative">
+      <div class="stat-label">Annual Run Rate</div>
+      <div class="stat-value red" id="expAnnual"><div class="skeleton"></div></div>
+      <div class="stat-sub">Recurring × 12</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">One-time (YTD)</div>
+      <div class="stat-value" id="expOneTime"><div class="skeleton"></div></div>
+      <div class="stat-sub">Not in monthly rate</div>
+    </div>
+  </div>
+
+  <button class="toggle-add-btn" id="toggleExpBtn" onclick="toggleExpForm()">+ Add expense</button>
+
+  <div id="expFormPanel" style="display:none;">
+    <div class="form-panel">
+      <div class="form-title" id="expFormTitle">Add Expense</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" type="text" id="expName" placeholder="e.g. Firebase Blaze">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount ($)</label>
+          <input class="form-input" type="number" id="expAmount" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frequency</label>
+          <select class="form-input" id="expFrequency">
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+            <option value="one-time">One-time</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-input" id="expCategory">
+            <option value="Infrastructure">Infrastructure</option>
+            <option value="Dev tools">Dev tools</option>
+            <option value="Domain">Domain</option>
+            <option value="Stores">Stores</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes (optional)</label>
+          <input class="form-input" type="text" id="expNotes" placeholder="e.g. renews May 2029">
+        </div>
+      </div>
+      <input type="hidden" id="editExpenseId">
+      <div class="form-actions">
+        <button class="btn-primary" id="saveExpBtn" onclick="saveExpense()">💾 Save Expense</button>
+        <button class="btn-secondary" onclick="cancelExpForm()">Cancel</button>
+        <span class="save-confirm" id="expConfirm">✓ Saved</span>
+        <span class="save-error" id="expError"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      Expense Register
+      <span class="table-count" id="expCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Frequency</th>
+          <th>Amount</th>
+          <th>Monthly equiv.</th>
+          <th>Notes</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="expenseBody">
+        <tr><td colspan="8" class="td-muted" style="padding:16px 24px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Player Earnings Liability -->
+  <div class="section-label">Player Earnings — Unpaid Liability</div>
+  <div class="stats-grid" style="margin-bottom:24px;">
+    <div class="stat-card liability">
+      <div class="stat-label">Total Owed to Players</div>
+      <div class="stat-value orange" id="liabTotal"><div class="skeleton"></div></div>
+      <div class="stat-sub">Sum of all usdEarnings balances</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Players with Earnings</div>
+      <div class="stat-value" id="liabUserCount"><div class="skeleton"></div></div>
+      <div class="stat-sub">Users with usdEarnings &gt; 0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg per User</div>
+      <div class="stat-value" id="liabAvg"><div class="skeleton"></div></div>
+      <div class="stat-sub">Among users with earnings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Largest Single Balance</div>
+      <div class="stat-value orange" id="liabMax"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="liabMaxUser">—</div>
+    </div>
+  </div>
+
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      Top Player Earnings (Unpaid)
+      <span class="table-count" id="liabTableCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nickname</th>
+          <th>Email</th>
+          <th>USD Earnings</th>
+          <th>TB Balance</th>
+        </tr>
+      </thead>
+      <tbody id="liabBody">
+        <tr><td colspan="5" class="td-muted" style="padding:16px 24px;">Loading...</td></tr>
+      </tbody>
+    </table>
+    <div style="padding:12px 24px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">
+      ⚠️ These are real USD amounts shown to players in-app. They become payable obligations when USD→TB redemption launches.
+    </div>
+  </div>
+
+</div>
+<div id="loginOverlay" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:360px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:16px;">💰</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gold-light);margin-bottom:4px;">TerraMine Finance</div>
+    <div style="font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:32px;">Admin access required</div>
+    <input id="loginEmail" type="email" placeholder="Email" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:12px;outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    <input id="loginPass" type="password" placeholder="Password" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:20px;outline:none;" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()" style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;">Sign In</button>
+    <div id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;display:none;"></div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import {
+    getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc,
+    query, orderBy, limit, setDoc, getDoc
+  } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let allRevenue = [];   // [{id, date, android, ios, iap, notes}]
+  let activeUsersYesterday = 0; // Set by loadPlayerLiability
+  let allExpenses = [];  // [{id, name, amount, frequency, category, notes, active}]
+  let totalPlayerLiability = 0;
+  let topEarners = [];   // [{nickname, email, usdEarnings, tbBalance}]
+  let currentPeriod = 'yesterday';
+  let chartInstance = null;
+  let editingRevId = null;
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      loadAll();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+    }
+  });
+
+  window.doLogout = async () => {
+    await signOut(auth);
+    location.reload();
+  };
+
+  window.doLogin = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (e) {
+      errEl.textContent = 'Sign-in failed. Check email and password.';
+      errEl.style.display = 'block';
+    }
+  };
+
+  // ── Load ───────────────────────────────────────────────────────────────────
+  async function loadAll() {
+    await Promise.all([loadRevenue(), loadExpenses(), loadPlayerLiability()]);
+    renderAll();
+  }
+
+  async function loadRevenue() {
+    try {
+      const snap = await getDocs(query(collection(db, 'finance_revenue'), orderBy('date', 'desc')));
+      allRevenue = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.warn('Revenue load failed:', e);
+      allRevenue = [];
+    }
+  }
+
+  async function loadPlayerLiability() {
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      totalPlayerLiability = users.reduce((s, u) => s + (parseFloat(u.usdEarnings) || 0), 0);
+      topEarners = users
+        .filter(u => (parseFloat(u.usdEarnings) || 0) > 0)
+        .map(u => ({
+          nickname: u.nickname || u.id.substring(0,8),
+          email: u.email || '—',
+          usdEarnings: parseFloat(u.usdEarnings) || 0,
+          tbBalance: u.tbBalance || 0,
+        }))
+        .sort((a, b) => b.usdEarnings - a.usdEarnings);
+
+      // Count users active yesterday (lastActiveAt within yesterday's date)
+      const yStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      activeUsersYesterday = users.filter(u => {
+        const la = u.lastActiveAt || u.lastCheckinAt || u.updatedAt || '';
+        return typeof la === 'string' ? la.startsWith(yStr) : false;
+      }).length;
+    } catch(e) {
+      console.warn('Liability load failed:', e);
+      totalPlayerLiability = 0;
+      topEarners = [];
+      activeUsersYesterday = 0;
+    }
+  }
+
+  async function loadExpenses() {
+    try {
+      const snap = await getDocs(query(collection(db, 'finance_expenses'), orderBy('createdAt', 'asc')));
+      allExpenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Seed default expenses if none exist
+      if (allExpenses.length === 0) await seedDefaultExpenses();
+    } catch (e) {
+      console.warn('Expenses load failed:', e);
+      allExpenses = [];
+    }
+  }
+
+  async function seedDefaultExpenses() {
+    const defaults = [
+      { name: 'Firebase Blaze (storage/reads)', amount: 25.00, frequency: 'monthly', category: 'Infrastructure', notes: '', active: true },
+      { name: 'EAS build credits', amount: 29.00, frequency: 'monthly', category: 'Dev tools', notes: '', active: true },
+      { name: 'terramine.app domain (GoDaddy)', amount: 20.00, frequency: 'yearly', category: 'Domain', notes: '', active: true },
+      { name: 'terraworksstudios.com domain (GoDaddy)', amount: 20.00, frequency: 'yearly', category: 'Domain', notes: 'Renews 5/27/2029', active: true },
+      { name: 'Google Play Developer', amount: 25.00, frequency: 'yearly', category: 'Stores', notes: 'One-time registration', active: true },
+      { name: 'Apple Developer Program', amount: 99.00, frequency: 'yearly', category: 'Stores', notes: 'Annual renewal', active: true },
+      { name: 'Collabstr — Tyler (TikTok 60s)', amount: 60.00, frequency: 'one-time', category: 'Marketing', notes: 'Due Jun 30 2026', active: true },
+      { name: 'Collabstr — Samuel/TheAnimeBrodie (TikTok 30-60s)', amount: 100.00, frequency: 'one-time', category: 'Marketing', notes: 'Due Jun 30 2026; account samuelperry2002@gmail.com', active: true },
+    ];
+    for (const exp of defaults) {
+      const ref = await addDoc(collection(db, 'finance_expenses'), { ...exp, createdAt: new Date().toISOString() });
+      allExpenses.push({ id: ref.id, ...exp });
+    }
+  }
+
+  // ── Calculations ──────────────────────────────────────────────────────────
+  function getDateRange(period) {
+    const today = new Date();
+    const end = today.toISOString().slice(0,10);
+    if (period === 'daily') return { start: end, end };
+    if (period === 'yesterday') {
+      const y = new Date(today); y.setDate(y.getDate() - 1);
+      const yStr = y.toISOString().slice(0,10);
+      return { start: yStr, end: yStr };
+    }
+    if (period === 'weekly') {
+      const s = new Date(today); s.setDate(s.getDate() - 6);
+      return { start: s.toISOString().slice(0,10), end };
+    }
+    if (period === 'monthly') {
+      const s = new Date(today); s.setDate(s.getDate() - 29);
+      return { start: s.toISOString().slice(0,10), end };
+    }
+    return { start: '2000-01-01', end };
+  }
+
+  function filteredRevenue(period) {
+    const { start, end } = getDateRange(period);
+    return allRevenue.filter(r => r.date >= start && r.date <= end);
+  }
+
+  function grossForPeriod(period) {
+    return filteredRevenue(period).reduce((s,r) => s + (r.android||0) + (r.ios||0) + (r.iap||0), 0);
+  }
+
+  function monthlyEquiv(expense) {
+    if (!expense.active) return 0;
+    if (expense.frequency === 'monthly') return expense.amount;
+    if (expense.frequency === 'yearly') return expense.amount / 12;
+    return 0;
+  }
+
+  function totalMonthlyExpenses() {
+    return allExpenses.reduce((s,e) => s + monthlyEquiv(e), 0);
+  }
+
+  function expensesForPeriod(period) {
+    const monthly = totalMonthlyExpenses();
+    if (period === 'daily') return monthly / 30;
+    if (period === 'yesterday') return monthly / 30;
+    if (period === 'weekly') return monthly / 30 * 7;
+    if (period === 'monthly') return monthly;
+    return 0; // alltime — don't prorate
+  }
+
+  function allTimeGross() {
+    return allRevenue.reduce((s,r) => s + (r.android||0) + (r.ios||0) + (r.iap||0), 0);
+  }
+
+  // Monthly run rate based on last 30 days actual revenue
+  function runRate() {
+    return grossForPeriod('monthly');
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Daily liability snapshot (localStorage) ─────────────────────────────
+  // Stores liability total keyed by date so we can show day-over-day change.
+  // ── Daily snapshot helpers ─────────────────────────────────────────────────
+  // Snapshot is now written to Firestore finance_snapshots/{YYYY-MM-DD}
+  // for cross-device persistence. localStorage is kept as a lightweight fallback.
+
+  async function takeSnapshot(manual = true) {
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+    // Read yesterday's Firestore snapshot for delta
+    let yesterdayLiab = null;
+    try {
+      const ySnap = await getDoc(doc(db, 'finance_snapshots', yesterday));
+      if (ySnap.exists()) yesterdayLiab = ySnap.data().totalLiability ?? null;
+    } catch(e) {
+      // Fallback to localStorage
+      try { yesterdayLiab = parseFloat(localStorage.getItem('tm_liab_' + yesterday)) || null; } catch(e2) {}
+    }
+
+    // Get yesterday's logged revenue
+    const yRev = allRevenue.find(r => r.date === yesterday) || {};
+    const androidRev = yRev.android || 0;
+    const iosRev     = yRev.ios     || 0;
+    const iapRev     = yRev.iap     || 0;
+    const totalRev   = androidRev + iosRev + iapRev;
+    const delta      = yesterdayLiab !== null ? totalPlayerLiability - yesterdayLiab : null;
+    const earnPerUser = (delta !== null && activeUsersYesterday > 0)
+      ? parseFloat((delta / activeUsersYesterday).toFixed(4)) : null;
+
+    const snapData = {
+      date:              today,
+      totalLiability:    totalPlayerLiability,
+      liabilityDelta:    delta,
+      yesterdayLiab:     yesterdayLiab,
+      activeUsers:       activeUsersYesterday || 0,
+      earnPerActiveUser: earnPerUser,
+      androidRevenue:    androidRev,
+      iosRevenue:        iosRev,
+      iapRevenue:        iapRev,
+      totalRevenue:      totalRev,
+      netPosition:       delta !== null ? totalRev - delta : null,
+      snapshotWrittenAt: new Date().toISOString(),
+      manual:            manual,
+    };
+
+    await setDoc(doc(db, 'finance_snapshots', today), snapData, { merge: true });
+    // Also cache in localStorage as fallback
+    try { localStorage.setItem('tm_liab_' + today, totalPlayerLiability.toString()); } catch(e) {}
+    return snapData;
+  }
+
+  function saveLiabilitySnapshot(total) {
+    // Keep localStorage write for immediate in-session use
+    try { localStorage.setItem('tm_liab_' + new Date().toISOString().slice(0,10), total.toString()); } catch(e) {}
+    // Non-blocking auto-snapshot to Firestore
+    takeSnapshot(false).catch(e => console.warn('Auto-snapshot failed:', e));
+  }
+
+  async function getYesterdayLiability() {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    // Try Firestore first
+    try {
+      const snap = await getDoc(doc(db, 'finance_snapshots', yesterday));
+      if (snap.exists()) return snap.data().totalLiability ?? null;
+    } catch(e) { console.warn('getYesterdayLiability Firestore error:', e); }
+    // Fallback to localStorage
+    try {
+      const cached = localStorage.getItem('tm_liab_' + yesterday);
+      return cached ? parseFloat(cached) : null;
+    } catch(e) { return null; }
+  }
+
+  async function renderLiabilityDelta() {
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterdayLiab = await getYesterdayLiability();
+    const delta = yesterdayLiab !== null ? totalPlayerLiability - yesterdayLiab : null;
+
+    document.getElementById('liabDeltaDate').textContent = today;
+
+    const rows = [];
+
+    // Today's total liability
+    rows.push(`<tr>
+      <td>Today's Total Liability</td>
+      <td class="td-gold">${fmtUSD(totalPlayerLiability)}</td>
+      <td><span class="stat-badge badge-amber">live</span></td>
+    </tr>`);
+
+    // Yesterday's liability
+    if (yesterdayLiab !== null) {
+      rows.push(`<tr>
+        <td>Yesterday's Liability</td>
+        <td class="td-muted">${fmtUSD(yesterdayLiab)}</td>
+        <td><span class="stat-badge badge-gray">snapshot</span></td>
+      </tr>`);
+    }
+
+    // Daily change in liability
+    if (delta !== null) {
+      const deltaPositive = delta > 0;
+      const deltaClass = deltaPositive ? 'td-red' : 'td-green';
+      const badge = deltaPositive
+        ? '<span class="stat-badge badge-red">↑ growing</span>'
+        : delta < 0
+          ? '<span class="stat-badge badge-green">↓ shrinking</span>'
+          : '<span class="stat-badge badge-gray">unchanged</span>';
+      rows.push(`<tr>
+        <td>Liability Change (24h)</td>
+        <td class="${deltaClass}">${delta >= 0 ? '+' : ''}${fmtUSD(delta)}</td>
+        <td>${badge}</td>
+      </tr>`);
+    } else {
+      rows.push(`<tr>
+        <td>Liability Change (24h)</td>
+        <td class="td-muted">—</td>
+        <td><span class="stat-badge badge-gray">no prior snapshot</span></td>
+      </tr>`);
+    }
+
+    document.getElementById('liabDeltaBody').innerHTML = rows.join('');
+
+    // Save today's snapshot for tomorrow's comparison
+    saveLiabilitySnapshot(totalPlayerLiability);
+  }
+
+  async function renderAll() {
+    renderKPIs();
+    renderChart();
+    renderSourceBreakdown();
+    renderRevenueTable();
+    renderExpenseSummary();
+    renderExpenseTable();
+    renderLiability();
+    await renderLiabilityDelta();
+    renderEarnPerUserChart();
+  }
+
+  function fmtUSD(n) {
+    if (n === null || n === undefined) return '—';
+    const abs = Math.abs(n);
+    return (n < 0 ? '-$' : '$') + abs.toFixed(2);
+  }
+
+  function renderKPIs() {
+    const gross = grossForPeriod(currentPeriod);
+    const exp = expensesForPeriod(currentPeriod);
+    const net = currentPeriod === 'alltime' ? allTimeGross() : gross - exp;
+    const alltime = allTimeGross();
+    const monthly = totalMonthlyExpenses();
+    const trueNet = alltime - (totalMonthlyExpenses() * 12) - totalPlayerLiability;
+
+    document.getElementById('kpiGross').textContent = fmtUSD(gross);
+    document.getElementById('kpiExpenses').textContent = currentPeriod === 'alltime' ? '—' : fmtUSD(-exp);
+    document.getElementById('kpiExpensesSub').textContent = currentPeriod === 'alltime' ? 'See expenses tab' : 'Prorated for period';
+    document.getElementById('kpiNet').textContent = currentPeriod === 'alltime' ? '—' : fmtUSD(net);
+    document.getElementById('kpiNet').className = 'stat-value' + (net >= 0 ? ' green' : ' red');
+    document.getElementById('kpiNetCard').className = 'stat-card' + (net >= 0 ? ' positive' : ' negative');
+    document.getElementById('kpiRunRate').textContent = fmtUSD(runRate()) + '/mo';
+    document.getElementById('kpiBreakeven').textContent = fmtUSD(monthly) + '/mo';
+    document.getElementById('kpiAlltime').textContent = fmtUSD(alltime);
+    document.getElementById('kpiLiability').textContent = fmtUSD(totalPlayerLiability);
+    document.getElementById('kpiLiabilitySub').textContent = `${topEarners.length} users with earnings`;
+    document.getElementById('kpiTrueNet').textContent = fmtUSD(trueNet);
+    document.getElementById('kpiTrueNet').className = 'stat-value' + (trueNet >= 0 ? ' green' : ' red');
+    document.getElementById('kpiTrueNetCard').className = 'stat-card' + (trueNet >= 0 ? ' positive' : ' negative');
+    document.getElementById('periodLabel').textContent = {
+      daily:'Today', yesterday:'Yesterday', weekly:'This Week', monthly:'Last 30 Days', alltime:'All Time'
+    }[currentPeriod];
+  }
+
+  function renderChart() {
+    const ctx = document.getElementById('revenueChart');
+    if (!ctx) return;
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+    // Last 30 days, filling in zeros for missing dates
+    const today = new Date();
+    const pts = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0,10);
+      const entry = allRevenue.find(r => r.date === dateStr);
+      pts.push({
+        label: d.toLocaleDateString('en-US', { month:'short', day:'numeric' }),
+        android: entry ? (entry.android || 0) : 0,
+        ios: entry ? (entry.ios || 0) : 0,
+        iap: entry ? (entry.iap || 0) : 0,
+      });
+    }
+
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: pts.map(p => p.label),
+        datasets: [
+          { label: 'Android AdMob', data: pts.map(p => +p.android.toFixed(2)), backgroundColor: '#5DCAA5', stack: 'rev' },
+          { label: 'iOS AdMob',     data: pts.map(p => +p.ios.toFixed(2)),     backgroundColor: '#7F77DD', stack: 'rev' },
+          { label: 'IAP',           data: pts.map(p => +p.iap.toFixed(2)),     backgroundColor: '#EF9F27', stack: 'rev' },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': $' + c.parsed.y.toFixed(2) } }
+        },
+        scales: {
+          x: { stacked: true, ticks: { color: '#8a7560', maxTicksLimit: 10, maxRotation: 0 }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } },
+          y: { stacked: true, ticks: { color: '#8a7560', callback: v => '$' + v.toFixed(2) }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } }
+        }
+      }
+    });
+  }
+
+  function renderSourceBreakdown() {
+    const rows = filteredRevenue(currentPeriod);
+    const android = rows.reduce((s,r) => s+(r.android||0), 0);
+    const ios     = rows.reduce((s,r) => s+(r.ios||0), 0);
+    const iap     = rows.reduce((s,r) => s+(r.iap||0), 0);
+    const gross   = android + ios + iap;
+    const pct = v => gross > 0 ? Math.round(v/gross*100)+'%' : '—';
+
+    document.getElementById('breakdownPeriodLabel').textContent = {
+      daily:'Today', weekly:'This Week', monthly:'Last 30 Days', alltime:'All Time'
+    }[currentPeriod];
+
+    document.getElementById('sourceBreakdownBody').innerHTML = gross > 0 ? `
+      <tr><td>Android AdMob</td><td class="td-green">${fmtUSD(android)}</td><td class="td-muted">${pct(android)}</td></tr>
+      <tr><td>iOS AdMob</td><td class="td-green">${fmtUSD(ios)}</td><td class="td-muted">${pct(ios)}</td></tr>
+      <tr><td>In-app purchases</td><td class="td-green">${fmtUSD(iap)}</td><td class="td-muted">${pct(iap)}</td></tr>
+      <tr><td class="td-gold" style="font-weight:500;">Total</td><td class="td-gold">${fmtUSD(gross)}</td><td class="td-muted">100%</td></tr>
+    ` : '<tr><td colspan="3" class="td-muted" style="padding:16px 24px;">No revenue logged for this period.</td></tr>';
+  }
+
+  function renderRevenueTable() {
+    const sorted = [...allRevenue].sort((a,b) => b.date.localeCompare(a.date));
+    document.getElementById('revCount').textContent = sorted.length + ' entries';
+    document.getElementById('revenueBody').innerHTML = sorted.length ? sorted.map(r => {
+      const total = (r.android||0) + (r.ios||0) + (r.iap||0);
+      return `<tr>
+        <td class="td-gold">${r.date}</td>
+        <td>${fmtUSD(r.android||0)}</td>
+        <td>${fmtUSD(r.ios||0)}</td>
+        <td>${fmtUSD(r.iap||0)}</td>
+        <td class="td-gold">${fmtUSD(total)}</td>
+        <td class="td-muted">${r.notes || '—'}</td>
+        <td style="display:flex;gap:6px;align-items:center;">
+          <button class="btn-edit" onclick="editRevenue('${r.id}')">Edit</button>
+          <button class="btn-danger" onclick="deleteRevenue('${r.id}')">✕</button>
+        </td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="7" class="td-muted" style="padding:16px 24px;">No revenue logged yet. Add your first entry above.</td></tr>';
+  }
+
+  function renderExpenseSummary() {
+    const monthly = totalMonthlyExpenses();
+    const oneTime = allExpenses.filter(e=>e.active && e.frequency==='one-time').reduce((s,e)=>s+e.amount,0);
+    document.getElementById('expMonthly').textContent = fmtUSD(monthly);
+    document.getElementById('expAnnual').textContent = fmtUSD(monthly * 12);
+    document.getElementById('expOneTime').textContent = fmtUSD(oneTime);
+  }
+
+  function renderExpenseTable() {
+    document.getElementById('expCount').textContent = allExpenses.length + ' items';
+    const freqBadge = { monthly:'badge-green', yearly:'badge-blue', 'one-time':'badge-purple' };
+    const catBadge  = { Infrastructure:'badge-amber', 'Dev tools':'badge-amber', Domain:'badge-blue', Stores:'badge-blue', Marketing:'badge-red', Other:'badge-gray' };
+
+    document.getElementById('expenseBody').innerHTML = allExpenses.length ? allExpenses.map(e => {
+      const monthly = monthlyEquiv(e);
+      return `<tr class="${!e.active ? 'expense-disabled' : ''}">
+        <td>${e.name}</td>
+        <td><span class="stat-badge ${catBadge[e.category]||'badge-gray'}">${e.category}</span></td>
+        <td><span class="stat-badge ${freqBadge[e.frequency]||'badge-gray'}">${e.frequency}</span></td>
+        <td class="td-gold">${fmtUSD(e.amount)}</td>
+        <td class="td-muted">${e.frequency==='one-time' ? '—' : fmtUSD(monthly)}</td>
+        <td class="td-muted">${e.notes || '—'}</td>
+        <td><span class="stat-badge ${e.active ? 'badge-green' : 'badge-gray'}">${e.active ? 'Active' : 'Paused'}</span></td>
+        <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-edit" onclick="editExpense('${e.id}')">Edit</button>
+          <button class="btn-edit" onclick="toggleExpense('${e.id}')">${e.active ? 'Pause' : 'Resume'}</button>
+          <button class="btn-danger" onclick="deleteExpense('${e.id}')">✕</button>
+        </td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="8" class="td-muted" style="padding:16px 24px;">No expenses yet.</td></tr>';
+  }
+
+  function renderLiability() {
+    const withEarnings = topEarners.length;
+    const avg = withEarnings > 0 ? totalPlayerLiability / withEarnings : 0;
+    const max = withEarnings > 0 ? topEarners[0] : null;
+
+    document.getElementById('liabTotal').textContent = fmtUSD(totalPlayerLiability);
+    document.getElementById('liabUserCount').textContent = withEarnings;
+    document.getElementById('liabAvg').textContent = fmtUSD(avg);
+    document.getElementById('liabMax').textContent = max ? fmtUSD(max.usdEarnings) : '$0.00';
+    document.getElementById('liabMaxUser').textContent = max ? max.nickname : '—';
+    document.getElementById('liabTableCount').textContent = `top ${Math.min(topEarners.length, 20)} of ${withEarnings}`;
+
+    const top20 = topEarners.slice(0, 20);
+    document.getElementById('liabBody').innerHTML = top20.length ? top20.map((u, i) => `
+      <tr>
+        <td class="td-muted">${i + 1}</td>
+        <td class="td-gold">${u.nickname}</td>
+        <td class="td-muted">${u.email}</td>
+        <td style="color:var(--orange);font-weight:500;">${fmtUSD(u.usdEarnings)}</td>
+        <td class="td-muted">${u.tbBalance.toLocaleString()} TB</td>
+      </tr>
+    `).join('') : '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No player earnings found.</td></tr>';
+  }
+
+  // ── Period toggle ─────────────────────────────────────────────────────────
+  window.setPeriod = (period, btn) => {
+    currentPeriod = period;
+    document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderKPIs();
+    renderSourceBreakdown();
+  };
+
+  // ── Revenue CRUD ──────────────────────────────────────────────────────────
+  window.toggleRevForm = () => {
+    const panel = document.getElementById('revFormPanel');
+    const visible = panel.style.display !== 'none';
+    if (visible) { cancelRevForm(); return; }
+    editingRevId = null;
+    document.getElementById('revFormTitle').textContent = 'Log Revenue Entry';
+    document.getElementById('revDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('revAndroid').value = '';
+    document.getElementById('revIos').value = '';
+    document.getElementById('revIap').value = '';
+    document.getElementById('revNotes').value = '';
+    panel.style.display = 'block';
+    document.getElementById('toggleRevBtn').textContent = '− Cancel';
+  };
+
+  window.cancelRevForm = () => {
+    document.getElementById('revFormPanel').style.display = 'none';
+    document.getElementById('toggleRevBtn').textContent = '+ Log revenue entry';
+    editingRevId = null;
+  };
+
+  window.editRevenue = (id) => {
+    const r = allRevenue.find(x => x.id === id);
+    if (!r) return;
+    editingRevId = id;
+    document.getElementById('revFormTitle').textContent = 'Edit Revenue Entry';
+    document.getElementById('revDate').value = r.date;
+    document.getElementById('revAndroid').value = r.android || '';
+    document.getElementById('revIos').value = r.ios || '';
+    document.getElementById('revIap').value = r.iap || '';
+    document.getElementById('revNotes').value = r.notes || '';
+    document.getElementById('revFormPanel').style.display = 'block';
+    document.getElementById('toggleRevBtn').textContent = '− Cancel';
+    document.getElementById('revFormPanel').scrollIntoView({ behavior:'smooth' });
+  };
+
+  window.saveRevenue = async () => {
+    const btn = document.getElementById('saveRevBtn');
+    const confirm = document.getElementById('revConfirm');
+    const errEl = document.getElementById('revError');
+    confirm.style.display = 'none';
+    errEl.style.display = 'none';
+
+    const date    = document.getElementById('revDate').value.trim();
+    const android = parseFloat(document.getElementById('revAndroid').value) || 0;
+    const ios     = parseFloat(document.getElementById('revIos').value) || 0;
+    const iap     = parseFloat(document.getElementById('revIap').value) || 0;
+    const notes   = document.getElementById('revNotes').value.trim();
+
+    if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      errEl.textContent = '✗ Invalid date'; errEl.style.display = 'inline'; return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      if (editingRevId) {
+        await updateDoc(doc(db, 'finance_revenue', editingRevId), { date, android, ios, iap, notes, updatedAt: new Date().toISOString() });
+        const idx = allRevenue.findIndex(r => r.id === editingRevId);
+        if (idx >= 0) allRevenue[idx] = { ...allRevenue[idx], date, android, ios, iap, notes };
+      } else {
+        // Upsert by date — if same date exists, update it
+        const existing = allRevenue.find(r => r.date === date);
+        if (existing) {
+          await updateDoc(doc(db, 'finance_revenue', existing.id), { android, ios, iap, notes, updatedAt: new Date().toISOString() });
+          const idx = allRevenue.findIndex(r => r.id === existing.id);
+          if (idx >= 0) allRevenue[idx] = { ...allRevenue[idx], android, ios, iap, notes };
+        } else {
+          const ref = await addDoc(collection(db, 'finance_revenue'), { date, android, ios, iap, notes, createdAt: new Date().toISOString() });
+          allRevenue.unshift({ id: ref.id, date, android, ios, iap, notes });
+        }
+      }
+      confirm.style.display = 'inline';
+      setTimeout(() => confirm.style.display = 'none', 3000);
+      cancelRevForm();
+      renderAll();
+    } catch(e) {
+      console.error(e);
+      errEl.textContent = '✗ Save failed — ' + e.message; errEl.style.display = 'inline';
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 Save Entry';
+    }
+  };
+
+  window.deleteRevenue = async (id) => {
+    if (!confirm('Delete this revenue entry?')) return;
+    try {
+      await deleteDoc(doc(db, 'finance_revenue', id));
+      allRevenue = allRevenue.filter(r => r.id !== id);
+      renderAll();
+    } catch(e) { alert('Delete failed: ' + e.message); }
+  };
+
+  // ── Expense CRUD ──────────────────────────────────────────────────────────
+  window.toggleExpForm = () => {
+    const panel = document.getElementById('expFormPanel');
+    const visible = panel.style.display !== 'none';
+    if (visible) { cancelExpForm(); return; }
+    document.getElementById('editExpenseId').value = '';
+    document.getElementById('expFormTitle').textContent = 'Add Expense';
+    document.getElementById('expName').value = '';
+    document.getElementById('expAmount').value = '';
+    document.getElementById('expFrequency').value = 'monthly';
+    document.getElementById('expCategory').value = 'Infrastructure';
+    document.getElementById('expNotes').value = '';
+    panel.style.display = 'block';
+    document.getElementById('toggleExpBtn').textContent = '− Cancel';
+  };
+
+  window.cancelExpForm = () => {
+    document.getElementById('expFormPanel').style.display = 'none';
+    document.getElementById('toggleExpBtn').textContent = '+ Add expense';
+    document.getElementById('editExpenseId').value = '';
+  };
+
+  window.editExpense = (id) => {
+    const e = allExpenses.find(x => x.id === id);
+    if (!e) return;
+    document.getElementById('editExpenseId').value = id;
+    document.getElementById('expFormTitle').textContent = 'Edit Expense';
+    document.getElementById('expName').value = e.name;
+    document.getElementById('expAmount').value = e.amount;
+    document.getElementById('expFrequency').value = e.frequency;
+    document.getElementById('expCategory').value = e.category || 'Other';
+    document.getElementById('expNotes').value = e.notes || '';
+    document.getElementById('expFormPanel').style.display = 'block';
+    document.getElementById('toggleExpBtn').textContent = '− Cancel';
+    document.getElementById('expFormPanel').scrollIntoView({ behavior:'smooth' });
+  };
+
+  window.saveExpense = async () => {
+    const btn = document.getElementById('saveExpBtn');
+    const confirm = document.getElementById('expConfirm');
+    const errEl = document.getElementById('expError');
+    confirm.style.display = 'none'; errEl.style.display = 'none';
+
+    const editId   = document.getElementById('editExpenseId').value;
+    const name     = document.getElementById('expName').value.trim();
+    const amount   = parseFloat(document.getElementById('expAmount').value);
+    const frequency = document.getElementById('expFrequency').value;
+    const category = document.getElementById('expCategory').value;
+    const notes    = document.getElementById('expNotes').value.trim();
+
+    if (!name || isNaN(amount) || amount < 0) {
+      errEl.textContent = '✗ Name and amount required'; errEl.style.display = 'inline'; return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      if (editId) {
+        await updateDoc(doc(db, 'finance_expenses', editId), { name, amount, frequency, category, notes, updatedAt: new Date().toISOString() });
+        const idx = allExpenses.findIndex(e => e.id === editId);
+        if (idx >= 0) allExpenses[idx] = { ...allExpenses[idx], name, amount, frequency, category, notes };
+      } else {
+        const ref = await addDoc(collection(db, 'finance_expenses'), { name, amount, frequency, category, notes, active: true, createdAt: new Date().toISOString() });
+        allExpenses.push({ id: ref.id, name, amount, frequency, category, notes, active: true });
+      }
+      confirm.style.display = 'inline';
+      setTimeout(() => confirm.style.display = 'none', 3000);
+      cancelExpForm();
+      renderAll();
+    } catch(e) {
+      console.error(e);
+      errEl.textContent = '✗ Save failed — ' + e.message; errEl.style.display = 'inline';
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 Save Expense';
+    }
+  };
+
+  window.toggleExpense = async (id) => {
+    const e = allExpenses.find(x => x.id === id);
+    if (!e) return;
+    try {
+      await updateDoc(doc(db, 'finance_expenses', id), { active: !e.active });
+      e.active = !e.active;
+      renderAll();
+    } catch(err) { alert('Update failed: ' + err.message); }
+  };
+
+  window.deleteExpense = async (id) => {
+    if (!confirm('Delete this expense?')) return;
+    try {
+      await deleteDoc(doc(db, 'finance_expenses', id));
+      allExpenses = allExpenses.filter(e => e.id !== id);
+      renderAll();
+    } catch(e) { alert('Delete failed: ' + e.message); }
+  };
+  function renderEarnPerUserChart() {
+    // Renders earn-per-user trend from localStorage snapshot data
+    // Data accumulates as snapshots are taken — shows nothing until first snapshot
+    try {
+      const ctx = document.getElementById('earnPerUserChart');
+      if (!ctx) return;
+
+      const history = JSON.parse(localStorage.getItem('terramine_earn_per_user') || '{}');
+      const today = new Date();
+      const pts = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        pts.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          value: history[dateStr] !== undefined ? history[dateStr] : null,
+        });
+      }
+
+      const hasData = pts.some(p => p.value !== null);
+      if (!hasData) {
+        ctx.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:12px;">Data accumulates day-by-day — check back after taking snapshots for a few days.</div>';
+        return;
+      }
+
+      if (window._earnPerUserChart) { window._earnPerUserChart.destroy(); }
+      window._earnPerUserChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: pts.map(p => p.label),
+          datasets: [{
+            label: 'Earnings / Active User',
+            data: pts.map(p => p.value),
+            borderColor: '#EF9F27',
+            backgroundColor: 'rgba(239,159,39,0.12)',
+            pointBackgroundColor: '#EF9F27',
+            pointRadius: 3,
+            fill: true,
+            tension: 0.35,
+            spanGaps: true,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: c => ' $' + (c.parsed.y || 0).toFixed(4) + ' / active user' } }
+          },
+          scales: {
+            x: { ticks: { color: '#8a7560', maxTicksLimit: 10, maxRotation: 0 }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } },
+            y: { ticks: { color: '#8a7560', callback: v => '$' + v.toFixed(3) }, grid: { color: 'rgba(200,146,42,0.07)' }, border: { display: false } }
+          }
+        }
+      });
+    } catch(e) {
+      console.warn('renderEarnPerUserChart error:', e);
+    }
+  }
+
+  window.handleTakeSnapshot = async function() {
+    const btn = document.getElementById('snapshot-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
+    try {
+      const data = await takeSnapshot(true);
+      const deltaStr = data.liabilityDelta !== null
+        ? (data.liabilityDelta >= 0 ? '+' : '') + '$' + Math.abs(data.liabilityDelta).toFixed(2)
+        : '—';
+      showSnapshotToast('✅ Snapshot saved — ' + data.date + ' | Liability: $' + data.totalLiability.toFixed(2) + ' | Delta: ' + deltaStr);
+      // Refresh the on-page table immediately instead of waiting for a reload —
+      // previously the write succeeded silently and the table looked unchanged.
+      await renderLiabilityDelta();
+    } catch(e) {
+      console.error('Snapshot failed:', e);
+      showSnapshotToast('❌ Snapshot failed: ' + (e && e.message ? e.message : e));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '📸 Take Snapshot'; }
+    }
+  };
+
+  function showSnapshotToast(msg) {
+    let el = document.getElementById('snapshot-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'snapshot-toast';
+      el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--amber);border-radius:8px;padding:14px 18px;font-size:13px;color:var(--text);z-index:9999;max-width:420px;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 6000);
+  }
+
+</script>
+</body>
+</html>

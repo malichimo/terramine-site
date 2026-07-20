@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine — Check-in Photos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07;
+    --surface: #1a1208;
+    --surface2: #241a0d;
+    --gold: #c8922a;
+    --gold-light: #f0b84a;
+    --amber: #e07b20;
+    --text: #f0e6d0;
+    --text-muted: #8a7560;
+    --green: #4caf6e;
+    --red: #e05050;
+    --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { font-size: 28px; }
+  .logo-text { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--gold-light); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .admin-email { font-size: 11px; color: var(--text-muted); }
+  .nav-link {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .nav-link:hover { color: var(--text); border-color: var(--gold); }
+  .logout-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .logout-btn:hover { color: var(--red); border-color: var(--red); }
+
+  /* Main */
+  .main { padding: 32px; max-width: 1400px; margin: 0 auto; }
+
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 32px 0 16px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .toolbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .status-pill {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+  }
+  .status-pill span { color: var(--gold-light); font-weight: 500; }
+  .load-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .load-btn:hover { background: var(--gold-light); }
+  .load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .load-more-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .load-more-btn:hover { border-color: var(--gold); color: var(--gold-light); }
+  .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .reset-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 9px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+  .reset-btn:hover { color: var(--amber); border-color: var(--amber); }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .mini-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    min-width: 120px;
+  }
+  .mini-stat-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .mini-stat-value { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+
+  /* Photo grid */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .photo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .photo-card:hover { border-color: rgba(200,146,42,0.35); }
+  .photo-card.flagged { border-color: rgba(224,80,80,0.5); }
+  .photo-thumb {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+    background: var(--surface2);
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .photo-thumb:hover { opacity: 0.85; }
+  .photo-thumb.error-img {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: var(--text-muted);
+    min-height: 180px;
+  }
+  .photo-info {
+    padding: 14px 16px;
+  }
+  .photo-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  .photo-nickname {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(240,184,74,0.3);
+    text-underline-offset: 3px;
+    transition: color 0.15s;
+  }
+  .photo-nickname:hover { color: #fff; text-decoration-color: var(--gold-light); }
+
+  /* User filter bar */
+  .filter-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: rgba(200,146,42,0.08);
+    border: 1px solid rgba(200,146,42,0.3);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-bar.active { display: flex; }
+  .filter-bar-label { font-size: 11px; color: var(--text-muted); }
+  .filter-bar-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+  .filter-bar-count { font-size: 11px; color: var(--text-muted); }
+  .clear-filter-btn {
+    margin-left: auto;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .clear-filter-btn:hover { color: var(--red); border-color: var(--red); }
+  .photo-date {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .photo-message {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    line-height: 1.5;
+    max-height: 48px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .photo-ids {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    line-height: 1.7;
+    opacity: 0.7;
+  }
+  .photo-ids span { color: var(--text-muted); }
+  .photo-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .delete-btn {
+    flex: 1;
+    background: rgba(224,80,80,0.12);
+    color: var(--red);
+    border: 1px solid rgba(224,80,80,0.3);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .delete-btn:hover { background: rgba(224,80,80,0.25); border-color: var(--red); }
+  .delete-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .view-btn {
+    background: rgba(74,159,212,0.12);
+    color: var(--blue);
+    border: 1px solid rgba(74,159,212,0.3);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    white-space: nowrap;
+  }
+  .view-btn:hover { background: rgba(74,159,212,0.25); border-color: var(--blue); }
+
+  /* Empty / loading states */
+  .empty-state {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-muted);
+    font-size: 14px;
+    grid-column: 1 / -1;
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 24px;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: min(90vw, 800px);
+    max-height: 75vh;
+    border-radius: 10px;
+    object-fit: contain;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  }
+  .lightbox-info {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .lightbox-close:hover { color: var(--text); }
+  .lightbox-delete {
+    margin-top: 16px;
+    background: rgba(224,80,80,0.15);
+    color: var(--red);
+    border: 1px solid rgba(224,80,80,0.4);
+    padding: 10px 28px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .lightbox-delete:hover { background: rgba(224,80,80,0.3); }
+
+  /* Confirm dialog */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 600;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .confirm-overlay.open { display: flex; }
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+  }
+  .confirm-box .icon { font-size: 36px; margin-bottom: 12px; }
+  .confirm-box h3 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .confirm-box p { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+  .confirm-actions { display: flex; gap: 10px; }
+  .confirm-yes {
+    flex: 1;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    padding: 11px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .confirm-yes:hover { opacity: 0.85; }
+  .confirm-no {
+    flex: 1;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 11px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .confirm-no:hover { border-color: var(--gold); color: var(--text); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 700;
+    display: none;
+    animation: slideUp 0.25s ease;
+  }
+  .toast.show { display: block; }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  @keyframes slideUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+
+  /* Login overlay */
+  #loginOverlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    .main { padding: 16px; }
+    .photo-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .header { padding: 16px; flex-wrap: wrap; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+<link rel="icon" type="image/png" href="/logo.png" />
+  <div class="logo">
+    <span class="logo-icon">📸</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Check-in Photo Moderation</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/" class="nav-link">📊 Dashboard</a>
+    <a href="/admin/admin-users.html" class="nav-link">👥 Users</a>
+    <a href="/admin/admin-properties.html" class="nav-link">🏔 Properties</a>
+    <a href="/admin/admin-finance.html" class="nav-link">💰 Finance</a>
+    <a href="/admin/admin-moderation.html" class="nav-link">🛡 Moderation</a>
+    <button class="logout-btn" id="logoutBtn" onclick="doLogout()" style="display:none;">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="section-label">Check-in Photo Moderation</div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="status-pill">Showing <span id="shownCount">0</span> of <span id="totalCount">—</span> photos with images</div>
+      <button class="load-btn" id="loadBtn" onclick="loadPhotos()">📥 Load Latest Photos</button>
+      <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()" style="display:none;">Load More</button>
+      <button class="reset-btn" onclick="resetAndReload()" title="Clear cursor and reload from newest">↺ Reset</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);">
+      Cursor saved — only new photos loaded each session
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="mini-stat">
+      <div class="mini-stat-label">Loaded This Session</div>
+      <div class="mini-stat-value" id="sessionCount">0</div>
+    </div>
+    <div class="mini-stat">
+      <div class="mini-stat-label">Deleted This Session</div>
+      <div class="mini-stat-value" id="deletedCount">0</div>
+    </div>
+    <div class="mini-stat">
+      <div class="mini-stat-label">Last Cursor</div>
+      <div class="mini-stat-value" style="font-size:12px;padding-top:4px;" id="cursorDisplay">None</div>
+    </div>
+  </div>
+
+  <!-- User filter bar -->
+  <div class="filter-bar" id="filterBar">
+    <button class="clear-filter-btn" onclick="clearUserFilter()">← Back to All Photos</button>
+    <span class="filter-bar-label">Showing photos from</span>
+    <span class="filter-bar-name" id="filterName"></span>
+    <span class="filter-bar-count" id="filterCount"></span>
+  </div>
+
+  <div class="photo-grid" id="photoGrid">
+    <div class="empty-state">
+      <div class="icon">📷</div>
+      <div>Click <strong>Load Latest Photos</strong> to begin</div>
+      <div style="font-size:11px;margin-top:6px;">Only check-ins with photos will be shown</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="Check-in photo">
+  <div class="lightbox-info" id="lightboxInfo"></div>
+  <button class="lightbox-delete" id="lightboxDeleteBtn" onclick="lightboxDelete()">🗑 Delete This Photo</button>
+</div>
+
+<!-- Confirm dialog -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="icon">⚠️</div>
+    <h3>Delete Check-in Photo?</h3>
+    <p id="confirmMsg">This will permanently delete the photo from Storage and remove the photoURL from Firestore. This cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="confirm-yes" id="confirmYes" onclick="confirmDelete()">🗑 Delete</button>
+      <button class="confirm-no" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Login overlay -->
+<div id="loginOverlay">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:360px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:16px;">📸</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gold-light);margin-bottom:4px;">TerraMine Admin</div>
+    <div style="font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:32px;">Sign in to continue</div>
+    <input id="loginEmail" type="email" placeholder="Email" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:12px;outline:none;">
+    <input id="loginPass" type="password" placeholder="Password" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:20px;outline:none;" onkeydown="if(event.key==='Enter')doLogin()">
+    <button id="loginBtn" onclick="doLogin()" style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;">Sign In</button>
+    <div id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;display:none;"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import {
+    getFirestore, collection, query, where, orderBy, limit,
+    startAfter, getDocs, doc, updateDoc, getDoc
+  } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getStorage, ref, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const storage = getStorage(app);
+
+  const PAGE_SIZE = 30;
+  const CURSOR_KEY = 'checkin_photo_cursor';
+
+  let lastDoc = null;
+  let sessionLoaded = 0;
+  let sessionDeleted = 0;
+  let pendingDeleteDocId = null;
+  let pendingDeletePhotoURL = null;
+  let lightboxDocId = null;
+  let lightboxPhotoURL = null;
+  let activeFilterUserId = null;
+  let activeFilterNickname = null;
+
+  // ── Auth ─────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      updateCursorDisplay();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+    }
+  });
+
+  window.doLogin = async function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn');
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    btn.textContent = 'Signing in...';
+    btn.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch(e) {
+      errEl.textContent = 'Invalid credentials. Try again.';
+      errEl.style.display = 'block';
+      btn.textContent = 'Sign In';
+      btn.disabled = false;
+    }
+  };
+
+  window.doLogout = async function() {
+    await signOut(auth);
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('adminEmail').textContent = '';
+  };
+
+  // ── Cursor management ─────────────────────────────────────────────
+  function getCursor() {
+    return localStorage.getItem(CURSOR_KEY) || null;
+  }
+
+  function saveCursor(isoTimestamp) {
+    localStorage.setItem(CURSOR_KEY, isoTimestamp);
+    updateCursorDisplay();
+  }
+
+  function updateCursorDisplay() {
+    const cursor = getCursor();
+    const el = document.getElementById('cursorDisplay');
+    if (cursor) {
+      const d = new Date(cursor);
+      el.textContent = d.toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      el.style.fontSize = '11px';
+    } else {
+      el.textContent = 'None';
+      el.style.fontSize = '12px';
+    }
+  }
+
+  window.resetAndReload = function() {
+    localStorage.removeItem(CURSOR_KEY);
+    lastDoc = null;
+    sessionLoaded = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📷</div>
+        <div>Cursor cleared. Click <strong>Load Latest Photos</strong> to reload from newest.</div>
+      </div>`;
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    updateCursorDisplay();
+    showToast('Cursor reset — will load all photos from newest', 'success');
+  };
+
+  // ── User filter ───────────────────────────────────────────────────
+  window.filterByUser = function(userId, nickname) {
+    activeFilterUserId = userId;
+    activeFilterNickname = nickname;
+    lastDoc = null;
+    sessionLoaded = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = '';
+    document.getElementById('filterName').textContent = nickname;
+    document.getElementById('filterCount').textContent = '';
+    document.getElementById('filterBar').classList.add('active');
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    loadPhotos(false);
+  };
+
+  window.clearUserFilter = function() {
+    activeFilterUserId = null;
+    activeFilterNickname = null;
+    lastDoc = null;
+    sessionLoaded = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = '';
+    document.getElementById('filterBar').classList.remove('active');
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    // Clear cursor temporarily so we always get results on return
+    const savedCursor = getCursor();
+    localStorage.removeItem(CURSOR_KEY);
+    loadPhotos(false).then(() => {
+      // Restore cursor after load so future sessions still work
+      if (savedCursor) localStorage.setItem(CURSOR_KEY, savedCursor);
+      updateCursorDisplay();
+    });
+  };
+
+  // ── Load photos ───────────────────────────────────────────────────
+  window.loadPhotos = async function(isLoadMore = false) {
+    const btn = document.getElementById('loadBtn');
+    const moreBtn = document.getElementById('loadMoreBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Loading...';
+    moreBtn.disabled = true;
+
+    try {
+      const cursor = getCursor();
+      let q;
+
+      if (activeFilterUserId) {
+        // ── User filter mode ──────────────────────────────────────
+        if (isLoadMore && lastDoc) {
+          q = query(
+            collection(db, 'checkIns'),
+            where('userId', '==', activeFilterUserId),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            startAfter(lastDoc),
+            limit(PAGE_SIZE)
+          );
+        } else {
+          q = query(
+            collection(db, 'checkIns'),
+            where('userId', '==', activeFilterUserId),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            limit(PAGE_SIZE)
+          );
+        }
+      } else {
+        // ── Normal mode ───────────────────────────────────────────
+        if (isLoadMore && lastDoc) {
+          q = query(
+            collection(db, 'checkIns'),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            startAfter(lastDoc),
+            limit(PAGE_SIZE)
+          );
+        } else if (!isLoadMore && cursor) {
+          q = query(
+            collection(db, 'checkIns'),
+            where('hasPhoto', '==', true),
+            where('timestamp', '>', cursor),
+            orderBy('timestamp', 'desc'),
+            limit(PAGE_SIZE)
+          );
+        } else {
+          q = query(
+            collection(db, 'checkIns'),
+            where('hasPhoto', '==', true),
+            orderBy('timestamp', 'desc'),
+            limit(PAGE_SIZE)
+          );
+        }
+      }
+
+      const snap = await getDocs(q);
+
+      if (snap.empty && !isLoadMore) {
+        const msg = activeFilterUserId
+          ? `No photos found for ${activeFilterNickname}.`
+          : (cursor ? 'No new photos since last session.' : 'No check-in photos found in the database.');
+        document.getElementById('photoGrid').innerHTML = `
+          <div class="empty-state">
+            <div class="icon">${activeFilterUserId ? '👤' : '✅'}</div>
+            <div>${msg}</div>
+          </div>`;
+        if (!activeFilterUserId && cursor) showToast('No new photos since last session', 'success');
+        btn.disabled = false;
+        btn.textContent = '📥 Load Latest Photos';
+        moreBtn.disabled = false;
+        return;
+      }
+
+      if (!snap.empty) {
+        lastDoc = snap.docs[snap.docs.length - 1];
+        if (!isLoadMore && !activeFilterUserId) {
+          const newestTs = snap.docs[0].data().timestamp;
+          if (newestTs) saveCursor(newestTs);
+        }
+      }
+
+      const grid = document.getElementById('photoGrid');
+      if (!isLoadMore) {
+        const existingEmpty = grid.querySelector('.empty-state');
+        if (existingEmpty) existingEmpty.remove();
+      }
+
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        if (!data.photoURL) return;
+        renderPhotoCard(docSnap.id, data, grid);
+        sessionLoaded++;
+      });
+
+      document.getElementById('sessionCount').textContent = sessionLoaded;
+      const shown = grid.querySelectorAll('.photo-card').length;
+      document.getElementById('shownCount').textContent = shown;
+
+      if (activeFilterUserId) {
+        document.getElementById('filterCount').textContent = `— ${shown} photo${shown !== 1 ? 's' : ''}`;
+      }
+
+      moreBtn.style.display = snap.docs.length === PAGE_SIZE ? 'inline-block' : 'none';
+
+    } catch(e) {
+      console.error('Load failed:', e);
+      showToast('Load failed — check console. You may need a Firestore index.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📥 Load Latest Photos';
+      moreBtn.disabled = false;
+    }
+  };
+
+  window.loadMore = function() {
+    loadPhotos(true);
+  };
+
+  function renderPhotoCard(docId, data, grid) {
+    const card = document.createElement('div');
+    card.className = 'photo-card';
+    card.id = `card-${docId}`;
+
+    const ts = data.timestamp ? new Date(data.timestamp) : null;
+    const dateStr = ts ? ts.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
+    const nickname = data.visitorNickname || 'Unknown';
+    const message = data.message && data.message !== '5' ? data.message : '';
+    const userId = data.userId || '—';
+    const propertyId = data.propertyId || '—';
+
+    card.innerHTML = `
+      <img
+        class="photo-thumb"
+        src="${escHtml(data.photoURL)}"
+        alt="Check-in photo"
+        loading="lazy"
+        onclick="openLightbox('${docId}', '${escHtml(data.photoURL)}', '${escHtml(nickname)}', '${escHtml(dateStr)}')"
+        onerror="this.outerHTML='<div class=\\'photo-thumb error-img\\'>🖼️</div>'"
+      >
+      <div class="photo-info">
+        <div class="photo-meta-row">
+          <div class="photo-nickname" onclick="filterByUser('${escHtml(userId)}', '${escHtml(nickname)}')" title="Click to see all photos from ${escHtml(nickname)}">${escHtml(nickname)}</div>
+          <div class="photo-date">${dateStr}</div>
+        </div>
+        ${message ? `<div class="photo-message">${escHtml(message)}</div>` : ''}
+        <div class="photo-ids">
+          <span>User:</span> ${userId.substring(0,18)}…<br>
+          <span>Property:</span> ${propertyId.substring(0,18)}…
+        </div>
+        <div class="photo-actions">
+          <a class="view-btn" href="${escHtml(data.photoURL)}" target="_blank">🔗 Full Size</a>
+          <button class="delete-btn" id="del-${docId}" onclick="promptDelete('${docId}', '${escHtml(data.photoURL)}', '${escHtml(nickname)}')">🗑 Delete</button>
+        </div>
+      </div>`;
+
+    grid.appendChild(card);
+  }
+
+  // ── Delete flow ───────────────────────────────────────────────────
+  window.promptDelete = function(docId, photoURL, nickname) {
+    pendingDeleteDocId = docId;
+    pendingDeletePhotoURL = photoURL;
+    document.getElementById('confirmMsg').textContent =
+      `Delete the photo from ${nickname}'s check-in? This permanently removes the file from Storage and clears the photoURL in Firestore. This cannot be undone.`;
+    document.getElementById('confirmOverlay').classList.add('open');
+  };
+
+  window.closeConfirm = function() {
+    document.getElementById('confirmOverlay').classList.remove('open');
+    pendingDeleteDocId = null;
+    pendingDeletePhotoURL = null;
+  };
+
+  window.confirmDelete = async function() {
+    const docId = pendingDeleteDocId;
+    const photoURL = pendingDeletePhotoURL;
+    closeConfirm();
+    closeLightbox();
+    await doDelete(docId, photoURL);
+  };
+
+  async function doDelete(docId, photoURL) {
+    const delBtn = document.getElementById(`del-${docId}`);
+    if (delBtn) { delBtn.disabled = true; delBtn.textContent = '⏳ Deleting...'; }
+
+    try {
+      // 1. Delete from Firebase Storage
+      try {
+        // deleteObject requires a storage path, not a download URL.
+        // Extract the path from the URL: decode the path segment between /o/ and ?
+        let storagePath = null;
+        try {
+          const urlObj = new URL(photoURL);
+          const match = urlObj.pathname.match(/\/o\/(.+)/);
+          if (match) storagePath = decodeURIComponent(match[1]);
+        } catch(parseErr) {
+          console.warn('Could not parse storage URL:', parseErr);
+        }
+        if (storagePath) {
+          const storageRef = ref(storage, storagePath);
+          await deleteObject(storageRef);
+        } else {
+          console.warn('Could not extract storage path from URL — skipping storage delete');
+        }
+      } catch (storageErr) {
+        // If file is already gone (storage/object-not-found), continue to clear Firestore
+        if (storageErr.code !== 'storage/object-not-found') {
+          console.warn('Storage delete warning:', storageErr.code, storageErr.message);
+        }
+      }
+
+      // 2. Clear photoURL and hasPhoto in Firestore
+      // Uses setDoc with merge:true — more permissive than updateDoc for admin ops.
+      // Also sets isHidden:true which falls within the existing update rule
+      // allowing isHidden field changes, giving a fallback if admin rule isn't set.
+      const docRef = doc(db, 'checkIns', docId);
+      try {
+        await updateDoc(docRef, {
+          photoURL: null,
+          hasPhoto: false,
+          isHidden: true,
+          photoDeletedAt: new Date().toISOString(),
+          photoDeletedBy: auth.currentUser?.uid || 'admin',
+        });
+      } catch (firestoreErr) {
+        // If updateDoc fails due to rules, the Firestore rules need the admin fix
+        // described in the console. Re-throw so the outer catch catches it.
+        console.error('Firestore update failed — check rules allow isAdmin() delete:', firestoreErr);
+        throw firestoreErr;
+      }
+
+      // 3. Remove card from grid
+      const card = document.getElementById(`card-${docId}`);
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+        card.style.transition = 'all 0.2s';
+        setTimeout(() => card.remove(), 200);
+      }
+
+      sessionDeleted++;
+      document.getElementById('deletedCount').textContent = sessionDeleted;
+      const shownEl = document.getElementById('shownCount');
+      shownEl.textContent = Math.max(0, parseInt(shownEl.textContent) - 1);
+
+      showToast('✓ Photo deleted successfully', 'success');
+
+    } catch(e) {
+      console.error('Delete failed:', e);
+      showToast('✗ Delete failed — see console', 'error');
+      if (delBtn) { delBtn.disabled = false; delBtn.textContent = '🗑 Delete'; }
+    }
+  }
+
+  // ── Lightbox ──────────────────────────────────────────────────────
+  window.openLightbox = function(docId, photoURL, nickname, dateStr) {
+    lightboxDocId = docId;
+    lightboxPhotoURL = photoURL;
+    document.getElementById('lightboxImg').src = photoURL;
+    document.getElementById('lightboxInfo').textContent = `${nickname} · ${dateStr}`;
+    document.getElementById('lightbox').classList.add('open');
+  };
+
+  window.closeLightbox = function(e) {
+    if (e && e.target !== document.getElementById('lightbox') && !e.target.classList.contains('lightbox-close')) return;
+    document.getElementById('lightbox').classList.remove('open');
+    lightboxDocId = null;
+    lightboxPhotoURL = null;
+  };
+
+  window.lightboxDelete = function() {
+    if (!lightboxDocId) return;
+    const card = document.getElementById(`card-${lightboxDocId}`);
+    const nickname = card ? card.querySelector('.photo-nickname')?.textContent : 'this user';
+    promptDelete(lightboxDocId, lightboxPhotoURL, nickname);
+  };
+
+  // ── Toast ─────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 3500);
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+</script>
+</body>
+</html>

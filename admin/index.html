@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Admin</title>
+<link rel="icon" type="image/png" href="/logo.png" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07;
+    --surface: #1a1208;
+    --surface2: #241a0d;
+    --gold: #c8922a;
+    --gold-light: #f0b84a;
+    --amber: #e07b20;
+    --text: #f0e6d0;
+    --text-muted: #8a7560;
+    --green: #4caf6e;
+    --red: #e05050;
+    --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    font-size: 28px;
+  }
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--gold-light);
+    letter-spacing: -0.5px;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .last-updated {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .refresh-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .refresh-btn:hover { background: var(--gold-light); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .logout-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .logout-btn:hover { color: var(--red); border-color: var(--red); }
+  .admin-email {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Layout */
+  .main { padding: 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* Section labels */
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 32px 0 16px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Stat cards grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: rgba(200,146,42,0.35); }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+    opacity: 0.4;
+  }
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .stat-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+  .badge-green { background: rgba(76,175,110,0.15); color: var(--green); }
+  .badge-amber { background: rgba(224,123,32,0.15); color: var(--amber); }
+  .badge-red { background: rgba(224,80,80,0.15); color: var(--red); }
+  .badge-blue { background: rgba(74,159,212,0.15); color: var(--blue); }
+
+  /* Tables */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .table-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  thead th {
+    padding: 10px 24px;
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(200,146,42,0.06);
+    transition: background 0.15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 12px 24px;
+    color: var(--text);
+  }
+  .td-muted { color: var(--text-muted); }
+  .td-gold { color: var(--gold-light); font-weight: 500; }
+  .td-green { color: var(--green); }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Mine type bar */
+  .mine-bar {
+    display: flex;
+    gap: 4px;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  .mine-bar-seg { border-radius: 3px; transition: flex 0.5s; }
+  .mine-type-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .mine-type-row:last-child { border-bottom: none; }
+  .mine-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+  }
+  .mine-details { padding: 20px 24px; }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    height: 32px;
+    width: 60%;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Error state */
+  .error-msg {
+    padding: 16px 24px;
+    color: var(--red);
+    font-size: 12px;
+  }
+
+  /* Spinner */
+  .spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Email list filter buttons */
+  .filter-btn {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--gold); color: var(--text); }
+  .filter-btn.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 500; }
+
+  /* Inactivity monitor */
+  .inactivity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .inactivity-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .inactivity-stat.warn { border-color: rgba(224,123,32,0.4); }
+  .inactivity-stat.danger { border-color: rgba(224,80,80,0.4); }
+  .inactivity-stat .stat-label { margin-bottom: 8px; }
+  .inactivity-stat .stat-value { font-size: 40px; }
+  .inactivity-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .run-btn {
+    background: var(--amber);
+    color: var(--bg);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .run-btn:hover { background: var(--gold-light); }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .run-status {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .run-status.success { color: var(--green); }
+  .run-status.error { color: var(--red); }
+  .badge-warn { background: rgba(224,123,32,0.15); color: var(--amber); }
+  .badge-danger { background: rgba(224,80,80,0.15); color: var(--red); }
+
+  /* Feedback */
+  .feedback-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--gold);
+    color: var(--bg);
+    border-color: var(--gold);
+  }
+  .feedback-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+  }
+  .feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+  .feedback-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .feedback-message {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  .feedback-type-badge {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .type-general  { background: rgba(74,159,212,0.15); color: var(--blue); }
+  .type-bug      { background: rgba(224,80,80,0.15);  color: var(--red); }
+  .type-feature  { background: rgba(200,146,42,0.15); color: var(--gold); }
+  .type-other    { background: rgba(138,117,96,0.15); color: var(--text-muted); }
+  .mark-read-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mark-read-btn:hover { border-color: var(--green); color: var(--green); }
+
+  /* Notification editor */
+  .notif-editor {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .notif-editor label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+  .notif-editor label:first-of-type { margin-top: 0; }
+  .notif-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+  .notif-input:focus { border-color: var(--gold); }
+  .notif-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    font-size: 12px;
+  }
+  .notif-preview-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .notif-preview-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .notif-preview-body {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .notif-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .save-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .save-btn:hover { background: var(--gold-light); }
+  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .save-confirm {
+    font-size: 12px;
+    color: var(--green);
+    display: none;
+  }
+  .save-error {
+    font-size: 12px;
+    color: var(--red);
+    display: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main { padding: 16px; }
+    .two-col { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">⛏️</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Admin Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <span class="last-updated" id="lastUpdated">Loading...</span>
+    <a href="/admin/admin-users.html" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;text-decoration:none;">👥 Users</a>
+    <a href="/admin/admin-properties.html" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;text-decoration:none;">🏔 Properties</a>
+    <a href="/admin/admin-finance.html" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;text-decoration:none;">💰 Finance</a>
+    <a href="/admin/admin-moderation.html" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;text-decoration:none;">🛡 Moderation</a>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
+    <button class="logout-btn" id="logoutBtn" onclick="doLogout()" style="display:none;">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PLAYERS -->
+  <div class="section-label">Players</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value" id="totalUsers"><div class="skeleton"></div></div>
+      <div class="stat-sub">All registered accounts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active (7 days)</div>
+      <div class="stat-value" id="active7d"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="active7dPct">of total users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active (30 days)</div>
+      <div class="stat-value" id="active30d"><div class="skeleton"></div></div>
+      <div class="stat-sub" id="active30dPct">of total users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg TB Balance</div>
+      <div class="stat-value" id="avgTB"><div class="skeleton"></div></div>
+      <div class="stat-sub">Per player</div>
+    </div>
+  </div>
+
+  <!-- ECONOMY -->
+  <div class="section-label">Economy</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total TB in Circulation</div>
+      <div class="stat-value" id="totalTB"><div class="skeleton"></div></div>
+      <div class="stat-sub">Across all accounts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total USD Earned</div>
+      <div class="stat-value" id="totalUSD"><div class="skeleton"></div></div>
+      <div class="stat-sub">Balance + redeemed TB + withdrawn</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Properties Sold</div>
+      <div class="stat-value" id="totalProps"><div class="skeleton"></div></div>
+      <div class="stat-sub">All-time purchases</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Check-ins</div>
+      <div class="stat-value" id="totalCheckIns"><div class="skeleton"></div></div>
+      <div class="stat-sub">All-time</div>
+    </div>
+  </div>
+
+  <!-- MINE TYPES + TOP PLAYERS -->
+  <div class="section-label">Properties & Players</div>
+  <div class="two-col">
+
+    <div class="table-card">
+      <div class="table-header">
+        Mine Type Breakdown
+        <span class="table-count" id="totalMinesCount">—</span>
+      </div>
+      <div class="mine-details" id="mineTypeDetails">
+        <div class="skeleton" style="margin-bottom:12px;"></div>
+        <div class="skeleton" style="width:80%;margin-bottom:12px;"></div>
+        <div class="skeleton" style="width:50%;"></div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        Top Players by TA
+        <span class="table-count" id="topPlayersCount">—</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Properties</th>
+            <th>TB Balance</th>
+            <th>USD Earnings</th>
+          </tr>
+        </thead>
+        <tbody id="topPlayersBody">
+          <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- RECENT ACTIVITY -->
+  <div class="section-label">Recent Check-ins</div>
+  <div class="table-card">
+    <div class="table-header">
+      Latest Check-ins
+      <span class="table-count" id="checkInsCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Visitor</th>
+          <th>Property ID</th>
+          <th>Message</th>
+          <th>Photo</th>
+        </tr>
+      </thead>
+      <tbody id="checkInsBody">
+        <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- DAILY NOTIFICATION -->
+  <div class="section-label">Daily Push Notification</div>
+  <div class="notif-editor">
+    <label for="notifTitle">Notification Title</label>
+    <input
+      id="notifTitle"
+      class="notif-input"
+      type="text"
+      maxlength="100"
+      placeholder="⛏️ Your mines are waiting!"
+    />
+    <label for="notifBody">Notification Body</label>
+    <textarea
+      id="notifBody"
+      class="notif-input"
+      rows="3"
+      maxlength="300"
+      placeholder="Log in to collect resources, run daily activities, and check on your properties."
+    ></textarea>
+
+    <div class="notif-preview">
+      <div class="notif-preview-label">📱 Preview</div>
+      <div class="notif-preview-title" id="notifPreviewTitle">⛏️ Your mines are waiting!</div>
+      <div class="notif-preview-body" id="notifPreviewBody">Log in to collect resources, run daily activities, and check on your properties.</div>
+    </div>
+
+    <div class="notif-actions">
+      <button class="save-btn" id="saveNotifBtn" onclick="saveNotification()">💾 Save Message</button>
+      <span class="save-confirm" id="saveConfirm">✓ Saved successfully</span>
+      <span class="save-error" id="saveError">✗ Save failed — check console</span>
+    </div>
+  </div>
+
+  <!-- FEEDBACK INBOX -->
+  <div class="section-label">Feedback Inbox</div>
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      User Feedback
+      <span class="table-count" id="feedbackCount">—</span>
+    </div>
+
+    <!-- Filter buttons -->
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+      <div class="feedback-filter">
+        <button class="filter-btn active" onclick="filterFeedback('all', this)">All</button>
+        <button class="filter-btn" onclick="filterFeedback('new', this)">🔴 New</button>
+        <button class="filter-btn" onclick="filterFeedback('bug', this)">🐛 Bug Reports</button>
+        <button class="filter-btn" onclick="filterFeedback('feature', this)">✨ Feature Requests</button>
+        <button class="filter-btn" onclick="filterFeedback('general', this)">💬 General</button>
+        <button class="filter-btn" onclick="filterFeedback('other', this)">📝 Other</button>
+      </div>
+    </div>
+
+    <!-- Feedback list -->
+    <div style="padding:16px 24px;" id="feedbackList">
+      <div style="color:var(--text-muted);font-size:12px;">Loading feedback...</div>
+    </div>
+  </div>
+
+  <!-- INACTIVITY MONITOR -->
+  <div class="section-label">Inactivity Monitor</div>
+
+  <!-- Summary stats -->
+  <div class="inactivity-grid">
+    <div class="inactivity-stat">
+      <div class="stat-label">Approaching Warning (4-5 mo)</div>
+      <div class="stat-value" id="inact-approaching">—</div>
+      <div class="stat-sub">accounts idle 120-150 days</div>
+    </div>
+    <div class="inactivity-stat warn">
+      <div class="stat-label">⚠️ Near Suspension (5-6 mo)</div>
+      <div class="stat-value" id="inact-warn">—</div>
+      <div class="stat-sub">accounts idle 150-180 days</div>
+    </div>
+    <div class="inactivity-stat danger">
+      <div class="stat-label">🚨 Suspended / Near Forfeiture</div>
+      <div class="stat-value" id="inact-danger">—</div>
+      <div class="stat-sub">accounts idle 180+ days</div>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="inactivity-actions">
+    <button class="run-btn" onclick="runInactivityCheck()">⚙️ Run Inactivity Check</button>
+    <span class="run-status" id="runStatus"></span>
+  </div>
+
+  <!-- At-risk accounts table -->
+  <div class="table-card" style="margin-bottom:16px;">
+    <div class="table-header">
+      At-Risk Accounts
+      <span class="table-count" id="atRiskCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Last Login</th>
+          <th>Days Idle</th>
+          <th>TAs</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="atRiskBody">
+        <tr><td colspan="6" class="td-muted" style="padding:16px 24px;">Run check to load</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- At-risk TAs table -->
+  <div class="table-card" style="margin-bottom:16px;">
+    <div class="table-header">
+      At-Risk TAs (No Activity)
+      <span class="table-count" id="atRiskTACount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Property ID</th>
+          <th>Owner</th>
+          <th>Mine Type</th>
+          <th>Last Activity</th>
+          <th>Days Idle</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="atRiskTABody">
+        <tr><td colspan="6" class="td-muted" style="padding:16px 24px;">Run check to load</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RECENT SIGNUPS -->
+  <div class="section-label">Recent Signups</div>
+  <div class="table-card">
+    <div class="table-header">
+      Newest Users
+      <span class="table-count" id="signupsCount">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Joined</th>
+          <th>Email</th>
+          <th>TB Balance</th>
+          <th>Properties</th>
+          <th>Check-ins</th>
+        </tr>
+      </thead>
+      <tbody id="signupsBody">
+        <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- EMAIL LISTS -->
+  <div class="section-label">Email Lists</div>
+  <div class="table-card" style="margin-bottom:32px;">
+    <div class="table-header">
+      Build an Email List
+      <span class="table-count" id="emailListCount">—</span>
+    </div>
+
+    <!-- Filter buttons -->
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;">
+      <button class="filter-btn active" data-filter="all" onclick="applyFilter('all')">All Users</button>
+      <button class="filter-btn" data-filter="active7" onclick="applyFilter('active7')">Active 7 days</button>
+      <button class="filter-btn" data-filter="active30" onclick="applyFilter('active30')">Active 30 days</button>
+      <button class="filter-btn" data-filter="noprops" onclick="applyFilter('noprops')">No Properties</button>
+      <button class="filter-btn" data-filter="hasprops" onclick="applyFilter('hasprops')">Has Properties</button>
+      <button class="filter-btn" data-filter="powerusers" onclick="applyFilter('powerusers')">Power Users (5+ props)</button>
+      <button class="filter-btn" data-filter="newthisweek" onclick="applyFilter('newthisweek')">New This Week</button>
+      <button class="filter-btn" data-filter="inactive" onclick="applyFilter('inactive')">Inactive 30+ days</button>
+    </div>
+
+    <!-- Email output -->
+    <div style="padding:20px 24px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+        Copy and paste into Gmail BCC field — comma separated
+      </div>
+      <textarea id="emailListOutput" readonly
+        style="width:100%;min-height:100px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;resize:vertical;outline:none;line-height:1.6;"
+        placeholder="Load data first, then select a filter above..."></textarea>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+        <button onclick="copyEmails()" style="background:var(--gold);color:var(--bg);border:none;padding:10px 20px;border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;">
+          📋 Copy to Clipboard
+        </button>
+        <span id="copyConfirm" style="font-size:12px;color:var(--green);display:none;">✅ Copied!</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="loginOverlay" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:360px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:16px;">⛏️</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--gold-light);margin-bottom:4px;">TerraMine Admin</div>
+    <div style="font-size:11px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:32px;">Sign in to continue</div>
+    <input id="loginEmail" type="email" placeholder="Email" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:12px;outline:none;">
+    <input id="loginPass" type="password" placeholder="Password" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;margin-bottom:20px;outline:none;">
+    <button id="loginBtn" onclick="doLogin()" style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;">Sign In</button>
+    <div id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;display:none;"></div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getFirestore, collection, getDocs, query, orderBy, limit, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  // ── Auth ────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      // Load from cache first (fast), then let user hit Refresh for full scan
+      const cached = await loadFromCache();
+      if (!cached) loadAll(); // first time or cache miss — do full load
+      loadNotificationConfig();
+      loadFeedback();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+    }
+  });
+
+  window.doLogout = async function() {
+    try {
+      await signOut(auth);
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+      document.getElementById('refreshBtn').style.display = 'none';
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
+  };
+
+  window.doLogin = async function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn');
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    btn.textContent = 'Signing in...';
+    btn.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle the rest
+    } catch(e) {
+      errEl.textContent = 'Invalid email or password.';
+      errEl.style.display = 'block';
+      btn.textContent = 'Sign In';
+      btn.disabled = false;
+    }
+  };
+
+  // Allow pressing Enter to submit
+  document.getElementById('loginPass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.doLogin();
+  });
+
+  function fmt(n) {
+    if (n === null || n === undefined) return '—';
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+    return n.toLocaleString();
+  }
+
+  function fmtUSD(n) {
+    if (!n) return '$0.000000';
+    return '$' + Number(n).toFixed(6);
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return Math.floor(diff) + 's ago';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  function shortDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
+  }
+
+  function truncate(s, n) {
+    if (!s) return '—';
+    return s.length > n ? s.substring(0, n) + '…' : s;
+  }
+
+  const MINE_COLORS = {
+    rock: '#888',
+    coal: '#444',
+    gold: '#c8922a',
+    diamond: '#4a9fd4',
+  };
+
+  // ── Fast initial load from adminStats/global ─────────────────────────────
+  async function loadFromCache() {
+    try {
+      const snap = await getDoc(doc(db, 'adminStats', 'global'));
+      if (!snap.exists()) return false;
+      const s = snap.data();
+      const fmt2 = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(Math.round(n));
+      const fmtUSD2 = n => '$' + (parseFloat(n)||0).toFixed(2);
+      const total = s.totalUsers || 0;
+      const active7 = s.active7d || 0;
+      const active30 = s.active30d || 0;
+      document.getElementById('totalUsers').textContent     = fmt2(total);
+      document.getElementById('active7d').textContent       = fmt2(active7);
+      document.getElementById('active7dPct').textContent    = total ? Math.round(active7/total*100)+'% of users' : '—';
+      document.getElementById('active30d').textContent      = fmt2(active30);
+      document.getElementById('active30dPct').textContent   = total ? Math.round(active30/total*100)+'% of users' : '—';
+      document.getElementById('totalTB').textContent        = fmt2(s.totalTB || 0);
+      document.getElementById('avgTB').textContent          = total ? fmt2(Math.round((s.totalTB||0)/total)) : '0';
+      document.getElementById('totalUSD').textContent       = fmtUSD2(s.totalUSD || 0);
+      document.getElementById('totalCheckIns').textContent  = fmt2(s.totalCheckIns || 0);
+      document.getElementById('totalProps').textContent     = fmt2(s.totalPropertiesSold || 0);
+      document.getElementById('totalMinesCount').textContent = (s.totalPropertiesSold || 0) + ' total';
+      if (s.updatedAt) {
+        const d = new Date(s.updatedAt);
+        document.getElementById('lastUpdated').textContent =
+          'Cached ' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
+          d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+      }
+      return true;
+    } catch(e) {
+      console.warn('Cache load failed:', e);
+      return false;
+    }
+  }
+
+  window.loadAll = async function() {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">↻</span> Loading';
+
+    try {
+      // ── Load users ──────────────────────────────────────────────
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const total = users.length;
+
+      const now = Date.now();
+      const day7 = now - 7 * 86400000;
+      const day30 = now - 30 * 86400000;
+
+      let active7 = 0, active30 = 0, totalTB = 0, totalUSD = 0, totalCI = 0;
+      users.forEach(u => {
+        const last = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
+        if (last > day7) active7++;
+        if (last > day30) active30++;
+        totalTB += (u.tbBalance || 0);
+        totalUSD += (u.usdEarnings || 0) + (u.usdEarnedFromTB || 0) + (u.usdWithdrawn || 0);
+        totalCI += (u.totalCheckIns || 0);
+      });
+
+      document.getElementById('totalUsers').textContent = fmt(total);
+      document.getElementById('active7d').textContent = fmt(active7);
+      document.getElementById('active7dPct').textContent = total ? Math.round(active7/total*100) + '% of users' : '—';
+      document.getElementById('active30d').textContent = fmt(active30);
+      document.getElementById('active30dPct').textContent = total ? Math.round(active30/total*100) + '% of users' : '—';
+      document.getElementById('avgTB').textContent = fmt(total ? Math.round(totalTB/total) : 0);
+      document.getElementById('totalTB').textContent = fmt(totalTB);
+      document.getElementById('totalUSD').textContent = fmtUSD(totalUSD);
+      document.getElementById('totalCheckIns').textContent = fmt(totalCI);
+
+      // ── Load properties ─────────────────────────────────────────
+      const propsSnap = await getDocs(collection(db, 'properties'));
+      const props = propsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const propCount = props.length;
+
+      document.getElementById('totalProps').textContent = fmt(propCount);
+      document.getElementById('totalMinesCount').textContent = propCount + ' total';
+
+      // Mine type breakdown
+      const mines = { rock: 0, coal: 0, gold: 0, diamond: 0 };
+      const ownerPropCount = {};
+      props.forEach(p => {
+        if (mines[p.mineType] !== undefined) mines[p.mineType]++;
+        if (p.ownerId) ownerPropCount[p.ownerId] = (ownerPropCount[p.ownerId] || 0) + 1;
+      });
+
+      let mineHTML = '';
+      let barHTML = '<div class="mine-bar">';
+      ['rock','coal','gold','diamond'].forEach(type => {
+        const count = mines[type];
+        const pct = propCount ? Math.round(count/propCount*100) : 0;
+        const emojis = { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' };
+        mineHTML += `
+          <div class="mine-type-row">
+            <div><span class="mine-dot" style="background:${MINE_COLORS[type]}"></span>${emojis[type]} ${type.charAt(0).toUpperCase()+type.slice(1)}</div>
+            <div style="display:flex;align-items:center;gap:16px;">
+              <span class="td-muted">${pct}%</span>
+              <span class="td-gold">${fmt(count)}</span>
+            </div>
+          </div>`;
+        if (count > 0) barHTML += `<div class="mine-bar-seg" style="background:${MINE_COLORS[type]};flex:${count}"></div>`;
+      });
+      barHTML += '</div>';
+      document.getElementById('mineTypeDetails').innerHTML = mineHTML + barHTML;
+
+      // ── Top players ──────────────────────────────────────────────
+      const sorted = [...users].sort((a,b) => (ownerPropCount[b.id]||0) - (ownerPropCount[a.id]||0)).slice(0, 10);
+      document.getElementById('topPlayersCount').textContent = 'top 10';
+      document.getElementById('topPlayersBody').innerHTML = sorted.map((u, i) => {
+        const usd = (u.usdEarnings || 0) + (u.usdEarnedFromTB || 0) + (u.usdWithdrawn || 0);
+        return `
+        <tr>
+          <td class="td-muted">${i+1}</td>
+          <td>${truncate(u.nickname || u.email?.split('@')[0] || u.id.substring(0,8), 20)}</td>
+          <td class="td-gold">${ownerPropCount[u.id] || 0}</td>
+          <td>${fmt(u.tbBalance || 0)}</td>
+          <td class="td-green">$${usd.toFixed(2)}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No data</td></tr>';
+
+      // ── Recent check-ins ─────────────────────────────────────────
+      const ciQuery = query(collection(db, 'checkIns'), orderBy('timestamp', 'desc'), limit(20));
+      const ciSnap = await getDocs(ciQuery);
+      const checkIns = ciSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('checkInsCount').textContent = 'latest 20';
+      document.getElementById('checkInsBody').innerHTML = checkIns.map(ci => `
+        <tr>
+          <td class="td-muted">${timeAgo(ci.timestamp)}</td>
+          <td>${truncate(ci.visitorNickname || ci.userId?.substring(0,8) || '—', 18)}</td>
+          <td class="td-muted" style="font-size:10px;">${ci.propertyId?.substring(0,14) || '—'}</td>
+          <td>${truncate(ci.message, 30)}</td>
+          <td>${ci.hasPhoto ? '<span class="badge-blue stat-badge">📷 yes</span>' : '<span class="td-muted">—</span>'}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No check-ins yet</td></tr>';
+
+      // ── Recent signups ───────────────────────────────────────────
+      const recentUsers = [...users]
+        .filter(u => u.createdAt)
+        .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 15);
+      document.getElementById('signupsCount').textContent = 'latest 15';
+      document.getElementById('signupsBody').innerHTML = recentUsers.map(u => `
+        <tr>
+          <td class="td-muted">${shortDate(u.createdAt)}</td>
+          <td>${truncate(u.email || '—', 28)}</td>
+          <td class="td-gold">${fmt(u.tbBalance || 0)}</td>
+          <td>${ownerPropCount[u.id] || 0}</td>
+          <td>${u.totalCheckIns || 0}</td>
+        </tr>`).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No users yet</td></tr>';
+
+      // ── Store globally for email filters ────────────────────────
+      _allUsers = users;
+      _ownerPropCount = ownerPropCount;
+      applyFilter('all'); // populate email list with default filter
+
+
+      // ── Sync full stats to adminStats/global ───────────────────
+      try {
+        await setDoc(doc(db, 'adminStats', 'global'), {
+          totalUsers:          total,
+          totalPropertiesSold: propCount,
+          active7d:            active7,
+          active30d:           active30,
+          totalTB:             totalTB,
+          totalUSD:            totalUSD,
+          totalCheckIns:       totalCI,
+          updatedAt:           new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn('adminStats sync failed:', e);
+      }
+      // ── Timestamp ────────────────────────────────────────────────
+      document.getElementById('lastUpdated').textContent =
+        'Updated ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+
+    } catch (err) {
+      console.error(err);
+      document.getElementById('lastUpdated').textContent = 'Error loading data';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '↻ Refresh';
+  };
+
+  // ── Global user store for email filters ─────────────────────────
+  let _allUsers = [];
+  let _ownerPropCount = {};
+  const _now = () => Date.now();
+
+  window.applyFilter = function(filter) {
+    // Update active button — scope to user-list filter bar only
+    document.querySelectorAll('.filter-btn[data-filter]').forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === filter);
+    });
+
+    if (!_allUsers.length) {
+      document.getElementById('emailListOutput').value = 'Please wait for data to finish loading...';
+      return;
+    }
+
+    const now = _now();
+    const day7  = now - 7  * 86400000;
+    const day30 = now - 30 * 86400000;
+
+    let filtered = [];
+
+    switch(filter) {
+      case 'all':
+        filtered = _allUsers;
+        break;
+      case 'active7':
+        filtered = _allUsers.filter(u => u.lastActiveAt && new Date(u.lastActiveAt).getTime() > day7);
+        break;
+      case 'active30':
+        filtered = _allUsers.filter(u => u.lastActiveAt && new Date(u.lastActiveAt).getTime() > day30);
+        break;
+      case 'noprops':
+        filtered = _allUsers.filter(u => !_ownerPropCount[u.id]);
+        break;
+      case 'hasprops':
+        filtered = _allUsers.filter(u => !!_ownerPropCount[u.id]);
+        break;
+      case 'powerusers':
+        filtered = _allUsers.filter(u => (_ownerPropCount[u.id] || 0) >= 5);
+        break;
+      case 'newthisweek':
+        filtered = _allUsers.filter(u => u.createdAt && new Date(u.createdAt).getTime() > day7);
+        break;
+      case 'inactive':
+        filtered = _allUsers.filter(u => !u.lastActiveAt || new Date(u.lastActiveAt).getTime() < (now - 30 * 86400000));
+        break;
+    }
+
+    const emails = filtered.map(u => u.email).filter(Boolean);
+    document.getElementById('emailListOutput').value = emails.join(', ');
+    document.getElementById('emailListCount').textContent = emails.length + ' addresses';
+    document.getElementById('copyConfirm').style.display = 'none';
+  };
+
+  window.copyEmails = function() {
+    const ta = document.getElementById('emailListOutput');
+    if (!ta.value || ta.value.startsWith('Please')) return;
+    navigator.clipboard.writeText(ta.value).then(() => {
+      const confirm = document.getElementById('copyConfirm');
+      confirm.style.display = 'inline';
+      setTimeout(() => confirm.style.display = 'none', 2500);
+    });
+  };
+
+  // ── Inactivity Monitor ──────────────────────────────────────────────────
+
+  const DAY_MS = 86400000;
+  const THRESHOLDS = {
+    APPROACHING: 120,   // 4 months — approaching warning zone
+    WARN_1:      150,   // 5 months — first warning
+    WARN_2:      179,   // day before suspension
+    SUSPENDED:   180,   // 6 months — suspended
+    WARN_3:      330,   // 11 months — second warning
+    WARN_4:      364,   // day before forfeiture
+    FORFEITED:   365,   // 12 months — forfeited
+  };
+
+  function daysIdle(lastActiveAt) {
+    if (!lastActiveAt) return 9999;
+    return Math.floor((Date.now() - new Date(lastActiveAt).getTime()) / DAY_MS);
+  }
+
+  function inactivityStatus(days) {
+    if (days >= THRESHOLDS.FORFEITED) return { label: '🔴 Forfeit', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_4)    return { label: '🔴 Forfeit Tomorrow', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_3)    return { label: '🟠 11mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.SUSPENDED) return { label: '🔴 Suspended', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_2)    return { label: '🟠 Suspend Tomorrow', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.WARN_1)    return { label: '🟡 5mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.APPROACHING) return { label: '🟡 Approaching', cls: 'badge-amber' };
+    return null;
+  }
+
+  function taInactivityStatus(days) {
+    if (days >= THRESHOLDS.FORFEITED) return { label: '🔴 TA Forfeit', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_4)    return { label: '🔴 Forfeit Tomorrow', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_3)    return { label: '🟠 11mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.SUSPENDED) return { label: '🔴 Earning Stopped', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.WARN_2)    return { label: '🟠 Stop Tomorrow', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.WARN_1)    return { label: '🟡 5mo Warning', cls: 'badge-warn' };
+    if (days >= THRESHOLDS.APPROACHING) return { label: '🟡 Approaching', cls: 'badge-amber' };
+    return null;
+  }
+
+  window.runInactivityCheck = async function() {
+    const btn = document.querySelector('.run-btn');
+    const status = document.getElementById('runStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ Running...';
+    status.textContent = '';
+    status.className = 'run-status';
+
+    try {
+      // ── Load users ──────────────────────────────────────────────
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // ── Load properties ─────────────────────────────────────────
+      const propsSnap = await getDocs(collection(db, 'properties'));
+      const props = propsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Build owner lookup
+      const ownerMap = {};
+      users.forEach(u => { ownerMap[u.id] = u; });
+
+      const ownerPropCount = {};
+      props.forEach(p => {
+        if (p.ownerId) ownerPropCount[p.ownerId] = (ownerPropCount[p.ownerId] || 0) + 1;
+      });
+
+      // ── Categorize at-risk accounts ──────────────────────────────
+      let approaching = 0, warned = 0, danger = 0;
+      const atRisk = [];
+
+      users.forEach(u => {
+        const days = daysIdle(u.lastActiveAt);
+        const st = inactivityStatus(days);
+        if (!st) return;
+        if (days >= THRESHOLDS.SUSPENDED) danger++;
+        else if (days >= THRESHOLDS.WARN_1) warned++;
+        else approaching++;
+        atRisk.push({ ...u, days, status: st });
+      });
+
+      atRisk.sort((a, b) => b.days - a.days);
+
+      document.getElementById('inact-approaching').textContent = approaching;
+      document.getElementById('inact-warn').textContent = warned;
+      document.getElementById('inact-danger').textContent = danger;
+      document.getElementById('atRiskCount').textContent = atRisk.length + ' accounts';
+
+      document.getElementById('atRiskBody').innerHTML = atRisk.length
+        ? atRisk.map(u => `
+          <tr>
+            <td>${truncate(u.nickname || u.id.substring(0,8), 16)}</td>
+            <td class="td-muted">${truncate(u.email || '—', 24)}</td>
+            <td class="td-muted">${u.lastActiveAt ? shortDate(u.lastActiveAt) : 'Never'}</td>
+            <td class="${u.days >= THRESHOLDS.SUSPENDED ? 'td-gold' : 'td-muted'}">${u.days === 9999 ? '∞' : u.days}d</td>
+            <td>${ownerPropCount[u.id] || 0}</td>
+            <td><span class="stat-badge ${u.status.cls}">${u.status.label}</span></td>
+          </tr>`).join('')
+        : '<tr><td colspan="6" class="td-muted" style="padding:16px 24px;">✓ No at-risk accounts</td></tr>';
+
+      // ── Categorize at-risk TAs ───────────────────────────────────
+      const atRiskTAs = [];
+
+      props.forEach(p => {
+        const lastActivity = p.lastActivityAt || p.purchasedAt || null;
+        const days = daysIdle(lastActivity);
+        const st = taInactivityStatus(days);
+        if (!st) return;
+        const owner = ownerMap[p.ownerId];
+        atRiskTAs.push({ ...p, days, status: st, ownerNickname: owner?.nickname || p.ownerId?.substring(0,8) || '—' });
+      });
+
+      atRiskTAs.sort((a, b) => b.days - a.days);
+      document.getElementById('atRiskTACount').textContent = atRiskTAs.length + ' TAs';
+
+      const mineEmoji = { rock: '🪨', coal: '⚫', gold: '🟡', diamond: '💎' };
+      document.getElementById('atRiskTABody').innerHTML = atRiskTAs.length
+        ? atRiskTAs.map(p => `
+          <tr>
+            <td class="td-muted" style="font-size:10px;">${p.id.substring(0,14)}</td>
+            <td>${truncate(p.ownerNickname, 16)}</td>
+            <td>${mineEmoji[p.mineType] || '⛏️'} ${p.mineType || '—'}</td>
+            <td class="td-muted">${p.lastActivityAt ? shortDate(p.lastActivityAt) : (p.purchasedAt ? shortDate(p.purchasedAt) : 'Unknown')}</td>
+            <td class="${p.days >= THRESHOLDS.SUSPENDED ? 'td-gold' : 'td-muted'}">${p.days === 9999 ? '∞' : p.days}d</td>
+            <td><span class="stat-badge ${p.status.cls}">${p.status.label}</span></td>
+          </tr>`).join('')
+        : '<tr><td colspan="6" class="td-muted" style="padding:16px 24px;">✓ No at-risk TAs</td></tr>';
+
+      status.textContent = '✓ Check complete — ' + new Date().toLocaleTimeString();
+      status.className = 'run-status success';
+
+    } catch (e) {
+      console.error('Inactivity check failed:', e);
+      status.textContent = '✗ Check failed — see console';
+      status.className = 'run-status error';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚙️ Run Inactivity Check';
+    }
+  };
+
+  // ── Feedback ─────────────────────────────────────────────────────────────
+
+  let allFeedback = [];
+
+  async function loadFeedback() {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'feedback'), orderBy('createdAt', 'desc'), limit(50))
+      );
+      allFeedback = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('feedbackCount').textContent = allFeedback.length + ' submissions';
+      renderFeedback(allFeedback);
+    } catch (e) {
+      console.warn('Feedback load failed:', e);
+      document.getElementById('feedbackList').innerHTML =
+        '<div class="td-muted" style="padding:16px 0;">Failed to load feedback.</div>';
+    }
+  }
+
+  window.filterFeedback = function(type, btn) {
+    // Scope to feedback filter bar only — avoids clobbering user-list filter buttons
+    btn.closest('.feedback-filter').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = type === 'all' ? allFeedback
+      : type === 'new' ? allFeedback.filter(f => !f.status || f.status === 'new')
+      : allFeedback.filter(f => f.type === type);
+    renderFeedback(filtered);
+  }
+
+  function renderFeedback(items) {
+    const typeEmoji = { general: '💬', bug: '🐛', feature: '✨', other: '📝' };
+    const typeLabel = { general: 'General', bug: 'Bug Report', feature: 'Feature Request', other: 'Other' };
+    document.getElementById('feedbackList').innerHTML = items.length
+      ? items.map(f => `
+        <div class="feedback-card" id="fb-${f.id}">
+          <div class="feedback-header">
+            <div>
+              <span class="feedback-type-badge type-${f.type}">
+                ${typeEmoji[f.type] || '📝'} ${typeLabel[f.type] || f.type}
+              </span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              ${f.status === 'new' ? '<span style="font-size:10px;color:var(--amber);">● NEW</span>' : ''}
+              <button class="mark-read-btn" onclick="markFeedbackRead('${f.id}')">
+                ${f.status === 'new' ? 'Mark read' : '✓ Read'}
+              </button>
+            </div>
+          </div>
+          <div class="feedback-meta">
+            ${f.userEmail || 'Anonymous'} &nbsp;·&nbsp; ${f.createdAt ? shortDate(f.createdAt) : '—'}
+          </div>
+          <div class="feedback-message">${f.message || '—'}</div>
+        </div>`).join('')
+      : '<div class="td-muted" style="padding:16px 0;">No feedback in this category.</div>';
+  }
+
+  window.markFeedbackRead = async function(feedbackId) {
+    try {
+      const ref = doc(db, 'feedback', feedbackId);
+      await setDoc(ref, { status: 'read' }, { merge: true });
+      const item = allFeedback.find(f => f.id === feedbackId);
+      if (item) item.status = 'read';
+      const card = document.getElementById('fb-' + feedbackId);
+      if (card) {
+        const btn = card.querySelector('.mark-read-btn');
+        const newBadge = card.querySelector('span[style*="amber"]');
+        if (btn) btn.textContent = '✓ Read';
+        if (newBadge) newBadge.remove();
+      }
+    } catch (e) {
+      console.error('Mark read failed:', e);
+    }
+  };
+
+  // Auto-load triggered by onAuthStateChanged above
+
+  // ── Daily Notification Editor ────────────────────────────────────────────
+
+  async function loadNotificationConfig() {
+    try {
+      const docRef = doc(db, 'config', 'dailyNotification');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.title) document.getElementById('notifTitle').value = data.title;
+        if (data.body)  document.getElementById('notifBody').value  = data.body;
+        updateNotifPreview();
+      }
+    } catch (e) {
+      console.warn('Could not load notification config:', e);
+    }
+  }
+
+  function updateNotifPreview() {
+    const title = document.getElementById('notifTitle').value.trim()
+      || '⛏️ Your mines are waiting!';
+    const body  = document.getElementById('notifBody').value.trim()
+      || 'Log in to collect resources, run daily activities, and check on your properties.';
+    document.getElementById('notifPreviewTitle').textContent = title;
+    document.getElementById('notifPreviewBody').textContent  = body;
+  }
+
+  window.saveNotification = async function() {
+    const btn = document.getElementById('saveNotifBtn');
+    const confirm = document.getElementById('saveConfirm');
+    const errEl   = document.getElementById('saveError');
+    confirm.style.display = 'none';
+    errEl.style.display   = 'none';
+
+    const title = document.getElementById('notifTitle').value.trim();
+    const body  = document.getElementById('notifBody').value.trim();
+
+    if (!title || !body) {
+      errEl.textContent = '✗ Title and body cannot be empty';
+      errEl.style.display = 'inline';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const docRef = doc(db, 'config', 'dailyNotification');
+      await setDoc(docRef, { title, body, updatedAt: new Date().toISOString() });
+      confirm.style.display = 'inline';
+      updateNotifPreview();
+      setTimeout(() => confirm.style.display = 'none', 3000);
+    } catch (e) {
+      console.error('Failed to save notification config:', e);
+      errEl.textContent = '✗ Save failed — check console';
+      errEl.style.display = 'inline';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 Save Message';
+    }
+  };
+
+  // Live preview update on typing
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('notifTitle').addEventListener('input', updateNotifPreview);
+    document.getElementById('notifBody').addEventListener('input',  updateNotifPreview);
+  });
+</script>
+</body>
+</html>
