@@ -218,70 +218,69 @@
 
   <!-- DATA INTEGRITY SCAN -->
   <div class="section-label">Data Integrity Scan</div>
-  <div class="section-sub">Runs a full scan server-side (Cloud Function) and caches the result — the browser never loads the raw collections.</div>
+  <div class="section-sub">Two independent server-side scans (Cloud Functions), each cached separately — the browser never loads the raw collections, and one scan running long never blocks the other.</div>
   <div class="card">
-    <div class="search-bar">
-      <button class="run-btn" id="scanBtn" onclick="runScan()">⚙ Run Scan</button>
-      <span style="font-size:11px;color:var(--text-muted);" id="lastScanLabel">Loading cache…</span>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabOrphans" onclick="setTab('orphans')">🔴 Orphaned <span id="orphanTabCount"></span></button>
+      <button class="tab-btn" id="tabNan" onclick="setTab('nan')">⚠️ NaN Issues <span id="nanTabCount"></span></button>
     </div>
-    <div class="status-bar" id="scanStatus">Click "Run Scan" for a fresh scan, or wait — showing cached results below if available.</div>
 
-    <div id="scanResults" style="display:none;">
-      <div class="tab-row">
-        <button class="tab-btn active" id="tabOrphans" onclick="setTab('orphans')">🔴 Orphaned <span id="orphanTabCount"></span></button>
-        <button class="tab-btn" id="tabNan" onclick="setTab('nan')">⚠️ NaN Issues <span id="nanTabCount"></span></button>
+    <!-- Orphans tab -->
+    <div id="orphanPane">
+      <div class="search-bar">
+        <button class="run-btn" id="orphanScanBtn" onclick="runOrphanScan()">⚙ Scan Orphans</button>
+        <span style="font-size:11px;color:var(--text-muted);" id="orphanScanLabel">Loading cache…</span>
       </div>
-
-      <!-- Orphans tab -->
-      <div id="orphanPane">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-          <span style="font-size:11px;color:var(--text-muted);margin-right:auto;">Properties whose ownerId has no matching user document.</span>
-          <button class="sel-btn" onclick="selectAllOrphans(true)">Select All</button>
-          <button class="sel-btn" onclick="selectAllOrphans(false)">Deselect All</button>
-          <button class="delete-btn" id="deleteOrphansBtn" style="display:none;" onclick="deleteSelectedOrphans()">🗑 Delete Selected</button>
-        </div>
-        <div style="max-height:420px;overflow-y:auto;">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:32px;">✓</th>
-                <th onclick="sortOrphans('id')" style="cursor:pointer;">Property ID ↕</th>
-                <th onclick="sortOrphans('ownerId')" style="cursor:pointer;">Owner UID ↕</th>
-                <th onclick="sortOrphans('mineType')" style="cursor:pointer;">Mine ↕</th>
-                <th onclick="sortOrphans('purchasedAt')" style="cursor:pointer;">Purchased ↕</th>
-                <th onclick="sortOrphans('centerLat')" style="cursor:pointer;">Lat / Lng ↕</th>
-              </tr>
-            </thead>
-            <tbody id="orphanTableBody"></tbody>
-          </table>
-        </div>
-        <div id="orphanDeleteLog" style="display:none;background:rgba(0,0,0,0.25);border-radius:8px;padding:12px;font-size:11px;color:var(--text-muted);margin-top:12px;max-height:160px;overflow-y:auto;"></div>
+      <div class="status-bar" id="orphanScanStatus">Properties whose ownerId has no matching user document.</div>
+      <div style="display:flex;align-items:center;gap:8px;margin:10px 0;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--text-muted);margin-right:auto;">Select rows to delete more than one at a time.</span>
+        <button class="sel-btn" onclick="selectAllOrphans(true)">Select All</button>
+        <button class="sel-btn" onclick="selectAllOrphans(false)">Deselect All</button>
+        <button class="delete-btn" id="deleteOrphansBtn" style="display:none;" onclick="deleteSelectedOrphans()">🗑 Delete Selected</button>
       </div>
+      <div style="max-height:420px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px;">✓</th>
+              <th onclick="sortOrphans('id')" style="cursor:pointer;">Property ID ↕</th>
+              <th onclick="sortOrphans('ownerId')" style="cursor:pointer;">Owner UID ↕</th>
+              <th onclick="sortOrphans('mineType')" style="cursor:pointer;">Mine ↕</th>
+              <th onclick="sortOrphans('purchasedAt')" style="cursor:pointer;">Purchased ↕</th>
+              <th onclick="sortOrphans('centerLat')" style="cursor:pointer;">Lat / Lng ↕</th>
+            </tr>
+          </thead>
+          <tbody id="orphanTableBody"></tbody>
+        </table>
+      </div>
+      <div id="orphanDeleteLog" style="display:none;background:rgba(0,0,0,0.25);border-radius:8px;padding:12px;font-size:11px;color:var(--text-muted);margin-top:12px;max-height:160px;overflow-y:auto;"></div>
+    </div>
 
-      <!-- NaN tab -->
-      <div id="nanPane" style="display:none;">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
-          Detection only — matches <span class="td-gold">scripts/repairNaNPropertyFields.ts</span>'s exact field checks. Run the script to actually repair these:
-        </div>
-        <div class="code-box">npx ts-node scripts/repairNaNPropertyFields.ts <span style="color:var(--text-muted);">(dry run)</span>
-          <button class="sel-btn copy-btn" onclick="copyCmd(false)">Copy</button>
-        </div>
-        <div class="code-box">npx ts-node scripts/repairNaNPropertyFields.ts --live <span style="color:var(--text-muted);">(applies fixes)</span>
-          <button class="sel-btn copy-btn" onclick="copyCmd(true)">Copy</button>
-        </div>
-        <div style="max-height:380px;overflow-y:auto;margin-top:10px;">
-          <table>
-            <thead>
-              <tr>
-                <th onclick="sortNan('id')" style="cursor:pointer;">Property ID ↕</th>
-                <th onclick="sortNan('ownerId')" style="cursor:pointer;">Owner UID ↕</th>
-                <th onclick="sortNan('mineType')" style="cursor:pointer;">Mine ↕</th>
-                <th onclick="sortNan('fieldCount')" style="cursor:pointer;">Broken Fields ↕</th>
-              </tr>
-            </thead>
-            <tbody id="nanTableBody"></tbody>
-          </table>
-        </div>
+    <!-- NaN tab -->
+    <div id="nanPane" style="display:none;">
+      <div class="search-bar">
+        <button class="run-btn" id="nanScanBtn" onclick="runNanScan()">⚙ Scan NaN Issues</button>
+        <span style="font-size:11px;color:var(--text-muted);" id="nanScanLabel">Loading cache…</span>
+      </div>
+      <div class="status-bar" id="nanScanStatus">Detection only — matches <span class="td-gold">scripts/repairNaNPropertyFields.ts</span>'s exact field checks.</div>
+      <div class="code-box">npx ts-node scripts/repairNaNPropertyFields.ts <span style="color:var(--text-muted);">(dry run)</span>
+        <button class="sel-btn copy-btn" onclick="copyCmd(false)">Copy</button>
+      </div>
+      <div class="code-box">npx ts-node scripts/repairNaNPropertyFields.ts --live <span style="color:var(--text-muted);">(applies fixes)</span>
+        <button class="sel-btn copy-btn" onclick="copyCmd(true)">Copy</button>
+      </div>
+      <div style="max-height:380px;overflow-y:auto;margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortNan('id')" style="cursor:pointer;">Property ID ↕</th>
+              <th onclick="sortNan('ownerId')" style="cursor:pointer;">Owner UID ↕</th>
+              <th onclick="sortNan('mineType')" style="cursor:pointer;">Mine ↕</th>
+              <th onclick="sortNan('fieldCount')" style="cursor:pointer;">Broken Fields ↕</th>
+            </tr>
+          </thead>
+          <tbody id="nanTableBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -316,7 +315,8 @@
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'inline-block';
       document.getElementById('adminEmail').textContent = user.email;
-      loadCachedScan();
+      loadOrphanCache();
+      loadNanCache();
     }
   });
 
@@ -579,58 +579,110 @@
   };
 
   // ── Data Integrity Scan (orphans + NaN, cache-driven) ──────────────────
-  let cacheData = null;
+  // Two independent caches/functions instead of one combined scan — see the
+  // header comment on refreshOrphanCache/refreshNanCache in
+  // functions/src/index.ts for why (client-side deadline-exceeded on the
+  // combined 3-collection scan). The { timeout: 300000 } here matters on
+  // its own too: the Firebase client SDK's httpsCallable() defaults to a
+  // 70-second deadline regardless of the function's own timeoutSeconds
+  // config, so without this override either scan could still time out
+  // client-side even though the function keeps running server-side.
+  let orphanCache = null;
+  let nanCache = null;
   let selectedOrphanIds = new Set();
-  const refreshDataIntegrityCache = httpsCallable(functions, 'refreshDataIntegrityCache');
+  const refreshOrphanCache = httpsCallable(functions, 'refreshOrphanCache', { timeout: 300000 });
+  const refreshNanCache = httpsCallable(functions, 'refreshNanCache', { timeout: 300000 });
 
-  async function loadCachedScan() {
+  async function loadOrphanCache() {
     try {
-      const snap = await getDoc(doc(db, 'adminCache', 'dataIntegrity'));
+      const snap = await getDoc(doc(db, 'adminCache', 'orphans'));
       if (snap.exists()) {
-        cacheData = snap.data();
-        renderScanResults();
+        orphanCache = snap.data();
+        renderOrphanCacheInfo();
       } else {
-        document.getElementById('lastScanLabel').textContent = 'No scan yet — click "Run Scan".';
+        document.getElementById('orphanScanLabel').textContent = 'No scan yet — click "Scan Orphans".';
       }
     } catch(e) {
-      console.error('loadCachedScan failed:', e);
-      document.getElementById('lastScanLabel').textContent = '';
+      console.error('loadOrphanCache failed:', e);
+      document.getElementById('orphanScanLabel').textContent = '';
     }
   }
 
-  window.runScan = async () => {
-    const btn = document.getElementById('scanBtn');
-    const status = document.getElementById('scanStatus');
+  async function loadNanCache() {
+    try {
+      const snap = await getDoc(doc(db, 'adminCache', 'nanIssues'));
+      if (snap.exists()) {
+        nanCache = snap.data();
+        renderNanCacheInfo();
+      } else {
+        document.getElementById('nanScanLabel').textContent = 'No scan yet — click "Scan NaN Issues".';
+      }
+    } catch(e) {
+      console.error('loadNanCache failed:', e);
+      document.getElementById('nanScanLabel').textContent = '';
+    }
+  }
+
+  window.runOrphanScan = async () => {
+    const btn = document.getElementById('orphanScanBtn');
+    const status = document.getElementById('orphanScanStatus');
     btn.disabled = true;
     btn.textContent = '⏳ Scanning…';
-    status.textContent = 'Running full server-side scan (properties + users + propertyDetails) — this can take up to a minute.';
+    status.textContent = 'Scanning properties + users server-side — this can take a minute or two on a large database.';
     try {
-      const result = await refreshDataIntegrityCache();
-      status.textContent = `Scan complete — ${result.data.orphanCount} orphaned, ${result.data.nanCount} with NaN fields.`;
-      await loadCachedScan();
+      const result = await refreshOrphanCache();
+      status.textContent = `Scan complete — ${result.data.orphanCount} orphaned properties found.`;
+      await loadOrphanCache();
     } catch(e) {
       console.error(e);
       status.textContent = 'Scan failed — ' + (e.message || e);
     } finally {
       btn.disabled = false;
-      btn.textContent = '⚙ Run Scan';
+      btn.textContent = '⚙ Scan Orphans';
     }
   };
 
-  function renderScanResults() {
-    if (!cacheData) return;
-    const ts = cacheData.generatedAt ? cacheData.generatedAt.toDate() : null;
-    document.getElementById('lastScanLabel').textContent = ts
-      ? `Last scanned ${ts.toLocaleString()} — ${cacheData.totalProperties} properties, ${cacheData.totalUsers} users`
-      : '';
-    document.getElementById('scanStatus').textContent =
-      `${cacheData.orphanCount} orphaned propert${cacheData.orphanCount !== 1 ? 'ies' : 'y'}, ${cacheData.nanCount} with NaN fields.`;
-    document.getElementById('orphanTabCount').textContent = `(${cacheData.orphanCount})`;
-    document.getElementById('nanTabCount').textContent = `(${cacheData.nanCount})`;
-    document.getElementById('scanResults').style.display = 'block';
+  window.runNanScan = async () => {
+    const btn = document.getElementById('nanScanBtn');
+    const status = document.getElementById('nanScanStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ Scanning…';
+    status.textContent = 'Scanning propertyDetails + properties server-side — this can take a minute or two on a large database.';
+    try {
+      const result = await refreshNanCache();
+      status.textContent = `Scan complete — ${result.data.nanCount} properties with NaN fields.`;
+      await loadNanCache();
+    } catch(e) {
+      console.error(e);
+      status.textContent = 'Scan failed — ' + (e.message || e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚙ Scan NaN Issues';
+    }
+  };
 
+  function renderOrphanCacheInfo() {
+    if (!orphanCache) return;
+    const ts = orphanCache.generatedAt ? orphanCache.generatedAt.toDate() : null;
+    document.getElementById('orphanScanLabel').textContent = ts
+      ? `Last scanned ${ts.toLocaleString()} — ${orphanCache.totalProperties} properties, ${orphanCache.totalUsers} users`
+      : '';
+    document.getElementById('orphanScanStatus').textContent =
+      `${orphanCache.orphanCount} orphaned propert${orphanCache.orphanCount !== 1 ? 'ies' : 'y'}.`;
+    document.getElementById('orphanTabCount').textContent = `(${orphanCache.orphanCount})`;
     selectedOrphanIds = new Set();
     renderOrphanTable();
+  }
+
+  function renderNanCacheInfo() {
+    if (!nanCache) return;
+    const ts = nanCache.generatedAt ? nanCache.generatedAt.toDate() : null;
+    document.getElementById('nanScanLabel').textContent = ts
+      ? `Last scanned ${ts.toLocaleString()} — ${nanCache.totalPropertyDetails} propertyDetails docs`
+      : '';
+    document.getElementById('nanScanStatus').textContent =
+      `${nanCache.nanCount} propert${nanCache.nanCount !== 1 ? 'ies' : 'y'} with NaN fields.`;
+    document.getElementById('nanTabCount').textContent = `(${nanCache.nanCount})`;
     renderNanTable();
   }
 
@@ -643,7 +695,7 @@
 
   function renderOrphanTable() {
     const body = document.getElementById('orphanTableBody');
-    let orphans = (cacheData && cacheData.orphans) || [];
+    let orphans = (orphanCache && orphanCache.orphans) || [];
     if (orphanSortKey) orphans = sortRows(orphans, orphanSortKey, orphanSortDir);
     if (!orphans.length) {
       body.innerHTML = `<tr><td colspan="6" class="empty-msg">No orphaned properties — clean.</td></tr>`;
@@ -667,7 +719,7 @@
     updateDeleteOrphansBtn();
   };
   window.selectAllOrphans = (checked) => {
-    const orphans = (cacheData && cacheData.orphans) || [];
+    const orphans = (orphanCache && orphanCache.orphans) || [];
     if (checked) orphans.forEach(o => selectedOrphanIds.add(o.id));
     else selectedOrphanIds.clear();
     renderOrphanTable();
@@ -689,7 +741,7 @@
     log.innerHTML = `<div style="color:var(--gold);font-weight:600;">Deleting ${ids.length} propert${ids.length !== 1 ? 'ies' : 'y'}…</div>`;
     document.getElementById('deleteOrphansBtn').disabled = true;
 
-    const byId = new Map(cacheData.orphans.map(o => [o.id, o]));
+    const byId = new Map(orphanCache.orphans.map(o => [o.id, o]));
     const succeeded = new Set();
     const CHUNK = 20;
 
@@ -708,19 +760,19 @@
       log.scrollTop = log.scrollHeight;
     }
 
-    cacheData.orphans = cacheData.orphans.filter(o => !succeeded.has(o.id));
-    cacheData.orphanCount = cacheData.orphans.length;
+    orphanCache.orphans = orphanCache.orphans.filter(o => !succeeded.has(o.id));
+    orphanCache.orphanCount = orphanCache.orphans.length;
     succeeded.forEach(id => selectedOrphanIds.delete(id));
-    log.innerHTML += `<div style="color:var(--gold);font-weight:600;border-top:1px solid var(--border);padding-top:8px;margin-top:8px;">Done — ${succeeded.size} deleted. ${cacheData.orphans.length} remaining. (Cache updated locally — run a fresh scan to confirm against Firestore.)</div>`;
+    log.innerHTML += `<div style="color:var(--gold);font-weight:600;border-top:1px solid var(--border);padding-top:8px;margin-top:8px;">Done — ${succeeded.size} deleted. ${orphanCache.orphans.length} remaining. (Cache updated locally — run a fresh scan to confirm against Firestore.)</div>`;
 
     document.getElementById('deleteOrphansBtn').disabled = false;
-    document.getElementById('orphanTabCount').textContent = `(${cacheData.orphanCount})`;
+    document.getElementById('orphanTabCount').textContent = `(${orphanCache.orphanCount})`;
     renderOrphanTable();
   };
 
   function renderNanTable() {
     const body = document.getElementById('nanTableBody');
-    let entries = (cacheData && cacheData.nanEntries) || [];
+    let entries = (nanCache && nanCache.nanEntries) || [];
     if (nanSortKey) entries = sortRows(entries, nanSortKey, nanSortDir);
     if (!entries.length) {
       body.innerHTML = `<tr><td colspan="4" class="empty-msg">No NaN fields found — clean.</td></tr>`;
