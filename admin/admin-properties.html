@@ -189,22 +189,30 @@
     </div>
     <div class="status-bar" id="lookupStatus">Enter a UID, email, or nickname to see that player's properties.</div>
     <div id="lookupResults" style="display:none;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--text-muted);margin-right:auto;">Select rows to delete more than one at a time.</span>
+        <button class="sel-btn" onclick="selectAllLookup(true)">Select All</button>
+        <button class="sel-btn" onclick="selectAllLookup(false)">Deselect All</button>
+        <button class="delete-btn" id="deleteLookupBtn" style="display:none;" onclick="deleteSelectedLookup()">🗑 Delete Selected</button>
+      </div>
       <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
-              <th>Property ID</th>
-              <th>Mine</th>
-              <th>Purchased</th>
-              <th>Prod. Lv</th>
-              <th>Game Lv</th>
-              <th>Data</th>
+              <th style="width:32px;">✓</th>
+              <th onclick="sortLookup('id')" style="cursor:pointer;">Property ID ↕</th>
+              <th onclick="sortLookup('mineType')" style="cursor:pointer;">Mine ↕</th>
+              <th onclick="sortLookup('purchasedAt')" style="cursor:pointer;">Purchased ↕</th>
+              <th onclick="sortLookup('productionLevel')" style="cursor:pointer;">Prod. Lv ↕</th>
+              <th onclick="sortLookup('gameLevel')" style="cursor:pointer;">Game Lv ↕</th>
+              <th onclick="sortLookup('nanFieldCount')" style="cursor:pointer;">Data ↕</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="lookupTableBody"></tbody>
         </table>
       </div>
+      <div id="lookupDeleteLog" style="display:none;background:rgba(0,0,0,0.25);border-radius:8px;padding:12px;font-size:11px;color:var(--text-muted);margin-top:12px;max-height:160px;overflow-y:auto;"></div>
     </div>
   </div>
 
@@ -237,11 +245,11 @@
             <thead>
               <tr>
                 <th style="width:32px;">✓</th>
-                <th>Property ID</th>
-                <th>Owner UID</th>
-                <th>Mine</th>
-                <th>Purchased</th>
-                <th>Lat / Lng</th>
+                <th onclick="sortOrphans('id')" style="cursor:pointer;">Property ID ↕</th>
+                <th onclick="sortOrphans('ownerId')" style="cursor:pointer;">Owner UID ↕</th>
+                <th onclick="sortOrphans('mineType')" style="cursor:pointer;">Mine ↕</th>
+                <th onclick="sortOrphans('purchasedAt')" style="cursor:pointer;">Purchased ↕</th>
+                <th onclick="sortOrphans('centerLat')" style="cursor:pointer;">Lat / Lng ↕</th>
               </tr>
             </thead>
             <tbody id="orphanTableBody"></tbody>
@@ -265,10 +273,10 @@
           <table>
             <thead>
               <tr>
-                <th>Property ID</th>
-                <th>Owner UID</th>
-                <th>Mine</th>
-                <th>Broken Fields</th>
+                <th onclick="sortNan('id')" style="cursor:pointer;">Property ID ↕</th>
+                <th onclick="sortNan('ownerId')" style="cursor:pointer;">Owner UID ↕</th>
+                <th onclick="sortNan('mineType')" style="cursor:pointer;">Mine ↕</th>
+                <th onclick="sortNan('fieldCount')" style="cursor:pointer;">Broken Fields ↕</th>
               </tr>
             </thead>
             <tbody id="nanTableBody"></tbody>
@@ -348,6 +356,51 @@
   }
   function looksLikeUid(s) { return /^[A-Za-z0-9]{20,36}$/.test(s); }
 
+  // Generic sort — all three tables here hold small, already-fetched
+  // arrays (one user's properties, or a cached scan summary), so sorting is
+  // just an in-memory re-order + re-render, no re-fetch needed.
+  // 'nanFieldCount'/'fieldCount' are derived (not stored directly on the row)
+  // so they're computed here rather than requiring every row builder to
+  // carry a redundant count field.
+  function sortRows(rows, key, dir) {
+    return [...rows].sort((a, b) => {
+      let av, bv;
+      if (key === 'nanFieldCount') { av = a.nanFields ? a.nanFields.length : 0; bv = b.nanFields ? b.nanFields.length : 0; }
+      else if (key === 'fieldCount') { av = a.fields ? a.fields.length : 0; bv = b.fields ? b.fields.length : 0; }
+      else { av = a[key]; bv = b[key]; }
+      if (key === 'purchasedAt') { av = av ? new Date(av).getTime() : 0; bv = bv ? new Date(bv).getTime() : 0; }
+      if (av == null) av = '';
+      if (bv == null) bv = '';
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return -dir;
+      if (av > bv) return dir;
+      return 0;
+    });
+  }
+
+  // Per-table sort state. Clicking a header toggles direction if it's
+  // already the active sort key, otherwise selects that column descending
+  // first (dir=-1), matching the old admin page's sortBy() UX.
+  let lastLookupRows = [];
+  let lookupSortKey = null, lookupSortDir = -1;
+  let selectedLookupIds = new Set();
+  let orphanSortKey = null, orphanSortDir = -1;
+  let nanSortKey = null, nanSortDir = -1;
+
+  window.sortLookup = (key) => {
+    if (lookupSortKey === key) lookupSortDir *= -1; else { lookupSortKey = key; lookupSortDir = -1; }
+    renderLookupTable();
+  };
+  window.sortOrphans = (key) => {
+    if (orphanSortKey === key) orphanSortDir *= -1; else { orphanSortKey = key; orphanSortDir = -1; }
+    renderOrphanTable();
+  };
+  window.sortNan = (key) => {
+    if (nanSortKey === key) nanSortDir *= -1; else { nanSortKey = key; nanSortDir = -1; }
+    renderNanTable();
+  };
+
   // ── User Properties Lookup ─────────────────────────────────────────────
   // Every query here is targeted (equality on an indexed field, or a direct
   // doc get) — bounded to one user's data, never a full-collection scan.
@@ -419,7 +472,11 @@
       });
 
       status.textContent = `${userLabel} (${uid}) — ${rows.length} propert${rows.length !== 1 ? 'ies' : 'y'} found.`;
-      renderLookupTable(rows);
+      lastLookupRows = rows;
+      lookupSortKey = null; lookupSortDir = -1;
+      selectedLookupIds = new Set();
+      document.getElementById('lookupDeleteLog').style.display = 'none';
+      renderLookupTable();
       results.style.display = 'block';
     } catch(e) {
       console.error(e);
@@ -429,9 +486,11 @@
     }
   };
 
-  function renderLookupTable(rows) {
+  function renderLookupTable() {
+    const rows = lookupSortKey ? sortRows(lastLookupRows, lookupSortKey, lookupSortDir) : lastLookupRows;
     document.getElementById('lookupTableBody').innerHTML = rows.map(r => `
       <tr>
+        <td><input type="checkbox" data-id="${r.id}" ${selectedLookupIds.has(r.id) ? 'checked' : ''} onchange="toggleLookupSelect('${r.id}', this.checked)" style="cursor:pointer;accent-color:var(--red);"></td>
         <td class="td-muted" style="font-size:11px;">${truncate(r.id, 24)}</td>
         <td>${mineBadge(r.mineType)}</td>
         <td class="td-muted">${shortDate(r.purchasedAt)}</td>
@@ -440,20 +499,83 @@
         <td>${r.nanFields.length ? r.nanFields.map(f => `<span class="nan-badge">${f}</span>`).join('') : '<span class="ok-badge">✓ OK</span>'}</td>
         <td><button class="delete-btn" onclick="deleteOneProperty('${r.id}', this)">🗑</button></td>
       </tr>`).join('');
+    updateDeleteLookupBtn();
   }
+
+  window.toggleLookupSelect = (id, checked) => {
+    if (checked) selectedLookupIds.add(id); else selectedLookupIds.delete(id);
+    updateDeleteLookupBtn();
+  };
+  window.selectAllLookup = (checked) => {
+    if (checked) lastLookupRows.forEach(r => selectedLookupIds.add(r.id));
+    else selectedLookupIds.clear();
+    renderLookupTable();
+  };
+  function updateDeleteLookupBtn() {
+    const n = selectedLookupIds.size;
+    const btn = document.getElementById('deleteLookupBtn');
+    btn.style.display = n > 0 ? 'inline-block' : 'none';
+    btn.textContent = `🗑 Delete ${n} Selected`;
+  }
+
+  // Deletion goes through the adminDeleteProperty Cloud Function, not a
+  // direct client deleteDoc() — properties/propertyDetails were locked to
+  // `allow delete: if false` in firestore.rules Jul 18 (Demolish Mine
+  // feature, forces player demolition through its own tombstone-writing
+  // Cloud Function). Admin SDK bypasses Security Rules, so this function is
+  // what actually lets these buttons work; see the function's header
+  // comment in functions/src/index.ts for the full rationale.
+  const adminDeleteProperty = httpsCallable(functions, 'adminDeleteProperty');
 
   window.deleteOneProperty = async (id, btnEl) => {
     if (!confirm(`Permanently delete property ${id} (and its propertyDetails)?\n\nThis cannot be undone.`)) return;
     btnEl.disabled = true;
     try {
-      await deleteDoc(doc(db, 'properties', id));
-      try { await deleteDoc(doc(db, 'propertyDetails', id)); } catch {}
+      await adminDeleteProperty({ propertyId: id });
       btnEl.closest('tr').style.opacity = '0.4';
       btnEl.textContent = '✅';
+      selectedLookupIds.delete(id);
+      lastLookupRows = lastLookupRows.filter(r => r.id !== id);
+      updateDeleteLookupBtn();
     } catch(e) {
       alert('Delete failed: ' + e.message);
       btnEl.disabled = false;
     }
+  };
+
+  window.deleteSelectedLookup = async () => {
+    const ids = [...selectedLookupIds];
+    if (!ids.length) return;
+    if (!confirm(`⚠️ Permanently delete ${ids.length} propert${ids.length !== 1 ? 'ies' : 'y'} from Firestore?\n\nThis also deletes matching propertyDetails documents.\nThis cannot be undone.`)) return;
+
+    const log = document.getElementById('lookupDeleteLog');
+    log.style.display = 'block';
+    log.innerHTML = `<div style="color:var(--gold);font-weight:600;">Deleting ${ids.length} propert${ids.length !== 1 ? 'ies' : 'y'}…</div>`;
+    document.getElementById('deleteLookupBtn').disabled = true;
+
+    const succeeded = new Set();
+    const CHUNK = 20;
+
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const chunk = ids.slice(i, i + CHUNK);
+      await Promise.all(chunk.map(async (id) => {
+        try {
+          await adminDeleteProperty({ propertyId: id });
+          log.innerHTML += `<div style="color:var(--green);">✅ ${id}</div>`;
+          succeeded.add(id);
+        } catch(e) {
+          log.innerHTML += `<div style="color:var(--red);">❌ ${id}: ${e.message}</div>`;
+        }
+      }));
+      log.scrollTop = log.scrollHeight;
+    }
+
+    lastLookupRows = lastLookupRows.filter(r => !succeeded.has(r.id));
+    succeeded.forEach(id => selectedLookupIds.delete(id));
+    log.innerHTML += `<div style="color:var(--gold);font-weight:600;border-top:1px solid var(--border);padding-top:8px;margin-top:8px;">Done — ${succeeded.size} deleted. ${lastLookupRows.length} remaining.</div>`;
+
+    document.getElementById('deleteLookupBtn').disabled = false;
+    renderLookupTable();
   };
 
   // ── Data Integrity Scan (orphans + NaN, cache-driven) ──────────────────
@@ -521,7 +643,8 @@
 
   function renderOrphanTable() {
     const body = document.getElementById('orphanTableBody');
-    const orphans = (cacheData && cacheData.orphans) || [];
+    let orphans = (cacheData && cacheData.orphans) || [];
+    if (orphanSortKey) orphans = sortRows(orphans, orphanSortKey, orphanSortDir);
     if (!orphans.length) {
       body.innerHTML = `<tr><td colspan="6" class="empty-msg">No orphaned properties — clean.</td></tr>`;
       updateDeleteOrphansBtn();
@@ -575,8 +698,7 @@
       await Promise.all(chunk.map(async (id) => {
         const o = byId.get(id);
         try {
-          await deleteDoc(doc(db, 'properties', id));
-          try { await deleteDoc(doc(db, 'propertyDetails', id)); } catch {}
+          await adminDeleteProperty({ propertyId: id });
           log.innerHTML += `<div style="color:var(--green);">✅ ${id} (${o?.mineType || '?'})</div>`;
           succeeded.add(id);
         } catch(e) {
@@ -598,7 +720,8 @@
 
   function renderNanTable() {
     const body = document.getElementById('nanTableBody');
-    const entries = (cacheData && cacheData.nanEntries) || [];
+    let entries = (cacheData && cacheData.nanEntries) || [];
+    if (nanSortKey) entries = sortRows(entries, nanSortKey, nanSortDir);
     if (!entries.length) {
       body.innerHTML = `<tr><td colspan="4" class="empty-msg">No NaN fields found — clean.</td></tr>`;
       return;
