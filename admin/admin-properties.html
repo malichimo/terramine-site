@@ -24,7 +24,6 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
 
-  /* Header */
   .header {
     background:var(--surface); border-bottom:1px solid var(--border);
     padding:20px 32px; display:flex; align-items:center; justify-content:space-between;
@@ -49,71 +48,54 @@
   }
   .logout-btn:hover { color:var(--red); border-color:var(--red); }
 
-  /* Layout */
-  .main { padding:32px; max-width:1400px; margin:0 auto; }
+  .main { padding:32px; max-width:1200px; margin:0 auto; }
   .section-label {
     font-family:'Syne',sans-serif; font-size:11px; font-weight:700;
     letter-spacing:3px; text-transform:uppercase; color:var(--gold); margin:32px 0 16px;
   }
   .section-label:first-child { margin-top:0; }
+  .section-sub { font-size:11px; color:var(--text-muted); margin:-10px 0 16px; }
 
-  /* Stat cards */
-  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:8px; }
-  .stat-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    padding:20px 24px; position:relative; overflow:hidden; transition:border-color 0.2s;
-  }
-  .stat-card:hover { border-color:rgba(200,146,42,0.35); }
-  .stat-card::before {
-    content:''; position:absolute; top:0; left:0; right:0; height:2px;
-    background:var(--gold); opacity:0.4;
-  }
-  .stat-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; }
-  .stat-value { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--text); line-height:1; }
-  .stat-sub { font-size:11px; color:var(--text-muted); margin-top:6px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; }
 
-  /* Mine type breakdown */
-  .mine-type-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:8px; }
-  .mine-type-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:10px;
-    padding:16px 18px; text-align:center; transition:border-color 0.2s;
+  .search-bar { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .search-input {
+    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-family:'DM Mono',monospace; font-size:12px;
+    padding:10px 14px; outline:none; flex:1; min-width:260px; transition:border-color 0.2s;
   }
-  .mine-type-card:hover { border-color:rgba(200,146,42,0.3); }
-  .mine-emoji { font-size:28px; margin-bottom:8px; }
-  .mine-name { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
-  .mine-count { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; }
-  .mine-pct { font-size:11px; color:var(--text-muted); margin-top:2px; }
-  .count-rock { color:#9e9e9e; }
-  .count-coal { color:#78909c; }
-  .count-gold { color:var(--gold-light); }
-  .count-diamond { color:var(--blue); }
+  .search-input:focus { border-color:var(--gold); }
+  .run-btn {
+    background:var(--amber); color:var(--bg); border:none; padding:10px 22px; border-radius:6px;
+    font-family:'DM Mono',monospace; font-size:12px; font-weight:500; cursor:pointer; transition:background 0.2s; white-space:nowrap;
+  }
+  .run-btn:hover { background:var(--gold-light); }
+  .run-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .delete-btn {
+    background:#c03030; color:white; border:none; padding:8px 16px; border-radius:6px;
+    font-family:'DM Mono',monospace; font-size:11px; font-weight:500; cursor:pointer; transition:background 0.2s;
+  }
+  .delete-btn:hover { background:#e04040; }
+  .delete-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .sel-btn {
+    background:transparent; border:1px solid var(--border); color:var(--text-muted);
+    padding:5px 12px; border-radius:6px; font-family:'DM Mono',monospace; font-size:10px; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .sel-btn:hover { border-color:var(--gold); color:var(--text); }
 
-  /* Table */
-  .table-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-  .table-header {
-    padding:16px 24px; border-bottom:1px solid var(--border);
-    font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--gold-light);
-    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-  }
-  .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; }
   table { width:100%; border-collapse:collapse; font-size:12px; }
   thead th {
-    padding:10px 20px; text-align:left; font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
-    color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--surface2); cursor:pointer;
-    user-select:none; white-space:nowrap;
+    padding:9px 14px; text-align:left; font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--surface2); white-space:nowrap;
   }
-  thead th:hover { color:var(--gold); }
-  tbody tr { border-bottom:1px solid rgba(200,146,42,0.06); transition:background 0.15s; }
+  tbody tr { border-bottom:1px solid rgba(200,146,42,0.06); }
   tbody tr:last-child { border-bottom:none; }
-  tbody tr:hover { background:var(--surface2); cursor:pointer; }
-  tbody td { padding:11px 20px; color:var(--text); }
+  tbody td { padding:10px 14px; color:var(--text); }
   .td-muted { color:var(--text-muted); }
   .td-gold { color:var(--gold-light); font-weight:500; }
-  .td-green { color:var(--green); }
   .td-red { color:var(--red); }
-  .td-blue { color:var(--blue); }
 
-  /* Mine badge */
   .mine-badge {
     display:inline-flex; align-items:center; gap:5px;
     padding:3px 9px; border-radius:20px; font-size:10px; font-weight:500;
@@ -123,93 +105,37 @@
   .mine-gold    { background:rgba(240,184,74,0.12);  color:var(--gold-light); }
   .mine-diamond { background:rgba(74,159,212,0.12);  color:var(--blue); }
 
-  /* Orphan badge */
-  .orphan-badge {
+  .nan-badge {
     display:inline-block; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:600;
-    background:rgba(224,80,80,0.15); color:var(--red); letter-spacing:0.5px;
+    background:rgba(224,80,80,0.15); color:var(--red); letter-spacing:0.3px; margin:2px 3px 2px 0;
   }
+  .ok-badge { color:var(--green); font-size:11px; }
 
-  /* Search bar */
-  .search-bar {
-    display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;
-  }
-  .search-input {
-    background:var(--surface); border:1px solid var(--border); border-radius:8px;
-    color:var(--text); font-family:'DM Mono',monospace; font-size:12px;
-    padding:9px 14px; outline:none; flex:1; min-width:240px; transition:border-color 0.2s;
-  }
-  .search-input:focus { border-color:var(--gold); }
-  .filter-btn {
-    background:var(--surface); border:1px solid var(--border); color:var(--text-muted);
-    padding:7px 13px; border-radius:20px; font-family:'DM Mono',monospace; font-size:11px;
-    cursor:pointer; transition:all 0.15s; white-space:nowrap;
-  }
-  .filter-btn:hover, .filter-btn.active { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
-  .prop-count-label { font-size:11px; color:var(--text-muted); white-space:nowrap; margin-left:4px; }
-
-  /* Orphan cleanup section */
-  .orphan-section {
-    background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    padding:24px; margin-bottom:0;
-  }
-  .orphan-header {
-    display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; flex-wrap:wrap;
-  }
-  .orphan-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; color:var(--gold-light); }
-  .orphan-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
-  .run-btn {
-    background:var(--amber); color:var(--bg); border:none; padding:10px 22px; border-radius:6px;
-    font-family:'DM Mono',monospace; font-size:12px; font-weight:500; cursor:pointer; transition:background 0.2s; white-space:nowrap;
-  }
-  .run-btn:hover { background:var(--gold-light); }
-  .run-btn:disabled { opacity:0.5; cursor:not-allowed; }
-  .delete-btn {
-    background:#c03030; color:white; border:none; padding:10px 22px; border-radius:6px;
-    font-family:'DM Mono',monospace; font-size:12px; font-weight:500; cursor:pointer; transition:background 0.2s;
-    display:none; white-space:nowrap;
-  }
-  .delete-btn:hover { background:#e04040; }
-  .delete-btn:disabled { opacity:0.5; cursor:not-allowed; }
-  .orphan-status {
+  .status-bar {
     background:var(--surface2); border:1px solid var(--border); border-radius:8px;
     padding:11px 16px; font-size:12px; color:var(--text-muted); margin-bottom:14px;
-    display:flex; align-items:center; gap:8px; min-height:42px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:20px;
   }
-  .orphan-toolbar {
-    display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;
-  }
-  .sel-btn {
+  .tab-row { display:flex; gap:8px; margin-bottom:14px; }
+  .tab-btn {
     background:transparent; border:1px solid var(--border); color:var(--text-muted);
-    padding:5px 12px; border-radius:6px; font-family:'DM Mono',monospace; font-size:10px; cursor:pointer;
-    transition:all 0.15s;
+    padding:8px 16px; border-radius:20px; font-family:'DM Mono',monospace; font-size:11px;
+    cursor:pointer; transition:all 0.15s;
   }
-  .sel-btn:hover { border-color:var(--gold); color:var(--text); }
-  .orphan-count-label { font-size:12px; color:var(--text-muted); margin-right:auto; }
-  .delete-log {
-    background:rgba(0,0,0,0.25); border-radius:8px; padding:12px; font-size:11px;
-    color:var(--text-muted); margin-top:12px; max-height:160px; overflow-y:auto; display:none;
+  .tab-btn.active, .tab-btn:hover { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
+  .empty-msg { padding:24px; color:var(--text-muted); font-size:12px; text-align:center; }
+  .code-box {
+    background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px;
+    padding:12px 16px; font-family:'DM Mono',monospace; font-size:11px; color:var(--gold-light);
+    margin:10px 0; overflow-x:auto; white-space:nowrap;
   }
-  .log-ok  { color:var(--green); }
-  .log-err { color:var(--red); }
-  .log-head { color:var(--gold); font-weight:600; margin-bottom:4px; }
-  .log-done { color:var(--gold); font-weight:600; border-top:1px solid var(--border); padding-top:8px; margin-top:8px; }
+  .copy-btn { font-size:10px; margin-left:10px; }
 
-  /* Skeleton */
-  .skeleton {
-    background:linear-gradient(90deg,var(--surface2) 25%,var(--surface) 50%,var(--surface2) 75%);
-    background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:4px; height:32px; width:55%;
-  }
-  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-
-  /* Login overlay */
   .login-overlay {
     position:fixed; inset:0; background:rgba(13,10,7,0.97);
     display:flex; align-items:center; justify-content:center; z-index:999;
   }
-  .login-box {
-    background:var(--surface); border:1px solid var(--border); border-radius:16px;
-    padding:40px; width:340px;
-  }
+  .login-box { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:340px; }
   .login-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); margin-bottom:24px; }
   .login-input {
     width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px;
@@ -218,16 +144,11 @@
   }
   .login-input:focus { border-color:var(--gold); }
 
-  @media (max-width:768px) {
-    .main { padding:16px; }
-    .mine-type-grid { grid-template-columns:repeat(2,1fr); }
-    .stats-grid { grid-template-columns:repeat(2,1fr); }
-  }
+  @media (max-width:768px) { .main { padding:16px; } }
 </style>
 </head>
 <body>
 
-<!-- Login overlay -->
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
     <div class="login-title">⛏️ TerraMine Admin</div>
@@ -238,7 +159,6 @@
   </div>
 </div>
 
-<!-- Header -->
 <div class="header">
   <div class="logo">
     <span class="logo-icon">⛏️</span>
@@ -259,160 +179,102 @@
 
 <div class="main">
 
-  <!-- OVERVIEW STATS -->
-  <div class="section-label">Overview</div>
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Total Properties</div>
-      <div class="stat-value" id="statTotal"><div class="skeleton"></div></div>
-      <div class="stat-sub">All purchased mines</div>
+  <!-- USER PROPERTIES LOOKUP -->
+  <div class="section-label">User Properties Lookup</div>
+  <div class="section-sub">Targeted query — only fetches this one user's properties, never the whole collection.</div>
+  <div class="card">
+    <div class="search-bar">
+      <input class="search-input" id="userLookupInput" type="text" placeholder="UID, email, or nickname…" onkeydown="if(event.key==='Enter') lookupUser()">
+      <button class="run-btn" id="lookupBtn" onclick="lookupUser()">🔍 Look Up</button>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Unique Owners</div>
-      <div class="stat-value" id="statOwners"><div class="skeleton"></div></div>
-      <div class="stat-sub">Players with ≥1 mine</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Avg Per Owner</div>
-      <div class="stat-value" id="statAvg"><div class="skeleton"></div></div>
-      <div class="stat-sub">Mines per player</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Orphaned</div>
-      <div class="stat-value" id="statOrphans" style="color:var(--red);"><div class="skeleton"></div></div>
-      <div class="stat-sub">No matching user</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Purchased This Week</div>
-      <div class="stat-value" id="statWeek"><div class="skeleton"></div></div>
-      <div class="stat-sub">Last 7 days</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Purchased This Month</div>
-      <div class="stat-value" id="statMonth"><div class="skeleton"></div></div>
-      <div class="stat-sub">Last 30 days</div>
-    </div>
-  </div>
-
-  <!-- MINE TYPE BREAKDOWN -->
-  <div class="section-label">Mine Type Breakdown</div>
-  <div class="mine-type-grid">
-    <div class="mine-type-card">
-      <div class="mine-emoji">🪨</div>
-      <div class="mine-name">Rock</div>
-      <div class="mine-count count-rock" id="countRock"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
-      <div class="mine-pct" id="pctRock">—</div>
-    </div>
-    <div class="mine-type-card">
-      <div class="mine-emoji">⚫</div>
-      <div class="mine-name">Coal</div>
-      <div class="mine-count count-coal" id="countCoal"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
-      <div class="mine-pct" id="pctCoal">—</div>
-    </div>
-    <div class="mine-type-card">
-      <div class="mine-emoji">🟡</div>
-      <div class="mine-name">Gold</div>
-      <div class="mine-count count-gold" id="countGold"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
-      <div class="mine-pct" id="pctGold">—</div>
-    </div>
-    <div class="mine-type-card">
-      <div class="mine-emoji">💎</div>
-      <div class="mine-name">Diamond</div>
-      <div class="mine-count count-diamond" id="countDiamond"><div class="skeleton" style="height:28px;width:60%;margin:0 auto;"></div></div>
-      <div class="mine-pct" id="pctDiamond">—</div>
-    </div>
-  </div>
-
-  <!-- ALL PROPERTIES TABLE -->
-  <div class="section-label">All Properties</div>
-
-  <div class="search-bar">
-    <input class="search-input" id="searchInput" type="text" placeholder="Search by property ID, owner UID, or mine type…" oninput="debouncedApplyFilters()">
-    <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">All</button>
-    <button class="filter-btn" data-f="rock" onclick="setFilter('rock',this)">🪨 Rock</button>
-    <button class="filter-btn" data-f="coal" onclick="setFilter('coal',this)">⚫ Coal</button>
-    <button class="filter-btn" data-f="gold" onclick="setFilter('gold',this)">🟡 Gold</button>
-    <button class="filter-btn" data-f="diamond" onclick="setFilter('diamond',this)">💎 Diamond</button>
-    <button class="filter-btn" data-f="orphan" onclick="setFilter('orphan',this)">🔴 Orphaned</button>
-    <span class="prop-count-label" id="propCountLabel">Loading…</span>
-  </div>
-
-  <div class="table-card">
-    <div class="table-header">
-      Properties
-      <span class="table-count" id="tableCount">—</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th onclick="sortBy('id')">Property ID ↕</th>
-          <th onclick="sortBy('mineType')">Mine ↕</th>
-          <th onclick="sortBy('ownerId')">Owner UID ↕</th>
-          <th onclick="sortBy('ownerNickname')">Owner ↕</th>
-          <th onclick="sortBy('purchasedAt')">Purchased ↕</th>
-          <th onclick="sortBy('lastActivityAt')">Last Activity ↕</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="propTableBody">
-        <tr><td colspan="7" style="padding:24px;color:var(--text-muted);font-size:12px;">Loading properties…</td></tr>
-      </tbody>
-    </table>
-    <div id="propPagination" style="display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 24px;border-top:1px solid var(--border);flex-wrap:wrap;"></div>
-  </div>
-
-  <!-- ORPHAN CLEANUP TOOL -->
-  <div class="section-label">Orphan Cleanup</div>
-  <div class="orphan-section">
-    <div class="orphan-header">
-      <div>
-        <div class="orphan-title">🔍 Orphaned Property Cleanup</div>
-        <div class="orphan-sub">Properties whose ownerId has no matching user document — blocks other players from purchasing those grid squares.</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="run-btn" id="scanBtn" onclick="scanOrphans()">⚙ Scan for Orphans</button>
-        <button class="sel-btn" id="refreshBtn" onclick="refreshAndScan()">🔄 Refresh from Firestore</button>
-        <button class="delete-btn" id="deleteBtn" onclick="deleteSelectedOrphans()">🗑 Delete Selected</button>
-      </div>
-    </div>
-
-    <div class="orphan-status" id="orphanStatus">
-      <span id="orphanStatusIcon">○</span>
-      <span id="orphanStatusText">Click "Scan for Orphans" to find properties with no matching user.</span>
-    </div>
-
-    <div id="orphanResults" style="display:none;">
-      <div class="orphan-toolbar">
-        <span class="orphan-count-label">
-          <span id="orphanCount" style="color:var(--red);font-weight:700;">0</span>
-          orphaned propert<span id="orphanPlural">ies</span> found
-          <span id="orphanUidCount" style="color:var(--text-muted);font-size:11px;margin-left:6px;"></span>
-        </span>
-        <button class="sel-btn" onclick="selectAllOrphans(true)">Select All</button>
-        <button class="sel-btn" onclick="selectAllOrphans(false)">Deselect All</button>
-        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);cursor:pointer;">
-          <input type="checkbox" id="groupToggle" onchange="renderOrphanTable()" checked style="accent-color:var(--gold);"> Group by UID
-        </label>
-      </div>
-
-      <div class="table-card" style="max-height:420px;overflow-y:auto;">
+    <div class="status-bar" id="lookupStatus">Enter a UID, email, or nickname to see that player's properties.</div>
+    <div id="lookupResults" style="display:none;">
+      <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
-              <th style="width:36px;">✓</th>
               <th>Property ID</th>
-              <th>Owner UID</th>
               <th>Mine</th>
               <th>Purchased</th>
-              <th>Lat / Lng</th>
+              <th>Prod. Lv</th>
+              <th>Game Lv</th>
+              <th>Data</th>
+              <th></th>
             </tr>
           </thead>
-          <tbody id="orphanTableBody"></tbody>
+          <tbody id="lookupTableBody"></tbody>
         </table>
       </div>
-      <div id="orphanPagination" style="display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 4px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
 
-      <div class="delete-log" id="deleteLog"></div>
+  <!-- DATA INTEGRITY SCAN -->
+  <div class="section-label">Data Integrity Scan</div>
+  <div class="section-sub">Runs a full scan server-side (Cloud Function) and caches the result — the browser never loads the raw collections.</div>
+  <div class="card">
+    <div class="search-bar">
+      <button class="run-btn" id="scanBtn" onclick="runScan()">⚙ Run Scan</button>
+      <span style="font-size:11px;color:var(--text-muted);" id="lastScanLabel">Loading cache…</span>
+    </div>
+    <div class="status-bar" id="scanStatus">Click "Run Scan" for a fresh scan, or wait — showing cached results below if available.</div>
+
+    <div id="scanResults" style="display:none;">
+      <div class="tab-row">
+        <button class="tab-btn active" id="tabOrphans" onclick="setTab('orphans')">🔴 Orphaned <span id="orphanTabCount"></span></button>
+        <button class="tab-btn" id="tabNan" onclick="setTab('nan')">⚠️ NaN Issues <span id="nanTabCount"></span></button>
+      </div>
+
+      <!-- Orphans tab -->
+      <div id="orphanPane">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--text-muted);margin-right:auto;">Properties whose ownerId has no matching user document.</span>
+          <button class="sel-btn" onclick="selectAllOrphans(true)">Select All</button>
+          <button class="sel-btn" onclick="selectAllOrphans(false)">Deselect All</button>
+          <button class="delete-btn" id="deleteOrphansBtn" style="display:none;" onclick="deleteSelectedOrphans()">🗑 Delete Selected</button>
+        </div>
+        <div style="max-height:420px;overflow-y:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:32px;">✓</th>
+                <th>Property ID</th>
+                <th>Owner UID</th>
+                <th>Mine</th>
+                <th>Purchased</th>
+                <th>Lat / Lng</th>
+              </tr>
+            </thead>
+            <tbody id="orphanTableBody"></tbody>
+          </table>
+        </div>
+        <div id="orphanDeleteLog" style="display:none;background:rgba(0,0,0,0.25);border-radius:8px;padding:12px;font-size:11px;color:var(--text-muted);margin-top:12px;max-height:160px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- NaN tab -->
+      <div id="nanPane" style="display:none;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+          Detection only — matches <span class="td-gold">scripts/repairNaNPropertyFields.ts</span>'s exact field checks. Run the script to actually repair these:
+        </div>
+        <div class="code-box">npx ts-node scripts/repairNaNPropertyFields.ts <span style="color:var(--text-muted);">(dry run)</span>
+          <button class="sel-btn copy-btn" onclick="copyCmd(false)">Copy</button>
+        </div>
+        <div class="code-box">npx ts-node scripts/repairNaNPropertyFields.ts --live <span style="color:var(--text-muted);">(applies fixes)</span>
+          <button class="sel-btn copy-btn" onclick="copyCmd(true)">Copy</button>
+        </div>
+        <div style="max-height:380px;overflow-y:auto;margin-top:10px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Property ID</th>
+                <th>Owner UID</th>
+                <th>Mine</th>
+                <th>Broken Fields</th>
+              </tr>
+            </thead>
+            <tbody id="nanTableBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -421,9 +283,10 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
-    getFirestore, collection, getDocs, doc, deleteDoc, getDoc
+    getFirestore, collection, query, where, limit, getDocs, doc, getDoc, deleteDoc
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
@@ -437,14 +300,15 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
+  const functions = getFunctions(app);
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
+  // ── Auth ────────────────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
     if (user) {
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'inline-block';
       document.getElementById('adminEmail').textContent = user.email;
-      loadAll();
+      loadCachedScan();
     }
   });
 
@@ -471,448 +335,240 @@
     if (e.key === 'Enter') window.doLogin();
   });
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
-  function fmt(n) {
-    if (n == null) return '—';
-    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
-    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
-    return Number(n).toLocaleString();
-  }
+  // ── Helpers ─────────────────────────────────────────────────────────────
   function shortDate(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
   }
-  function timeAgo(iso) {
-    if (!iso) return '—';
-    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-    if (diff < 60) return Math.floor(diff) + 's ago';
-    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-    if (diff < 2592000) return Math.floor(diff/86400) + 'd ago';
-    return Math.floor(diff/2592000) + 'mo ago';
-  }
-  function truncate(s, n) { if (!s) return '—'; return s.length > n ? s.substring(0,n) + '…' : s; }
+  function truncate(s, n) { if (!s) return '—'; return (s || '').length > n ? s.substring(0,n) + '…' : (s || '—'); }
   function mineEmoji(t) { return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[t] || '⛏️'; }
   function mineBadge(t) {
     const cls = { rock:'mine-rock', coal:'mine-coal', gold:'mine-gold', diamond:'mine-diamond' }[t] || 'mine-rock';
     return `<span class="mine-badge ${cls}">${mineEmoji(t)} ${t || '—'}</span>`;
   }
+  function looksLikeUid(s) { return /^[A-Za-z0-9]{20,36}$/.test(s); }
 
-  // ── State ───────────────────────────────────────────────────────────────────
-  let allProps = [];
-  let userMap  = {}; // uid → { nickname, email }
-  let userIds  = new Set();
-  let activeFilter = 'all';
-  let sortKey  = 'purchasedAt';
-  let sortDir  = -1;
+  // ── User Properties Lookup ─────────────────────────────────────────────
+  // Every query here is targeted (equality on an indexed field, or a direct
+  // doc get) — bounded to one user's data, never a full-collection scan.
+  window.lookupUser = async () => {
+    const raw = document.getElementById('userLookupInput').value.trim();
+    const status = document.getElementById('lookupStatus');
+    const results = document.getElementById('lookupResults');
+    const btn = document.getElementById('lookupBtn');
+    if (!raw) { status.textContent = 'Enter a UID, email, or nickname first.'; return; }
 
-  // Rendering ~80k <tr> elements in one innerHTML write is what was hanging/
-  // crashing the tab — everything below is paginated client-side instead.
-  let filteredProps = [];
-  let currentPage = 1;
-  const PAGE_SIZE = 100;
-  let searchDebounceTimer = null;
+    btn.disabled = true;
+    status.textContent = 'Looking up user…';
+    results.style.display = 'none';
 
-  let orphanData = [];
-  let selectedOrphanIds = new Set(); // persists selection across orphan pages
-  let orphanPage = 1;
-  const ORPHAN_PAGE_SIZE = 100;
-
-  // ── Load ────────────────────────────────────────────────────────────────────
-  async function loadAll() {
     try {
-      const [propsSnap, usersSnap] = await Promise.all([
-        getDocs(collection(db, 'properties')),
-        getDocs(collection(db, 'users'))
-      ]);
+      let uid = null, userLabel = raw;
 
-      // Build user lookup
-      userMap = {};
-      userIds = new Set();
-      usersSnap.docs.forEach(d => {
-        userIds.add(d.id);
-        userMap[d.id] = { nickname: d.data().nickname || null, email: d.data().email || null };
-      });
+      if (looksLikeUid(raw)) {
+        const uSnap = await getDoc(doc(db, 'users', raw));
+        if (uSnap.exists()) { uid = raw; userLabel = uSnap.data().nickname || uSnap.data().email || raw; }
+      }
+      if (!uid) {
+        const byEmail = await getDocs(query(collection(db,'users'), where('email','==',raw), limit(1)));
+        if (!byEmail.empty) { uid = byEmail.docs[0].id; userLabel = byEmail.docs[0].data().nickname || raw; }
+      }
+      if (!uid) {
+        const byNick = await getDocs(query(collection(db,'users'), where('nickname','==',raw), limit(1)));
+        if (!byNick.empty) { uid = byNick.docs[0].id; userLabel = raw; }
+      }
 
-      allProps = propsSnap.docs.map(d => {
+      if (!uid) {
+        status.textContent = `No account found matching "${raw}" (checked UID, email, nickname).`;
+        btn.disabled = false;
+        return;
+      }
+
+      const propsSnap = await getDocs(query(collection(db,'properties'), where('ownerId','==',uid)));
+      if (propsSnap.empty) {
+        status.textContent = `${userLabel} (${uid}) owns no properties.`;
+        btn.disabled = false;
+        return;
+      }
+
+      // propertyDetails fetched individually for just this user's properties
+      // — small N (a power user might own hundreds, never the ~80k full
+      // collection), so this is cheap regardless of overall database size.
+      const detailsResults = await Promise.all(
+        propsSnap.docs.map(d => getDoc(doc(db, 'propertyDetails', d.id)).catch(() => null))
+      );
+
+      const rows = propsSnap.docs.map((d, i) => {
         const data = d.data();
-        const isOrphan = !!(data.ownerId && !userIds.has(data.ownerId));
-        const user = userMap[data.ownerId] || {};
+        const details = detailsResults[i] && detailsResults[i].exists() ? detailsResults[i].data() : null;
+        const nanFields = [];
+        if (details) {
+          ['productionLevel','gameLevel','gameXP','gamesPlayed','gamesWon'].forEach(f => {
+            if (typeof details[f] === 'number' && Number.isNaN(details[f])) nanFields.push(f);
+          });
+        }
         return {
           id: d.id,
-          ownerId: data.ownerId || '',
-          ownerNickname: user.nickname || user.email?.split('@')[0] || null,
           mineType: data.mineType || '',
           purchasedAt: data.purchasedAt || '',
-          lastActivityAt: data.lastActivityAt || '',
-          centerLat: data.centerLat,
-          centerLng: data.centerLng,
-          isOrphan,
+          productionLevel: details ? details.productionLevel : null,
+          gameLevel: details ? details.gameLevel : null,
+          nanFields,
+          hasDetails: !!details,
         };
       });
 
-      currentPage = 1;
-      computeAndRenderStats();
-      applyFilters();
+      status.textContent = `${userLabel} (${uid}) — ${rows.length} propert${rows.length !== 1 ? 'ies' : 'y'} found.`;
+      renderLookupTable(rows);
+      results.style.display = 'block';
     } catch(e) {
-      console.error('loadAll failed:', e);
-      document.getElementById('propTableBody').innerHTML =
-        '<tr><td colspan="7" style="padding:24px;color:var(--red);font-size:12px;">Failed to load — see console</td></tr>';
+      console.error(e);
+      status.textContent = 'Lookup failed — ' + e.message;
+    } finally {
+      btn.disabled = false;
     }
-  }
-
-  // Stat cards + mine type breakdown, split out of loadAll() so it can be
-  // recomputed from the in-memory allProps after a delete without doing
-  // another full ~80k-document Firestore fetch.
-  function computeAndRenderStats() {
-    const now = Date.now();
-    const week7   = now - 7  * 86400000;
-    const month30 = now - 30 * 86400000;
-
-    let totalByType = { rock:0, coal:0, gold:0, diamond:0 };
-    let weekCount = 0, monthCount = 0, orphanCount = 0;
-    const ownerSet = new Set();
-
-    allProps.forEach(p => {
-      if (p.mineType) totalByType[p.mineType] = (totalByType[p.mineType] || 0) + 1;
-      if (p.ownerId) ownerSet.add(p.ownerId);
-      if (p.isOrphan) orphanCount++;
-      const purchasedMs = p.purchasedAt ? new Date(p.purchasedAt).getTime() : 0;
-      if (purchasedMs > week7)   weekCount++;
-      if (purchasedMs > month30) monthCount++;
-    });
-
-    const total = allProps.length;
-    document.getElementById('statTotal').textContent  = fmt(total);
-    document.getElementById('statOwners').textContent = fmt(ownerSet.size);
-    document.getElementById('statAvg').textContent    = ownerSet.size ? (total / ownerSet.size).toFixed(1) : '—';
-    document.getElementById('statOrphans').textContent = orphanCount || '0';
-    document.getElementById('statWeek').textContent   = fmt(weekCount);
-    document.getElementById('statMonth').textContent  = fmt(monthCount);
-
-    ['rock','coal','gold','diamond'].forEach(t => {
-      const c = totalByType[t] || 0;
-      document.getElementById('count' + t.charAt(0).toUpperCase() + t.slice(1)).textContent = fmt(c);
-      document.getElementById('pct'   + t.charAt(0).toUpperCase() + t.slice(1)).textContent =
-        total ? ((c / total) * 100).toFixed(1) + '% of total' : '—';
-    });
-  }
-
-  // ── Filter / Sort / Pagination ─────────────────────────────────────────────
-  window.setFilter = (f, btn) => {
-    activeFilter = f;
-    currentPage = 1;
-    document.querySelectorAll('[data-f]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    applyFilters();
   };
 
-  // Typing in the search box used to re-filter/re-sort/re-render all ~80k
-  // rows on every keystroke. Debounce so it only runs once typing pauses.
-  window.debouncedApplyFilters = () => {
-    clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => { currentPage = 1; applyFilters(); }, 220);
-  };
-
-  window.applyFilters = () => {
-    const q = (document.getElementById('searchInput').value || '').toLowerCase();
-
-    let filtered = allProps.filter(p => {
-      if (activeFilter === 'orphan' && !p.isOrphan) return false;
-      if (['rock','coal','gold','diamond'].includes(activeFilter) && p.mineType !== activeFilter) return false;
-      if (q) {
-        if (!p.id.toLowerCase().includes(q) &&
-            !p.ownerId.toLowerCase().includes(q) &&
-            !(p.mineType || '').toLowerCase().includes(q) &&
-            !(p.ownerNickname || '').toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
-
-    // Sort
-    filtered.sort((a, b) => {
-      let av = a[sortKey], bv = b[sortKey];
-      if (sortKey === 'purchasedAt' || sortKey === 'lastActivityAt') {
-        av = av ? new Date(av).getTime() : 0;
-        bv = bv ? new Date(bv).getTime() : 0;
-      }
-      av = av ?? ''; bv = bv ?? '';
-      if (typeof av === 'string') av = av.toLowerCase();
-      if (typeof bv === 'string') bv = bv.toLowerCase();
-      return av < bv ? -sortDir : av > bv ? sortDir : 0;
-    });
-
-    filteredProps = filtered;
-    const totalPages = Math.max(1, Math.ceil(filteredProps.length / PAGE_SIZE));
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
-
-    document.getElementById('tableCount').textContent = filteredProps.length + ' properties';
-    document.getElementById('propCountLabel').textContent = filteredProps.length + ' of ' + allProps.length + ' properties';
-
-    // Only ever render one page's worth of rows — rendering all ~80k <tr>
-    // elements in a single innerHTML write is what was hanging the tab.
-    const start = (currentPage - 1) * PAGE_SIZE;
-    renderTable(filteredProps.slice(start, start + PAGE_SIZE));
-    renderPropPagination(totalPages);
-  };
-
-  window.sortBy = (key) => {
-    if (sortKey === key) sortDir *= -1;
-    else { sortKey = key; sortDir = -1; }
-    currentPage = 1;
-    applyFilters();
-  };
-
-  function renderPropPagination(totalPages) {
-    const el = document.getElementById('propPagination');
-    if (!el) return;
-    if (filteredProps.length <= PAGE_SIZE) { el.innerHTML = ''; return; }
-    const start = (currentPage - 1) * PAGE_SIZE + 1;
-    const end = Math.min(currentPage * PAGE_SIZE, filteredProps.length);
-    el.innerHTML = `
-      <button class="sel-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="goToPropPage(${currentPage - 1})">← Prev</button>
-      <span style="font-size:11px;color:var(--text-muted);">Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${filteredProps.length.toLocaleString()} · Page ${currentPage} of ${totalPages}</span>
-      <button class="sel-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goToPropPage(${currentPage + 1})">Next →</button>
-      <span style="display:flex;align-items:center;gap:4px;margin-left:8px;">
-        <input type="number" id="propPageJump" min="1" max="${totalPages}" placeholder="page #" style="width:64px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:4px 6px;">
-        <button class="sel-btn" onclick="jumpToPropPage(${totalPages})">Go</button>
-      </span>
-    `;
-  }
-
-  window.goToPropPage = (p) => {
-    const totalPages = Math.max(1, Math.ceil(filteredProps.length / PAGE_SIZE));
-    currentPage = Math.max(1, Math.min(totalPages, p));
-    const start = (currentPage - 1) * PAGE_SIZE;
-    renderTable(filteredProps.slice(start, start + PAGE_SIZE));
-    renderPropPagination(totalPages);
-  };
-
-  window.jumpToPropPage = (totalPages) => {
-    const input = document.getElementById('propPageJump');
-    let val = parseInt(input && input.value);
-    if (isNaN(val)) return;
-    goToPropPage(val);
-  };
-
-  function renderTable(props) {
-    if (!props.length) {
-      document.getElementById('propTableBody').innerHTML =
-        '<tr><td colspan="7" style="padding:24px;color:var(--text-muted);font-size:12px;">No properties match this filter.</td></tr>';
-      return;
-    }
-    document.getElementById('propTableBody').innerHTML = props.map(p => `
+  function renderLookupTable(rows) {
+    document.getElementById('lookupTableBody').innerHTML = rows.map(r => `
       <tr>
-        <td class="td-muted" style="font-size:11px;">${truncate(p.id, 22)}</td>
-        <td>${mineBadge(p.mineType)}</td>
-        <td class="td-muted" style="font-size:10px;">${truncate(p.ownerId, 20)}</td>
-        <td class="td-gold">${truncate(p.ownerNickname || '(deleted)', 18)}</td>
-        <td class="td-muted">${shortDate(p.purchasedAt)}</td>
-        <td class="td-muted">${timeAgo(p.lastActivityAt)}</td>
-        <td>${p.isOrphan ? '<span class="orphan-badge">ORPHAN</span>' : '<span style="color:var(--green);font-size:11px;">✓ OK</span>'}</td>
+        <td class="td-muted" style="font-size:11px;">${truncate(r.id, 24)}</td>
+        <td>${mineBadge(r.mineType)}</td>
+        <td class="td-muted">${shortDate(r.purchasedAt)}</td>
+        <td class="td-muted">${r.productionLevel ?? (r.hasDetails ? '—' : '<span class="td-red">no details</span>')}</td>
+        <td class="td-muted">${r.gameLevel ?? (r.hasDetails ? '—' : '')}</td>
+        <td>${r.nanFields.length ? r.nanFields.map(f => `<span class="nan-badge">${f}</span>`).join('') : '<span class="ok-badge">✓ OK</span>'}</td>
+        <td><button class="delete-btn" onclick="deleteOneProperty('${r.id}', this)">🗑</button></td>
       </tr>`).join('');
   }
 
-  // ── Orphan Cleanup ──────────────────────────────────────────────────────────
-  // Scans the properties already loaded for the main table (in-memory
-  // isOrphan flag computed in loadAll()) instead of re-fetching all ~80k
-  // property docs a second time — that duplicate fetch, combined with
-  // rendering every row in one shot, was what hung the page.
-  window.scanOrphans = async () => {
-    const btn = document.getElementById('scanBtn');
-    const statusIcon = document.getElementById('orphanStatusIcon');
-    const statusText = document.getElementById('orphanStatusText');
-    const results    = document.getElementById('orphanResults');
-    const deleteLog  = document.getElementById('deleteLog');
+  window.deleteOneProperty = async (id, btnEl) => {
+    if (!confirm(`Permanently delete property ${id} (and its propertyDetails)?\n\nThis cannot be undone.`)) return;
+    btnEl.disabled = true;
+    try {
+      await deleteDoc(doc(db, 'properties', id));
+      try { await deleteDoc(doc(db, 'propertyDetails', id)); } catch {}
+      btnEl.closest('tr').style.opacity = '0.4';
+      btnEl.textContent = '✅';
+    } catch(e) {
+      alert('Delete failed: ' + e.message);
+      btnEl.disabled = false;
+    }
+  };
 
+  // ── Data Integrity Scan (orphans + NaN, cache-driven) ──────────────────
+  let cacheData = null;
+  let selectedOrphanIds = new Set();
+  const refreshDataIntegrityCache = httpsCallable(functions, 'refreshDataIntegrityCache');
+
+  async function loadCachedScan() {
+    try {
+      const snap = await getDoc(doc(db, 'adminCache', 'dataIntegrity'));
+      if (snap.exists()) {
+        cacheData = snap.data();
+        renderScanResults();
+      } else {
+        document.getElementById('lastScanLabel').textContent = 'No scan yet — click "Run Scan".';
+      }
+    } catch(e) {
+      console.error('loadCachedScan failed:', e);
+      document.getElementById('lastScanLabel').textContent = '';
+    }
+  }
+
+  window.runScan = async () => {
+    const btn = document.getElementById('scanBtn');
+    const status = document.getElementById('scanStatus');
     btn.disabled = true;
     btn.textContent = '⏳ Scanning…';
-    statusIcon.textContent = '⏳';
-    statusText.textContent = 'Checking loaded properties…';
-    results.style.display = 'none';
-    deleteLog.style.display = 'none';
-    orphanData = [];
-    selectedOrphanIds = new Set();
-    orphanPage = 1;
-
+    status.textContent = 'Running full server-side scan (properties + users + propertyDetails) — this can take up to a minute.';
     try {
-      if (!allProps.length) {
-        statusText.textContent = 'Loading properties and users…';
-        await loadAll();
-      }
-
-      orphanData = allProps
-        .filter(p => p.isOrphan)
-        .map(p => ({
-          id: p.id,
-          ownerId: p.ownerId || '—',
-          mineType: p.mineType || '—',
-          purchasedAt: p.purchasedAt ? p.purchasedAt.slice(0,10) : '—',
-          centerLat: typeof p.centerLat === 'number' ? p.centerLat.toFixed(4) : '—',
-          centerLng: typeof p.centerLng === 'number' ? p.centerLng.toFixed(4) : '—',
-        }));
-
-      renderOrphanSummary(statusIcon, statusText, results);
+      const result = await refreshDataIntegrityCache();
+      status.textContent = `Scan complete — ${result.data.orphanCount} orphaned, ${result.data.nanCount} with NaN fields.`;
+      await loadCachedScan();
     } catch(e) {
-      statusIcon.textContent = '❌';
-      statusText.textContent = 'Scan failed — ' + e.message;
       console.error(e);
+      status.textContent = 'Scan failed — ' + (e.message || e);
     } finally {
       btn.disabled = false;
-      btn.textContent = '⚙ Scan for Orphans';
+      btn.textContent = '⚙ Run Scan';
     }
   };
 
-  // Forces a fresh ~80k-doc pull (properties + users) before scanning —
-  // for when data may have changed elsewhere and the cached copy is stale.
-  window.refreshAndScan = async () => {
-    const refreshBtn = document.getElementById('refreshBtn');
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = '⏳ Refreshing…';
-    try {
-      await loadAll();
-      await scanOrphans();
-    } finally {
-      refreshBtn.disabled = false;
-      refreshBtn.textContent = '🔄 Refresh from Firestore';
-    }
-  };
+  function renderScanResults() {
+    if (!cacheData) return;
+    const ts = cacheData.generatedAt ? cacheData.generatedAt.toDate() : null;
+    document.getElementById('lastScanLabel').textContent = ts
+      ? `Last scanned ${ts.toLocaleString()} — ${cacheData.totalProperties} properties, ${cacheData.totalUsers} users`
+      : '';
+    document.getElementById('scanStatus').textContent =
+      `${cacheData.orphanCount} orphaned propert${cacheData.orphanCount !== 1 ? 'ies' : 'y'}, ${cacheData.nanCount} with NaN fields.`;
+    document.getElementById('orphanTabCount').textContent = `(${cacheData.orphanCount})`;
+    document.getElementById('nanTabCount').textContent = `(${cacheData.nanCount})`;
+    document.getElementById('scanResults').style.display = 'block';
 
-  function renderOrphanSummary(statusIcon, statusText, results) {
-    const uidSet = new Set(orphanData.map(o => o.ownerId));
-    document.getElementById('orphanCount').textContent = orphanData.length;
-    document.getElementById('orphanPlural').textContent = orphanData.length === 1 ? 'y' : 'ies';
-    document.getElementById('orphanUidCount').textContent =
-      `across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}`;
-
-    if (orphanData.length === 0) {
-      statusIcon.textContent = '✅';
-      statusText.textContent = 'No orphaned properties found — database is clean.';
-      results.style.display = 'none';
-    } else {
-      statusIcon.textContent = '⚠️';
-      statusText.textContent =
-        `${orphanData.length} orphaned propert${orphanData.length !== 1 ? 'ies' : 'y'} found across ${uidSet.size} deleted account${uidSet.size !== 1 ? 's' : ''}.`;
-      results.style.display = 'block';
-      renderOrphanTable();
-    }
-  }
-
-  // Orphan table is paginated too — some UID cleanups here run into the
-  // thousands, and selection state lives in a Set keyed by property id so
-  // it survives moving between pages (checkboxes alone wouldn't).
-  window.renderOrphanTable = () => {
-    const body    = document.getElementById('orphanTableBody');
-    const grouped = document.getElementById('groupToggle').checked;
-    body.innerHTML = '';
-
-    let rows = [...orphanData];
-    if (grouped) rows.sort((a,b) => a.ownerId.localeCompare(b.ownerId));
-
-    const totalPages = Math.max(1, Math.ceil(rows.length / ORPHAN_PAGE_SIZE));
-    if (orphanPage > totalPages) orphanPage = totalPages;
-    if (orphanPage < 1) orphanPage = 1;
-    const start = (orphanPage - 1) * ORPHAN_PAGE_SIZE;
-    const pageRows = rows.slice(start, start + ORPHAN_PAGE_SIZE);
-
-    let lastUid = null;
-    pageRows.forEach((o) => {
-      if (grouped && o.ownerId !== lastUid) {
-        lastUid = o.ownerId;
-        const groupCount = orphanData.filter(r => r.ownerId === o.ownerId).length;
-        const tr = document.createElement('tr');
-        tr.style.cssText = 'background:rgba(200,146,42,0.05);';
-        tr.innerHTML = `<td colspan="6" style="padding:8px 20px;color:var(--gold);font-size:10px;font-weight:700;letter-spacing:0.5px;border-top:1px solid var(--border);">
-          UID: ${o.ownerId}
-          <span style="color:var(--text-muted);font-weight:400;margin-left:8px;">(${groupCount} propert${groupCount !== 1 ? 'ies' : 'y'})</span>
-          <button onclick="selectByUid('${o.ownerId}',true)" style="margin-left:10px;background:transparent;border:1px solid rgba(200,146,42,0.3);color:var(--gold);border-radius:4px;padding:2px 8px;font-size:9px;cursor:pointer;">Select all</button>
-          <button onclick="selectByUid('${o.ownerId}',false)" style="margin-left:4px;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:4px;padding:2px 8px;font-size:9px;cursor:pointer;">Deselect</button>
-        </td>`;
-        body.appendChild(tr);
-      }
-
-      const tr = document.createElement('tr');
-      const checked = selectedOrphanIds.has(o.id);
-      tr.innerHTML = `
-        <td style="padding:9px 20px;"><input type="checkbox" data-id="${o.id}" ${checked ? 'checked' : ''} onchange="toggleOrphanSelect('${o.id}', this.checked)" style="cursor:pointer;accent-color:var(--red);"></td>
-        <td class="td-muted" style="font-size:11px;">${o.id}</td>
-        <td class="td-muted" style="font-size:10px;color:var(--red);">${grouped ? '↳' : o.ownerId}</td>
-        <td>${mineBadge(o.mineType)}</td>
-        <td class="td-muted">${o.purchasedAt}</td>
-        <td class="td-muted">${o.centerLat}, ${o.centerLng}</td>`;
-      body.appendChild(tr);
-    });
-
-    renderOrphanPagination(totalPages, rows.length);
-    updateDeleteBtn();
-  };
-
-  function renderOrphanPagination(totalPages, totalRows) {
-    const el = document.getElementById('orphanPagination');
-    if (!el) return;
-    if (totalRows <= ORPHAN_PAGE_SIZE) { el.innerHTML = ''; return; }
-    const start = (orphanPage - 1) * ORPHAN_PAGE_SIZE + 1;
-    const end = Math.min(orphanPage * ORPHAN_PAGE_SIZE, totalRows);
-    el.innerHTML = `
-      <button class="sel-btn" ${orphanPage <= 1 ? 'disabled' : ''} onclick="goToOrphanPage(${orphanPage - 1})">← Prev</button>
-      <span style="font-size:11px;color:var(--text-muted);">Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${totalRows.toLocaleString()} · Page ${orphanPage} of ${totalPages}</span>
-      <button class="sel-btn" ${orphanPage >= totalPages ? 'disabled' : ''} onclick="goToOrphanPage(${orphanPage + 1})">Next →</button>
-    `;
-  }
-
-  window.goToOrphanPage = (p) => {
-    orphanPage = p;
+    selectedOrphanIds = new Set();
     renderOrphanTable();
+    renderNanTable();
+  }
+
+  window.setTab = (tab) => {
+    document.getElementById('tabOrphans').classList.toggle('active', tab === 'orphans');
+    document.getElementById('tabNan').classList.toggle('active', tab === 'nan');
+    document.getElementById('orphanPane').style.display = tab === 'orphans' ? 'block' : 'none';
+    document.getElementById('nanPane').style.display = tab === 'nan' ? 'block' : 'none';
   };
+
+  function renderOrphanTable() {
+    const body = document.getElementById('orphanTableBody');
+    const orphans = (cacheData && cacheData.orphans) || [];
+    if (!orphans.length) {
+      body.innerHTML = `<tr><td colspan="6" class="empty-msg">No orphaned properties — clean.</td></tr>`;
+      updateDeleteOrphansBtn();
+      return;
+    }
+    body.innerHTML = orphans.map(o => `
+      <tr>
+        <td><input type="checkbox" data-id="${o.id}" ${selectedOrphanIds.has(o.id) ? 'checked' : ''} onchange="toggleOrphanSelect('${o.id}', this.checked)" style="cursor:pointer;accent-color:var(--red);"></td>
+        <td class="td-muted" style="font-size:11px;">${o.id}</td>
+        <td class="td-red" style="font-size:10px;">${o.ownerId}</td>
+        <td>${mineBadge(o.mineType)}</td>
+        <td class="td-muted">${shortDate(o.purchasedAt)}</td>
+        <td class="td-muted">${o.centerLat != null ? o.centerLat.toFixed(4) : '—'}, ${o.centerLng != null ? o.centerLng.toFixed(4) : '—'}</td>
+      </tr>`).join('');
+    updateDeleteOrphansBtn();
+  }
 
   window.toggleOrphanSelect = (id, checked) => {
     if (checked) selectedOrphanIds.add(id); else selectedOrphanIds.delete(id);
-    updateDeleteBtn();
+    updateDeleteOrphansBtn();
   };
-
-  // Select All / Deselect All apply to every orphan found, not just the
-  // ones currently visible on this page.
   window.selectAllOrphans = (checked) => {
-    if (checked) orphanData.forEach(o => selectedOrphanIds.add(o.id));
+    const orphans = (cacheData && cacheData.orphans) || [];
+    if (checked) orphans.forEach(o => selectedOrphanIds.add(o.id));
     else selectedOrphanIds.clear();
     renderOrphanTable();
   };
-
-  window.selectByUid = (uid, checked) => {
-    orphanData.forEach(o => {
-      if (o.ownerId === uid) {
-        if (checked) selectedOrphanIds.add(o.id); else selectedOrphanIds.delete(o.id);
-      }
-    });
-    renderOrphanTable();
-  };
-
-  window.updateDeleteBtn = () => {
+  function updateDeleteOrphansBtn() {
     const n = selectedOrphanIds.size;
-    const btn = document.getElementById('deleteBtn');
+    const btn = document.getElementById('deleteOrphansBtn');
     btn.style.display = n > 0 ? 'inline-block' : 'none';
     btn.textContent = `🗑 Delete ${n} Selected`;
-  };
+  }
 
   window.deleteSelectedOrphans = async () => {
     const ids = [...selectedOrphanIds];
     if (!ids.length) return;
     if (!confirm(`⚠️ Permanently delete ${ids.length} orphaned propert${ids.length !== 1 ? 'ies' : 'y'} from Firestore?\n\nThis also deletes matching propertyDetails documents.\nThis cannot be undone.`)) return;
 
-    const log = document.getElementById('deleteLog');
+    const log = document.getElementById('orphanDeleteLog');
     log.style.display = 'block';
-    log.innerHTML = `<div class="log-head">Deleting ${ids.length} propert${ids.length !== 1 ? 'ies' : 'y'}…</div>`;
+    log.innerHTML = `<div style="color:var(--gold);font-weight:600;">Deleting ${ids.length} propert${ids.length !== 1 ? 'ies' : 'y'}…</div>`;
+    document.getElementById('deleteOrphansBtn').disabled = true;
 
-    const deleteBtn = document.getElementById('deleteBtn');
-    deleteBtn.disabled = true;
-
-    const byId = new Map(orphanData.map(o => [o.id, o]));
+    const byId = new Map(cacheData.orphans.map(o => [o.id, o]));
     const succeeded = new Set();
-    let ok = 0, fail = 0;
-    const CHUNK = 20; // concurrency-limited batches, same pattern used elsewhere
-                      // in TerraMine for large deletes/reads — avoids hammering
-                      // Firestore or freezing the tab on big cleanups
+    const CHUNK = 20;
 
     for (let i = 0; i < ids.length; i += CHUNK) {
       const chunk = ids.slice(i, i + CHUNK);
@@ -921,42 +577,47 @@
         try {
           await deleteDoc(doc(db, 'properties', id));
           try { await deleteDoc(doc(db, 'propertyDetails', id)); } catch {}
-          log.innerHTML += `<div class="log-ok">✅ ${id} (${o?.mineType || '?'}, UID: ${(o?.ownerId || '').slice(0,8)}…)</div>`;
+          log.innerHTML += `<div style="color:var(--green);">✅ ${id} (${o?.mineType || '?'})</div>`;
           succeeded.add(id);
-          ok++;
         } catch(e) {
-          log.innerHTML += `<div class="log-err">❌ ${id}: ${e.message}</div>`;
-          fail++;
+          log.innerHTML += `<div style="color:var(--red);">❌ ${id}: ${e.message}</div>`;
         }
       }));
       log.scrollTop = log.scrollHeight;
     }
 
-    orphanData = orphanData.filter(o => !succeeded.has(o.id));
+    cacheData.orphans = cacheData.orphans.filter(o => !succeeded.has(o.id));
+    cacheData.orphanCount = cacheData.orphans.length;
     succeeded.forEach(id => selectedOrphanIds.delete(id));
+    log.innerHTML += `<div style="color:var(--gold);font-weight:600;border-top:1px solid var(--border);padding-top:8px;margin-top:8px;">Done — ${succeeded.size} deleted. ${cacheData.orphans.length} remaining. (Cache updated locally — run a fresh scan to confirm against Firestore.)</div>`;
 
-    log.innerHTML += `<div class="log-done">Done — ${ok} deleted${fail > 0 ? `, ${fail} failed` : ''}. ${orphanData.length} orphan${orphanData.length !== 1 ? 's' : ''} remaining.</div>`;
-    log.scrollTop = log.scrollHeight;
-
-    const statusIcon = document.getElementById('orphanStatusIcon');
-    const statusText = document.getElementById('orphanStatusText');
-    statusIcon.textContent = orphanData.length === 0 ? '✅' : '⚠️';
-    statusText.textContent = orphanData.length === 0
-      ? 'All orphans deleted — database is clean.'
-      : `${orphanData.length} orphaned propert${orphanData.length !== 1 ? 'ies' : 'y'} remaining.`;
-
-    deleteBtn.disabled = false;
+    document.getElementById('deleteOrphansBtn').disabled = false;
+    document.getElementById('orphanTabCount').textContent = `(${cacheData.orphanCount})`;
     renderOrphanTable();
-
-    // Drop the deleted docs from the in-memory property list + stats
-    // directly instead of re-fetching all ~80k property docs again.
-    allProps = allProps.filter(p => !succeeded.has(p.id));
-    computeAndRenderStats();
-    applyFilters();
   };
 
-  // Expose mineBadge for orphan table (mineEmoji already defined above)
-  window.mineBadge = mineBadge;
+  function renderNanTable() {
+    const body = document.getElementById('nanTableBody');
+    const entries = (cacheData && cacheData.nanEntries) || [];
+    if (!entries.length) {
+      body.innerHTML = `<tr><td colspan="4" class="empty-msg">No NaN fields found — clean.</td></tr>`;
+      return;
+    }
+    body.innerHTML = entries.map(n => `
+      <tr>
+        <td class="td-muted" style="font-size:11px;">${n.id}</td>
+        <td class="td-red" style="font-size:10px;">${n.ownerId}</td>
+        <td>${mineBadge(n.mineType)}</td>
+        <td>${n.fields.map(f => `<span class="nan-badge">${f}</span>`).join('')}</td>
+      </tr>`).join('');
+  }
+
+  window.copyCmd = (live) => {
+    const cmd = live
+      ? 'npx ts-node scripts/repairNaNPropertyFields.ts --live'
+      : 'npx ts-node scripts/repairNaNPropertyFields.ts';
+    navigator.clipboard.writeText(cmd).catch(() => {});
+  };
 </script>
 </body>
 </html>
