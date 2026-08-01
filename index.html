@@ -168,7 +168,9 @@
     function updateScrollTopButton() {
       const button = document.getElementById('scrollTopBtn');
       if (!button) return;
-      button.classList.toggle('visible', window.scrollY > 320);
+      const isVisible = window.scrollY > 320;
+      button.classList.toggle('visible', isVisible);
+      button.style.display = isVisible ? 'flex' : 'none';
     }
 
     window.scrollToTop = function() {
@@ -377,7 +379,7 @@
     <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
   </footer>
 
-  <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()">↑</button>
+  <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()" style="position: fixed; right: 28px; bottom: 28px; width: 48px; height: 48px; border-radius: 999px; border: 1px solid rgba(91,229,208,0.35); background: rgba(15,22,32,0.92); color: #5BE5D0; display: none; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; z-index: 80; box-shadow: 0 12px 32px rgba(0,0,0,0.32); transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;">↑</button>
 
 </body>
 </html>
