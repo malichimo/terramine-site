@@ -921,7 +921,7 @@ footer {
   border-top: 1px solid var(--border);
   max-width: 920px;
   width: 100%;
-  margin: clamp(72px, 10vw, 100px) auto 0;
+  margin: clamp(12px, 2vw, 24px) auto 0;
   padding: 48px clamp(36px, 4.5vw, 56px) 36px;
   display: flex;
   align-items: center;
