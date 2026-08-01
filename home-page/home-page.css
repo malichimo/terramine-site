@@ -914,6 +914,35 @@ section.content {
   padding: 16px;
 }
 
+.scroll-top-btn {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(91,229,208,0.35);
+  background: rgba(15,22,32,0.92);
+  color: var(--cyan);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 80;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.32);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.scroll-top-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(91,229,208,0.7);
+  background: rgba(20,30,43,0.98);
+  color: var(--white);
+}
+.scroll-top-btn.visible { display: flex; }
+
 /* ── FOOTER ── */
 footer {
   position: relative;
@@ -1116,4 +1145,5 @@ footer {
   .community-card { padding: 16px; }
   .community-copy { font-size: 15px; margin-bottom: 18px; }
   footer { flex-direction: column; align-items: flex-start; padding: 32px 16px 24px; }
+  .scroll-top-btn { right: 16px; bottom: 16px; width: 44px; height: 44px; font-size: 20px; }
 }

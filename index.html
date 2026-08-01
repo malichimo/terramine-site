@@ -165,6 +165,20 @@
       });
     }
 
+    function updateScrollTopButton() {
+      const button = document.getElementById('scrollTopBtn');
+      if (!button) return;
+      button.classList.toggle('visible', window.scrollY > 320);
+    }
+
+    window.scrollToTop = function() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('scroll', updateScrollTopButton, { passive: true });
+    window.addEventListener('load', updateScrollTopButton);
+    updateScrollTopButton();
+
     async function loadDiscordCommunity() {
       const inviteLink = document.getElementById('discord-invite-link');
       const onlineCount = document.getElementById('discord-online-count');
@@ -362,6 +376,8 @@
     </div>
     <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
   </footer>
+
+  <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()">↑</button>
 
 </body>
 </html>
