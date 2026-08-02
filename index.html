@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TerraMine — Stake a Claim. Visit Friends. Earn Money.</title>
   <meta name="description" content="Buy virtual properties on a real-world map, visit other players' mines to earn TerraBucks, and watch your passive income grow around the clock." />
-  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="home-page/home-page.css" />
@@ -13,7 +13,7 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="/">⛏ Terra<span>Mine</span></a>
+    <a class="nav-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 32px; width: auto;" /> <span style="font-size: 0.9em;">TerraMine</span></a>
     <div class="nav-links" id="nav-links-menu">
       <a href="#mines">Mine Types</a>
       <a href="#how">How It Works</a>
@@ -164,6 +164,22 @@
         if (window.innerWidth > 1024) closeMenu();
       });
     }
+
+    function updateScrollTopButton() {
+      const button = document.getElementById('scrollTopBtn');
+      if (!button) return;
+      const isVisible = window.scrollY > 320;
+      button.classList.toggle('visible', isVisible);
+      button.style.display = isVisible ? 'flex' : 'none';
+    }
+
+    window.scrollToTop = function() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('scroll', updateScrollTopButton, { passive: true });
+    window.addEventListener('load', updateScrollTopButton);
+    updateScrollTopButton();
 
     async function loadDiscordCommunity() {
       const inviteLink = document.getElementById('discord-invite-link');
@@ -351,7 +367,7 @@
 
   <!-- ── FOOTER ── -->
   <footer>
-    <a class="footer-logo" href="/">⛏ TerraMine</a>
+    <a class="footer-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 32px; width: auto;" /> <span style="font-size: 0.9em;">TerraMine</span></a>
     <div class="footer-links">
       <a href="/heatmap.html">World Map</a>
       <a href="/privacy.html">Privacy Policy</a>
@@ -362,6 +378,8 @@
     </div>
     <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
   </footer>
+
+  <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()" style="position: fixed; right: 28px; bottom: 28px; width: 48px; height: 48px; border-radius: 999px; border: 1px solid rgba(91,229,208,0.35); background: rgba(15,22,32,0.92); color: #5BE5D0; display: none; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; z-index: 80; box-shadow: 0 12px 32px rgba(0,0,0,0.32); transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;">↑</button>
 
 </body>
 </html>
