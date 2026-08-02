@@ -424,6 +424,28 @@
     white-space: nowrap;
   }
   .mark-read-btn:hover { border-color: var(--green); color: var(--green); }
+  /* Feedback reply (Aug 2, 2026 — notification-bell feature) */
+  .feedback-reply-section { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .feedback-reply-existing {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .feedback-reply-label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+  .feedback-reply-text { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-wrap; margin-bottom: 8px; }
+  .reply-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .reply-toggle-btn:hover { background: var(--gold); color: var(--bg); }
+  .feedback-reply-form { margin-top: 10px; }
 
   /* Notification editor */
   .notif-editor {
@@ -703,6 +725,7 @@
       <div class="feedback-filter">
         <button class="filter-btn active" onclick="filterFeedback('all', this)">All</button>
         <button class="filter-btn" onclick="filterFeedback('new', this)">🔴 New</button>
+        <button class="filter-btn" onclick="filterFeedback('unreplied', this)">💬 Awaiting Reply</button>
         <button class="filter-btn" onclick="filterFeedback('bug', this)">🐛 Bug Reports</button>
         <button class="filter-btn" onclick="filterFeedback('feature', this)">✨ Feature Requests</button>
         <button class="filter-btn" onclick="filterFeedback('general', this)">💬 General</button>
@@ -1387,6 +1410,7 @@
     btn.classList.add('active');
     const filtered = type === 'all' ? allFeedback
       : type === 'new' ? allFeedback.filter(f => !f.status || f.status === 'new')
+      : type === 'unreplied' ? allFeedback.filter(f => !f.adminReply)
       : allFeedback.filter(f => f.type === type);
     renderFeedback(filtered);
   }
@@ -1414,9 +1438,111 @@
             ${f.userEmail || 'Anonymous'} &nbsp;·&nbsp; ${f.createdAt ? shortDate(f.createdAt) : '—'}
           </div>
           <div class="feedback-message">${f.message || '—'}</div>
+          <div class="feedback-reply-section">
+            ${f.adminReply ? `
+              <div class="feedback-reply-existing">
+                <div class="feedback-reply-label">↩ Your reply${f.repliedAt ? ' · ' + shortDate(f.repliedAt) : ''}${f.repliedBy ? ' · ' + f.repliedBy : ''}</div>
+                <div class="feedback-reply-text">${f.adminReply}</div>
+              </div>
+              <button class="reply-toggle-btn" onclick="toggleReplyForm('${f.id}')">✏️ Edit reply</button>
+            ` : `
+              <button class="reply-toggle-btn" onclick="toggleReplyForm('${f.id}')">💬 Reply</button>
+            `}
+            <div class="feedback-reply-form" id="reply-form-${f.id}" style="display:none;">
+              <textarea class="notif-input" id="reply-input-${f.id}" rows="3" maxlength="1000" placeholder="Type your reply — the player will be notified in-app and via push.">${f.adminReply || ''}</textarea>
+              <div class="notif-actions">
+                <button class="save-btn" id="reply-send-${f.id}" onclick="sendFeedbackReply('${f.id}')">📤 Send Reply</button>
+                <span class="save-confirm" id="reply-confirm-${f.id}">✓ Sent — player will be notified</span>
+                <span class="save-error" id="reply-error-${f.id}">✗ Failed to send — check console</span>
+              </div>
+            </div>
+          </div>
         </div>`).join('')
       : '<div class="td-muted" style="padding:16px 0;">No feedback in this category.</div>';
   }
+
+  window.toggleReplyForm = function(feedbackId) {
+    const form = document.getElementById('reply-form-' + feedbackId);
+    if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.sendFeedbackReply = async function(feedbackId) {
+    const input = document.getElementById('reply-input-' + feedbackId);
+    const btn = document.getElementById('reply-send-' + feedbackId);
+    const confirmEl = document.getElementById('reply-confirm-' + feedbackId);
+    const errEl = document.getElementById('reply-error-' + feedbackId);
+    confirmEl.style.display = 'none';
+    errEl.style.display = 'none';
+
+    const reply = input.value.trim();
+    if (!reply) {
+      errEl.textContent = '✗ Reply cannot be empty';
+      errEl.style.display = 'inline';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+      const ref = doc(db, 'feedback', feedbackId);
+      await setDoc(ref, {
+        adminReply: reply,
+        repliedAt: new Date().toISOString(),
+        repliedBy: auth.currentUser ? auth.currentUser.email : null,
+        status: 'replied',
+      }, { merge: true });
+
+      // Update local cache, then patch just this card's DOM directly rather
+      // than calling renderFeedback(allFeedback) — a full re-render would
+      // silently drop back to showing every item, losing whatever filter
+      // (e.g. "Awaiting Reply") the admin was currently looking at. Same
+      // targeted-patch approach markFeedbackRead already uses below. The
+      // onFeedbackReplied Cloud Function (functions/src/index.ts) picks up
+      // this Firestore write independently and handles notifying the player
+      // — nothing further needed from this function for that part.
+      const nowIso = new Date().toISOString();
+      const repliedBy = auth.currentUser ? auth.currentUser.email : null;
+      const item = allFeedback.find(f => f.id === feedbackId);
+      if (item) {
+        item.adminReply = reply;
+        item.repliedAt = nowIso;
+        item.repliedBy = repliedBy;
+        item.status = 'replied';
+      }
+
+      const card = document.getElementById('fb-' + feedbackId);
+      if (card) {
+        const section = card.querySelector('.feedback-reply-section');
+        let existingBlock = section.querySelector('.feedback-reply-existing');
+        const label = '↩ Your reply · ' + shortDate(nowIso) + (repliedBy ? ' · ' + repliedBy : '');
+        if (!existingBlock) {
+          existingBlock = document.createElement('div');
+          existingBlock.className = 'feedback-reply-existing';
+          existingBlock.innerHTML = '<div class="feedback-reply-label"></div><div class="feedback-reply-text"></div>';
+          section.insertBefore(existingBlock, section.querySelector('.reply-toggle-btn'));
+        }
+        existingBlock.querySelector('.feedback-reply-label').textContent = label;
+        existingBlock.querySelector('.feedback-reply-text').textContent = reply;
+        const toggleBtn = section.querySelector('.reply-toggle-btn');
+        if (toggleBtn) toggleBtn.textContent = '✏️ Edit reply';
+        // Form stays open (pre-filled with what was just sent) so the
+        // confirm message below is actually visible, and in case the admin
+        // wants to immediately follow up with another edit.
+      }
+
+      confirmEl.style.display = 'inline';
+      btn.textContent = '📤 Send Reply';
+      btn.disabled = false;
+      setTimeout(() => { confirmEl.style.display = 'none'; }, 3000);
+    } catch (e) {
+      console.error('Failed to send feedback reply:', e);
+      errEl.textContent = '✗ Failed to send — check console';
+      errEl.style.display = 'inline';
+      btn.textContent = '📤 Send Reply';
+      btn.disabled = false;
+    }
+  };
 
   window.markFeedbackRead = async function(feedbackId) {
     try {
