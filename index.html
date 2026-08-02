@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://discord.com https://firestore.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
   <title>TerraMine — Stake a Claim. Visit Friends. Earn Money.</title>
   <meta name="description" content="Buy virtual properties on a real-world map, visit other players' mines to earn TerraBucks, and watch your passive income grow around the clock." />
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
@@ -112,21 +113,38 @@
       }
     }
 
-    function getMemberInitials(username) {
-      return username
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map(part => part[0])
-        .join('')
-        .toUpperCase();
+    function normalizeDiscordText(value, fallback, maxLength = 80) {
+      if (typeof value !== 'string') return fallback;
+      const normalized = value.trim();
+      if (!normalized) return fallback;
+      return normalized.slice(0, maxLength);
     }
 
-    function statusClass(status) {
-      if (status === 'online') return 'status-online';
-      if (status === 'idle') return 'status-idle';
-      if (status === 'dnd') return 'status-dnd';
-      return 'status-offline';
+    function normalizePresenceCount(value) {
+      const count = Number(value);
+      if (!Number.isFinite(count) || count < 0) return 0;
+      return Math.min(1000000, Math.floor(count));
+    }
+
+    function normalizeDiscordInvite(value) {
+      if (typeof value !== 'string' || !value.trim()) return null;
+      try {
+        const url = new URL(value);
+        const host = url.hostname.toLowerCase();
+        const isDiscordHost = host === 'discord.gg' || host === 'discord.com' || host === 'www.discord.com';
+        if (url.protocol !== 'https:' || !isDiscordHost) return null;
+        return url.toString();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function renderCommunityMessage(container, message) {
+      if (!container) return;
+      const row = document.createElement('div');
+      row.className = 'community-fallback';
+      row.textContent = message;
+      container.replaceChildren(row);
     }
 
     function setupMobileNav() {
@@ -194,46 +212,27 @@
         if (!response.ok) throw new Error(`Discord API returned ${response.status}`);
 
         const data = await response.json();
-        const memberCount = Number(data.presence_count || 0);
-        const members = Array.isArray(data.members) ? data.members.slice(0, 8) : [];
+        const memberCount = normalizePresenceCount(data.presence_count);
+        const safeGuildName = normalizeDiscordText(data.name, 'Terramine');
+        const safeInvite = normalizeDiscordInvite(data.instant_invite);
 
-        if (inviteLink && data.instant_invite) inviteLink.href = data.instant_invite;
-        if (guildName && data.name) guildName.textContent = data.name;
-        if (serverName && data.name) serverName.textContent = data.name;
+        if (inviteLink && safeInvite) inviteLink.href = safeInvite;
+        if (guildName) guildName.textContent = safeGuildName;
+        if (serverName) serverName.textContent = safeGuildName;
         if (onlineCount) onlineCount.textContent = memberCount.toLocaleString();
         if (presencePill) presencePill.textContent = `${memberCount.toLocaleString()} online`;
-
-        if (membersList) {
-          membersList.innerHTML = members.map(member => {
-            const avatarUrl = member.avatar_url || '';
-            const initials = getMemberInitials(member.username || 'Member');
-            const status = member.status || 'offline';
-            const activity = member.game && member.game.name ? member.game.name : 'Active now';
-
-            return `
-              <div class="community-member" title="${member.username || 'Member'}">
-                ${avatarUrl
-                  ? `<img class="community-member-avatar" src="${avatarUrl}" alt="${member.username || 'Member'} avatar" loading="lazy" />`
-                  : `<span class="community-member-fallback">${initials}</span>`}
-                <div class="community-member-info">
-                  <div class="community-member-name">${member.username || 'Member'}</div>
-                  <div class="community-member-status ${statusClass(status)}">${activity}</div>
-                </div>
-              </div>
-            `;
-          }).join('');
-
-          if (!members.length) {
-            membersList.innerHTML = '<div class="community-fallback">No members are currently visible in the widget feed.</div>';
-          }
-        }
+        renderCommunityMessage(
+          membersList,
+          'For privacy and safety, live member identities are hidden. Join Discord to view the full member list.'
+        );
       } catch (err) {
         console.warn('Discord community load failed:', err);
         if (presencePill) presencePill.textContent = 'Unavailable';
         if (onlineCount) onlineCount.textContent = '--';
-        if (membersList) {
-          membersList.innerHTML = '<div class="community-fallback">The Discord feed is unavailable right now. Use the Join Discord button to open the server directly.</div>';
-        }
+        renderCommunityMessage(
+          membersList,
+          'Discord community summary is unavailable right now. Use the Join Discord button to open the server directly.'
+        );
       }
     }
 
@@ -359,7 +358,7 @@
           <div class="community-online" id="discord-presence-pill">Loading...</div>
         </div>
         <div class="community-members" id="discord-members-list">
-          <div class="community-fallback">Loading community members...</div>
+          <div class="community-fallback">Member identities are hidden for privacy. Join Discord to see the full community.</div>
         </div>
       </div>
     </div>
