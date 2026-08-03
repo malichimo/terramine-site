@@ -534,7 +534,7 @@
       }
 
       list.innerHTML = visits.map(v => {
-        const name = v.visitorNickname || v.nickname || 'Anonymous Miner';
+        const name = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
         const propName = v.propertyId || '';
         const msg = v.message ? `"${v.message}"` : `Visited ${propName}`;
         const tbEarned = v.tbEarned || v.visitorTBEarned || 0;

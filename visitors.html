@@ -501,7 +501,7 @@
   }
 
   function renderVisitCard(v) {
-    const name     = v.visitorNickname || v.nickname || 'Anonymous Miner';
+    const name     = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
     const photoURL = v.photoURL || v.photoUrl || null;
     const mine     = myPropertyMap[v.propertyId] || { customName: v.propertyId, mineType: 'rock' };
     const badges   = [

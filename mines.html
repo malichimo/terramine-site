@@ -1137,7 +1137,7 @@
           <span class="app-card-title" style="color:white;">👥 RECENT VISITORS</span>
         </div>
         ${visitors.length ? visitors.map(v => {
-          const vname = v.visitorNickname || v.nickname || 'Anonymous Miner';
+          const vname = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
           const msg   = v.message ? `"${v.message}"` : 'Checked in';
           return `<div class="visitor-item">
             <div class="visitor-avatar-app">${initials(vname)}</div>
