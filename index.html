@@ -112,6 +112,28 @@
       }
     }
 
+    // ✅ SECURITY FIX (Aug 3, 2026): responsibly disclosed by a researcher
+    // (ProTon, protonop on Discord) via email — loadDiscordCommunity() below
+    // was inserting member.username and member.game.name (activity) from
+    // Discord's public widget.json feed directly into the page via
+    // innerHTML/template literals with no escaping. Since Discord usernames
+    // and "now playing" activity strings are attacker-controllable (anyone
+    // can set their own Discord username/status), a malicious value like
+    // `<img src=x onerror=alert(1)>` would execute as real HTML/JS for every
+    // visitor to the homepage the moment that member appeared in the widget
+    // feed — a stored/reflected XSS reachable with zero authentication,
+    // since the widget is public and unauthenticated. Fix: escape every
+    // widget-sourced value before it goes into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[ch]));
+    }
+
     function getMemberInitials(username) {
       return username
         .split(/\s+/)
@@ -205,18 +227,19 @@
 
         if (membersList) {
           membersList.innerHTML = members.map(member => {
-            const avatarUrl = member.avatar_url || '';
-            const initials = getMemberInitials(member.username || 'Member');
+            const safeUsername = escapeHtml(member.username || 'Member');
+            const avatarUrl = escapeHtml(member.avatar_url || '');
+            const initials = escapeHtml(getMemberInitials(member.username || 'Member'));
             const status = member.status || 'offline';
-            const activity = member.game && member.game.name ? member.game.name : 'Active now';
+            const activity = escapeHtml(member.game && member.game.name ? member.game.name : 'Active now');
 
             return `
-              <div class="community-member" title="${member.username || 'Member'}">
+              <div class="community-member" title="${safeUsername}">
                 ${avatarUrl
-                  ? `<img class="community-member-avatar" src="${avatarUrl}" alt="${member.username || 'Member'} avatar" loading="lazy" />`
+                  ? `<img class="community-member-avatar" src="${avatarUrl}" alt="${safeUsername} avatar" loading="lazy" />`
                   : `<span class="community-member-fallback">${initials}</span>`}
                 <div class="community-member-info">
-                  <div class="community-member-name">${member.username || 'Member'}</div>
+                  <div class="community-member-name">${safeUsername}</div>
                   <div class="community-member-status ${statusClass(status)}">${activity}</div>
                 </div>
               </div>
