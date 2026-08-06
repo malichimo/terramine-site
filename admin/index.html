@@ -654,29 +654,6 @@
 
   </div>
 
-  <!-- RECENT ACTIVITY -->
-  <div class="section-label">Recent Check-ins</div>
-  <div class="table-card">
-    <div class="table-header">
-      Latest Check-ins
-      <span class="table-count" id="checkInsCount">—</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Visitor</th>
-          <th>Property ID</th>
-          <th>Message</th>
-          <th>Photo</th>
-        </tr>
-      </thead>
-      <tbody id="checkInsBody">
-        <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
   <!-- DAILY NOTIFICATION -->
   <div class="section-label">Daily Push Notification</div>
   <div class="notif-editor">
@@ -1084,20 +1061,6 @@
       // just re-derived from this same full properties scan purely for display, and
       // weren't worth the extra render/Firestore-read cost. See the Properties/Users
       // admin pages for this data instead.
-
-      // ── Recent check-ins ─────────────────────────────────────────
-      const ciQuery = query(collection(db, 'checkIns'), orderBy('timestamp', 'desc'), limit(20));
-      const ciSnap = await getDocs(ciQuery);
-      const checkIns = ciSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      document.getElementById('checkInsCount').textContent = 'latest 20';
-      document.getElementById('checkInsBody').innerHTML = checkIns.map(ci => `
-        <tr>
-          <td class="td-muted">${timeAgo(ci.timestamp)}</td>
-          <td>${truncate(ci.visitorNickname || ci.userId?.substring(0,8) || '—', 18)}</td>
-          <td class="td-muted" style="font-size:10px;">${ci.propertyId?.substring(0,14) || '—'}</td>
-          <td>${truncate(ci.message, 30)}</td>
-          <td>${ci.hasPhoto ? '<span class="badge-blue stat-badge">📷 yes</span>' : '<span class="td-muted">—</span>'}</td>
-        </tr>`).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No check-ins yet</td></tr>';
 
       // ── Recent signups ───────────────────────────────────────────
       const recentUsers = [...users]
