@@ -627,9 +627,7 @@
         <span class="table-count" id="totalMinesCount">—</span>
       </div>
       <div class="mine-details" id="mineTypeDetails">
-        <div class="skeleton" style="margin-bottom:12px;"></div>
-        <div class="skeleton" style="width:80%;margin-bottom:12px;"></div>
-        <div class="skeleton" style="width:50%;"></div>
+        <div style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Disabled — required a full properties-collection scan just for this widget. See the Properties tab.</div>
       </div>
     </div>
 
@@ -649,7 +647,7 @@
           </tr>
         </thead>
         <tbody id="topPlayersBody">
-          <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Loading...</td></tr>
+          <tr><td colspan="5" style="padding:20px 24px;color:var(--text-muted);font-size:12px;">Disabled — required a full properties-collection scan just for this widget. See the Users tab.</td></tr>
         </tbody>
       </table>
     </div>
@@ -1075,47 +1073,17 @@
       document.getElementById('totalProps').textContent = fmt(propCount);
       document.getElementById('totalMinesCount').textContent = propCount + ' total';
 
-      // Mine type breakdown
-      const mines = { rock: 0, coal: 0, gold: 0, diamond: 0 };
+      // Owner property counts — still needed for the signups table, email filters
+      // (Power Users / No Properties), and the adminStats sync below.
       const ownerPropCount = {};
       props.forEach(p => {
-        if (mines[p.mineType] !== undefined) mines[p.mineType]++;
         if (p.ownerId) ownerPropCount[p.ownerId] = (ownerPropCount[p.ownerId] || 0) + 1;
       });
 
-      let mineHTML = '';
-      let barHTML = '<div class="mine-bar">';
-      ['rock','coal','gold','diamond'].forEach(type => {
-        const count = mines[type];
-        const pct = propCount ? Math.round(count/propCount*100) : 0;
-        const emojis = { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' };
-        mineHTML += `
-          <div class="mine-type-row">
-            <div><span class="mine-dot" style="background:${MINE_COLORS[type]}"></span>${emojis[type]} ${type.charAt(0).toUpperCase()+type.slice(1)}</div>
-            <div style="display:flex;align-items:center;gap:16px;">
-              <span class="td-muted">${pct}%</span>
-              <span class="td-gold">${fmt(count)}</span>
-            </div>
-          </div>`;
-        if (count > 0) barHTML += `<div class="mine-bar-seg" style="background:${MINE_COLORS[type]};flex:${count}"></div>`;
-      });
-      barHTML += '</div>';
-      document.getElementById('mineTypeDetails').innerHTML = mineHTML + barHTML;
-
-      // ── Top players ──────────────────────────────────────────────
-      const sorted = [...users].sort((a,b) => (ownerPropCount[b.id]||0) - (ownerPropCount[a.id]||0)).slice(0, 10);
-      document.getElementById('topPlayersCount').textContent = 'top 10';
-      document.getElementById('topPlayersBody').innerHTML = sorted.map((u, i) => {
-        const usd = (u.usdEarnings || 0) + (u.usdEarnedFromTB || 0) + (u.usdWithdrawn || 0);
-        return `
-        <tr>
-          <td class="td-muted">${i+1}</td>
-          <td>${truncate(u.nickname || u.email?.split('@')[0] || u.id.substring(0,8), 20)}</td>
-          <td class="td-gold">${ownerPropCount[u.id] || 0}</td>
-          <td>${fmt(u.tbBalance || 0)}</td>
-          <td class="td-green">$${usd.toFixed(2)}</td>
-        </tr>`;
-      }).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No data</td></tr>';
+      // Mine Type Breakdown + Top Players by TA widgets disabled (Aug 6, 2026) — both
+      // just re-derived from this same full properties scan purely for display, and
+      // weren't worth the extra render/Firestore-read cost. See the Properties/Users
+      // admin pages for this data instead.
 
       // ── Recent check-ins ─────────────────────────────────────────
       const ciQuery = query(collection(db, 'checkIns'), orderBy('timestamp', 'desc'), limit(20));
