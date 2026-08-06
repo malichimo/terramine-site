@@ -494,12 +494,11 @@
 
   <!-- Search + filters -->
   <div class="search-bar">
-    <input class="search-input" id="searchInput" type="text" placeholder="Search by nickname, email, or UID..." oninput="applyFilters()">
-    <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">All</button>
-    <button class="filter-btn" data-f="banned" onclick="setFilter('banned',this)">🚫 Banned</button>
-    <button class="filter-btn" data-f="active" onclick="setFilter('active',this)">✅ Active 7d</button>
-    <button class="filter-btn" data-f="noprops" onclick="setFilter('noprops',this)">No Props</button>
-    <span class="user-count-label" id="userCountLabel">Loading...</span>
+    <input class="search-input" id="searchInput" type="text" placeholder="Search by nickname, email, or UID..." onkeydown="if(event.key==='Enter') runSearch()">
+    <button class="filter-btn" onclick="runSearch()">🔍 Search</button>
+    <button class="filter-btn" data-f="banned" onclick="runFilter('banned',this)">🚫 Banned</button>
+    <button class="filter-btn" data-f="active" onclick="runFilter('active',this)">✅ Active 7d</button>
+    <span class="user-count-label" id="userCountLabel">Search for a user above</span>
   </div>
 
   <!-- Users table -->
@@ -523,7 +522,7 @@
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <tr><td colspan="8" style="padding:24px;color:var(--text-muted);font-size:12px;">Loading users...</td></tr>
+        <tr><td colspan="9" style="padding:24px;color:var(--text-muted);font-size:12px;">Search by nickname, email, or UID to look up a user — this page no longer preloads all 20K+ accounts.</td></tr>
       </tbody>
     </table>
   </div>
@@ -588,7 +587,7 @@
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'inline-block';
       document.getElementById('adminEmail').textContent = user.email;
-      loadUsers();
+      // No auto-load — 20K+ users / 460K+ properties. Search or use a filter instead.
     }
   });
 
@@ -642,79 +641,136 @@
   }
 
   // ── State ─────────────────────────────────────────────────────
-  let allUsers = [];
+  // currentResults holds only whatever the last search/filter returned —
+  // never the full users collection. propsByOwner is scoped to those users only.
+  let currentResults = [];
   let propsByOwner = {};
-  let activeFilter = 'all';
   let sortKey = 'lastActiveAt';
   let sortDir = -1; // -1 = desc
   let currentUserId = null;
 
-  // ── Load all users + property counts ─────────────────────────
-  async function loadUsers() {
-    try {
-      const [usersSnap, propsSnap] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'properties'))
-      ]);
-
-      // Build property count per owner
-      propsByOwner = {};
-      propsSnap.docs.forEach(d => {
-        const data = d.data();
-        if (data.ownerId) {
-          if (!propsByOwner[data.ownerId]) propsByOwner[data.ownerId] = [];
-          propsByOwner[data.ownerId].push({ id: d.id, ...data });
-        }
-      });
-
-      allUsers = usersSnap.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-        propCount: (propsByOwner[d.id] || []).length
-      }));
-
-      applyFilters();
-    } catch(e) {
-      console.error('loadUsers failed:', e);
-      document.getElementById('userTableBody').innerHTML =
-        '<tr><td colspan="8" style="padding:24px;color:var(--red);font-size:12px;">Failed to load users — see console</td></tr>';
-    }
+  function setTableLoading(msg) {
+    document.getElementById('userTableBody').innerHTML =
+      `<tr><td colspan="9" style="padding:24px;color:var(--text-muted);font-size:12px;">${msg || 'Searching...'}</td></tr>`;
   }
 
-  // ── Filter + sort + render table ─────────────────────────────
-  window.setFilter = (f, btn) => {
-    activeFilter = f;
+  // ── Bounded per-user property lookup (only for currently-displayed users) ──
+  async function fetchPropsForUsers(users) {
+    propsByOwner = {};
+    const ids = users.map(u => u.id);
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += 10) chunks.push(ids.slice(i, i + 10));
+    await Promise.all(chunks.map(async chunk => {
+      if (!chunk.length) return;
+      const snap = await getDocs(query(collection(db, 'properties'), where('ownerId', 'in', chunk)));
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (!propsByOwner[data.ownerId]) propsByOwner[data.ownerId] = [];
+        propsByOwner[data.ownerId].push({ id: d.id, ...data });
+      });
+    }));
+    users.forEach(u => { u.propCount = (propsByOwner[u.id] || []).length; });
+  }
+
+  // ── Text search: UID exact match, email exact/prefix, or nickname prefix ──
+  // Note: this replaces the old full-collection substring search. Firestore can't
+  // do case-insensitive substring matching without a full scan, so email/nickname
+  // matches are prefix-based (case-sensitive as typed). Exact UID and exact email
+  // lookups (as-typed and lowercased) are tried first since those are common.
+  window.runSearch = async () => {
+    const raw = (document.getElementById('searchInput').value || '').trim();
+    if (!raw) {
+      document.getElementById('userCountLabel').textContent = 'Enter a search term above';
+      return;
+    }
     document.querySelectorAll('[data-f]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    applyFilters();
+    setTableLoading();
+
+    try {
+      let results = [];
+      const looksLikeUid = /^[A-Za-z0-9]{15,40}$/.test(raw);
+
+      if (looksLikeUid) {
+        const snap = await getDoc(doc(db, 'users', raw));
+        if (snap.exists()) results = [{ id: snap.id, ...snap.data() }];
+      }
+
+      if (!results.length && raw.includes('@')) {
+        for (const candidate of [raw, raw.toLowerCase()]) {
+          const snap = await getDocs(query(collection(db, 'users'), where('email', '==', candidate), limit(25)));
+          if (!snap.empty) { results = snap.docs.map(d => ({ id: d.id, ...d.data() })); break; }
+        }
+        if (!results.length) {
+          const snap = await getDocs(query(collection(db, 'users'), orderBy('email'),
+            where('email', '>=', raw), where('email', '<=', raw + ''), limit(25)));
+          results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+      }
+
+      if (!results.length && !raw.includes('@')) {
+        const snap = await getDocs(query(collection(db, 'users'), orderBy('nickname'),
+          where('nickname', '>=', raw), where('nickname', '<=', raw + ''), limit(25)));
+        results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+
+      if (!results.length) {
+        currentResults = [];
+        document.getElementById('userCountLabel').textContent = 'No matches';
+        renderTable([]);
+        return;
+      }
+
+      await fetchPropsForUsers(results);
+      currentResults = results;
+      document.getElementById('userCountLabel').textContent =
+        results.length + (results.length === 25 ? '+ matches (capped at 25 — refine your search)' : ' match' + (results.length === 1 ? '' : 'es'));
+      applySort();
+    } catch(e) {
+      console.error('Search failed:', e);
+      document.getElementById('userTableBody').innerHTML =
+        '<tr><td colspan="9" style="padding:24px;color:var(--red);font-size:12px;">Search failed — see console</td></tr>';
+    }
   };
 
-  window.applyFilters = () => {
-    const q = (document.getElementById('searchInput').value || '').toLowerCase();
-    const now = Date.now();
-    const day7 = now - 7 * 86400000;
+  // ── Quick filters: bounded server-side queries, capped at 50 ──────────
+  window.runFilter = async (kind, btn) => {
+    document.getElementById('searchInput').value = '';
+    document.querySelectorAll('[data-f]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    setTableLoading();
 
-    let filtered = allUsers.filter(u => {
-      // Filter
-      if (activeFilter === 'banned' && !u.isBanned) return false;
-      if (activeFilter === 'active') {
-        const last = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
-        if (last < day7) return false;
+    try {
+      let q;
+      if (kind === 'banned') {
+        q = query(collection(db, 'users'), where('isBanned', '==', true), limit(50));
+      } else if (kind === 'active') {
+        const day7 = new Date(Date.now() - 7 * 86400000).toISOString();
+        q = query(collection(db, 'users'), where('lastActiveAt', '>=', day7), orderBy('lastActiveAt', 'desc'), limit(50));
       }
-      if (activeFilter === 'noprops' && u.propCount > 0) return false;
+      const snap = await getDocs(q);
+      const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Search
-      if (q) {
-        const nick = (u.nickname || '').toLowerCase();
-        const email = (u.email || '').toLowerCase();
-        const uid = u.id.toLowerCase();
-        if (!nick.includes(q) && !email.includes(q) && !uid.includes(q)) return false;
-      }
-      return true;
-    });
+      await fetchPropsForUsers(results);
+      currentResults = results;
+      document.getElementById('userCountLabel').textContent =
+        results.length + (results.length === 50 ? '+ shown (capped at 50)' : ' users');
+      applySort();
+    } catch(e) {
+      console.error('Filter failed:', e);
+      document.getElementById('userTableBody').innerHTML =
+        '<tr><td colspan="9" style="padding:24px;color:var(--red);font-size:12px;">Filter failed — see console</td></tr>';
+    }
+  };
 
-    // Sort
-    filtered.sort((a, b) => {
+  // ── Sort (client-side, scoped to whatever's currently displayed) ─────
+  window.sortBy = (key) => {
+    if (sortKey === key) sortDir *= -1;
+    else { sortKey = key; sortDir = -1; }
+    applySort();
+  };
+
+  function applySort() {
+    const sorted = [...currentResults].sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey];
       if (sortKey === 'lastActiveAt' || sortKey === 'createdAt') {
         av = av ? new Date(av).getTime() : 0;
@@ -725,17 +781,9 @@
       if (typeof bv === 'string') bv = bv.toLowerCase();
       return av < bv ? -sortDir : av > bv ? sortDir : 0;
     });
-
-    document.getElementById('tableCount').textContent = filtered.length + ' users';
-    document.getElementById('userCountLabel').textContent = filtered.length + ' of ' + allUsers.length + ' users';
-    renderTable(filtered);
-  };
-
-  window.sortBy = (key) => {
-    if (sortKey === key) sortDir *= -1;
-    else { sortKey = key; sortDir = -1; }
-    applyFilters();
-  };
+    document.getElementById('tableCount').textContent = sorted.length + ' users';
+    renderTable(sorted);
+  }
 
   function renderTable(users) {
     if (!users.length) {
@@ -766,7 +814,7 @@
   // ── Open user modal ───────────────────────────────────────────
   window.openUser = async (uid) => {
     currentUserId = uid;
-    const user = allUsers.find(u => u.id === uid);
+    const user = currentResults.find(u => u.id === uid);
     if (!user) return;
 
     document.getElementById('modalNickname').textContent = user.nickname || '(no nickname)';
@@ -955,7 +1003,7 @@
     try {
       await setDoc(doc(db, 'users', uid), { [field]: value }, { merge: true });
       // Update local cache
-      const u = allUsers.find(u => u.id === uid);
+      const u = currentResults.find(u => u.id === uid);
       if (u) u[field] = value;
       okEl.style.display = 'inline';
       setTimeout(() => okEl.style.display = 'none', 2000);
@@ -975,7 +1023,7 @@
 
     try {
       await setDoc(doc(db, 'users', uid), { isBanned: ban }, { merge: true });
-      const u = allUsers.find(u => u.id === uid);
+      const u = currentResults.find(u => u.id === uid);
       if (u) u.isBanned = ban;
 
       // Re-render ban row
@@ -1032,7 +1080,7 @@
       // Update local cache
       const ids = checked.map(cb => cb.dataset.id);
       if (propsByOwner[uid]) propsByOwner[uid] = propsByOwner[uid].filter(p => !ids.includes(p.id));
-      const u = allUsers.find(u => u.id === uid);
+      const u = currentResults.find(u => u.id === uid);
       if (u) u.propCount = (propsByOwner[uid]||[]).length;
 
       // Remove rows from UI
@@ -1082,7 +1130,7 @@
   window.closeModal = () => {
     document.getElementById('userModal').style.display = 'none';
     currentUserId = null;
-    applyFilters(); // refresh table to reflect any edits
+    applySort(); // re-render current results to reflect any edits (no re-fetch)
   };
 
   window.handleModalClick = (e) => {
