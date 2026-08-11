@@ -865,7 +865,7 @@
 <!-- Firebase -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-  import { getFirestore, collection, getDocs, query, orderBy, limit, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getFirestore, collection, getDocs, query, orderBy, limit, where, doc, getDoc, setDoc, getCountFromServer, getAggregateFromServer, sum } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
   const firebaseConfig = {
@@ -1007,30 +1007,61 @@
     }
   }
 
+  // ✅ Aug 11, 2026 cost fix: this used to download the ENTIRE users and
+  // properties collections (getDocs with no filter/limit) on every single
+  // click of "Refresh" — at 656K+ properties and growing, that's 656K+
+  // document reads just to compute a handful of totals. Every number this
+  // function needs is either a count or a sum, and Firestore's aggregation
+  // queries (getCountFromServer / getAggregateFromServer + sum()) compute
+  // those server-side for a flat, near-zero cost regardless of collection
+  // size — no documents are downloaded at all. The only thing that still
+  // needs real documents is the 15-row "recent signups" table, which is now
+  // a bounded orderBy+limit(15) query instead of riding along on the full
+  // scan. The email-list-builder filters (Power Users, No Properties, etc.)
+  // genuinely do need full user records to filter client-side — that data
+  // is no longer fetched here automatically; see applyFilter() below, which
+  // now fetches it lazily (once) only if an admin actually uses that panel.
   window.loadAll = async function() {
     const btn = document.getElementById('refreshBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spin">↻</span> Loading';
 
     try {
-      // ── Load users ──────────────────────────────────────────────
-      const usersSnap = await getDocs(collection(db, 'users'));
-      const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const total = users.length;
+      const usersCol = collection(db, 'users');
+      const propsCol = collection(db, 'properties');
 
       const now = Date.now();
-      const day7 = now - 7 * 86400000;
-      const day30 = now - 30 * 86400000;
+      const day7ISO  = new Date(now - 7  * 86400000).toISOString();
+      const day30ISO = new Date(now - 30 * 86400000).toISOString();
 
-      let active7 = 0, active30 = 0, totalTB = 0, totalUSD = 0, totalCI = 0;
-      users.forEach(u => {
-        const last = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
-        if (last > day7) active7++;
-        if (last > day30) active30++;
-        totalTB += (u.tbBalance || 0);
-        totalUSD += (u.usdEarnings || 0) + (u.usdEarnedFromTB || 0) + (u.usdWithdrawn || 0);
-        totalCI += (u.totalCheckIns || 0);
-      });
+      const [
+        totalCountSnap,
+        active7CountSnap,
+        active30CountSnap,
+        sumsSnap,
+        propCountSnap,
+      ] = await Promise.all([
+        getCountFromServer(usersCol),
+        getCountFromServer(query(usersCol, where('lastActiveAt', '>', day7ISO))),
+        getCountFromServer(query(usersCol, where('lastActiveAt', '>', day30ISO))),
+        getAggregateFromServer(usersCol, {
+          totalTB:      sum('tbBalance'),
+          usdEarnings:  sum('usdEarnings'),
+          usdFromTB:    sum('usdEarnedFromTB'),
+          usdWithdrawn: sum('usdWithdrawn'),
+          totalCI:      sum('totalCheckIns'),
+        }),
+        getCountFromServer(propsCol),
+      ]);
+
+      const total   = totalCountSnap.data().count;
+      const active7  = active7CountSnap.data().count;
+      const active30 = active30CountSnap.data().count;
+      const sums     = sumsSnap.data();
+      const totalTB  = sums.totalTB || 0;
+      const totalUSD = (sums.usdEarnings || 0) + (sums.usdFromTB || 0) + (sums.usdWithdrawn || 0);
+      const totalCI  = sums.totalCI || 0;
+      const propCount = propCountSnap.data().count;
 
       document.getElementById('totalUsers').textContent = fmt(total);
       document.getElementById('active7d').textContent = fmt(active7);
@@ -1041,49 +1072,41 @@
       document.getElementById('totalTB').textContent = fmt(totalTB);
       document.getElementById('totalUSD').textContent = fmtUSD(totalUSD);
       document.getElementById('totalCheckIns').textContent = fmt(totalCI);
-
-      // ── Load properties ─────────────────────────────────────────
-      const propsSnap = await getDocs(collection(db, 'properties'));
-      const props = propsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const propCount = props.length;
-
       document.getElementById('totalProps').textContent = fmt(propCount);
       document.getElementById('totalMinesCount').textContent = propCount + ' total';
 
-      // Owner property counts — still needed for the signups table, email filters
-      // (Power Users / No Properties), and the adminStats sync below.
-      const ownerPropCount = {};
-      props.forEach(p => {
-        if (p.ownerId) ownerPropCount[p.ownerId] = (ownerPropCount[p.ownerId] || 0) + 1;
-      });
-
       // Mine Type Breakdown + Top Players by TA widgets disabled (Aug 6, 2026) — both
-      // just re-derived from this same full properties scan purely for display, and
+      // just re-derived from a full properties scan purely for display, and
       // weren't worth the extra render/Firestore-read cost. See the Properties/Users
       // admin pages for this data instead.
 
-      // ── Recent signups ───────────────────────────────────────────
-      const recentUsers = [...users]
-        .filter(u => u.createdAt)
-        .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 15);
+      // ── Recent signups (bounded — only 15 docs, not the whole collection) ──
+      const recentSnap = await getDocs(
+        query(usersCol, orderBy('createdAt', 'desc'), limit(15))
+      );
+      const recentUsers = recentSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // One small count() per recent user for their property tally — 15
+      // cheap aggregation queries beats downloading all 656K+ property docs.
+      const recentPropCounts = await Promise.all(
+        recentUsers.map(u =>
+          getCountFromServer(query(propsCol, where('ownerId', '==', u.id)))
+            .then(s => s.data().count)
+            .catch(() => 0)
+        )
+      );
+
       document.getElementById('signupsCount').textContent = 'latest 15';
-      document.getElementById('signupsBody').innerHTML = recentUsers.map(u => `
+      document.getElementById('signupsBody').innerHTML = recentUsers.map((u, i) => `
         <tr>
           <td class="td-muted">${shortDate(u.createdAt)}</td>
           <td>${truncate(u.email || '—', 28)}</td>
           <td class="td-gold">${fmt(u.tbBalance || 0)}</td>
-          <td>${ownerPropCount[u.id] || 0}</td>
+          <td>${recentPropCounts[i] || 0}</td>
           <td>${u.totalCheckIns || 0}</td>
         </tr>`).join('') || '<tr><td colspan="5" class="td-muted" style="padding:16px 24px;">No users yet</td></tr>';
 
-      // ── Store globally for email filters ────────────────────────
-      _allUsers = users;
-      _ownerPropCount = ownerPropCount;
-      applyFilter('all'); // populate email list with default filter
-
-
-      // ── Sync full stats to adminStats/global ───────────────────
+      // ── Sync aggregate stats to adminStats/global ───────────────
       try {
         await setDoc(doc(db, 'adminStats', 'global'), {
           totalUsers:          total,
@@ -1112,19 +1135,50 @@
   };
 
   // ── Global user store for email filters ─────────────────────────
+  // ✅ Aug 11, 2026 cost fix: this used to be populated automatically by
+  // loadAll() on every dashboard load/refresh, which meant every visit paid
+  // for a full users+properties collection download whether or not anyone
+  // ever used the email-list-builder panel below. It's now fetched lazily,
+  // exactly once per session, only when an admin actually clicks a filter
+  // button — and cached in these two variables for subsequent clicks.
   let _allUsers = [];
   let _ownerPropCount = {};
+  let _emailDataLoading = false;
   const _now = () => Date.now();
 
-  window.applyFilter = function(filter) {
+  async function _ensureEmailFilterData() {
+    if (_allUsers.length || _emailDataLoading) return;
+    _emailDataLoading = true;
+    document.getElementById('emailListOutput').value = 'Loading user + property data (one-time per session)...';
+    try {
+      const [usersSnap, propsSnap] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'properties')),
+      ]);
+      const ownerPropCount = {};
+      propsSnap.docs.forEach(d => {
+        const ownerId = d.data().ownerId;
+        if (ownerId) ownerPropCount[ownerId] = (ownerPropCount[ownerId] || 0) + 1;
+      });
+      _allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _ownerPropCount = ownerPropCount;
+    } catch (e) {
+      console.error('Email filter data load failed:', e);
+      document.getElementById('emailListOutput').value = 'Failed to load — see console.';
+    } finally {
+      _emailDataLoading = false;
+    }
+  }
+
+  window.applyFilter = async function(filter) {
     // Update active button — scope to user-list filter bar only
     document.querySelectorAll('.filter-btn[data-filter]').forEach(b => {
       b.classList.toggle('active', b.dataset.filter === filter);
     });
 
     if (!_allUsers.length) {
-      document.getElementById('emailListOutput').value = 'Please wait for data to finish loading...';
-      return;
+      await _ensureEmailFilterData();
+      if (!_allUsers.length) return; // load failed — message already shown
     }
 
     const now = _now();
@@ -1225,22 +1279,39 @@
     status.className = 'run-status';
 
     try {
-      // ── Load users ──────────────────────────────────────────────
-      const usersSnap = await getDocs(collection(db, 'users'));
+      const usersCol = collection(db, 'users');
+      const propsCol = collection(db, 'properties');
+
+      // ── Load users — kept as a full scan, deliberately not narrowed ──
+      // createUser() does NOT set lastActiveAt at signup (only tbBalance,
+      // totalCheckIns, totalTBEarned, createdAt) — it's only written later,
+      // on first "active" ping. daysIdle() treats a missing lastActiveAt as
+      // 9999 (max risk), and this check exists specifically to catch that
+      // population. A where('lastActiveAt','<',cutoff) filter would exclude
+      // any doc missing the field entirely (Firestore range queries only
+      // match docs that have the field), silently hiding exactly the
+      // accounts this tool is supposed to flag. Users is also a far smaller
+      // collection than properties (thousands vs. 656K+), so the cost here
+      // is minor next to what the properties narrowing below saves.
+      const usersSnap = await getDocs(usersCol);
       const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // ── Load properties ─────────────────────────────────────────
-      const propsSnap = await getDocs(collection(db, 'properties'));
+      // ── Load properties — narrowed to only docs that could possibly
+      // qualify for ANY inactivity tier (120+ days idle, the lowest
+      // threshold below). purchaseProperty() unconditionally sets
+      // lastActivityAt at creation (functions/src/index.ts), so every
+      // property has this field — safe to filter on server-side instead of
+      // downloading all 656K+ docs just to throw away the ~99% that are
+      // recently active.
+      const cutoffISO = new Date(Date.now() - THRESHOLDS.APPROACHING * DAY_MS).toISOString();
+      const propsSnap = await getDocs(
+        query(propsCol, where('lastActivityAt', '<', cutoffISO))
+      );
       const props = propsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       // Build owner lookup
       const ownerMap = {};
       users.forEach(u => { ownerMap[u.id] = u; });
-
-      const ownerPropCount = {};
-      props.forEach(p => {
-        if (p.ownerId) ownerPropCount[p.ownerId] = (ownerPropCount[p.ownerId] || 0) + 1;
-      });
 
       // ── Categorize at-risk accounts ──────────────────────────────
       let approaching = 0, warned = 0, danger = 0;
@@ -1258,19 +1329,31 @@
 
       atRisk.sort((a, b) => b.days - a.days);
 
+      // Property counts for just the at-risk rows actually shown — one
+      // cheap count() per row instead of tallying from a full properties
+      // download (props above is now narrowed to idle properties only, so
+      // it can no longer be used to derive a correct per-owner total).
+      const atRiskPropCounts = await Promise.all(
+        atRisk.map(u =>
+          getCountFromServer(query(propsCol, where('ownerId', '==', u.id)))
+            .then(s => s.data().count)
+            .catch(() => 0)
+        )
+      );
+
       document.getElementById('inact-approaching').textContent = approaching;
       document.getElementById('inact-warn').textContent = warned;
       document.getElementById('inact-danger').textContent = danger;
       document.getElementById('atRiskCount').textContent = atRisk.length + ' accounts';
 
       document.getElementById('atRiskBody').innerHTML = atRisk.length
-        ? atRisk.map(u => `
+        ? atRisk.map((u, i) => `
           <tr>
             <td>${truncate(u.nickname || u.id.substring(0,8), 16)}</td>
             <td class="td-muted">${truncate(u.email || '—', 24)}</td>
             <td class="td-muted">${u.lastActiveAt ? shortDate(u.lastActiveAt) : 'Never'}</td>
             <td class="${u.days >= THRESHOLDS.SUSPENDED ? 'td-gold' : 'td-muted'}">${u.days === 9999 ? '∞' : u.days}d</td>
-            <td>${ownerPropCount[u.id] || 0}</td>
+            <td>${atRiskPropCounts[i] || 0}</td>
             <td><span class="stat-badge ${u.status.cls}">${u.status.label}</span></td>
           </tr>`).join('')
         : '<tr><td colspan="6" class="td-muted" style="padding:16px 24px;">✓ No at-risk accounts</td></tr>';

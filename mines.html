@@ -552,6 +552,49 @@
   // ── Helpers ────────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
   let currentUser = null;
+
+  // ✅ FIX (Aug 7, 2026 — Discord report from gator67, "editing a previously
+  // unedited mine name renders the mine unusable"; Scott confirmed this had
+  // been reported multiple times). saveMineName()/saveGreeting()/doActivity()
+  // used to do a blind db.collection('propertyDetails').doc(id).set({...},
+  // {merge:true}) — if a mine was bought in the app but never opened (so its
+  // propertyDetails doc was never initialized with productionLevel/gameLevel/
+  // gameXP/gamesPlayed/gamesWon), naming or greeting it from the WEBSITE
+  // created a propertyDetails doc containing ONLY the edited field. Back on
+  // the phone, the mine's own game screens read gameLevel as undefined —
+  // MinerMaze's tier check (<=10 Easy, <=30 Medium, else Hard) falls through
+  // to Hard since `undefined <= 10`/`<= 30` are both false, and LaserBlast's
+  // reward math multiplies against undefined and yields NaN, i.e. no reward.
+  // This is the EXACT SAME bug already fixed in the app's own
+  // DatabaseService.updatePropertyDetails() on Jul 19, 2026 (Discord report
+  // from Audimobil) — it just never got ported to this separate website
+  // codebase, which reimplements mine-editing independently. Mirrors that
+  // fix: check existence first, backfill full defaults only when creating a
+  // brand-new doc, never touch an existing doc's real progress.
+  async function safeUpdatePropertyDetails(mineId, updates) {
+    const detailsRef = db.collection('propertyDetails').doc(mineId);
+    const now = new Date().toISOString();
+    const existing = await detailsRef.get();
+    if (!existing.exists) {
+      await detailsRef.set({
+        propertyId: mineId,
+        productionLevel: 1,
+        gameLevel: 1,
+        gameXP: 0,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        dailyActivitiesRemaining: 1,
+        doubleRewardAvailable: true,
+        lastDailyReset: now,
+        createdAt: now,
+        ...updates,
+        updatedAt: now,
+        lastUpdated: now,
+      });
+    } else {
+      await detailsRef.set({ ...updates, updatedAt: now }, { merge: true });
+    }
+  }
   let allMines = [];
   let selectedMineId = null;
   let resetInterval = null;
@@ -619,12 +662,11 @@
     if (!shouldResetDailyActivity(d.lastDailyReset)) return;
     const now = new Date().toISOString();
     try {
-      await db.collection('propertyDetails').doc(mine.id).set({
+      await safeUpdatePropertyDetails(mine.id, {
         dailyActivitiesRemaining: 1,
         doubleRewardAvailable: true,
         lastDailyReset: now,
-        lastUpdated: now,
-      }, { merge: true });
+      });
       mine._details = { ...d, dailyActivitiesRemaining: 1, doubleRewardAvailable: true, lastDailyReset: now, lastUpdated: now };
     } catch (e) {
       // Non-fatal — worst case the mine still shows stale until next load/visit.
@@ -1195,7 +1237,7 @@
     const val = inp.value.trim();
     if (!val) { showToast('Please enter a name.', 'error'); return; }
     try {
-      await db.collection('propertyDetails').doc(selectedMineId).set({ customName: val }, { merge: true });
+      await safeUpdatePropertyDetails(selectedMineId, { customName: val });
       const mine = allMines.find(p => p.id === selectedMineId);
       if (mine) mine._details = { ...mine._details, customName: val };
       $('name-section').innerHTML = `
@@ -1233,7 +1275,7 @@
   async function saveGreeting() {
     const val = ($('greeting-input')?.value || '').trim();
     try {
-      await db.collection('propertyDetails').doc(selectedMineId).set({ greeting: val }, { merge: true });
+      await safeUpdatePropertyDetails(selectedMineId, { greeting: val });
       const mine = allMines.find(p => p.id === selectedMineId);
       if (mine) mine._details = { ...mine._details, greeting: val };
       const body = document.querySelector('.greeting-card-body');
@@ -1270,11 +1312,11 @@
       const now = new Date().toISOString();
 
       // Write to propertyDetails
-      await db.collection('propertyDetails').doc(mineId).set({
+      await safeUpdatePropertyDetails(mineId, {
         dailyActivitiesRemaining: remaining,
         doubleRewardAvailable: doubled ? false : d.doubleRewardAvailable,
         lastDailyReset: now,
-      }, { merge: true });
+      });
 
       // Credit resources to user
       const resourceKey = `${type}Resources`;
@@ -1347,11 +1389,11 @@
     if (6 - adUsed < 2) { showToast('Daily ad limit reached (3 ads/day). Resets at 4 AM EST.', 'error'); return; }
     if (!confirm('On mobile, a rewarded video ad plays here. Click OK to simulate the reward (web preview only).')) return;
     try {
-      await db.collection('propertyDetails').doc(mineId).set({
+      await safeUpdatePropertyDetails(mineId, {
         dailyActivitiesRemaining: firebase.firestore.FieldValue.increment(2),
         adAttemptsUsedToday: adUsed + 2,
         lastAdAttemptDate: new Date().toISOString(),
-      }, { merge: true });
+      });
       mine._details = { ...d, dailyActivitiesRemaining: (d.dailyActivitiesRemaining ?? 1) + 2, adAttemptsUsedToday: adUsed + 2 };
       showToast('✓ +2 activity attempts unlocked!', 'success');
       await selectMine(selectedMineId);
@@ -1474,7 +1516,7 @@
     el.insertAdjacentHTML('beforeend', '<div class="pfp-option-check">✓</div>');
 
     try {
-      await db.collection('propertyDetails').doc(pfpCurrentMineId).set({ profilePhotoURL: url }, { merge: true });
+      await safeUpdatePropertyDetails(pfpCurrentMineId, { profilePhotoURL: url });
       const mine = allMines.find(p => p.id === pfpCurrentMineId);
       if (mine) mine._details = { ...mine._details, profilePhotoURL: url };
       showToast('Mine photo updated!', 'success');
