@@ -346,12 +346,18 @@
     <div class="referral-text">
       <p class="section-label">Referral Program</p>
       <h2>Invite a friend.<br/>You <em>both</em> win.</h2>
-      <p>Share your referral link from the map screen. When your friend signs up and buys their first TerraAcre, you each receive 1,000 TerraBucks — automatically, no codes needed.</p>
+      <p>Share your referral link from the map screen. When your friend signs up and buys their first TerraAcre, you get 1,000 TerraBucks and they get 2,000 TerraBucks — no codes needed, rewarded once you're both active in the app.</p>
     </div>
     <div class="referral-badge">
-      <div class="tb-amount">1,000</div>
-      <div class="tb-label">TerraBucks each</div>
-      <div class="tb-sub">You + your friend</div>
+      <div class="tb-row">
+        <div class="tb-amount">1,000</div>
+        <div class="tb-label">TerraBucks for you</div>
+      </div>
+      <div class="tb-divider"></div>
+      <div class="tb-row">
+        <div class="tb-amount">2,000</div>
+        <div class="tb-label">TerraBucks for your friend</div>
+      </div>
     </div>
   </div>
 
@@ -388,14 +394,17 @@
     </div>
 
     <!--
-      🔒 SECURITY (Aug 12, 2026): third-party embed (SociableKit Facebook
-      group widget), sandboxed the same way we contain untrusted content
-      elsewhere on this page. Deliberately NOT pasted in as a same-origin
-      <script> tag — see widgets/facebook-group.html for the full writeup.
-      No "allow-same-origin" on purpose: this frame gets an opaque origin
-      with no access to terramine.app cookies/localStorage/DOM, only
-      allow-scripts (so the widget's own JS can run) and allow-popups (so
-      "view post" style links open normally instead of being blocked).
+      🔒 SECURITY (Aug 12, 2026, updated same day): third-party embed
+      (SociableKit Facebook group widget). Originally wrapped in our own
+      widgets/facebook-group.html + sandboxed iframe so SociableKit's JS
+      never ran same-origin with terramine.app. Switched to SociableKit's
+      own hosted iframe endpoint instead — same containment goal, simpler:
+      their JS now runs entirely on widgets.sociablekit.com's own origin,
+      never on ours at all, so there's no wrapper file to maintain. Sandbox
+      attributes kept anyway as defense-in-depth (still no
+      "allow-same-origin" — this frame gets an opaque origin either way,
+      only allow-scripts + allow-popups so the widget and its "view post"
+      links work normally).
     -->
     <div class="community-facebook-card">
       <div class="community-card-header">
@@ -405,7 +414,7 @@
         </div>
       </div>
       <iframe
-        src="/widgets/facebook-group.html"
+        src="https://widgets.sociablekit.com/facebook-group-posts/iframe/25701939"
         title="TerraMine Facebook Group"
         loading="lazy"
         referrerpolicy="no-referrer"
