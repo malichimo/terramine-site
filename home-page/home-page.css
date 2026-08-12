@@ -851,6 +851,20 @@ section.content {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
 }
+.community-facebook-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  margin-top: 16px;
+}
+.community-facebook-frame {
+  width: 100%;
+  min-height: 600px;
+  border: 0;
+  border-radius: 12px;
+  display: block;
+}
 .community-member {
   display: flex;
   align-items: center;

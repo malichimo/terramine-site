@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TerraMine Facebook Group</title>
+<!--
+  🔒 SECURITY (Aug 12, 2026): this file exists ONLY to hold the SociableKit
+  Facebook-group-posts embed, and is loaded from index.html inside a
+  sandboxed iframe with NO "allow-same-origin" — see the iframe's sandbox
+  attribute in index.html for the actual enforcement.
+
+  Why a separate file + sandbox instead of pasting the embed straight into
+  index.html: the Discord widget fix (Aug 3, 2026) was about not trusting
+  attacker-influenceable DATA (Discord usernames) without escaping it before
+  it hits innerHTML. This embed is a different, bigger trust problem — it's
+  not our data being rendered, it's a third party's SCRIPT running with full
+  page privileges. A <script src="https://widgets.sociablekit.com/..."> tag
+  pasted directly into index.html would run with the SAME origin as the rest
+  of the site — able to read/write the DOM anywhere on the page, read
+  cookies and localStorage under terramine.app, and everything else same-
+  origin script access allows. If SociableKit's CDN were ever compromised,
+  or they later added tracking/malicious behavior, that code would be
+  running as trusted as our own.
+
+  Putting the embed in its own file and loading it via a sandboxed iframe
+  (sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox", no
+  allow-same-origin) puts it in a browser-enforced opaque origin instead:
+  it can still run its own JS and fetch its own data from SociableKit's API,
+  but it CANNOT read/write anything in the parent page's DOM, and it cannot
+  read terramine.app's cookies or localStorage (no Firebase Auth session,
+  no site data — none of that is reachable from inside this frame). Same
+  goal as the Discord fix (don't let untrusted third-party content operate
+  with full trust on this page), different mechanism because the threat
+  here is untrusted CODE, not untrusted DATA.
+-->
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+</style>
+</head>
+<body>
+  <div class="sk-ww-facebook-group-posts" data-embed-id="25701939"></div>
+  <script src="https://widgets.sociablekit.com/facebook-group-posts/widget.js" defer></script>
+</body>
+</html>

@@ -386,6 +386,33 @@
         </div>
       </div>
     </div>
+
+    <!--
+      🔒 SECURITY (Aug 12, 2026): third-party embed (SociableKit Facebook
+      group widget), sandboxed the same way we contain untrusted content
+      elsewhere on this page. Deliberately NOT pasted in as a same-origin
+      <script> tag — see widgets/facebook-group.html for the full writeup.
+      No "allow-same-origin" on purpose: this frame gets an opaque origin
+      with no access to terramine.app cookies/localStorage/DOM, only
+      allow-scripts (so the widget's own JS can run) and allow-popups (so
+      "view post" style links open normally instead of being blocked).
+    -->
+    <div class="community-facebook-card">
+      <div class="community-card-header">
+        <div>
+          <p class="section-label community-discord-label">Facebook</p>
+          <h3>TerraMine Group</h3>
+        </div>
+      </div>
+      <iframe
+        src="/widgets/facebook-group.html"
+        title="TerraMine Facebook Group"
+        loading="lazy"
+        referrerpolicy="no-referrer"
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        class="community-facebook-frame"
+      ></iframe>
+    </div>
   </section>
 
   <!-- ── FOOTER ── -->
