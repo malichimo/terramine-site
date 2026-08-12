@@ -147,6 +147,70 @@
   }
   .reset-btn:hover { color: var(--amber); border-color: var(--amber); }
 
+  /* Date range filter */
+  .date-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+  .date-filter-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .date-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    color-scheme: dark;
+  }
+  .date-input:focus { border-color: var(--gold); }
+  .apply-date-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .apply-date-btn:hover { background: var(--gold-light); }
+  .clear-date-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .clear-date-btn:hover { color: var(--red); border-color: var(--red); }
+
+  /* Bottom load-more */
+  .load-more-bottom {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+  }
+
   /* Stats row */
   .stats-row {
     display: flex;
@@ -522,6 +586,17 @@
     </div>
   </div>
 
+  <!-- Date range filter -->
+  <div class="date-filter-row">
+    <span class="date-filter-label">From</span>
+    <input type="date" id="dateStartInput" class="date-input">
+    <span class="date-filter-label">To</span>
+    <input type="date" id="dateEndInput" class="date-input">
+    <button class="apply-date-btn" onclick="applyDateFilter()">Apply Range</button>
+    <button class="clear-date-btn" id="clearDateFilterBtn" onclick="clearDateFilter()" style="display:none;">✕ Clear Range</button>
+    <span class="date-filter-label" id="dateFilterStatus"></span>
+  </div>
+
   <!-- User filter bar -->
   <div class="filter-bar" id="filterBar">
     <button class="clear-filter-btn" onclick="clearUserFilter()">← Back to All Photos</button>
@@ -536,6 +611,10 @@
       <div>Click <strong>Load Latest Photos</strong> to begin</div>
       <div style="font-size:11px;margin-top:6px;">Only check-ins with photos will be shown</div>
     </div>
+  </div>
+
+  <div class="load-more-bottom">
+    <button class="load-more-btn" id="loadMoreBtnBottom" onclick="loadMore()" style="display:none;">Load More</button>
   </div>
 
 </div>
@@ -612,6 +691,19 @@
   let lightboxPhotoURL = null;
   let activeFilterUserId = null;
   let activeFilterNickname = null;
+  let activeDateStart = null; // ISO string, inclusive
+  let activeDateEnd = null;   // ISO string, inclusive
+
+  // Keep both "Load More" buttons (top toolbar + bottom of grid) in sync —
+  // they're the same action, just placed in two spots for convenience.
+  function setLoadMoreVisible(visible) {
+    document.getElementById('loadMoreBtn').style.display = visible ? 'inline-block' : 'none';
+    document.getElementById('loadMoreBtnBottom').style.display = visible ? 'inline-block' : 'none';
+  }
+  function setLoadMoreDisabled(disabled) {
+    document.getElementById('loadMoreBtn').disabled = disabled;
+    document.getElementById('loadMoreBtnBottom').disabled = disabled;
+  }
 
   // ── Auth ─────────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
@@ -683,7 +775,7 @@
         <div class="icon">📷</div>
         <div>Cursor cleared. Click <strong>Load Latest Photos</strong> to reload from newest.</div>
       </div>`;
-    document.getElementById('loadMoreBtn').style.display = 'none';
+    setLoadMoreVisible(false);
     updateCursorDisplay();
     showToast('Cursor reset — will load all photos from newest', 'success');
   };
@@ -700,7 +792,7 @@
     document.getElementById('filterName').textContent = nickname;
     document.getElementById('filterCount').textContent = '';
     document.getElementById('filterBar').classList.add('active');
-    document.getElementById('loadMoreBtn').style.display = 'none';
+    setLoadMoreVisible(false);
     loadPhotos(false);
   };
 
@@ -713,7 +805,7 @@
     document.getElementById('shownCount').textContent = '0';
     document.getElementById('photoGrid').innerHTML = '';
     document.getElementById('filterBar').classList.remove('active');
-    document.getElementById('loadMoreBtn').style.display = 'none';
+    setLoadMoreVisible(false);
     // Clear cursor temporarily so we always get results on return
     const savedCursor = getCursor();
     localStorage.removeItem(CURSOR_KEY);
@@ -724,87 +816,124 @@
     });
   };
 
+  // ── Date range filter ─────────────────────────────────────────────
+  window.applyDateFilter = function() {
+    const startVal = document.getElementById('dateStartInput').value;
+    const endVal = document.getElementById('dateEndInput').value;
+    if (!startVal && !endVal) {
+      showToast('Pick a start date, end date, or both', 'error');
+      return;
+    }
+    // Interpreted in the browser's local time (start of day / end of day),
+    // then converted to ISO/UTC to match how timestamp strings are stored
+    // (submitCheckIn writes new Date().toISOString() server-side).
+    activeDateStart = startVal ? new Date(startVal + 'T00:00:00').toISOString() : null;
+    activeDateEnd = endVal ? new Date(endVal + 'T23:59:59.999').toISOString() : null;
+
+    lastDoc = null;
+    sessionLoaded = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = '';
+    setLoadMoreVisible(false);
+    document.getElementById('clearDateFilterBtn').style.display = 'inline-block';
+    document.getElementById('dateFilterStatus').textContent =
+      startVal && endVal ? `Filtering ${startVal} → ${endVal}` :
+      startVal ? `Filtering from ${startVal}` : `Filtering through ${endVal}`;
+    loadPhotos(false);
+  };
+
+  window.clearDateFilter = function() {
+    activeDateStart = null;
+    activeDateEnd = null;
+    document.getElementById('dateStartInput').value = '';
+    document.getElementById('dateEndInput').value = '';
+    document.getElementById('clearDateFilterBtn').style.display = 'none';
+    document.getElementById('dateFilterStatus').textContent = '';
+    lastDoc = null;
+    sessionLoaded = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = '';
+    setLoadMoreVisible(false);
+    loadPhotos(false);
+  };
+
   // ── Load photos ───────────────────────────────────────────────────
+  // Builds the Firestore query constraints for the current filter
+  // combination (user filter + date range are independent and can be
+  // combined; both can also combine with pagination via startAfter).
+  // While either filter is active, the "only new since last session"
+  // cursor is ignored — that behavior only makes sense for the default
+  // unfiltered view. Applying/clearing a filter always starts a fresh
+  // lastDoc-based pagination sequence (see applyDateFilter/clearDateFilter/
+  // filterByUser/clearUserFilter, which all reset lastDoc to null).
+  function buildQueryConstraints(isLoadMore) {
+    const constraints = [where('hasPhoto', '==', true)];
+
+    if (activeFilterUserId) {
+      constraints.push(where('userId', '==', activeFilterUserId));
+    }
+    if (activeDateStart) {
+      constraints.push(where('timestamp', '>=', activeDateStart));
+    }
+    if (activeDateEnd) {
+      constraints.push(where('timestamp', '<=', activeDateEnd));
+    }
+
+    constraints.push(orderBy('timestamp', 'desc'));
+
+    const hasAnyFilter = !!(activeFilterUserId || activeDateStart || activeDateEnd);
+    const cursor = getCursor();
+    if (isLoadMore && lastDoc) {
+      constraints.push(startAfter(lastDoc));
+    } else if (!isLoadMore && !hasAnyFilter && cursor) {
+      constraints.push(where('timestamp', '>', cursor));
+    }
+
+    constraints.push(limit(PAGE_SIZE));
+    return constraints;
+  }
+
   window.loadPhotos = async function(isLoadMore = false) {
     const btn = document.getElementById('loadBtn');
-    const moreBtn = document.getElementById('loadMoreBtn');
     btn.disabled = true;
     btn.textContent = '⏳ Loading...';
-    moreBtn.disabled = true;
+    setLoadMoreDisabled(true);
 
     try {
       const cursor = getCursor();
-      let q;
-
-      if (activeFilterUserId) {
-        // ── User filter mode ──────────────────────────────────────
-        if (isLoadMore && lastDoc) {
-          q = query(
-            collection(db, 'checkIns'),
-            where('userId', '==', activeFilterUserId),
-            where('hasPhoto', '==', true),
-            orderBy('timestamp', 'desc'),
-            startAfter(lastDoc),
-            limit(PAGE_SIZE)
-          );
-        } else {
-          q = query(
-            collection(db, 'checkIns'),
-            where('userId', '==', activeFilterUserId),
-            where('hasPhoto', '==', true),
-            orderBy('timestamp', 'desc'),
-            limit(PAGE_SIZE)
-          );
-        }
-      } else {
-        // ── Normal mode ───────────────────────────────────────────
-        if (isLoadMore && lastDoc) {
-          q = query(
-            collection(db, 'checkIns'),
-            where('hasPhoto', '==', true),
-            orderBy('timestamp', 'desc'),
-            startAfter(lastDoc),
-            limit(PAGE_SIZE)
-          );
-        } else if (!isLoadMore && cursor) {
-          q = query(
-            collection(db, 'checkIns'),
-            where('hasPhoto', '==', true),
-            where('timestamp', '>', cursor),
-            orderBy('timestamp', 'desc'),
-            limit(PAGE_SIZE)
-          );
-        } else {
-          q = query(
-            collection(db, 'checkIns'),
-            where('hasPhoto', '==', true),
-            orderBy('timestamp', 'desc'),
-            limit(PAGE_SIZE)
-          );
-        }
-      }
+      const hasAnyFilter = !!(activeFilterUserId || activeDateStart || activeDateEnd);
+      const q = query(collection(db, 'checkIns'), ...buildQueryConstraints(isLoadMore));
 
       const snap = await getDocs(q);
 
       if (snap.empty && !isLoadMore) {
-        const msg = activeFilterUserId
-          ? `No photos found for ${activeFilterNickname}.`
-          : (cursor ? 'No new photos since last session.' : 'No check-in photos found in the database.');
+        let msg;
+        if (activeFilterUserId && (activeDateStart || activeDateEnd)) {
+          msg = `No photos found for ${activeFilterNickname} in this date range.`;
+        } else if (activeFilterUserId) {
+          msg = `No photos found for ${activeFilterNickname}.`;
+        } else if (activeDateStart || activeDateEnd) {
+          msg = 'No photos found in this date range.';
+        } else {
+          msg = cursor ? 'No new photos since last session.' : 'No check-in photos found in the database.';
+        }
         document.getElementById('photoGrid').innerHTML = `
           <div class="empty-state">
-            <div class="icon">${activeFilterUserId ? '👤' : '✅'}</div>
+            <div class="icon">${hasAnyFilter ? '🔍' : '✅'}</div>
             <div>${msg}</div>
           </div>`;
-        if (!activeFilterUserId && cursor) showToast('No new photos since last session', 'success');
+        if (!hasAnyFilter && cursor) showToast('No new photos since last session', 'success');
         btn.disabled = false;
         btn.textContent = '📥 Load Latest Photos';
-        moreBtn.disabled = false;
+        setLoadMoreDisabled(false);
         return;
       }
 
       if (!snap.empty) {
         lastDoc = snap.docs[snap.docs.length - 1];
-        if (!isLoadMore && !activeFilterUserId) {
+        if (!isLoadMore && !hasAnyFilter) {
           const newestTs = snap.docs[0].data().timestamp;
           if (newestTs) saveCursor(newestTs);
         }
@@ -831,7 +960,7 @@
         document.getElementById('filterCount').textContent = `— ${shown} photo${shown !== 1 ? 's' : ''}`;
       }
 
-      moreBtn.style.display = snap.docs.length === PAGE_SIZE ? 'inline-block' : 'none';
+      setLoadMoreVisible(snap.docs.length === PAGE_SIZE);
 
     } catch(e) {
       console.error('Load failed:', e);
@@ -839,7 +968,7 @@
     } finally {
       btn.disabled = false;
       btn.textContent = '📥 Load Latest Photos';
-      moreBtn.disabled = false;
+      setLoadMoreDisabled(false);
     }
   };
 
