@@ -663,7 +663,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
     getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc,
-    query, orderBy, limit, setDoc, getDoc
+    query, orderBy, limit, where, setDoc, getDoc, getCountFromServer, getAggregateFromServer, sum
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
@@ -685,7 +685,8 @@
   let activeUsersYesterday = 0; // Set by loadPlayerLiability
   let allExpenses = [];  // [{id, name, amount, frequency, category, notes, active}]
   let totalPlayerLiability = 0;
-  let topEarners = [];   // [{nickname, email, usdEarnings, tbBalance}]
+  let topEarners = [];    // top 20 only, sorted desc — see loadPlayerLiability()
+  let earnersCount = 0;   // TRUE total count of users with usdEarnings > 0 (topEarners is capped at 20)
   let currentPeriod = 'yesterday';
   let chartInstance = null;
   let editingRevId = null;
@@ -737,31 +738,54 @@
     }
   }
 
+  // ✅ Aug 11, 2026 cost fix: this used to download the ENTIRE users
+  // collection (getDocs, no where/limit) on every single Finance page load
+  // just to sum usdEarnings and build a top-20 table — same pattern already
+  // fixed in admin/index.html's loadAll(). Total liability is now a single
+  // getAggregateFromServer sum(), the earners count is a getCountFromServer
+  // on where('usdEarnings','>',0), and the table itself is a bounded
+  // orderBy(desc)+limit(20) query — no full collection download at all.
+  //
+  // activeUsersYesterday previously OR'd across lastActiveAt/lastCheckinAt/
+  // updatedAt (whichever was set) — that can't be expressed as a single
+  // range query, so it's now scoped to lastActiveAt only. This is a rough
+  // "earn per active user" denominator, not a compliance-critical number
+  // (contrast with runInactivityCheck() in admin/index.html, which does
+  // need the full users scan for exactly this reason) — a minor undercount
+  // here is an acceptable tradeoff for dropping a 20K+ doc download.
   async function loadPlayerLiability() {
     try {
-      const snap = await getDocs(collection(db, 'users'));
-      const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      totalPlayerLiability = users.reduce((s, u) => s + (parseFloat(u.usdEarnings) || 0), 0);
-      topEarners = users
-        .filter(u => (parseFloat(u.usdEarnings) || 0) > 0)
-        .map(u => ({
-          nickname: u.nickname || u.id.substring(0,8),
+      const usersCol = collection(db, 'users');
+
+      const yStart = new Date(); yStart.setUTCDate(yStart.getUTCDate() - 1); yStart.setUTCHours(0,0,0,0);
+      const yEnd = new Date(yStart); yEnd.setUTCHours(23,59,59,999);
+
+      const [sumSnap, earnersCountSnap, activeYSnap, topSnap] = await Promise.all([
+        getAggregateFromServer(usersCol, { total: sum('usdEarnings') }),
+        getCountFromServer(query(usersCol, where('usdEarnings', '>', 0))),
+        getCountFromServer(query(usersCol,
+          where('lastActiveAt', '>=', yStart.toISOString()),
+          where('lastActiveAt', '<=', yEnd.toISOString()))),
+        getDocs(query(usersCol, orderBy('usdEarnings', 'desc'), limit(20))),
+      ]);
+
+      totalPlayerLiability = sumSnap.data().total || 0;
+      earnersCount = earnersCountSnap.data().count;
+      activeUsersYesterday = activeYSnap.data().count;
+      topEarners = topSnap.docs.map(d => {
+        const u = d.data();
+        return {
+          nickname: u.nickname || d.id.substring(0,8),
           email: u.email || '—',
           usdEarnings: parseFloat(u.usdEarnings) || 0,
           tbBalance: u.tbBalance || 0,
-        }))
-        .sort((a, b) => b.usdEarnings - a.usdEarnings);
-
-      // Count users active yesterday (lastActiveAt within yesterday's date)
-      const yStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      activeUsersYesterday = users.filter(u => {
-        const la = u.lastActiveAt || u.lastCheckinAt || u.updatedAt || '';
-        return typeof la === 'string' ? la.startsWith(yStr) : false;
-      }).length;
+        };
+      });
     } catch(e) {
       console.warn('Liability load failed:', e);
       totalPlayerLiability = 0;
       topEarners = [];
+      earnersCount = 0;
       activeUsersYesterday = 0;
     }
   }
@@ -1017,7 +1041,7 @@
     document.getElementById('kpiBreakeven').textContent = fmtUSD(monthly) + '/mo';
     document.getElementById('kpiAlltime').textContent = fmtUSD(alltime);
     document.getElementById('kpiLiability').textContent = fmtUSD(totalPlayerLiability);
-    document.getElementById('kpiLiabilitySub').textContent = `${topEarners.length} users with earnings`;
+    document.getElementById('kpiLiabilitySub').textContent = `${earnersCount} users with earnings`;
     document.getElementById('kpiTrueNet').textContent = fmtUSD(trueNet);
     document.getElementById('kpiTrueNet').className = 'stat-value' + (trueNet >= 0 ? ' green' : ' red');
     document.getElementById('kpiTrueNetCard').className = 'stat-card' + (trueNet >= 0 ? ' positive' : ' negative');
@@ -1143,9 +1167,9 @@
   }
 
   function renderLiability() {
-    const withEarnings = topEarners.length;
+    const withEarnings = earnersCount;
     const avg = withEarnings > 0 ? totalPlayerLiability / withEarnings : 0;
-    const max = withEarnings > 0 ? topEarners[0] : null;
+    const max = topEarners.length > 0 ? topEarners[0] : null;
 
     document.getElementById('liabTotal').textContent = fmtUSD(totalPlayerLiability);
     document.getElementById('liabUserCount').textContent = withEarnings;
