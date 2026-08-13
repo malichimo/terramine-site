@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ & What's New — TerraMine</title>
+  <meta name="description" content="Answers to common TerraMine questions — currencies, cash out, ads, referrals, phone verification, and more — plus the latest updates to the app." />
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080C10;
+      --surface: #0F1620;
+      --border:  rgba(255,255,255,0.07);
+      --gold:    #F5C542;
+      --gold2:   #E89B1A;
+      --cyan:    #5BE5D0;
+      --white:   #EEF2F8;
+      --muted:   #6B7C93;
+      --rock:    #8A9BAE;
+      --coal:    #3D4F62;
+      --goldm:   #D4A017;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID TEXTURE ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91,229,208,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,229,208,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(8,12,16,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--white); }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-login {
+      border: 1px solid var(--cyan);
+      color: var(--cyan) !important;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .nav-cta {
+      background: var(--gold);
+      color: #080C10 !important;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      padding: 72px 40px 56px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(44px, 7vw, 80px);
+      letter-spacing: 2px;
+      line-height: 1.0;
+      color: var(--white);
+      margin-bottom: 18px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--gold);
+    }
+    .hero-desc {
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 560px;
+      margin-bottom: 8px;
+    }
+
+    /* ── LAYOUT ── */
+    .page-layout {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    /* ── STICKY TOC ── */
+    .toc {
+      position: sticky;
+      top: 88px;
+    }
+    .toc-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .toc-list { list-style: none; }
+    .toc-list li { margin-bottom: 2px; }
+    .toc-list a {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 7px 10px;
+      border-left: 2px solid transparent;
+      border-radius: 0 4px 4px 0;
+      text-decoration: none;
+      font-size: 13px;
+      color: var(--muted);
+      transition: all 0.2s;
+      line-height: 1.4;
+    }
+    .toc-list a:hover { color: var(--white); border-left-color: rgba(91,229,208,0.3); }
+    .toc-list a.active { color: var(--cyan); border-left-color: var(--cyan); background: rgba(91,229,208,0.06); }
+
+    /* ── SECTIONS ── */
+    .sections { min-width: 0; }
+    .section {
+      margin-bottom: 56px;
+      padding-top: 8px;
+      scroll-margin-top: 100px;
+    }
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-icon { font-size: 22px; line-height: 1; }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: 1px;
+      color: var(--white);
+      line-height: 1.1;
+    }
+
+    /* ── WHAT'S NEW PANEL ── */
+    .whats-new {
+      background: linear-gradient(135deg, rgba(245,197,66,0.08), rgba(91,229,208,0.04));
+      border: 1px solid rgba(245,197,66,0.2);
+      border-radius: 14px;
+      padding: 24px 28px;
+    }
+    .whats-new-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .update-list { list-style: none; }
+    .update-item {
+      display: flex;
+      gap: 14px;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+    }
+    .update-item:first-child { border-top: none; padding-top: 0; }
+    .update-tag {
+      flex-shrink: 0;
+      width: 68px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 3px 0;
+      border-radius: 6px;
+      text-align: center;
+      height: fit-content;
+    }
+    .update-tag.new       { background: rgba(91,229,208,0.15); color: var(--cyan); }
+    .update-tag.improved  { background: rgba(245,197,66,0.15); color: var(--gold); }
+    .update-body h4 { font-size: 14px; color: var(--white); margin-bottom: 3px; }
+    .update-body p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── FAQ ACCORDION ── */
+    .faq-list { }
+    details.faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    details.faq-item summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 16px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    details.faq-item summary::-webkit-details-marker { display: none; }
+    details.faq-item summary::after {
+      content: '+';
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      color: var(--cyan);
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    details.faq-item[open] summary::after { transform: rotate(45deg); }
+    details.faq-item[open] summary { border-bottom: 1px solid var(--border); }
+    details.faq-item .faq-answer {
+      padding: 4px 18px 18px;
+      font-size: 14px;
+      color: rgba(238,242,248,0.82);
+      line-height: 1.75;
+    }
+    details.faq-item .faq-answer a { color: var(--cyan); }
+    details.faq-item .faq-answer strong { color: var(--white); }
+
+    /* ── CTA BANNER ── */
+    .cta-banner {
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, rgba(245,197,66,0.08), rgba(91,229,208,0.05));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 32px 36px;
+      margin: 0 40px 60px;
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .cta-text h2 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; color: var(--white); margin-bottom: 4px; }
+    .cta-text p { font-size: 14px; color: var(--muted); }
+    .btn-app {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--gold); color: #080C10;
+      padding: 10px 20px; border-radius: 8px;
+      font-weight: 700; font-size: 14px; text-decoration: none;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-app:hover { background: var(--gold2); }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 36px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--gold); text-decoration: none; }
+    .footer-links { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 13px; color: var(--muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 48px 20px 36px; }
+      .page-layout { grid-template-columns: 1fr; padding: 0 20px 60px; gap: 0; }
+      .toc { display: none; }
+      .cta-banner { margin: 0 20px 48px; padding: 24px 20px; }
+      footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; }
+      .update-item { flex-direction: column; gap: 6px; }
+      .update-tag { width: auto; display: inline-block; padding: 3px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">⛏ Terra<span>Mine</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="heatmap.html">World Map</a>
+    <a href="portal.html" class="nav-login">My Portal</a>
+    <a href="index.html#download" class="nav-cta">Download</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Help Center</div>
+  <h1>FAQ & <em>What's New</em></h1>
+  <p class="hero-desc">Answers to the questions we hear most, plus a running list of what's recently changed in the app. Can't find what you're looking for? Reach us at <a href="mailto:scott@terramine.app" style="color:var(--cyan);">scott@terramine.app</a> or on <a href="https://discord.gg/QTSJuT2GgP" target="_blank" rel="noopener" style="color:var(--cyan);">Discord</a>.</p>
+</div>
+
+<!-- LAYOUT -->
+<div class="page-layout">
+
+  <!-- TOC -->
+  <aside class="toc">
+    <div class="toc-label">Jump To</div>
+    <ul class="toc-list">
+      <li><a href="#whats-new" class="active">✨ What's New</a></li>
+      <li><a href="#getting-started">Getting Started</a></li>
+      <li><a href="#currencies">Currencies & Cash Out</a></li>
+      <li><a href="#ads">Ads</a></li>
+      <li><a href="#account">Account & Verification</a></li>
+      <li><a href="#referrals">Referrals</a></li>
+      <li><a href="#checkins">Check-ins & Mines</a></li>
+      <li><a href="#support">Bugs & Support</a></li>
+    </ul>
+  </aside>
+
+  <!-- SECTIONS -->
+  <div class="sections">
+
+    <!-- WHAT'S NEW -->
+    <section class="section" id="whats-new">
+      <div class="section-header">
+        <span class="section-icon">✨</span>
+        <h2 class="section-title">What's New</h2>
+      </div>
+      <div class="whats-new">
+        <p class="whats-new-note">The highlights — for the full technical changelog, see our <a href="https://discord.gg/QTSJuT2GgP" target="_blank" rel="noopener" style="color:var(--cyan);">Discord</a>.</p>
+        <ul class="update-list">
+          <li class="update-item">
+            <span class="update-tag new">New</span>
+            <div class="update-body">
+              <h4>Bonus TB trade-in days</h4>
+              <p>Trading your USD earnings for TerraBucks now pays a bonus rate — 300 TB per $1 instead of the standard 200 TB — on the 1st and 15th of every month.</p>
+            </div>
+          </li>
+          <li class="update-item">
+            <span class="update-tag new">New</span>
+            <div class="update-body">
+              <h4>Per-mine activity indicator</h4>
+              <p>See at a glance how active or inactive each of your mines is, right from your Properties list, so nothing sneaks past you before it's flagged inactive.</p>
+            </div>
+          </li>
+          <li class="update-item">
+            <span class="update-tag new">New</span>
+            <div class="update-body">
+              <h4>Demolish Mine</h4>
+              <p>Don't want a property anymore? You can now demolish it and free it up, instead of it sitting idle forever.</p>
+            </div>
+          </li>
+          <li class="update-item">
+            <span class="update-tag new">New</span>
+            <div class="update-body">
+              <h4>Phone verification</h4>
+              <p>Added as part of getting the app ready for real cash withdrawals — one verified phone number per account. See the Account & Verification section below if you're hitting a temporary limit.</p>
+            </div>
+          </li>
+          <li class="update-item">
+            <span class="update-tag improved">Improved</span>
+            <div class="update-body">
+              <h4>Fresh visuals</h4>
+              <p>New loading screen and updated in-game graphics.</p>
+            </div>
+          </li>
+          <li class="update-item">
+            <span class="update-tag improved">Improved</span>
+            <div class="update-body">
+              <h4>Check-in and referral reward accuracy</h4>
+              <p>Fixed cases where check-in bonuses and referral rewards weren't crediting correctly.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- GETTING STARTED -->
+    <section class="section" id="getting-started">
+      <div class="section-header">
+        <span class="section-icon">⛏</span>
+        <h2 class="section-title">Getting Started</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>What is TerraMine?</summary>
+          <div class="faq-answer">TerraMine is a GPS-based mobile game where every property you buy — a TerraAcre (TA) — is tied to a real-world location. Each one generates TerraBucks (TB) and a trickle of passive USD income over time. Walk around, claim unclaimed grid squares near you, and run their daily mini-games to level them up. See the full <a href="guide.html">Player's Guide</a> for a step-by-step walkthrough.</div>
+        </details>
+        <details class="faq-item">
+          <summary>How do I claim a mine?</summary>
+          <div class="faq-answer">Open the map, walk to an unclaimed grid square near you, tap it, and pay 100 TB to claim it. It's randomly assigned one of four mine types — Rock, Coal, Gold, or Diamond — each with its own earning rate and mini-game.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Is TerraMine free to play?</summary>
+          <div class="faq-answer">Yes. TerraMine is free to download and play, with optional rewarded ads that boost your earnings.</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- CURRENCIES & CASH OUT -->
+    <section class="section" id="currencies">
+      <div class="section-header">
+        <span class="section-icon">💰</span>
+        <h2 class="section-title">Currencies & Cash Out</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>What's the difference between TerraBucks and my USD earnings?</summary>
+          <div class="faq-answer"><strong>TerraBucks (TB)</strong> is the in-game currency you use to claim and upgrade mines. Your <strong>USD earnings</strong> build up passively from your mines over time in real dollars, and can be traded for TB or eventually cashed out.</div>
+        </details>
+        <details class="faq-item">
+          <summary>How do I trade my USD earnings for TB?</summary>
+          <div class="faq-answer">Tap your USD balance on the map screen and choose "Trade Earnings for TB." The standard rate is 200 TB per $1, with a bonus rate of 300 TB per $1 on the 1st and 15th of each month.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Can I cash out my USD earnings for real money?</summary>
+          <div class="faq-answer">Cash Out via PayPal is launching in August 2026. We'll announce it in-app and on Discord as soon as it's live — no action needed on your end until then.</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ADS -->
+    <section class="section" id="ads">
+      <div class="section-header">
+        <span class="section-icon">📺</span>
+        <h2 class="section-title">Ads</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>An ad won't play, or gets stuck loading — what do I do?</summary>
+          <div class="faq-answer">We don't have control over the behavior of individual ads — that's determined by our ad network, and availability can vary by device, region, and time of day. If an ad gets stuck, force-close and reopen the app; that resolves it most of the time. Reliability keeps improving with every update.</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ACCOUNT & VERIFICATION -->
+    <section class="section" id="account">
+      <div class="section-header">
+        <span class="section-icon">🔐</span>
+        <h2 class="section-title">Account & Verification</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Phone verification says I've hit a limit — what now?</summary>
+          <div class="faq-answer">We're actively working with our verification provider to raise the daily limit. Try again in a day or two and it should go through. If it still doesn't work after that, email us at <a href="mailto:scott@terramine.app">scott@terramine.app</a>.</div>
+        </details>
+        <details class="faq-item">
+          <summary>What happens if I stop playing for a while?</summary>
+          <div class="faq-answer">Individual mines that go untouched for an extended period get flagged and can have their passive earnings paused — you'll see a warning in-app well before that happens. Your account itself follows a similar staged warning process for long-term inactivity. Full details are in our <a href="terms.html">Terms of Service</a>. Your TerraBucks and USD balance are never deleted.</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- REFERRALS -->
+    <section class="section" id="referrals">
+      <div class="section-header">
+        <span class="section-icon">🤝</span>
+        <h2 class="section-title">Referrals</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How do referral codes work?</summary>
+          <div class="faq-answer">Share your referral code with a friend. When they enter it <strong>during signup</strong>, they get 2,000 TB and you get 1,000 TB. It has to be entered at signup — it can't be applied to an account that already exists.</div>
+        </details>
+        <details class="faq-item">
+          <summary>I referred a friend but didn't get my bonus — what happened?</summary>
+          <div class="faq-answer">First, double check your friend entered your code at signup, not afterward. Rewards are also capped per day to prevent abuse, so a burst of referrals in one day may spill over to the next. If it's been a couple of days and you still don't see it, email <a href="mailto:scott@terramine.app">scott@terramine.app</a> with both your referral code and your friend's — that's the fastest way for us to look it up.</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- CHECK-INS & MINES -->
+    <section class="section" id="checkins">
+      <div class="section-header">
+        <span class="section-icon">📍</span>
+        <h2 class="section-title">Check-ins & Mines</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>What happens when I check in to someone else's mine?</summary>
+          <div class="faq-answer">You can leave the owner a message and photo, and they'll see it in their Visitor Log. Checking into multiple mines in one day also builds a streak bonus.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Do I need to play a mine's mini-game every day?</summary>
+          <div class="faq-answer">Not required, but it keeps that mine's activity level up and unlocks higher rewards as you level it. Each of the four mine types — Rock, Coal, Gold, and Diamond — has its own mini-game. See the <a href="guide.html">Player's Guide</a> for details on each.</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- BUGS & SUPPORT -->
+    <section class="section" id="support">
+      <div class="section-header">
+        <span class="section-icon">🐛</span>
+        <h2 class="section-title">Bugs & Support</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>I found a bug — how do I report it?</summary>
+          <div class="faq-answer">Use the Feedback option in the app's Settings, or email <a href="mailto:scott@terramine.app">scott@terramine.app</a> directly. Include your referral code or username if you can — it's the fastest way for us to look up your account.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Didn't find your answer here?</summary>
+          <div class="faq-answer">Reach out on <a href="https://discord.gg/QTSJuT2GgP" target="_blank" rel="noopener">Discord</a> or email <a href="mailto:scott@terramine.app">scott@terramine.app</a> — we read everything.</div>
+        </details>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-banner">
+  <div class="cta-text">
+    <h2>Still have questions?</h2>
+    <p>Join the community on Discord — it's the fastest way to get help.</p>
+  </div>
+  <a href="https://discord.gg/QTSJuT2GgP" class="btn-app" target="_blank" rel="noopener">💬 Join Discord</a>
+</div>
+
+<footer>
+  <a class="footer-logo" href="index.html">⛏ TerraMine</a>
+  <div class="footer-links">
+    <a href="faq.html">FAQ</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="heatmap.html">World Map</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+    <a href="portal.html">My Portal</a>
+    <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+    <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+  </div>
+  <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+</footer>
+
+<script>
+  // Scrollspy — highlight active section in TOC
+  const sections = document.querySelectorAll('.section');
+  const tocLinks  = document.querySelectorAll('.toc-list a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        tocLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
