@@ -146,6 +146,31 @@
     white-space: nowrap;
   }
   .reset-btn:hover { color: var(--amber); border-color: var(--amber); }
+  .flagged-toggle-btn {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .flagged-toggle-btn:hover { border-color: var(--red); color: var(--text); }
+  .flagged-toggle-btn.active { background: var(--red); color: #fff; border-color: var(--red); font-weight: 500; }
+  .flagged-badge {
+    display: inline-block;
+    background: rgba(224,80,80,0.15);
+    color: var(--red);
+    border: 1px solid rgba(224,80,80,0.4);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
 
   /* Date range filter */
   .date-filter-row {
@@ -242,7 +267,7 @@
     transition: border-color 0.2s;
   }
   .photo-card:hover { border-color: rgba(200,146,42,0.35); }
-  .photo-card.flagged { border-color: rgba(224,80,80,0.5); }
+  .photo-card.flagged { border-color: var(--red); border-width: 2px; }
   .photo-thumb {
     width: 100%;
     aspect-ratio: 4/3;
@@ -565,16 +590,27 @@
       <button class="load-btn" id="loadBtn" onclick="loadPhotos()">📥 Load Latest Photos</button>
       <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()" style="display:none;">Load More</button>
       <button class="reset-btn" onclick="resetAndReload()" title="Clear cursor and reload from newest">↺ Reset</button>
+      <button class="flagged-toggle-btn" id="flaggedToggleBtn" onclick="toggleFlaggedOnly()" title="Show only photos dailyPhotoModerationScan flagged for review">🚩 Flagged Only</button>
     </div>
     <div style="font-size:11px;color:var(--text-muted);">
       Cursor saved — only new photos loaded each session
     </div>
   </div>
 
+  <div style="font-size:11px;color:var(--text-muted);margin:-12px 0 20px;line-height:1.6;">
+    🚩 Flagged photos were caught by the nightly self-hosted scan (<code>dailyPhotoModerationScan</code>,
+    added Aug 13, 2026 after Azure Content Safety was paused). Not every photo has been scanned yet —
+    the scan backfills a batch every night — and flags are a starting point for review, not a verdict.
+  </div>
+
   <div class="stats-row">
     <div class="mini-stat">
       <div class="mini-stat-label">Loaded This Session</div>
       <div class="mini-stat-value" id="sessionCount">0</div>
+    </div>
+    <div class="mini-stat">
+      <div class="mini-stat-label">Flagged (loaded)</div>
+      <div class="mini-stat-value" id="flaggedCount" style="color:var(--red);">0</div>
     </div>
     <div class="mini-stat">
       <div class="mini-stat-label">Deleted This Session</div>
@@ -685,6 +721,7 @@
   let lastDoc = null;
   let sessionLoaded = 0;
   let sessionDeleted = 0;
+  let sessionFlagged = 0;
   let pendingDeleteDocId = null;
   let pendingDeletePhotoURL = null;
   let lightboxDocId = null;
@@ -693,6 +730,7 @@
   let activeFilterNickname = null;
   let activeDateStart = null; // ISO string, inclusive
   let activeDateEnd = null;   // ISO string, inclusive
+  let showFlaggedOnly = false; // filters to selfScanFlagged==true (dailyPhotoModerationScan, Aug 13, 2026)
 
   // Keep both "Load More" buttons (top toolbar + bottom of grid) in sync —
   // they're the same action, just placed in two spots for convenience.
@@ -816,6 +854,21 @@
     });
   };
 
+  // ── Flagged-only filter (dailyPhotoModerationScan, Aug 13, 2026) ────
+  window.toggleFlaggedOnly = function() {
+    showFlaggedOnly = !showFlaggedOnly;
+    document.getElementById('flaggedToggleBtn').classList.toggle('active', showFlaggedOnly);
+    lastDoc = null;
+    sessionLoaded = 0;
+    sessionFlagged = 0;
+    document.getElementById('sessionCount').textContent = '0';
+    document.getElementById('flaggedCount').textContent = '0';
+    document.getElementById('shownCount').textContent = '0';
+    document.getElementById('photoGrid').innerHTML = '';
+    setLoadMoreVisible(false);
+    loadPhotos(false);
+  };
+
   // ── Date range filter ─────────────────────────────────────────────
   window.applyDateFilter = function() {
     const startVal = document.getElementById('dateStartInput').value;
@@ -871,6 +924,9 @@
   function buildQueryConstraints(isLoadMore) {
     const constraints = [where('hasPhoto', '==', true)];
 
+    if (showFlaggedOnly) {
+      constraints.push(where('selfScanFlagged', '==', true));
+    }
     if (activeFilterUserId) {
       constraints.push(where('userId', '==', activeFilterUserId));
     }
@@ -883,7 +939,7 @@
 
     constraints.push(orderBy('timestamp', 'desc'));
 
-    const hasAnyFilter = !!(activeFilterUserId || activeDateStart || activeDateEnd);
+    const hasAnyFilter = !!(activeFilterUserId || activeDateStart || activeDateEnd || showFlaggedOnly);
     const cursor = getCursor();
     if (isLoadMore && lastDoc) {
       constraints.push(startAfter(lastDoc));
@@ -903,14 +959,16 @@
 
     try {
       const cursor = getCursor();
-      const hasAnyFilter = !!(activeFilterUserId || activeDateStart || activeDateEnd);
+      const hasAnyFilter = !!(activeFilterUserId || activeDateStart || activeDateEnd || showFlaggedOnly);
       const q = query(collection(db, 'checkIns'), ...buildQueryConstraints(isLoadMore));
 
       const snap = await getDocs(q);
 
       if (snap.empty && !isLoadMore) {
         let msg;
-        if (activeFilterUserId && (activeDateStart || activeDateEnd)) {
+        if (showFlaggedOnly) {
+          msg = 'No flagged photos found. Either the scan hasn\'t caught up yet, or everything loaded is clean.';
+        } else if (activeFilterUserId && (activeDateStart || activeDateEnd)) {
           msg = `No photos found for ${activeFilterNickname} in this date range.`;
         } else if (activeFilterUserId) {
           msg = `No photos found for ${activeFilterNickname}.`;
@@ -978,8 +1036,14 @@
 
   function renderPhotoCard(docId, data, grid) {
     const card = document.createElement('div');
-    card.className = 'photo-card';
+    const isFlagged = data.selfScanFlagged === true;
+    card.className = isFlagged ? 'photo-card flagged' : 'photo-card';
     card.id = `card-${docId}`;
+
+    if (isFlagged) {
+      sessionFlagged++;
+      document.getElementById('flaggedCount').textContent = sessionFlagged;
+    }
 
     const ts = data.timestamp ? new Date(data.timestamp) : null;
     const dateStr = ts ? ts.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
@@ -987,6 +1051,19 @@
     const message = data.message && data.message !== '5' ? data.message : '';
     const userId = data.userId || '—';
     const propertyId = data.propertyId || '—';
+
+    // selfScanScores is a plain object of className -> probability (0-1)
+    // written by dailyPhotoModerationScan, e.g. { Porn: 0.83, Neutral: 0.05, ... }.
+    // Only shown when present, whether or not the card ended up flagged.
+    let scoresLine = '';
+    if (data.selfScanScores && typeof data.selfScanScores === 'object') {
+      const top = Object.entries(data.selfScanScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([k, v]) => `${escHtml(k)} ${Math.round(v * 100)}%`)
+        .join(' · ');
+      if (top) scoresLine = `<div class="flagged-badge">🚩 ${top}</div>`;
+    }
 
     card.innerHTML = `
       <img
@@ -1002,6 +1079,7 @@
           <div class="photo-nickname" onclick="filterByUser('${escHtml(userId)}', '${escHtml(nickname)}')" title="Click to see all photos from ${escHtml(nickname)}">${escHtml(nickname)}</div>
           <div class="photo-date">${dateStr}</div>
         </div>
+        ${isFlagged ? scoresLine : ''}
         ${message ? `<div class="photo-message">${escHtml(message)}</div>` : ''}
         <div class="photo-ids">
           <span>User:</span> ${userId.substring(0,18)}…<br>
