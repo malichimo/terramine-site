@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Withdrawal Exchange Rates by Country — TerraMine</title>
+  <meta name="description" content="See which fee tier your country falls into for cashing out USD earnings, and what each tier's exchange fee is. Rates are reviewed and adjusted periodically." />
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080C10;
+      --surface: #0F1620;
+      --border:  rgba(255,255,255,0.07);
+      --gold:    #F5C542;
+      --gold2:   #E89B1A;
+      --cyan:    #5BE5D0;
+      --white:   #EEF2F8;
+      --muted:   #6B7C93;
+      --tier0:   #5BE5D0;
+      --tier1:   #7ED957;
+      --tier2:   #F5C542;
+      --tier3:   #E85B5B;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91,229,208,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,229,208,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(8,12,16,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 3px; color: var(--gold); text-decoration: none; }
+    .nav-logo span { color: var(--white); }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--white); }
+    .nav-login { border: 1px solid var(--cyan); color: var(--cyan) !important; padding: 6px 14px; border-radius: 4px; font-size: 13px; }
+    .nav-cta { background: var(--gold); color: #080C10 !important; padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; }
+
+    /* ── HERO ── */
+    .hero { position: relative; z-index: 1; padding: 72px 40px 40px; max-width: 960px; margin: 0 auto; }
+    .hero-eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin-bottom: 14px; }
+    .hero h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(40px, 6.5vw, 72px); letter-spacing: 2px; line-height: 1.0; color: var(--white); margin-bottom: 18px; }
+    .hero h1 em { font-style: normal; color: var(--gold); }
+    .hero-desc { font-size: 17px; color: var(--muted); line-height: 1.7; max-width: 640px; margin-bottom: 8px; }
+
+    /* ── UPDATE NOTICE ── */
+    .update-notice {
+      position: relative; z-index: 1;
+      max-width: 960px; margin: 0 auto 48px; padding: 0 40px;
+    }
+    .update-notice-inner {
+      background: linear-gradient(135deg, rgba(245,197,66,0.10), rgba(91,229,208,0.05));
+      border: 1px solid rgba(245,197,66,0.25);
+      border-radius: 12px;
+      padding: 18px 22px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .update-notice-icon { font-size: 20px; flex-shrink: 0; line-height: 1.3; }
+    .update-notice p { font-size: 14px; color: rgba(238,242,248,0.85); line-height: 1.6; }
+    .update-notice strong { color: var(--white); }
+    .update-notice .stamp { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── TIER CARDS ── */
+    .tier-grid {
+      position: relative; z-index: 1;
+      max-width: 1080px; margin: 0 auto 56px; padding: 0 40px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .tier-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--tier-color);
+      border-radius: 12px;
+      padding: 22px 20px;
+    }
+    .tier-card.tier0 { --tier-color: var(--tier0); }
+    .tier-card.tier1 { --tier-color: var(--tier1); }
+    .tier-card.tier2 { --tier-color: var(--tier2); }
+    .tier-card.tier3 { --tier-color: var(--tier3); }
+    .tier-card-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .tier-card-fee { font-family: 'Bebas Neue', sans-serif; font-size: 42px; color: var(--tier-color); letter-spacing: 1px; line-height: 1; margin-bottom: 10px; }
+    .tier-card-desc { font-size: 13px; color: rgba(238,242,248,0.75); line-height: 1.6; }
+    .tier-count { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+    /* ── LAYOUT / TABLE ── */
+    .page-layout { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
+    .table-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+    .table-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1px; color: var(--white); }
+    .search-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      width: 260px;
+      max-width: 100%;
+    }
+    .search-box::placeholder { color: var(--muted); }
+    .search-box:focus { outline: none; border-color: var(--cyan); }
+
+    .filter-chips { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .filter-chip:hover { color: var(--white); border-color: rgba(255,255,255,0.2); }
+    .filter-chip.active { color: #080C10; background: var(--cyan); border-color: var(--cyan); font-weight: 700; }
+
+    .country-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .country-table thead th {
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .country-table tbody td { padding: 11px 18px; font-size: 14px; border-bottom: 1px solid var(--border); }
+    .country-table tbody tr:last-child td { border-bottom: none; }
+    .country-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    .tier-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .tier-badge.tier0 { background: rgba(91,229,208,0.14); color: var(--tier0); }
+    .tier-badge.tier1 { background: rgba(126,217,87,0.14); color: var(--tier1); }
+    .tier-badge.tier2 { background: rgba(245,197,66,0.14); color: var(--tier2); }
+    .tier-badge.tier3 { background: rgba(232,91,91,0.14); color: var(--tier3); }
+    .fee-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .no-results { padding: 32px 18px; text-align: center; color: var(--muted); font-size: 14px; display: none; }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 36px 40px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--gold); text-decoration: none; }
+    .footer-links { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 13px; color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .tier-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 48px 20px 32px; }
+      .update-notice, .tier-grid, .page-layout { padding-left: 20px; padding-right: 20px; }
+      .tier-grid { grid-template-columns: 1fr; }
+      footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; }
+      .country-table thead th:nth-child(3), .country-table tbody td:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">⛏ Terra<span>Mine</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="faq.html">FAQ</a>
+    <a href="portal.html" class="nav-login">My Portal</a>
+    <a href="index.html#download" class="nav-cta">Download</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Cash Out</div>
+  <h1>Withdrawal <em>Exchange Rates</em></h1>
+  <p class="hero-desc">When you cash out your USD earnings, a fee applies based on your country's tier. Search the table below to find your country and see its current rate.</p>
+</div>
+
+<!-- UPDATE NOTICE -->
+<div class="update-notice">
+  <div class="update-notice-inner">
+    <span class="update-notice-icon">📢</span>
+    <div>
+      <p><strong>These rates are subject to change.</strong> Tiers and fees are reviewed and adjusted periodically as regional market conditions shift — they are not fixed for the life of the app. Always check this page for the current rate before withdrawing.</p>
+      <p class="stamp">Last updated: August 16, 2026</p>
+    </div>
+  </div>
+</div>
+
+<!-- TIER CARDS -->
+<div class="tier-grid">
+  <div class="tier-card tier0">
+    <div class="tier-card-label">Tier 0</div>
+    <div class="tier-card-fee">0%</div>
+    <div class="tier-card-desc">No exchange fee.</div>
+    <div class="tier-count" id="count-0"></div>
+  </div>
+  <div class="tier-card tier1">
+    <div class="tier-card-label">Tier 1</div>
+    <div class="tier-card-fee">8%</div>
+    <div class="tier-card-desc">Strongest regional ad markets outside Tier 0.</div>
+    <div class="tier-count" id="count-1"></div>
+  </div>
+  <div class="tier-card tier2">
+    <div class="tier-card-label">Tier 2</div>
+    <div class="tier-card-fee">17%</div>
+    <div class="tier-card-desc">Moderate regional ad markets.</div>
+    <div class="tier-count" id="count-2"></div>
+  </div>
+  <div class="tier-card tier3">
+    <div class="tier-card-label">Tier 3</div>
+    <div class="tier-card-fee">38%</div>
+    <div class="tier-card-desc">Weaker or unestablished regional ad markets.</div>
+    <div class="tier-count" id="count-3"></div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="page-layout">
+  <div class="table-header">
+    <h2 class="table-title">Find Your Country</h2>
+    <input type="text" class="search-box" id="searchBox" placeholder="Search countries..." />
+  </div>
+  <div class="filter-chips" id="filterChips">
+    <div class="filter-chip active" data-tier="all">All</div>
+    <div class="filter-chip" data-tier="0">Tier 0 · 0%</div>
+    <div class="filter-chip" data-tier="1">Tier 1 · 8%</div>
+    <div class="filter-chip" data-tier="2">Tier 2 · 17%</div>
+    <div class="filter-chip" data-tier="3">Tier 3 · 38%</div>
+  </div>
+
+  <table class="country-table">
+    <thead>
+      <tr>
+        <th>Country / Region</th>
+        <th>Tier</th>
+        <th>Fee</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="no-results" id="noResults">No countries match your search.</div>
+</div>
+
+<footer>
+  <a class="footer-logo" href="index.html">⛏ TerraMine</a>
+  <div class="footer-links">
+    <a href="faq.html">FAQ</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+    <a href="portal.html">My Portal</a>
+  </div>
+  <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+</footer>
+
+<script>
+  // -------------------------------------------------------------------------
+  // Country → tier data. Regenerate from the AdMob eCPM tier model
+  // (TerraMine_Redemption_Fee_Comparison_vN.xlsx, "Country Comparison" tab)
+  // whenever rates/tiers are reviewed. Tier fee %s below must match the
+  // FEE_BY_TIER map — update both together.
+  // Last generated: August 16, 2026.
+  // -------------------------------------------------------------------------
+  const FEE_BY_TIER = { 0: 0, 1: 8, 2: 17, 3: 38 };
+
+  const COUNTRY_TIERS = [
+  ["United States", 0],
+  ["Australia", 1],
+  ["Austria", 1],
+  ["Germany", 1],
+  ["Latvia", 1],
+  ["Norway", 1],
+  ["Singapore", 1],
+  ["Switzerland", 1],
+  ["United Kingdom", 1],
+  ["Albania", 2],
+  ["Argentina", 2],
+  ["Armenia", 2],
+  ["Azerbaijan", 2],
+  ["Bahamas", 2],
+  ["Belarus", 2],
+  ["Belgium", 2],
+  ["Benin", 2],
+  ["Bosnia & Herzegovina", 2],
+  ["Brazil", 2],
+  ["Bulgaria", 2],
+  ["Cambodia", 2],
+  ["Cameroon", 2],
+  ["Canada", 2],
+  ["Chad", 2],
+  ["Chile", 2],
+  ["China", 2],
+  ["Croatia", 2],
+  ["Cyprus", 2],
+  ["Czechia", 2],
+  ["Côte d’Ivoire", 2],
+  ["Denmark", 2],
+  ["Ecuador", 2],
+  ["Egypt", 2],
+  ["Finland", 2],
+  ["France", 2],
+  ["Georgia", 2],
+  ["Ghana", 2],
+  ["Greece", 2],
+  ["Hong Kong", 2],
+  ["Hungary", 2],
+  ["Iceland", 2],
+  ["Iraq", 2],
+  ["Ireland", 2],
+  ["Israel", 2],
+  ["Italy", 2],
+  ["Jamaica", 2],
+  ["Japan", 2],
+  ["Jordan", 2],
+  ["Kazakhstan", 2],
+  ["Lithuania", 2],
+  ["Luxembourg", 2],
+  ["Malaysia", 2],
+  ["Malta", 2],
+  ["Mauritius", 2],
+  ["Mexico", 2],
+  ["Moldova", 2],
+  ["Mozambique", 2],
+  ["Myanmar (Burma)", 2],
+  ["Netherlands", 2],
+  ["New Zealand", 2],
+  ["Nigeria", 2],
+  ["Oman", 2],
+  ["Panama", 2],
+  ["Poland", 2],
+  ["Portugal", 2],
+  ["Qatar", 2],
+  ["Saudi Arabia", 2],
+  ["Senegal", 2],
+  ["Serbia", 2],
+  ["Slovakia", 2],
+  ["Slovenia", 2],
+  ["Spain", 2],
+  ["Sudan", 2],
+  ["Sweden", 2],
+  ["Taiwan", 2],
+  ["Thailand", 2],
+  ["Tunisia", 2],
+  ["Türkiye", 2],
+  ["United Arab Emirates", 2],
+  ["Uzbekistan", 2],
+  ["Yemen", 2],
+  ["Algeria", 3],
+  ["Angola", 3],
+  ["Antigua & Barbuda", 3],
+  ["Aruba", 3],
+  ["Bahrain", 3],
+  ["Bangladesh", 3],
+  ["Belize", 3],
+  ["Bermuda", 3],
+  ["Bolivia", 3],
+  ["Botswana", 3],
+  ["British Virgin Islands", 3],
+  ["Burkina Faso", 3],
+  ["Cape Verde", 3],
+  ["Cayman Islands", 3],
+  ["Colombia", 3],
+  ["Comoros", 3],
+  ["Congo - Brazzaville", 3],
+  ["Congo - Kinshasa", 3],
+  ["Costa Rica", 3],
+  ["Cuba", 3],
+  ["Djibouti", 3],
+  ["Dominica", 3],
+  ["Dominican Republic", 3],
+  ["El Salvador", 3],
+  ["Eritrea", 3],
+  ["Estonia", 3],
+  ["Fiji", 3],
+  ["Gabon", 3],
+  ["Gambia", 3],
+  ["Gibraltar", 3],
+  ["Grenada", 3],
+  ["Guatemala", 3],
+  ["Guinea", 3],
+  ["Guinea-Bissau", 3],
+  ["Haiti", 3],
+  ["Honduras", 3],
+  ["India", 3],
+  ["Indonesia", 3],
+  ["Iran", 3],
+  ["Kenya", 3],
+  ["Kuwait", 3],
+  ["Kyrgyzstan", 3],
+  ["Laos", 3],
+  ["Lebanon", 3],
+  ["Liberia", 3],
+  ["Libya", 3],
+  ["Liechtenstein", 3],
+  ["Macao", 3],
+  ["Maldives", 3],
+  ["Mali", 3],
+  ["Micronesia", 3],
+  ["Monaco", 3],
+  ["Mongolia", 3],
+  ["Morocco", 3],
+  ["Namibia", 3],
+  ["Nepal", 3],
+  ["Nicaragua", 3],
+  ["Niger", 3],
+  ["North Macedonia", 3],
+  ["Pakistan", 3],
+  ["Papua New Guinea", 3],
+  ["Paraguay", 3],
+  ["Peru", 3],
+  ["Philippines", 3],
+  ["Rest of World", 3],
+  ["Romania", 3],
+  ["Russia", 3],
+  ["Rwanda", 3],
+  ["Samoa", 3],
+  ["San Marino", 3],
+  ["Seychelles", 3],
+  ["Sierra Leone", 3],
+  ["Solomon Islands", 3],
+  ["Somalia", 3],
+  ["South Africa", 3],
+  ["Sri Lanka", 3],
+  ["St. Kitts & Nevis", 3],
+  ["St. Lucia", 3],
+  ["Suriname", 3],
+  ["Tajikistan", 3],
+  ["Tanzania", 3],
+  ["Togo", 3],
+  ["Tonga", 3],
+  ["Trinidad & Tobago", 3],
+  ["Turkmenistan", 3],
+  ["Turks & Caicos Islands", 3],
+  ["Uganda", 3],
+  ["Ukraine", 3],
+  ["Uruguay", 3],
+  ["Vanuatu", 3],
+  ["Vatican City", 3],
+  ["Venezuela", 3],
+  ["Vietnam", 3],
+  ["Zambia", 3],
+  ["Zimbabwe", 3],
+  ];
+
+  // Tier counts on the summary cards
+  [0,1,2,3].forEach(t => {
+    const n = COUNTRY_TIERS.filter(([,tier]) => tier === t).length;
+    document.getElementById('count-' + t).textContent = n + (n === 1 ? ' market' : ' markets');
+  });
+
+  // Render table
+  const tbody = document.getElementById('tableBody');
+  const noResults = document.getElementById('noResults');
+  let activeTier = 'all';
+  let searchTerm = '';
+
+  function render() {
+    const rows = COUNTRY_TIERS.filter(([name, tier]) => {
+      const matchesTier = activeTier === 'all' || tier === Number(activeTier);
+      const matchesSearch = name.toLowerCase().includes(searchTerm);
+      return matchesTier && matchesSearch;
+    });
+    tbody.innerHTML = rows.map(([name, tier]) => `
+      <tr>
+        <td>${name}</td>
+        <td><span class="tier-badge tier${tier}">Tier ${tier}</span></td>
+        <td class="fee-cell">${FEE_BY_TIER[tier]}%</td>
+      </tr>
+    `).join('');
+    noResults.style.display = rows.length === 0 ? 'block' : 'none';
+  }
+
+  document.getElementById('searchBox').addEventListener('input', e => {
+    searchTerm = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  document.getElementById('filterChips').addEventListener('click', e => {
+    const chip = e.target.closest('.filter-chip');
+    if (!chip) return;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeTier = chip.dataset.tier;
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
