@@ -711,24 +711,26 @@ section.content {
   padding: 28px 36px;
   text-align: center;
 }
+.referral-badge .tb-row + .tb-row {
+  margin-top: 16px;
+}
+.referral-badge .tb-divider {
+  height: 1px;
+  background: rgba(245,197,66,0.2);
+  margin: 16px 0;
+}
 .referral-badge .tb-amount {
   font-family: 'Syne', sans-serif;
   font-weight: 800;
-  font-size: 48px;
+  font-size: 34px;
   color: var(--gold);
-  letter-spacing: -2px;
+  letter-spacing: -1.5px;
   line-height: 1;
 }
 .referral-badge .tb-label {
-  font-size: 14px;
-  color: var(--muted);
-  margin-top: 8px;
-}
-.referral-badge .tb-sub {
   font-size: 13px;
-  color: var(--gold);
-  opacity: 0.7;
-  margin-top: 4px;
+  color: var(--muted);
+  margin-top: 6px;
 }
 
 /* ── COMMUNITY ── */
@@ -854,15 +856,25 @@ section.content {
 .community-facebook-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
   padding: 18px;
   margin-top: 16px;
+  /* Full-bleed: break out of section.content's 920px max-width/centering
+     so this card spans the full viewport width, edge to edge, regardless
+     of how deep it's nested. Safe here since html/body already set
+     overflow-x: clip (see top of this file), which absorbs any sub-pixel
+     scrollbar-width overhang from the 100vw calc below. */
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-radius: 0;
+  box-sizing: border-box;
 }
 .community-facebook-frame {
   width: 100%;
-  min-height: 600px;
+  min-height: 2000px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 0;
   display: block;
 }
 .community-member {
