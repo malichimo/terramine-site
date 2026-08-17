@@ -449,6 +449,28 @@
     opacity: 0.7;
   }
   .photo-ids span { color: var(--text-muted); }
+  .photo-id-value {
+    color: var(--text-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(200,146,42,0.3);
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+  }
+  .photo-id-value:hover { color: var(--gold-light); }
+  .copy-id-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 9px;
+    padding: 0 0 0 4px;
+    line-height: 1;
+    vertical-align: middle;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+  .copy-id-btn:hover { opacity: 1; }
   .photo-actions {
     display: flex;
     gap: 8px;
@@ -1265,7 +1287,7 @@
         ${isFlagged ? scoresLine : ''}
         ${message ? `<div class="photo-message">${escHtml(message)}</div>` : ''}
         <div class="photo-ids">
-          <span>User:</span> ${userId.substring(0,18)}…<br>
+          <span>User:</span> ${userId === '—' ? '—' : `<span class="photo-id-value" onclick="filterByUser('${escHtml(userId)}', '${escHtml(nickname)}')" title="Click to see all photos from this user\n${escHtml(userId)}">${escHtml(userId)}</span><button class="copy-id-btn" onclick="event.stopPropagation(); copyToClipboard('${escHtml(userId)}', this)" title="Copy full User ID">📋</button>`}<br>
           <span>Property:</span> ${propertyId.substring(0,18)}…
         </div>
         <div class="photo-actions">
@@ -1407,6 +1429,21 @@
   }
 
   // ── Utils ─────────────────────────────────────────────────────────
+  window.copyToClipboard = async function(text, btnEl) {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (btnEl) {
+        const original = btnEl.textContent;
+        btnEl.textContent = '✓';
+        setTimeout(() => { btnEl.textContent = original; }, 1200);
+      }
+      showToast('User ID copied to clipboard', 'success');
+    } catch(e) {
+      console.error('Clipboard copy failed:', e);
+      showToast('Copy failed — see console', 'error');
+    }
+  };
+
   function escHtml(str) {
     if (!str) return '';
     return String(str)
