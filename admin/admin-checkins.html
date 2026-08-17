@@ -219,6 +219,24 @@
   }
   .search-btn:hover { background: var(--gold-light); }
   .search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .search-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .search-mode-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+  .search-mode-toggle input[type="radio"] {
+    accent-color: var(--gold);
+    cursor: pointer;
+  }
   .search-status {
     font-size: 11px;
     color: var(--text-muted);
@@ -726,6 +744,10 @@
   <div class="search-row">
     <span class="search-label">Search</span>
     <input type="text" id="userSearchInput" class="search-input" placeholder="Username (nickname) or UID..." onkeydown="if(event.key==='Enter') runUserSearch()">
+    <div class="search-mode-toggle">
+      <label><input type="radio" name="searchMode" value="userId" checked> Visitor</label>
+      <label><input type="radio" name="searchMode" value="propertyOwnerId"> Property Owner</label>
+    </div>
     <button class="search-btn" id="userSearchBtn" onclick="runUserSearch()">🔍 Search</button>
     <span class="search-status" id="userSearchStatus"></span>
     <div class="search-results-list" id="userSearchResults"></div>
@@ -745,7 +767,7 @@
   <!-- User filter bar -->
   <div class="filter-bar" id="filterBar">
     <button class="clear-filter-btn" onclick="clearUserFilter()">← Back to All Photos</button>
-    <span class="filter-bar-label">Showing photos from</span>
+    <span class="filter-bar-label" id="filterFieldLabel">Showing photos from</span>
     <span class="filter-bar-name" id="filterName"></span>
     <span class="filter-bar-count" id="filterCount"></span>
   </div>
@@ -837,6 +859,13 @@
   let lightboxPhotoURL = null;
   let activeFilterUserId = null;
   let activeFilterNickname = null;
+  // Which checkIns field activeFilterUserId is matched against — 'userId'
+  // (the visitor who checked in) or 'propertyOwnerId' (whose mine it was).
+  // Both are plain fields on every checkIns doc (see submitCheckIn in
+  // functions/src/index.ts), so this is just a matter of swapping the
+  // where() clause; filterByUser()/filterByOwner() both funnel through the
+  // same applyIdFilter() below and set this accordingly.
+  let activeFilterField = 'userId';
   let activeDateStart = null; // ISO string, inclusive
   let activeDateEnd = null;   // ISO string, inclusive
   let showFlaggedOnly = false; // filters to selfScanFlagged==true (dailyPhotoModerationScan, Aug 13, 2026)
@@ -927,25 +956,53 @@
     showToast('Cursor reset — will load all photos from newest', 'success');
   };
 
-  // ── User filter ───────────────────────────────────────────────────
-  window.filterByUser = function(userId, nickname) {
-    activeFilterUserId = userId;
+  // ── User / owner filter ──────────────────────────────────────────────
+  // Shared core — field is 'userId' (the visitor) or 'propertyOwnerId'
+  // (whose mine it was). Both filterByUser() and filterByOwner() below
+  // funnel through this so the filter-bar UI and query logic stay in sync
+  // regardless of which one is active.
+  function applyIdFilter(field, id, nickname) {
+    activeFilterField = field;
+    activeFilterUserId = id;
     activeFilterNickname = nickname;
     lastDoc = null;
     sessionLoaded = 0;
     document.getElementById('sessionCount').textContent = '0';
     document.getElementById('shownCount').textContent = '0';
     document.getElementById('photoGrid').innerHTML = '';
+    document.getElementById('filterFieldLabel').textContent =
+      field === 'propertyOwnerId' ? 'Showing photos at mines owned by' : 'Showing photos from';
     document.getElementById('filterName').textContent = nickname;
     document.getElementById('filterCount').textContent = '';
     document.getElementById('filterBar').classList.add('active');
     setLoadMoreVisible(false);
     loadPhotos(false);
+  }
+
+  window.filterByUser = function(userId, nickname) {
+    applyIdFilter('userId', userId, nickname);
+  };
+
+  // Property-owner click-through from a card only has the raw ownerId to
+  // work with (checkIns docs don't denormalize the owner's nickname the
+  // way they do the visitor's) — look it up from `users` first so the
+  // filter bar shows a name instead of a bare UID. Falls back to showing
+  // the UID itself if the users doc is missing (e.g. deleted account).
+  window.filterByOwner = async function(ownerId) {
+    let nickname = ownerId;
+    try {
+      const snap = await getDoc(doc(db, 'users', ownerId));
+      if (snap.exists() && snap.data().nickname) nickname = snap.data().nickname;
+    } catch(e) {
+      console.warn('Owner nickname lookup failed (non-fatal):', e);
+    }
+    applyIdFilter('propertyOwnerId', ownerId, nickname);
   };
 
   window.clearUserFilter = function() {
     activeFilterUserId = null;
     activeFilterNickname = null;
+    activeFilterField = 'userId';
     lastDoc = null;
     sessionLoaded = 0;
     document.getElementById('sessionCount').textContent = '0';
@@ -976,17 +1033,21 @@
   // alphanumeric strings for Firebase Auth UIDs), then an exact nickname
   // match, then a nickname PREFIX match (Firestore can't do case-insensitive
   // substring search without a full collection scan, so this is the same
-  // "as-typed prefix" tradeoff used elsewhere on this site). Results
-  // resolve to a `users` doc — checkIns' own `visitorNickname` field is a
-  // denormalized snapshot from check-in time and can go stale if someone
-  // renames, so searching by CURRENT nickname goes through `users`, not
-  // `checkIns`, then reuses the existing filterByUser() to actually load
-  // that user's check-in photos by their stable userId.
+  // "as-typed prefix" tradeoff used elsewhere on this site). Either way this
+  // resolves against the `users` collection (checkIns' own denormalized
+  // `visitorNickname` can go stale if someone renames, so current-nickname
+  // search always goes through `users`, not `checkIns`).
+  //
+  // The "Visitor" / "Property Owner" radio picks WHICH checkIns field the
+  // resolved id ultimately filters on — the person-lookup step above is
+  // identical either way, since a property owner is just as much a `users`
+  // doc as a visitor is. See applyIdFilter().
   window.runUserSearch = async function() {
     const raw = (document.getElementById('userSearchInput').value || '').trim();
     const statusEl = document.getElementById('userSearchStatus');
     const resultsEl = document.getElementById('userSearchResults');
     const btn = document.getElementById('userSearchBtn');
+    const searchField = document.querySelector('input[name="searchMode"]:checked').value; // 'userId' | 'propertyOwnerId'
     resultsEl.classList.remove('open');
     resultsEl.innerHTML = '';
 
@@ -1033,7 +1094,7 @@
 
       if (matches.length === 1) {
         statusEl.textContent = '';
-        window.filterByUser(matches[0].id, matches[0].nickname);
+        applyIdFilter(searchField, matches[0].id, matches[0].nickname);
         return;
       }
 
@@ -1042,7 +1103,7 @@
       matches.forEach(m => {
         const item = document.createElement('div');
         item.className = 'search-result-item';
-        item.onclick = () => window.filterByUser(m.id, m.nickname);
+        item.onclick = () => applyIdFilter(searchField, m.id, m.nickname);
         item.innerHTML = `
           <span class="search-result-name">${escHtml(m.nickname)}</span>
           <span class="search-result-uid">${escHtml(m.id)}</span>`;
@@ -1133,7 +1194,7 @@
       constraints.push(where('selfScanFlagged', '==', true));
     }
     if (activeFilterUserId) {
-      constraints.push(where('userId', '==', activeFilterUserId));
+      constraints.push(where(activeFilterField, '==', activeFilterUserId));
     }
     if (activeDateStart) {
       constraints.push(where('timestamp', '>=', activeDateStart));
@@ -1256,6 +1317,7 @@
     const message = data.message && data.message !== '5' ? data.message : '';
     const userId = data.userId || '—';
     const propertyId = data.propertyId || '—';
+    const ownerId = data.propertyOwnerId || '—';
 
     // selfScanScores is a plain object of className -> probability (0-1)
     // written by dailyPhotoModerationScan, e.g. { Porn: 0.83, Neutral: 0.05, ... }.
@@ -1288,7 +1350,8 @@
         ${message ? `<div class="photo-message">${escHtml(message)}</div>` : ''}
         <div class="photo-ids">
           <span>User:</span> ${userId === '—' ? '—' : `<span class="photo-id-value" onclick="filterByUser('${escHtml(userId)}', '${escHtml(nickname)}')" title="Click to see all photos from this user\n${escHtml(userId)}">${escHtml(userId)}</span><button class="copy-id-btn" onclick="event.stopPropagation(); copyToClipboard('${escHtml(userId)}', this)" title="Copy full User ID">📋</button>`}<br>
-          <span>Property:</span> ${propertyId.substring(0,18)}…
+          <span>Property:</span> ${propertyId.substring(0,18)}…<br>
+          <span>Owner:</span> ${ownerId === '—' ? '—' : `<span class="photo-id-value" onclick="filterByOwner('${escHtml(ownerId)}')" title="Click to see all check-ins at this owner's mines\n${escHtml(ownerId)}">${escHtml(ownerId)}</span><button class="copy-id-btn" onclick="event.stopPropagation(); copyToClipboard('${escHtml(ownerId)}', this)" title="Copy full Owner ID">📋</button>`}
         </div>
         <div class="photo-actions">
           <a class="view-btn" href="${escHtml(data.photoURL)}" target="_blank">🔗 Full Size</a>
