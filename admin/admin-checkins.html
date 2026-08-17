@@ -172,6 +172,84 @@
     margin-bottom: 8px;
   }
 
+  /* User search */
+  .search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+  .search-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .search-input {
+    flex: 1;
+    min-width: 220px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--gold); }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .search-btn:hover { background: var(--gold-light); }
+  .search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .search-status {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .search-results-list {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .search-results-list.open { display: flex; }
+  .search-result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .search-result-item:hover { border-color: var(--gold); }
+  .search-result-name { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: var(--gold-light); }
+  .search-result-uid { font-size: 10px; color: var(--text-muted); opacity: 0.8; }
+
   /* Date range filter */
   .date-filter-row {
     display: flex;
@@ -622,6 +700,15 @@
     </div>
   </div>
 
+  <!-- User search -->
+  <div class="search-row">
+    <span class="search-label">Search</span>
+    <input type="text" id="userSearchInput" class="search-input" placeholder="Username (nickname) or UID..." onkeydown="if(event.key==='Enter') runUserSearch()">
+    <button class="search-btn" id="userSearchBtn" onclick="runUserSearch()">🔍 Search</button>
+    <span class="search-status" id="userSearchStatus"></span>
+    <div class="search-results-list" id="userSearchResults"></div>
+  </div>
+
   <!-- Date range filter -->
   <div class="date-filter-row">
     <span class="date-filter-label">From</span>
@@ -844,6 +931,13 @@
     document.getElementById('photoGrid').innerHTML = '';
     document.getElementById('filterBar').classList.remove('active');
     setLoadMoreVisible(false);
+    // Also reset the search UI so re-opening the page (or clicking a
+    // nickname on a card) doesn't leave stale search state behind.
+    document.getElementById('userSearchInput').value = '';
+    document.getElementById('userSearchStatus').textContent = '';
+    const resultsEl = document.getElementById('userSearchResults');
+    resultsEl.classList.remove('open');
+    resultsEl.innerHTML = '';
     // Clear cursor temporarily so we always get results on return
     const savedCursor = getCursor();
     localStorage.removeItem(CURSOR_KEY);
@@ -852,6 +946,95 @@
       if (savedCursor) localStorage.setItem(CURSOR_KEY, savedCursor);
       updateCursorDisplay();
     });
+  };
+
+  // ── User search (by username/nickname or UID) ───────────────────────
+  // Same lookup strategy as admin-users.html's runSearch(), kept consistent
+  // on purpose: exact UID match first (Firestore doc IDs are 20-28 char
+  // alphanumeric strings for Firebase Auth UIDs), then an exact nickname
+  // match, then a nickname PREFIX match (Firestore can't do case-insensitive
+  // substring search without a full collection scan, so this is the same
+  // "as-typed prefix" tradeoff used elsewhere on this site). Results
+  // resolve to a `users` doc — checkIns' own `visitorNickname` field is a
+  // denormalized snapshot from check-in time and can go stale if someone
+  // renames, so searching by CURRENT nickname goes through `users`, not
+  // `checkIns`, then reuses the existing filterByUser() to actually load
+  // that user's check-in photos by their stable userId.
+  window.runUserSearch = async function() {
+    const raw = (document.getElementById('userSearchInput').value || '').trim();
+    const statusEl = document.getElementById('userSearchStatus');
+    const resultsEl = document.getElementById('userSearchResults');
+    const btn = document.getElementById('userSearchBtn');
+    resultsEl.classList.remove('open');
+    resultsEl.innerHTML = '';
+
+    if (!raw) {
+      statusEl.textContent = 'Enter a username or UID above';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Searching...';
+    statusEl.textContent = '';
+
+    try {
+      const looksLikeUid = /^[A-Za-z0-9]{15,40}$/.test(raw);
+      let matches = [];
+
+      if (looksLikeUid) {
+        const snap = await getDoc(doc(db, 'users', raw));
+        if (snap.exists()) {
+          matches = [{ id: snap.id, nickname: snap.data().nickname || raw }];
+        } else {
+          // No users doc for that ID (deleted account, or a typo) — still
+          // let the admin filter checkIns directly by that raw ID, since
+          // check-in docs reference userId regardless of whether the
+          // users doc still exists.
+          matches = [{ id: raw, nickname: raw }];
+          statusEl.textContent = 'No user doc found for that UID — filtering check-ins by it directly.';
+        }
+      } else {
+        const exactSnap = await getDocs(query(collection(db, 'users'), where('nickname', '==', raw), limit(10)));
+        if (!exactSnap.empty) {
+          matches = exactSnap.docs.map(d => ({ id: d.id, nickname: d.data().nickname || d.id }));
+        } else {
+          const prefixSnap = await getDocs(query(collection(db, 'users'), orderBy('nickname'),
+            where('nickname', '>=', raw), where('nickname', '<=', raw + ''), limit(10)));
+          matches = prefixSnap.docs.map(d => ({ id: d.id, nickname: d.data().nickname || d.id }));
+        }
+      }
+
+      if (matches.length === 0) {
+        statusEl.textContent = `No users found matching "${raw}".`;
+        return;
+      }
+
+      if (matches.length === 1) {
+        statusEl.textContent = '';
+        window.filterByUser(matches[0].id, matches[0].nickname);
+        return;
+      }
+
+      // Multiple nickname matches — let the admin pick which one.
+      statusEl.textContent = `${matches.length} matches — pick one:`;
+      matches.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.onclick = () => window.filterByUser(m.id, m.nickname);
+        item.innerHTML = `
+          <span class="search-result-name">${escHtml(m.nickname)}</span>
+          <span class="search-result-uid">${escHtml(m.id)}</span>`;
+        resultsEl.appendChild(item);
+      });
+      resultsEl.classList.add('open');
+
+    } catch(e) {
+      console.error('User search failed:', e);
+      statusEl.textContent = 'Search failed — see console.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔍 Search';
+    }
   };
 
   // ── Flagged-only filter (dailyPhotoModerationScan, Aug 13, 2026) ────
