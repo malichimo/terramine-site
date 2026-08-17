@@ -254,6 +254,113 @@
     .main { padding: 16px; }
     .header { padding: 16px; flex-wrap: wrap; gap: 10px; }
   }
+
+  /* ── User Reports (Aug 17, 2026) ─────────────────────────────────── */
+  .report-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .report-card.unreviewed { border-left-color: var(--amber); }
+  .report-card.reviewed { border-left-color: var(--green); }
+  .report-reason-badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    text-transform: uppercase;
+    background: rgba(224,80,80,0.15);
+    color: var(--red);
+  }
+  .report-status-badge {
+    font-size: 10px;
+    padding: 3px 9px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .report-status-badge.unreviewed { background: rgba(224,177,32,0.15); color: #e0b120; }
+  .report-status-badge.reviewed { background: rgba(76,175,110,0.15); color: var(--green); }
+  .report-meta { font-size: 11px; color: var(--text-muted); margin: 8px 0 12px; line-height: 1.6; }
+  .report-meta .k { color: var(--text-muted); }
+  .report-content-box {
+    display: flex;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .report-content-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .report-content-text { font-size: 12px; color: var(--text); line-height: 1.6; flex: 1; min-width: 0; }
+  .report-content-text .label { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .report-content-message { white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+  .report-content-missing { font-size: 12px; color: var(--text-muted); font-style: italic; }
+  .report-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .report-review-btn, .report-reply-toggle-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .report-review-btn:hover, .report-reply-toggle-btn:hover { border-color: var(--gold); color: var(--gold-light); }
+  .report-review-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .report-reply-existing {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .report-reply-label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+  .report-reply-text { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-wrap; }
+  .report-reply-form { margin-top: 10px; width: 100%; }
+  .report-reply-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    resize: vertical;
+    outline: none;
+  }
+  .report-reply-input:focus { border-color: var(--gold); }
+  .report-reply-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+  .report-reply-send-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .report-reply-send-btn:hover { background: var(--gold-light); }
+  .report-reply-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .report-reply-confirm { color: var(--green); font-size: 11px; display: none; }
+  .report-reply-error { color: var(--red); font-size: 11px; display: none; }
 </style>
 </head>
 <body>
@@ -278,6 +385,49 @@
 </div>
 
 <div class="main">
+
+  <div class="section-label">User Reports</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">
+    Reports players submit via the "🚩 Report this content" option on a check-in (spam, harassment,
+    inappropriate photo, hate speech, other). Mark a report reviewed once you've looked at it, or send
+    a reply — the reporter is notified in-app and via push, same as feedback replies. Added Aug 17, 2026.
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left type-filters">
+      <button class="type-pill active" data-rfilter="all" onclick="setReportFilter('all')">All</button>
+      <button class="type-pill" data-rfilter="unreviewed" onclick="setReportFilter('unreviewed')">⏳ Unreviewed</button>
+      <button class="type-pill" data-rfilter="reviewed" onclick="setReportFilter('reviewed')">✓ Reviewed</button>
+      <button class="type-pill" data-rfilter="spam" onclick="setReportFilter('spam')">Spam</button>
+      <button class="type-pill" data-rfilter="harassment" onclick="setReportFilter('harassment')">Harassment</button>
+      <button class="type-pill" data-rfilter="inappropriate_photo" onclick="setReportFilter('inappropriate_photo')">Photo</button>
+      <button class="type-pill" data-rfilter="hate_speech" onclick="setReportFilter('hate_speech')">Hate speech</button>
+      <button class="type-pill" data-rfilter="other" onclick="setReportFilter('other')">Other</button>
+    </div>
+    <button class="load-btn" id="reportsLoadBtn" onclick="loadReports()">🔄 Refresh</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="mini-stat unavailable">
+      <div class="mini-stat-label">Unreviewed</div>
+      <div class="mini-stat-value" id="countUnreviewed">0</div>
+    </div>
+    <div class="mini-stat">
+      <div class="mini-stat-label">Total (loaded)</div>
+      <div class="mini-stat-value" id="countReportsTotal">0</div>
+    </div>
+  </div>
+
+  <div class="event-list" id="reportsList">
+    <div class="empty-state">
+      <div class="icon">🚩</div>
+      <div>Sign in to load reports</div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:20px;margin-bottom:8px;">
+    <button class="load-more-btn" id="reportsLoadMoreBtn" onclick="loadReports(true)" style="display:none;">Load More</button>
+  </div>
 
   <div class="section-label">Content Moderation Log</div>
   <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">
@@ -343,7 +493,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
     getFirestore, collection, query, where, orderBy, limit,
-    startAfter, getDocs
+    startAfter, getDocs, doc, getDoc, setDoc
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
@@ -373,6 +523,7 @@
       document.getElementById('logoutBtn').style.display = 'inline-block';
       document.getElementById('adminEmail').textContent = user.email;
       resetAndLoad();
+      loadReports();
     } else {
       document.getElementById('logoutBtn').style.display = 'none';
     }
@@ -537,6 +688,288 @@
 
     list.appendChild(card);
   }
+
+  // ── User Reports (Aug 17, 2026) ─────────────────────────────────────
+  // `reports` docs (see firestore.rules / ModerationService.reportCheckIn)
+  // reference the reported content via contentId (currently always a
+  // checkIns doc, contentType 'checkIn') rather than embedding it, so each
+  // report is joined against its checkIn doc here for display. Small
+  // in-memory caches avoid re-fetching the same checkIn or
+  // reporter nickname across reports in the same loaded page — a report
+  // storm against one photo, or several reports from one reporter, only
+  // costs one extra read each, not one per report.
+  const REPORT_PAGE_SIZE = 50;
+  const REASON_LABEL = {
+    spam: 'Spam or misleading',
+    harassment: 'Harassment or bullying',
+    inappropriate_photo: 'Inappropriate photo',
+    hate_speech: 'Hate speech',
+    other: 'Other',
+  };
+
+  let allReports = [];
+  let reportsLastDoc = null;
+  let activeReportFilter = 'all';
+  const checkInCache = new Map();   // contentId -> checkIn data | null (null = missing/deleted)
+  const nicknameCache = new Map();  // userId -> nickname | userId (fallback)
+
+  async function fetchCheckIn(contentId) {
+    if (!contentId) return null;
+    if (checkInCache.has(contentId)) return checkInCache.get(contentId);
+    try {
+      const snap = await getDoc(doc(db, 'checkIns', contentId));
+      const data = snap.exists() ? snap.data() : null;
+      checkInCache.set(contentId, data);
+      return data;
+    } catch (e) {
+      console.warn('fetchCheckIn failed for', contentId, e);
+      checkInCache.set(contentId, null);
+      return null;
+    }
+  }
+
+  async function fetchNickname(userId) {
+    if (!userId) return '—';
+    if (nicknameCache.has(userId)) return nicknameCache.get(userId);
+    try {
+      const snap = await getDoc(doc(db, 'users', userId));
+      const nick = (snap.exists() && snap.data().nickname) ? snap.data().nickname : userId;
+      nicknameCache.set(userId, nick);
+      return nick;
+    } catch (e) {
+      nicknameCache.set(userId, userId);
+      return userId;
+    }
+  }
+
+  window.setReportFilter = function(type) {
+    activeReportFilter = type;
+    document.querySelectorAll('[data-rfilter]').forEach(p => {
+      p.classList.toggle('active', p.dataset.rfilter === type);
+    });
+    renderReportsFiltered();
+  };
+
+  function renderReportsFiltered() {
+    const filtered = activeReportFilter === 'all' ? allReports
+      : activeReportFilter === 'unreviewed' ? allReports.filter(r => !r.reviewed)
+      : activeReportFilter === 'reviewed' ? allReports.filter(r => r.reviewed)
+      : allReports.filter(r => r.reason === activeReportFilter);
+    renderReports(filtered);
+  }
+
+  window.loadReports = async function(isLoadMore) {
+    const btn = document.getElementById('reportsLoadBtn');
+    const moreBtn = document.getElementById('reportsLoadMoreBtn');
+    btn.disabled = true;
+    if (moreBtn) moreBtn.disabled = true;
+
+    if (!isLoadMore) {
+      allReports = [];
+      reportsLastDoc = null;
+    }
+
+    try {
+      const base = [collection(db, 'reports'), orderBy('createdAt', 'desc'), limit(REPORT_PAGE_SIZE)];
+      const q = isLoadMore && reportsLastDoc
+        ? query(collection(db, 'reports'), orderBy('createdAt', 'desc'), startAfter(reportsLastDoc), limit(REPORT_PAGE_SIZE))
+        : query(...base);
+
+      const snap = await getDocs(q);
+      if (!snap.empty) reportsLastDoc = snap.docs[snap.docs.length - 1];
+
+      const newItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Join each report against its checkIn content + reporter nickname —
+      // fetched in parallel, not chunked, since REPORT_PAGE_SIZE (50) is
+      // small and this is a low-traffic admin tool, not the mobile app.
+      await Promise.all(newItems.map(async (r) => {
+        const [checkIn, reporterNickname] = await Promise.all([
+          fetchCheckIn(r.contentId),
+          fetchNickname(r.reporterId),
+        ]);
+        r._checkIn = checkIn;
+        r._reporterNickname = reporterNickname;
+      }));
+
+      allReports = allReports.concat(newItems);
+      document.getElementById('countReportsTotal').textContent = allReports.length;
+      document.getElementById('countUnreviewed').textContent = allReports.filter(r => !r.reviewed).length;
+
+      renderReportsFiltered();
+      if (moreBtn) moreBtn.style.display = snap.docs.length === REPORT_PAGE_SIZE ? 'inline-block' : 'none';
+    } catch (e) {
+      console.error('loadReports failed:', e);
+      document.getElementById('reportsList').innerHTML =
+        '<div class="empty-state"><div class="icon">⚠️</div><div>Load failed — check console. You may need a Firestore index (Firestore will print a direct link the first time this query runs).</div></div>';
+    } finally {
+      btn.disabled = false;
+      if (moreBtn) moreBtn.disabled = false;
+    }
+  };
+
+  function renderReports(items) {
+    const list = document.getElementById('reportsList');
+    if (!items.length) {
+      list.innerHTML = '<div class="empty-state"><div class="icon">✅</div><div>No reports in this category.</div></div>';
+      return;
+    }
+    list.innerHTML = items.map(r => renderReportCard(r)).join('');
+  }
+
+  function renderReportCard(r) {
+    const ts = r.createdAt ? new Date(r.createdAt) : null;
+    const dateStr = ts ? ts.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
+    const ci = r._checkIn;
+
+    let contentBlock;
+    if (r.contentType === 'checkIn' && ci) {
+      const authorNick = ci.visitorNickname || ci.userId || 'Unknown';
+      const msg = ci.message && ci.message !== '5' ? ci.message : '';
+      contentBlock = `
+        <div class="report-content-box">
+          ${ci.hasPhoto && ci.photoURL
+            ? `<img class="report-content-thumb" src="${escHtml(ci.photoURL)}" alt="Reported photo" onerror="this.style.display='none'">`
+            : ''}
+          <div class="report-content-text">
+            <div class="label">Reported check-in — by ${escHtml(authorNick)}${ci.isHidden ? ' · <span style="color:var(--red)">hidden</span>' : ''}${ci.reportCount ? ` · ${ci.reportCount} report(s) total` : ''}</div>
+            ${msg ? `<div class="report-content-message">${escHtml(msg)}</div>` : '<div class="report-content-message" style="color:var(--text-muted);font-style:italic;">No message</div>'}
+          </div>
+        </div>`;
+    } else if (r.contentType === 'checkIn' && !ci) {
+      contentBlock = `<div class="report-content-missing">⚠️ Reported check-in no longer exists (contentId: ${escHtml(r.contentId || '—')}) — likely already deleted.</div>`;
+    } else {
+      contentBlock = `<div class="report-content-missing">Unrecognized content type: ${escHtml(r.contentType || '—')} (contentId: ${escHtml(r.contentId || '—')})</div>`;
+    }
+
+    return `
+      <div class="report-card ${r.reviewed ? 'reviewed' : 'unreviewed'}" id="report-${r.id}">
+        <div class="event-top">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span class="report-reason-badge">${escHtml(REASON_LABEL[r.reason] || r.reason || 'Other')}</span>
+            <span class="report-status-badge ${r.reviewed ? 'reviewed' : 'unreviewed'}">${r.reviewed ? '✓ Reviewed' : '⏳ Unreviewed'}</span>
+          </div>
+          <span class="event-date">${dateStr}</span>
+        </div>
+        <div class="report-meta">
+          <span class="k">Reported by:</span> ${escHtml(r._reporterNickname || r.reporterId || '—')}
+          ${r.reviewedAt ? ` &nbsp;·&nbsp; <span class="k">Reviewed:</span> ${new Date(r.reviewedAt).toLocaleDateString('en-US', {month:'short',day:'numeric'})}${r.reviewedBy ? ' by ' + escHtml(r.reviewedBy) : ''}` : ''}
+        </div>
+        ${contentBlock}
+        ${r.adminReply ? `
+          <div class="report-reply-existing">
+            <div class="report-reply-label">↩ Your reply${r.repliedAt ? ' · ' + new Date(r.repliedAt).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : ''}${r.repliedBy ? ' · ' + escHtml(r.repliedBy) : ''}</div>
+            <div class="report-reply-text">${escHtml(r.adminReply)}</div>
+          </div>` : ''}
+        <div class="report-actions">
+          ${!r.reviewed ? `<button class="report-review-btn" id="review-btn-${r.id}" onclick="markReportReviewed('${r.id}')">✓ Mark Reviewed</button>` : ''}
+          <button class="report-reply-toggle-btn" onclick="toggleReportReplyForm('${r.id}')">${r.adminReply ? '✏️ Edit reply' : '💬 Reply'}</button>
+        </div>
+        <div class="report-reply-form" id="report-reply-form-${r.id}" style="display:none;">
+          <textarea class="report-reply-input" id="report-reply-input-${r.id}" rows="3" maxlength="1000" placeholder="Type your reply — the reporter will be notified in-app and via push.">${r.adminReply || ''}</textarea>
+          <div class="report-reply-actions">
+            <button class="report-reply-send-btn" id="report-reply-send-${r.id}" onclick="sendReportReply('${r.id}')">📤 Send Reply</button>
+            <span class="report-reply-confirm" id="report-reply-confirm-${r.id}">✓ Sent — reporter will be notified</span>
+            <span class="report-reply-error" id="report-reply-error-${r.id}">✗ Failed to send — check console</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  window.toggleReportReplyForm = function(reportId) {
+    const form = document.getElementById('report-reply-form-' + reportId);
+    if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.markReportReviewed = async function(reportId) {
+    const btn = document.getElementById('review-btn-' + reportId);
+    if (btn) { btn.disabled = true; btn.textContent = 'Marking...'; }
+    try {
+      await setDoc(doc(db, 'reports', reportId), {
+        reviewed: true,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: auth.currentUser ? auth.currentUser.email : null,
+      }, { merge: true });
+
+      const item = allReports.find(r => r.id === reportId);
+      if (item) {
+        item.reviewed = true;
+        item.reviewedAt = new Date().toISOString();
+        item.reviewedBy = auth.currentUser ? auth.currentUser.email : null;
+      }
+      document.getElementById('countUnreviewed').textContent = allReports.filter(r => !r.reviewed).length;
+      // Full re-render of the current filter is fine here (unlike the
+      // feedback page's targeted DOM patch) — marking reviewed only matters
+      // for badge/border state and the "unreviewed" filter, so a re-render
+      // is simpler and correctness matters more than avoiding a reflow.
+      renderReportsFiltered();
+    } catch (e) {
+      console.error('markReportReviewed failed:', e);
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Mark Reviewed'; }
+    }
+  };
+
+  window.sendReportReply = async function(reportId) {
+    const input = document.getElementById('report-reply-input-' + reportId);
+    const btn = document.getElementById('report-reply-send-' + reportId);
+    const confirmEl = document.getElementById('report-reply-confirm-' + reportId);
+    const errEl = document.getElementById('report-reply-error-' + reportId);
+    confirmEl.style.display = 'none';
+    errEl.style.display = 'none';
+
+    const reply = input.value.trim();
+    if (!reply) {
+      errEl.textContent = '✗ Reply cannot be empty';
+      errEl.style.display = 'inline';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+      const nowIso = new Date().toISOString();
+      const repliedBy = auth.currentUser ? auth.currentUser.email : null;
+      await setDoc(doc(db, 'reports', reportId), {
+        adminReply: reply,
+        repliedAt: nowIso,
+        repliedBy,
+        reviewed: true,
+        reviewedAt: nowIso,
+        reviewedBy: repliedBy,
+      }, { merge: true });
+
+      // onReportReviewed (functions/src/index.ts) picks up this write
+      // independently and handles notifying the reporter — nothing further
+      // needed here for that part.
+      const item = allReports.find(r => r.id === reportId);
+      if (item) {
+        item.adminReply = reply;
+        item.repliedAt = nowIso;
+        item.repliedBy = repliedBy;
+        item.reviewed = true;
+        item.reviewedAt = nowIso;
+        item.reviewedBy = repliedBy;
+      }
+      document.getElementById('countUnreviewed').textContent = allReports.filter(r => !r.reviewed).length;
+
+      confirmEl.style.display = 'inline';
+      btn.textContent = '📤 Send Reply';
+      btn.disabled = false;
+      setTimeout(() => { confirmEl.style.display = 'none'; }, 3000);
+      // Re-render so the border/badge flips to "reviewed" and the existing-
+      // reply block appears without losing the just-typed textarea state
+      // (form stays open since renderReportsFiltered rebuilds it pre-filled
+      // with r.adminReply, same convention as the feedback page).
+      renderReportsFiltered();
+    } catch (e) {
+      console.error('Failed to send report reply:', e);
+      errEl.textContent = '✗ Failed to send — check console';
+      errEl.style.display = 'inline';
+      btn.textContent = '📤 Send Reply';
+      btn.disabled = false;
+    }
+  };
 
   // ── Utils ─────────────────────────────────────────────────────────
   function escHtml(str) {
