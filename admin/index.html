@@ -601,9 +601,14 @@
       <div class="stat-sub">Across all accounts</div>
     </div>
     <div class="stat-card">
+      <div class="stat-label">Current Liability</div>
+      <div class="stat-value" id="currentLiability"><div class="skeleton"></div></div>
+      <div class="stat-sub">Unwithdrawn balance owed to players</div>
+    </div>
+    <div class="stat-card">
       <div class="stat-label">Total USD Earned</div>
       <div class="stat-value" id="totalUSD"><div class="skeleton"></div></div>
-      <div class="stat-sub">Balance + redeemed TB + withdrawn</div>
+      <div class="stat-sub">Lifetime: balance + redeemed TB + withdrawn</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Properties Sold</div>
@@ -991,6 +996,7 @@
       document.getElementById('totalTB').textContent        = fmt2(s.totalTB || 0);
       document.getElementById('avgTB').textContent          = total ? fmt2(Math.round((s.totalTB||0)/total)) : '0';
       document.getElementById('totalUSD').textContent       = fmtUSD2(s.totalUSD || 0);
+      document.getElementById('currentLiability').textContent = fmtUSD2(s.currentLiability || 0);
       document.getElementById('totalCheckIns').textContent  = fmt2(s.totalCheckIns || 0);
       document.getElementById('totalProps').textContent     = fmt2(s.totalPropertiesSold || 0);
       document.getElementById('totalMinesCount').textContent = (s.totalPropertiesSold || 0) + ' total';
@@ -1074,7 +1080,18 @@
       const active7  = active7CountSnap.data().count;
       const active30 = active30CountSnap.data().count;
       const totalTB  = tbSnap.data().v || 0;
-      const totalUSD = (usdEarningsSnap.data().v || 0) + (usdFromTBSnap.data().v || 0) + (usdWithdrawnSnap.data().v || 0);
+      // ✅ Aug 17, 2026: split into two distinct figures instead of one
+      // conflated "Total USD Earned" — see PROJECT_NOTES.md ("liabilities
+      // number" question). currentLiability is what TerraMine actually owes
+      // players right now (their live spendable usdEarnings balance only —
+      // money already paid out via withdrawal is no longer owed, so it must
+      // NOT be added back in here). totalUSD stays the lifetime figure
+      // (balance + redeemed-TB-to-USD + withdrawn), which now stays accurate
+      // going forward since processWithdrawals.ts's checkBatch() writes
+      // usdWithdrawn at the moment a payout is PayPal-confirmed.
+      const usdEarningsSum = usdEarningsSnap.data().v || 0;
+      const currentLiability = usdEarningsSum;
+      const totalUSD = usdEarningsSum + (usdFromTBSnap.data().v || 0) + (usdWithdrawnSnap.data().v || 0);
       const totalCI  = checkInsSnap.data().v || 0;
       const propCount = propCountSnap.data().count;
 
@@ -1086,6 +1103,7 @@
       document.getElementById('avgTB').textContent = fmt(total ? Math.round(totalTB/total) : 0);
       document.getElementById('totalTB').textContent = fmt(totalTB);
       document.getElementById('totalUSD').textContent = fmtUSD(totalUSD);
+      document.getElementById('currentLiability').textContent = fmtUSD(currentLiability);
       document.getElementById('totalCheckIns').textContent = fmt(totalCI);
       document.getElementById('totalProps').textContent = fmt(propCount);
       document.getElementById('totalMinesCount').textContent = propCount + ' total';
@@ -1130,6 +1148,7 @@
           active30d:           active30,
           totalTB:             totalTB,
           totalUSD:            totalUSD,
+          currentLiability:    currentLiability,
           totalCheckIns:       totalCI,
           updatedAt:           new Date().toISOString()
         });
