@@ -1034,33 +1034,48 @@
       const day7ISO  = new Date(now - 7  * 86400000).toISOString();
       const day30ISO = new Date(now - 30 * 86400000).toISOString();
 
+      // ⚠️ ROOT-CAUSE FIX (Aug 17, 2026): the single combined
+      // getAggregateFromServer() call that used to live here (5 sum()
+      // accumulators in one query) hit a documented Firestore limitation:
+      // when a query requests MULTIPLE sum()/average() accumulators at
+      // once, Firestore only includes a document in ANY of the sums if
+      // that document has ALL of the requested fields present — an
+      // implicit AND across every accumulated field, not independent
+      // per-field sums. `usdEarnedFromTB`/`usdWithdrawn` aren't written
+      // anywhere yet (withdrawals aren't live), so zero users have those
+      // two fields — collapsing "has all 5 fields" to the empty set and
+      // zeroing totalTB/totalCheckIns too, even though tbBalance/
+      // totalCheckIns are populated on essentially every user. usdEarnings
+      // isn't universal either (only created via increment() the first
+      // time a user actually earns USD). Fix: one accumulator per
+      // getAggregateFromServer() call, run in parallel — same flat,
+      // near-zero cost, but each field's sum no longer depends on whether
+      // the others exist on a given doc. Mirrors the same fix in
+      // functions/src/index.ts's refreshAdminStats.
       const [
         totalCountSnap,
         active7CountSnap,
         active30CountSnap,
-        sumsSnap,
+        tbSnap, usdEarningsSnap, usdFromTBSnap, usdWithdrawnSnap, checkInsSnap,
         propCountSnap,
       ] = await Promise.all([
         getCountFromServer(usersCol),
         getCountFromServer(query(usersCol, where('lastActiveAt', '>', day7ISO))),
         getCountFromServer(query(usersCol, where('lastActiveAt', '>', day30ISO))),
-        getAggregateFromServer(usersCol, {
-          totalTB:      sum('tbBalance'),
-          usdEarnings:  sum('usdEarnings'),
-          usdFromTB:    sum('usdEarnedFromTB'),
-          usdWithdrawn: sum('usdWithdrawn'),
-          totalCI:      sum('totalCheckIns'),
-        }),
+        getAggregateFromServer(usersCol, { v: sum('tbBalance') }),
+        getAggregateFromServer(usersCol, { v: sum('usdEarnings') }),
+        getAggregateFromServer(usersCol, { v: sum('usdEarnedFromTB') }),
+        getAggregateFromServer(usersCol, { v: sum('usdWithdrawn') }),
+        getAggregateFromServer(usersCol, { v: sum('totalCheckIns') }),
         getCountFromServer(propsCol),
       ]);
 
       const total   = totalCountSnap.data().count;
       const active7  = active7CountSnap.data().count;
       const active30 = active30CountSnap.data().count;
-      const sums     = sumsSnap.data();
-      const totalTB  = sums.totalTB || 0;
-      const totalUSD = (sums.usdEarnings || 0) + (sums.usdFromTB || 0) + (sums.usdWithdrawn || 0);
-      const totalCI  = sums.totalCI || 0;
+      const totalTB  = tbSnap.data().v || 0;
+      const totalUSD = (usdEarningsSnap.data().v || 0) + (usdFromTBSnap.data().v || 0) + (usdWithdrawnSnap.data().v || 0);
+      const totalCI  = checkInsSnap.data().v || 0;
       const propCount = propCountSnap.data().count;
 
       document.getElementById('totalUsers').textContent = fmt(total);
