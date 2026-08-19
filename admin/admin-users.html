@@ -366,6 +366,27 @@
   .ban-btn.do-ban:hover { background: #c03030; }
   .ban-btn.do-unban { background: var(--green); color: var(--bg); }
   .ban-btn.do-unban:hover { background: #3a9a5a; }
+  .ban-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Ban reason (Aug 19, 2026) */
+  .ban-reason-input {
+    width: 100%;
+    margin-top: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s;
+  }
+  .ban-reason-input:focus { border-color: var(--red); }
+  .ban-reason-display { font-size: 12px; color: var(--text); margin-top: 8px; line-height: 1.5; }
+  .ban-reason-label { color: var(--text-muted); }
+  .ban-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
   /* Properties list in modal */
   .prop-list { display: flex; flex-direction: column; gap: 6px; }
@@ -639,6 +660,15 @@
     if (!s) return '—';
     return s.length > n ? s.substring(0,n) + '…' : s;
   }
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
 
   // ── State ─────────────────────────────────────────────────────
   // currentResults holds only whatever the last search/filter returned —
@@ -792,7 +822,9 @@
       return;
     }
     document.getElementById('userTableBody').innerHTML = users.map(u => {
-      const banned = u.isBanned ? '<span class="badge badge-red">BANNED</span>' : '';
+      const banned = u.isBanned
+        ? `<span class="badge badge-red"${u.bannedReason ? ` title="${escHtml(u.bannedReason)}"` : ''}>BANNED</span>`
+        : '';
       const adult = u.isAdult ? '' : '<span class="badge badge-blue">MINOR</span>';
       const statusBadge = banned || adult || '<span class="badge badge-muted">OK</span>';
       const tb = u.tbBalance ?? 0;
@@ -928,18 +960,7 @@
       <!-- Ban control -->
       <div class="modal-section">
         <div class="modal-section-title">Account Status</div>
-        <div class="ban-row" id="banRow">
-          <div class="ban-info">
-            <div class="ban-title">${user.isBanned ? '🚫 This account is banned' : '⚠️ Ban this account'}</div>
-            <div class="ban-desc">${user.isBanned
-              ? 'User will be signed out immediately on next app open.'
-              : 'Banning blocks this user from accessing the app. Reversible anytime.'}</div>
-          </div>
-          <button class="ban-btn ${user.isBanned ? 'do-unban' : 'do-ban'}"
-            onclick="toggleBan('${uid}', ${!user.isBanned})">
-            ${user.isBanned ? '✓ Unban User' : '🚫 Ban User'}
-          </button>
-        </div>
+        ${renderBanRow(user)}
       </div>
 
       <!-- Properties -->
@@ -989,6 +1010,43 @@
     `;
   }
 
+  // ── Ban row markup (Aug 19, 2026 — added a reason field) ───────
+  // Shared by the initial modal render and toggleBan's re-render so the two
+  // never drift out of sync. Ban requires a reason (enforced in toggleBan
+  // below, not just a UI nicety) — bannedReason/bannedAt/bannedBy match the
+  // field names the admin scripts (scripts/banAccount_*.ts, banReferralFraud.ts,
+  // etc.) already use, so a ban made here reads the same as one made from a
+  // script. Unban doesn't require a reason (keeps the existing one-click
+  // reversal flow) but does stamp unbannedAt/unbannedBy for the audit trail.
+  function renderBanRow(user) {
+    if (user.isBanned) {
+      const reasonHtml = user.bannedReason ? escHtml(user.bannedReason) : '<em>(no reason recorded)</em>';
+      const metaParts = [];
+      if (user.bannedAt) metaParts.push('Banned ' + shortDate(user.bannedAt));
+      if (user.bannedBy) metaParts.push('by ' + escHtml(user.bannedBy));
+      return `
+        <div class="ban-row" id="banRow">
+          <div class="ban-info">
+            <div class="ban-title">🚫 This account is banned</div>
+            <div class="ban-desc">User will be signed out immediately on next app open.</div>
+            <div class="ban-reason-display"><span class="ban-reason-label">Reason:</span> ${reasonHtml}</div>
+            ${metaParts.length ? `<div class="ban-meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>` : ''}
+          </div>
+          <button class="ban-btn do-unban" onclick="toggleBan('${user.id}', false)">✓ Unban User</button>
+        </div>`;
+    }
+    return `
+      <div class="ban-row" id="banRow">
+        <div class="ban-info">
+          <div class="ban-title">⚠️ Ban this account</div>
+          <div class="ban-desc">Banning blocks this user from accessing the app. Reversible anytime.</div>
+          <textarea class="ban-reason-input" id="ban-reason-input" rows="2"
+            placeholder="Reason for ban (required — e.g. harassment, spam, fraud)..."></textarea>
+        </div>
+        <button class="ban-btn do-ban" onclick="toggleBan('${user.id}', true)">🚫 Ban User</button>
+      </div>`;
+  }
+
   // ── Save a field ──────────────────────────────────────────────
   window.saveField = async (uid, field, inputId, type, okId, errId) => {
     const input = document.getElementById(inputId);
@@ -1016,34 +1074,40 @@
 
   // ── Ban / unban ───────────────────────────────────────────────
   window.toggleBan = async (uid, ban) => {
+    let reason = '';
+    if (ban) {
+      const reasonInput = document.getElementById('ban-reason-input');
+      reason = (reasonInput && reasonInput.value || '').trim();
+      if (!reason) {
+        alert('Please enter a reason for the ban before confirming.');
+        if (reasonInput) reasonInput.focus();
+        return;
+      }
+    }
+
     const confirmed = confirm(ban
-      ? `Ban this user? They will be locked out on next app open.`
+      ? `Ban this user for "${reason}"? They will be locked out on next app open.`
       : `Unban this user? They will regain access immediately.`);
     if (!confirmed) return;
 
-    try {
-      await setDoc(doc(db, 'users', uid), { isBanned: ban }, { merge: true });
-      const u = currentResults.find(u => u.id === uid);
-      if (u) u.isBanned = ban;
+    const nowIso = new Date().toISOString();
+    const adminEmailVal = auth.currentUser ? auth.currentUser.email : null;
+    const payload = ban
+      ? { isBanned: true, bannedAt: nowIso, bannedReason: reason, bannedBy: adminEmailVal }
+      : { isBanned: false, unbannedAt: nowIso, unbannedBy: adminEmailVal };
 
-      // Re-render ban row
-      document.getElementById('banRow').outerHTML = `
-        <div class="ban-row" id="banRow">
-          <div class="ban-info">
-            <div class="ban-title">${ban ? '🚫 This account is banned' : '⚠️ Ban this account'}</div>
-            <div class="ban-desc">${ban
-              ? 'User will be signed out immediately on next app open.'
-              : 'Banning blocks this user from accessing the app. Reversible anytime.'}</div>
-          </div>
-          <button class="ban-btn ${ban ? 'do-unban' : 'do-ban'}"
-            onclick="toggleBan('${uid}', ${!ban})">
-            ${ban ? '✓ Unban User' : '🚫 Ban User'}
-          </button>
-        </div>`;
+    try {
+      await setDoc(doc(db, 'users', uid), payload, { merge: true });
+      const u = currentResults.find(u => u.id === uid);
+      if (u) Object.assign(u, payload);
+
+      // Re-render ban row from the merged local record so it reflects the
+      // reason/timestamp immediately without a re-fetch.
+      document.getElementById('banRow').outerHTML = renderBanRow(u || { id: uid, ...payload });
 
       // Update badges
       const badges = [];
-      if (ban) badges.push('<span class="badge badge-red">🚫 BANNED</span>');
+      if (payload.isBanned) badges.push('<span class="badge badge-red">🚫 BANNED</span>');
       document.getElementById('modalBadges').innerHTML = badges.join(' ');
     } catch(e) {
       console.error('toggleBan failed:', e);

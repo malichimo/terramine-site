@@ -303,7 +303,10 @@
     object-fit: cover;
     flex-shrink: 0;
     background: var(--bg);
+    cursor: zoom-in;
+    transition: opacity 0.15s;
   }
+  .report-content-thumb:hover { opacity: 0.8; }
   .report-content-text { font-size: 12px; color: var(--text); line-height: 1.6; flex: 1; min-width: 0; }
   .report-content-text .label { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
   .report-content-message { white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
@@ -361,6 +364,35 @@
   .report-reply-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .report-reply-confirm { color: var(--green); font-size: 11px; display: none; }
   .report-reply-error { color: var(--red); font-size: 11px; display: none; }
+
+  /* ── Notify-author / hide / lightbox (Aug 19, 2026) ─────────────────── */
+  .report-reply-existing.notice-existing { border-color: rgba(224,177,32,0.4); }
+  .hide-toggle-btn:hover { border-color: var(--red); color: var(--red); }
+
+  #lightboxOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    padding: 24px;
+  }
+  #lightboxOverlay img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+  #lightboxOverlay .lightbox-hint {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    color: var(--text-muted);
+    font-size: 11px;
+  }
 </style>
 </head>
 <body>
@@ -474,6 +506,12 @@
     <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()" style="display:none;">Load More</button>
   </div>
 
+</div>
+
+<!-- Lightbox for expanding reported photos -->
+<div id="lightboxOverlay" onclick="closeLightbox()">
+  <span class="lightbox-hint">click anywhere to close ✕</span>
+  <img id="lightboxImg" src="" alt="Expanded photo">
 </div>
 
 <!-- Login overlay -->
@@ -821,6 +859,10 @@
     const ts = r.createdAt ? new Date(r.createdAt) : null;
     const dateStr = ts ? ts.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
     const ci = r._checkIn;
+    // Content is still moderatable (hide / notify author) only when the
+    // reported check-in still exists — a deleted doc has nothing left to
+    // hide and no author field we can trust to still be current.
+    const canModerateContent = r.contentType === 'checkIn' && !!ci;
 
     let contentBlock;
     if (r.contentType === 'checkIn' && ci) {
@@ -829,7 +871,7 @@
       contentBlock = `
         <div class="report-content-box">
           ${ci.hasPhoto && ci.photoURL
-            ? `<img class="report-content-thumb" src="${escHtml(ci.photoURL)}" alt="Reported photo" onerror="this.style.display='none'">`
+            ? `<img class="report-content-thumb" src="${escHtml(ci.photoURL)}" data-url="${escHtml(ci.photoURL)}" alt="Reported photo — click to expand" onclick="openLightbox(this.dataset.url)" onerror="this.style.display='none'">`
             : ''}
           <div class="report-content-text">
             <div class="label">Reported check-in — by ${escHtml(authorNick)}${ci.isHidden ? ' · <span style="color:var(--red)">hidden</span>' : ''}${ci.reportCount ? ` · ${ci.reportCount} report(s) total` : ''}</div>
@@ -858,12 +900,21 @@
         ${contentBlock}
         ${r.adminReply ? `
           <div class="report-reply-existing">
-            <div class="report-reply-label">↩ Your reply${r.repliedAt ? ' · ' + new Date(r.repliedAt).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : ''}${r.repliedBy ? ' · ' + escHtml(r.repliedBy) : ''}</div>
+            <div class="report-reply-label">↩ Your reply to the reporter${r.repliedAt ? ' · ' + new Date(r.repliedAt).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : ''}${r.repliedBy ? ' · ' + escHtml(r.repliedBy) : ''}</div>
             <div class="report-reply-text">${escHtml(r.adminReply)}</div>
+          </div>` : ''}
+        ${canModerateContent && ci.moderationNotice ? `
+          <div class="report-reply-existing notice-existing">
+            <div class="report-reply-label">⚠️ Policy-violation notice sent to author${ci.moderationNoticeAt ? ' · ' + new Date(ci.moderationNoticeAt).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : ''}${ci.moderationNoticeBy ? ' by ' + escHtml(ci.moderationNoticeBy) : ''}</div>
+            <div class="report-reply-text">${escHtml(ci.moderationNotice)}</div>
           </div>` : ''}
         <div class="report-actions">
           ${!r.reviewed ? `<button class="report-review-btn" id="review-btn-${r.id}" onclick="markReportReviewed('${r.id}')">✓ Mark Reviewed</button>` : ''}
-          <button class="report-reply-toggle-btn" onclick="toggleReportReplyForm('${r.id}')">${r.adminReply ? '✏️ Edit reply' : '💬 Reply'}</button>
+          <button class="report-reply-toggle-btn" onclick="toggleReportReplyForm('${r.id}')">${r.adminReply ? '✏️ Edit reply to reporter' : '💬 Reply to reporter'}</button>
+          ${canModerateContent ? `
+            <button class="report-reply-toggle-btn" onclick="toggleNoticeForm('${r.id}')">${ci.moderationNotice ? '✏️ Edit notice to author' : '⚠️ Notify author'}</button>
+            <button class="report-reply-toggle-btn hide-toggle-btn" id="hide-btn-${r.id}" onclick="toggleHideCheckIn('${r.id}')">${ci.isHidden ? '👁 Unhide check-in' : '🙈 Hide check-in'}</button>
+          ` : ''}
         </div>
         <div class="report-reply-form" id="report-reply-form-${r.id}" style="display:none;">
           <textarea class="report-reply-input" id="report-reply-input-${r.id}" rows="3" maxlength="1000" placeholder="Type your reply — the reporter will be notified in-app and via push.">${r.adminReply || ''}</textarea>
@@ -873,8 +924,121 @@
             <span class="report-reply-error" id="report-reply-error-${r.id}">✗ Failed to send — check console</span>
           </div>
         </div>
+        ${canModerateContent ? `
+        <div class="report-reply-form" id="notice-form-${r.id}" style="display:none;">
+          <textarea class="report-reply-input" id="notice-input-${r.id}" rows="3" maxlength="500" placeholder="Message to the check-in's author explaining what policy it violated — they'll be notified in-app and via push.">${ci.moderationNotice || ''}</textarea>
+          <div class="report-reply-actions">
+            <button class="report-reply-send-btn" id="notice-send-${r.id}" onclick="sendModerationNotice('${r.id}')">📤 Send Notice</button>
+            <span class="report-reply-confirm" id="notice-confirm-${r.id}">✓ Sent — author will be notified</span>
+            <span class="report-reply-error" id="notice-error-${r.id}">✗ Failed to send — check console</span>
+          </div>
+        </div>` : ''}
       </div>`;
   }
+
+  // ── Lightbox (Aug 19, 2026) ─────────────────────────────────────────
+  window.openLightbox = function(url) {
+    if (!url) return;
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightboxOverlay').style.display = 'flex';
+  };
+  window.closeLightbox = function() {
+    document.getElementById('lightboxOverlay').style.display = 'none';
+    document.getElementById('lightboxImg').src = '';
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+
+  // ── Notify author of policy violation (Aug 19, 2026) ────────────────
+  // Writes moderationNotice/moderationNoticeAt/moderationNoticeBy directly
+  // onto the checkIns/{contentId} doc (isAdmin() already permits arbitrary
+  // field writes there — see firestore.rules). onCheckInModerationNotice
+  // (functions/src/index.ts) watches for moderationNotice changing and
+  // delivers the actual in-app notification + push to the check-in's
+  // author — same "write a field, a trigger notifies" shape already used
+  // for report replies and feedback replies.
+  window.toggleNoticeForm = function(reportId) {
+    const form = document.getElementById('notice-form-' + reportId);
+    if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.sendModerationNotice = async function(reportId) {
+    const r = allReports.find(x => x.id === reportId);
+    if (!r || !r._checkIn || !r.contentId) return;
+    const input = document.getElementById('notice-input-' + reportId);
+    const btn = document.getElementById('notice-send-' + reportId);
+    const confirmEl = document.getElementById('notice-confirm-' + reportId);
+    const errEl = document.getElementById('notice-error-' + reportId);
+    confirmEl.style.display = 'none';
+    errEl.style.display = 'none';
+
+    const notice = input.value.trim();
+    if (!notice) {
+      errEl.textContent = '✗ Notice cannot be empty';
+      errEl.style.display = 'inline';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+      const nowIso = new Date().toISOString();
+      const sentBy = auth.currentUser ? auth.currentUser.email : null;
+      await setDoc(doc(db, 'checkIns', r.contentId), {
+        moderationNotice: notice,
+        moderationNoticeAt: nowIso,
+        moderationNoticeBy: sentBy,
+      }, { merge: true });
+
+      r._checkIn.moderationNotice = notice;
+      r._checkIn.moderationNoticeAt = nowIso;
+      r._checkIn.moderationNoticeBy = sentBy;
+      checkInCache.set(r.contentId, r._checkIn);
+
+      confirmEl.style.display = 'inline';
+      btn.textContent = '📤 Send Notice';
+      btn.disabled = false;
+      setTimeout(() => { confirmEl.style.display = 'none'; }, 3000);
+      renderReportsFiltered();
+    } catch (e) {
+      console.error('Failed to send moderation notice:', e);
+      errEl.textContent = '✗ Failed to send — check console';
+      errEl.style.display = 'inline';
+      btn.textContent = '📤 Send Notice';
+      btn.disabled = false;
+    }
+  };
+
+  // ── Hide / unhide reported check-in (Aug 19, 2026) ──────────────────
+  // Toggles the same isHidden field ModerationService's auto-hide-at-3-
+  // reports already sets — VisitorLogScreen already filters on it
+  // (`.filter(ci => !ci.isHidden ...)`), so this is a real suppression, not
+  // cosmetic. Manual override for content an admin wants hidden before it
+  // hits the auto-hide threshold (or un-hidden after a bad-faith report).
+  window.toggleHideCheckIn = async function(reportId) {
+    const r = allReports.find(x => x.id === reportId);
+    if (!r || !r._checkIn || !r.contentId) return;
+    const btn = document.getElementById('hide-btn-' + reportId);
+    const newHidden = !r._checkIn.isHidden;
+    const confirmed = confirm(newHidden
+      ? "Hide this check-in from the property's visitor log? Reversible anytime."
+      : 'Unhide this check-in? It will reappear in the visitor log immediately.');
+    if (!confirmed) return;
+
+    if (btn) btn.disabled = true;
+    try {
+      await setDoc(doc(db, 'checkIns', r.contentId), { isHidden: newHidden }, { merge: true });
+      r._checkIn.isHidden = newHidden;
+      checkInCache.set(r.contentId, r._checkIn);
+      renderReportsFiltered();
+    } catch (e) {
+      console.error('toggleHideCheckIn failed:', e);
+      alert('Failed to update — see console');
+      if (btn) btn.disabled = false;
+    }
+  };
 
   window.toggleReportReplyForm = function(reportId) {
     const form = document.getElementById('report-reply-form-' + reportId);
