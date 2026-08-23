@@ -368,6 +368,46 @@
   .ban-btn.do-unban:hover { background: #3a9a5a; }
   .ban-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* Send in-app notification (Aug 23, 2026) */
+  .notif-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(74,159,212,0.06);
+    border: 1px solid rgba(74,159,212,0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .notif-field { display: flex; flex-direction: column; gap: 4px; }
+  .notif-label { font-size: 11px; color: var(--text-muted); }
+  .notif-input, .notif-textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    resize: vertical;
+  }
+  .notif-input:focus, .notif-textarea:focus { outline: none; border-color: var(--blue); }
+  .notif-actions { display: flex; align-items: center; gap: 10px; }
+  .notif-btn {
+    border: none;
+    background: var(--blue);
+    color: white;
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .notif-btn:hover { background: #3a8bc0; }
+  .notif-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
   /* Ban reason (Aug 19, 2026) */
   .ban-reason-input {
     width: 100%;
@@ -963,6 +1003,26 @@
         ${renderBanRow(user)}
       </div>
 
+      <!-- Send in-app notification (Aug 23, 2026) -->
+      <div class="modal-section">
+        <div class="modal-section-title">Send In-App Notification</div>
+        <div class="notif-row">
+          <div class="notif-field">
+            <span class="notif-label">Title</span>
+            <input class="notif-input" id="notif-title" type="text" placeholder="⚠️ Warning" maxlength="80">
+          </div>
+          <div class="notif-field">
+            <span class="notif-label">Message</span>
+            <textarea class="notif-textarea" id="notif-body" rows="3" placeholder="Message shown in their notification inbox..." maxlength="500"></textarea>
+          </div>
+          <div class="notif-actions">
+            <button class="notif-btn" id="notif-send-btn" onclick="sendNotification('${uid}')">🔔 Send Notification</button>
+            <span class="save-ok" id="notif-ok">✓ Sent</span>
+            <span class="save-err" id="notif-err">✗ Failed</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Properties -->
       <div class="modal-section">
         <div class="modal-section-title">Properties (${props.length})</div>
@@ -1112,6 +1172,80 @@
     } catch(e) {
       console.error('toggleBan failed:', e);
       alert('Failed to update ban status — see console');
+    }
+  };
+
+  // ── Send in-app notification (Aug 23, 2026) ─────────────────────
+  // Writes to the top-level `notifications` collection — same shape
+  // NotificationService.ts / AppNotification on the client expects, and the
+  // same schema the Cloud Functions (onFeedbackReplied etc.) already write.
+  // Requires the firestore.rules `notifications` create rule to allow
+  // isAdmin() — everything else that writes there goes through the Admin
+  // SDK, which bypasses rules, so a direct client write needed that added.
+  //
+  // Push is best-effort and non-fatal, mirroring NotificationService's own
+  // "push failure should never break the flow" pattern — the in-app
+  // notification (the record NotificationsScreen.tsx actually reads) is
+  // written first and always persists even if the push call below fails
+  // (missing token, network, CORS from a browser origin hitting Expo's push
+  // API directly, etc.).
+  window.sendNotification = async (uid) => {
+    const titleInput = document.getElementById('notif-title');
+    const bodyInput = document.getElementById('notif-body');
+    const btn = document.getElementById('notif-send-btn');
+    const okEl = document.getElementById('notif-ok');
+    const errEl = document.getElementById('notif-err');
+    okEl.style.display = 'none';
+    errEl.style.display = 'none';
+
+    const title = (titleInput.value || '').trim();
+    const body = (bodyInput.value || '').trim();
+    if (!title || !body) {
+      alert('Enter both a title and a message before sending.');
+      return;
+    }
+
+    const u = currentResults.find(u => u.id === uid);
+    const label = (u && (u.nickname || u.email)) || uid;
+    if (!confirm(`Send this notification to ${label}?\n\n"${title}"\n${body}`)) return;
+
+    btn.disabled = true;
+    try {
+      const notifRef = doc(collection(db, 'notifications'));
+      await setDoc(notifRef, {
+        userId: uid,
+        type: 'admin_message',
+        title,
+        body,
+        data: { source: 'admin', sentBy: auth.currentUser ? auth.currentUser.email : null },
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Best-effort push alongside the in-app record — see comment above.
+      try {
+        const userSnap = await getDoc(doc(db, 'users', uid));
+        const token = userSnap.exists() ? userSnap.data().expoPushToken : null;
+        if (token) {
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ to: token, sound: 'default', title, body, data: { type: 'admin_message' } }),
+          });
+        }
+      } catch (pushErr) {
+        console.warn('Push send failed (non-fatal, in-app notification still sent):', pushErr);
+      }
+
+      okEl.style.display = 'inline';
+      titleInput.value = '';
+      bodyInput.value = '';
+      setTimeout(() => okEl.style.display = 'none', 3000);
+    } catch (e) {
+      console.error('sendNotification failed:', e);
+      errEl.style.display = 'inline';
+    } finally {
+      btn.disabled = false;
     }
   };
 
