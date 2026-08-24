@@ -58,6 +58,36 @@ body.auth-pending #portal {
 }
 
 /* ═══════════════════════════════════════════
+   AD BANNER (top, below header)
+   ✅ Aug 24, 2026 — same block on heatmap.html and every portal page
+   (mines/visitors/activity/account carry their own copy inline since
+   those pages don't use this shared stylesheet). min-height reserves
+   space before the ad loads (or if it's blocked) so nothing jumps.
+═══════════════════════════════════════════ */
+.ad-banner-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(13,27,42,0.97);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  padding: 6px 0;
+}
+.ad-banner-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #556070;
+}
+.ad-banner-wrap .adsbygoogle { width: 100%; max-width: 970px; }
+@media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; } }
+
+/* ═══════════════════════════════════════════
    TOP NAV
 ═══════════════════════════════════════════ */
 .top-nav {

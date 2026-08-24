@@ -6,6 +6,9 @@
   <title>My Mines — TerraMine</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
+       already verified via ads.txt at the site root). -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4502698429383902" crossorigin="anonymous"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -67,6 +70,17 @@
     .nav-nickname { font-size: 13px; color: #8899AA; }
     .nav-signout { font-size: 12px; color: #556070; background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: color 0.15s; }
     .nav-signout:hover { color: white; }
+
+    /* ═══ AD BANNER (top, below header) — Aug 24, 2026 ═══ */
+    .ad-banner-wrap {
+      flex-shrink: 0; width: 100%; min-height: 90px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      background: rgba(13,27,42,0.97); border-bottom: 1px solid var(--border);
+      overflow: hidden; padding: 6px 0;
+    }
+    .ad-banner-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #556070; }
+    .ad-banner-wrap .adsbygoogle { width: 100%; max-width: 970px; }
+    @media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; } }
 
     /* ═══ LAYOUT ═══ */
     .layout { display: flex; flex: 1; min-height: 0; }
@@ -456,6 +470,22 @@
       <button class="nav-signout" id="btn-signout">Sign out</button>
     </div>
   </nav>
+
+  <!-- ═══ AD BANNER ═══ -->
+  <!-- TODO(Scott): replace data-ad-slot="0000000000" below with the real
+       slot ID once you've created a Display ad unit for this placement in
+       the AdSense console (adsense.google.com → Ads → By ad unit). Each
+       page's placement should get its own distinct slot ID. -->
+  <div class="ad-banner-wrap">
+    <span class="ad-banner-label">Advertisement</span>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-4502698429383902"
+         data-ad-slot="0000000000"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+  </div>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
   <div class="layout">
     <aside class="sidebar">

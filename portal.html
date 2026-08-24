@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="portal.css" />
+  <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
+       already verified via ads.txt at the site root). -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4502698429383902" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -96,6 +99,23 @@
           <button class="nav-signout" id="btn-signout">Sign out</button>
         </div>
       </nav>
+
+      <!-- ═══ AD BANNER ═══ -->
+      <!-- TODO(Scott): replace data-ad-slot="0000000000" below with the real
+           slot ID once you've created a Display ad unit for this placement
+           in the AdSense console (adsense.google.com → Ads → By ad unit).
+           Same placeholder pattern on heatmap.html + the other 4 portal
+           pages — each placement should get its own distinct slot ID. -->
+      <div class="ad-banner-wrap">
+        <span class="ad-banner-label">Advertisement</span>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4502698429383902"
+             data-ad-slot="0000000000"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      </div>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
       <!-- Main -->
       <main class="main" id="main-content">
