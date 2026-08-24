@@ -73,14 +73,17 @@
 
     /* ═══ AD BANNER (top, below header) — Aug 24, 2026 ═══ */
     .ad-banner-wrap {
-      flex-shrink: 0; width: 100%; min-height: 90px;
+      flex-shrink: 0; width: 100%; min-height: 90px; max-height: 100px;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
       background: rgba(13,27,42,0.97); border-bottom: 1px solid var(--border);
       overflow: hidden; padding: 6px 0;
     }
     .ad-banner-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #556070; }
-    .ad-banner-wrap .adsbygoogle { width: 100%; max-width: 970px; }
-    @media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; } }
+    /* Fixed 728x90 unit, not auto/full-width-responsive — that let Google's
+       script reserve an oversized placeholder for the unfilled slot (seen
+       live, ~350px tall). This plus max-height/overflow above is a hard cap. */
+    .ad-banner-wrap .adsbygoogle { max-width: 100%; }
+    @media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; max-height: 64px; } }
 
     /* ═══ LAYOUT ═══ */
     .layout { display: flex; flex: 1; min-height: 0; }
@@ -479,11 +482,9 @@
   <div class="ad-banner-wrap">
     <span class="ad-banner-label">Advertisement</span>
     <ins class="adsbygoogle"
-         style="display:block"
+         style="display:inline-block;width:728px;height:90px;max-width:100%;"
          data-ad-client="ca-pub-4502698429383902"
-         data-ad-slot="0000000000"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
+         data-ad-slot="0000000000"></ins>
   </div>
   <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 

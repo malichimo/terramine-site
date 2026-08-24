@@ -68,6 +68,7 @@ body.auth-pending #portal {
   flex-shrink: 0;
   width: 100%;
   min-height: 90px;
+  max-height: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -84,8 +85,14 @@ body.auth-pending #portal {
   text-transform: uppercase;
   color: #556070;
 }
-.ad-banner-wrap .adsbygoogle { width: 100%; max-width: 970px; }
-@media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; } }
+/* Fixed 728x90 leaderboard unit — deliberately NOT data-ad-format="auto" +
+   full-width-responsive. Auto/responsive sizing let Google's script reserve
+   however much vertical space it wanted for an unfilled placeholder slot
+   (observed ~350px tall live on terramine.app/heatmap.html, Aug 24, 2026,
+   before this fix) — a fixed unit plus this wrapper's max-height/overflow
+   is a hard, predictable cap regardless of what any future slot config does. */
+.ad-banner-wrap .adsbygoogle { max-width: 100%; }
+@media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; max-height: 64px; } }
 
 /* ═══════════════════════════════════════════
    TOP NAV
