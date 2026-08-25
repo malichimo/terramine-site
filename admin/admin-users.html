@@ -617,7 +617,7 @@
 
   <!-- Search + filters -->
   <div class="search-bar">
-    <input class="search-input" id="searchInput" type="text" placeholder="Search by nickname, email, or UID..." onkeydown="if(event.key==='Enter') runSearch()">
+    <input class="search-input" id="searchInput" type="text" placeholder="Search by nickname, email, UID, or referral code..." onkeydown="if(event.key==='Enter') runSearch()">
     <button class="filter-btn" onclick="runSearch()">🔍 Search</button>
     <button class="filter-btn" data-f="banned" onclick="runFilter('banned',this)">🚫 Banned</button>
     <button class="filter-btn" data-f="active" onclick="runFilter('active',this)">✅ Active 7d</button>
@@ -645,7 +645,7 @@
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <tr><td colspan="9" style="padding:24px;color:var(--text-muted);font-size:12px;">Search by nickname, email, or UID to look up a user — this page no longer preloads all 20K+ accounts.</td></tr>
+        <tr><td colspan="9" style="padding:24px;color:var(--text-muted);font-size:12px;">Search by nickname, email, UID, or referral code to look up a user — this page no longer preloads all 20K+ accounts.</td></tr>
       </tbody>
     </table>
   </div>
@@ -805,11 +805,14 @@
     users.forEach(u => { u.propCount = (propsByOwner[u.id] || []).length; });
   }
 
-  // ── Text search: UID exact match, email exact/prefix, or nickname prefix ──
+  // ── Text search: UID exact match, referral code exact match, email exact/
+  // prefix, or nickname prefix ──
   // Note: this replaces the old full-collection substring search. Firestore can't
   // do case-insensitive substring matching without a full scan, so email/nickname
-  // matches are prefix-based (case-sensitive as typed). Exact UID and exact email
-  // lookups (as-typed and lowercased) are tried first since those are common.
+  // matches are prefix-based (case-sensitive as typed). Exact UID, exact referral
+  // code (normalized to uppercase — codes are always stored as TM-XXXXX), and
+  // exact email lookups (as-typed and lowercased) are tried first since those are
+  // common and unambiguous.
   window.runSearch = async () => {
     const raw = (document.getElementById('searchInput').value || '').trim();
     if (!raw) {
@@ -826,6 +829,11 @@
       if (looksLikeUid) {
         const snap = await getDoc(doc(db, 'users', raw));
         if (snap.exists()) results = [{ id: snap.id, ...snap.data() }];
+      }
+
+      if (!results.length && /^TM-/i.test(raw)) {
+        const snap = await getDocs(query(collection(db, 'users'), where('referralCode', '==', raw.toUpperCase()), limit(25)));
+        results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
 
       if (!results.length && raw.includes('@')) {
