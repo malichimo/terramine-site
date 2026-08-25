@@ -1117,7 +1117,13 @@ footer {
     letter-spacing: 2px;
   }
   .hero h1 {
-    font-size: 5em;
+    /* BUG FIX (Aug 25, 2026): this was left at the desktop 5em (~85px)
+       value — same as the un-overridden base rule above — instead of
+       actually being scaled down for mobile, so the hero headline never
+       shrank on any phone screen. Confirmed live on production via the
+       deployed stylesheet before this fix. clamp() keeps it fluid across
+       phone widths instead of a single fixed size. */
+    font-size: clamp(36px, 11vw, 52px);
     line-height: 0.95;
     max-width: 360px;
   }
