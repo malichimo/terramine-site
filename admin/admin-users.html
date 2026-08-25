@@ -428,6 +428,68 @@
   .ban-reason-label { color: var(--text-muted); }
   .ban-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
+  /* Balance Adjustments (Aug 25, 2026) — additive-only, reason-required */
+  .adjust-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: rgba(76,175,110,0.06);
+    border: 1px solid rgba(76,175,110,0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+  }
+  .adjust-info { width: 130px; flex-shrink: 0; }
+  .adjust-current-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .adjust-current-value { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--text); }
+  .adjust-fields { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .adjust-amount-input, .adjust-reason-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s;
+  }
+  .adjust-amount-input:focus, .adjust-reason-input:focus { border-color: var(--green); }
+  .adjust-btn {
+    align-self: flex-start;
+    border: none;
+    background: var(--green);
+    color: var(--bg);
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .adjust-btn:hover { background: #3a9a5a; }
+  .adjust-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .adjust-log { margin-top: 4px; }
+  .adjust-log-title { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin: 12px 0 8px; }
+  .adjust-log-empty { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
+  .adjust-log-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .adjust-log-item:last-child { border-bottom: none; }
+  .adjust-log-delta { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; width: 110px; flex-shrink: 0; }
+  .adjust-log-delta.positive { color: var(--green); }
+  .adjust-log-delta.negative { color: var(--red); }
+  .adjust-log-detail { flex: 1; }
+  .adjust-log-reason { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .adjust-log-meta { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
   /* Properties list in modal */
   .prop-list { display: flex; flex-direction: column; gap: 6px; }
   .prop-item {
@@ -625,7 +687,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
     getFirestore, collection, getDocs, query, orderBy, limit, where,
-    doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch
+    doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, increment
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
@@ -718,6 +780,7 @@
   let sortKey = 'lastActiveAt';
   let sortDir = -1; // -1 = desc
   let currentUserId = null;
+  let currentAdjustments = []; // last-loaded manual balance adjustments for the open modal
 
   function setTableLoading(msg) {
     document.getElementById('userTableBody').innerHTML =
@@ -901,6 +964,9 @@
     document.getElementById('userModal').style.display = 'flex';
     document.getElementById('modalBody').innerHTML = '<div class="modal-loading">⏳ Loading user data...</div>';
 
+    let checkIns = [];
+    let adjustments = [];
+
     try {
       // Load check-ins made BY this user
       const checkInsSnap = await getDocs(
@@ -909,17 +975,33 @@
           orderBy('timestamp', 'desc'),
           limit(50))
       );
-      const checkIns = checkInsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      renderModal(user, propsByOwner[uid] || [], checkIns);
+      checkIns = checkInsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch(e) {
-      console.error('Failed to load user detail:', e);
-      // Render modal without check-ins if query fails (missing index)
-      renderModal(user, propsByOwner[uid] || [], []);
+      console.error('Failed to load check-ins:', e);
+      // Falls through with checkIns = [] (e.g. missing index)
     }
+
+    try {
+      // Load manual balance adjustments made against this account (Aug 25,
+      // 2026) — needs a composite index (uid ASC, createdAt DESC); Firestore
+      // will prompt with a direct create-index link the first time this runs.
+      const adjSnap = await getDocs(
+        query(collection(db, 'adminBalanceAdjustments'),
+          where('uid', '==', uid),
+          orderBy('createdAt', 'desc'),
+          limit(10))
+      );
+      adjustments = adjSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {
+      console.error('Failed to load balance adjustments:', e);
+      // Falls through with adjustments = [] (e.g. missing index on first run)
+    }
+
+    currentAdjustments = adjustments;
+    renderModal(user, propsByOwner[uid] || [], checkIns, adjustments);
   };
 
-  function renderModal(user, props, checkIns) {
+  function renderModal(user, props, checkIns, adjustments) {
     const uid = user.id;
 
     document.getElementById('modalBody').innerHTML = `
@@ -972,21 +1054,15 @@
           <span class="save-err" id="err-nickname">✗</span>
         </div>
 
-        <div class="edit-row">
-          <span class="edit-label">TB Balance</span>
-          <input class="edit-input" id="edit-tb" type="number" value="${user.tbBalance||0}" min="0">
-          <button class="edit-save-btn" onclick="saveField('${uid}','tbBalance','edit-tb','number','ok-tb','err-tb')">Save</button>
-          <span class="save-ok" id="ok-tb">✓</span>
-          <span class="save-err" id="err-tb">✗</span>
-        </div>
-
-        <div class="edit-row">
-          <span class="edit-label">USD Earnings</span>
-          <input class="edit-input" id="edit-usd" type="number" value="${user.usdEarnings||0}" step="0.000001" min="0">
-          <button class="edit-save-btn" onclick="saveField('${uid}','usdEarnings','edit-usd','number','ok-usd','err-usd')">Save</button>
-          <span class="save-ok" id="ok-usd">✓</span>
-          <span class="save-err" id="err-usd">✗</span>
-        </div>
+        <!-- TB Balance / USD Earnings are no longer directly editable here
+             (Aug 25, 2026) — a raw setDoc({field: value}) let an admin
+             overwrite a balance to any number with zero record of why.
+             See the "Balance Adjustments" section below: corrections now
+             go through addBalance(), which is additive, requires a reason,
+             and logs to adminBalanceAdjustments. Closes the gap noted in
+             auditTbResetDamage.ts's caveat #5 ("Manual admin grants/
+             deductions in the Firestore console leave no trace") for
+             every adjustment made from this page going forward. -->
 
         <div class="edit-row">
           <span class="edit-label">Total Check-ins</span>
@@ -995,6 +1071,42 @@
           <span class="save-ok" id="ok-ci">✓</span>
           <span class="save-err" id="err-ci">✗</span>
         </div>
+      </div>
+
+      <!-- Balance Adjustments (Aug 25, 2026) — additive-only, reason-required,
+           logged to adminBalanceAdjustments. See addBalance() below. -->
+      <div class="modal-section">
+        <div class="modal-section-title">Balance Adjustments</div>
+
+        <div class="adjust-row">
+          <div class="adjust-info">
+            <div class="adjust-current-label">TB Balance</div>
+            <div class="adjust-current-value" id="adjust-tb-current" style="color:var(--gold-light)">${fmt(user.tbBalance)}</div>
+          </div>
+          <div class="adjust-fields">
+            <input class="adjust-amount-input" id="adjust-tb-amount" type="number" step="1" placeholder="Amount (+/-)">
+            <textarea class="adjust-reason-input" id="adjust-tb-reason" rows="2" placeholder="Reason (required) — e.g. 'TM-KVJ79 Discord ticket, confirmed reset 4000→ 1000 Aug 19'"></textarea>
+            <button class="adjust-btn" onclick="addBalance('${uid}','tbBalance','adjust-tb-amount','adjust-tb-reason','adjust-tb-current','ok-adjust-tb','err-adjust-tb')">➕ Add to TB Balance</button>
+            <span class="save-ok" id="ok-adjust-tb">✓ Logged</span>
+            <span class="save-err" id="err-adjust-tb">✗ Failed</span>
+          </div>
+        </div>
+
+        <div class="adjust-row">
+          <div class="adjust-info">
+            <div class="adjust-current-label">USD Earnings</div>
+            <div class="adjust-current-value" id="adjust-usd-current" style="font-size:16px;">$${Number(user.usdEarnings||0).toFixed(6)}</div>
+          </div>
+          <div class="adjust-fields">
+            <input class="adjust-amount-input" id="adjust-usd-amount" type="number" step="0.000001" placeholder="Amount (+/-)">
+            <textarea class="adjust-reason-input" id="adjust-usd-reason" rows="2" placeholder="Reason (required)"></textarea>
+            <button class="adjust-btn" onclick="addBalance('${uid}','usdEarnings','adjust-usd-amount','adjust-usd-reason','adjust-usd-current','ok-adjust-usd','err-adjust-usd')">➕ Add to USD Earnings</button>
+            <span class="save-ok" id="ok-adjust-usd">✓ Logged</span>
+            <span class="save-err" id="err-adjust-usd">✗ Failed</span>
+          </div>
+        </div>
+
+        <div class="adjust-log" id="adjust-log">${renderAdjustLog(adjustments)}</div>
       </div>
 
       <!-- Ban control -->
@@ -1106,6 +1218,130 @@
         <button class="ban-btn do-ban" onclick="toggleBan('${user.id}', true)">🚫 Ban User</button>
       </div>`;
   }
+
+  // ── Balance adjustments log markup ──────────────────────────────
+  // Shared by the initial modal render and addBalance()'s optimistic
+  // prepend-to-log update below, so the two never drift out of sync —
+  // same pattern renderBanRow() uses for the ban/unban row above.
+  function renderAdjustLog(adjustments) {
+    if (!adjustments || adjustments.length === 0) {
+      return '<div class="adjust-log-empty">No manual adjustments recorded for this account.</div>';
+    }
+    const rows = adjustments.map(a => {
+      const delta = Number(a.delta || 0);
+      const sign = delta >= 0 ? '+' : '';
+      const fieldLabel = a.field === 'tbBalance' ? 'TB' : 'USD';
+      const deltaDisplay = a.field === 'tbBalance'
+        ? `${sign}${fmt(delta)} TB`
+        : `${sign}$${delta.toFixed(6)}`;
+      return `
+        <div class="adjust-log-item">
+          <div class="adjust-log-delta ${delta >= 0 ? 'positive' : 'negative'}">${deltaDisplay}</div>
+          <div class="adjust-log-detail">
+            <div class="adjust-log-reason">${escHtml(a.reason || '(no reason recorded)')}</div>
+            <div class="adjust-log-meta">${fieldLabel} &nbsp;·&nbsp; ${shortDate(a.createdAt)} &nbsp;·&nbsp; ${escHtml(a.adminEmail || 'unknown admin')}</div>
+          </div>
+        </div>`;
+    }).join('');
+    return '<div class="adjust-log-title">Recent Adjustments</div>' + rows;
+  }
+
+  // ── Add to a balance field (TB or USD), with a required reason ──
+  // Replaces the old raw saveField()-based direct-set editing for
+  // tbBalance/usdEarnings (Aug 25, 2026). A plain setDoc({field: value})
+  // let an admin overwrite a balance to any arbitrary number with zero
+  // record of why — exactly the gap auditTbResetDamage.ts's caveat #5
+  // calls out ("Manual admin grants/deductions in the Firestore console
+  // leave no trace"). This uses increment() — atomic and race-safe
+  // against the app's own concurrent writes to the same field, unlike a
+  // read-modify-write — and always pairs the change with a log entry in
+  // adminBalanceAdjustments carrying the admin's identity, the exact
+  // delta, and a required reason. Technically accepts a negative amount
+  // too (rare clawback case), but the UI/copy is framed as "Add" since
+  // that's the actual day-to-day use case.
+  window.addBalance = async (uid, field, amountId, reasonId, currentId, okId, errId) => {
+    const amountInput = document.getElementById(amountId);
+    const reasonInput = document.getElementById(reasonId);
+    const currentEl = document.getElementById(currentId);
+    const okEl = document.getElementById(okId);
+    const errEl = document.getElementById(errId);
+    okEl.style.display = 'none';
+    errEl.style.display = 'none';
+
+    const delta = Number(amountInput.value);
+    const reason = (reasonInput.value || '').trim();
+
+    if (!Number.isFinite(delta) || delta === 0) {
+      alert('Enter a non-zero amount.');
+      amountInput.focus();
+      return;
+    }
+    if (!reason) {
+      alert('Please enter a reason for this adjustment before confirming.');
+      reasonInput.focus();
+      return;
+    }
+
+    const fieldLabel = field === 'tbBalance' ? 'TB Balance' : 'USD Earnings';
+    const deltaLabel = field === 'tbBalance'
+      ? `${delta > 0 ? '+' : ''}${delta} TB`
+      : `${delta > 0 ? '+' : ''}$${delta.toFixed(6)}`;
+    const confirmed = confirm(`Apply ${deltaLabel} to this user's ${fieldLabel}?\n\nReason: ${reason}`);
+    if (!confirmed) return;
+
+    try {
+      const userRef = doc(db, 'users', uid);
+      const beforeSnap = await getDoc(userRef);
+      const beforeValue = Number((beforeSnap.exists() ? beforeSnap.data()[field] : 0) || 0);
+
+      await updateDoc(userRef, {
+        [field]: increment(delta),
+        lastUpdated: new Date().toISOString()
+      });
+
+      const afterValue = beforeValue + delta;
+      const user = currentResults.find(u => u.id === uid);
+      const adminEmail = auth.currentUser ? auth.currentUser.email : null;
+      const adminUid = auth.currentUser ? auth.currentUser.uid : null;
+      const createdAt = new Date().toISOString();
+
+      await setDoc(doc(collection(db, 'adminBalanceAdjustments')), {
+        uid,
+        email: (user && user.email) || null,
+        referralCode: (user && user.referralCode) || null,
+        field,
+        beforeValue,
+        delta,
+        afterValue,
+        reason,
+        adminEmail,
+        adminUid,
+        source: 'admin-users.html',
+        createdAt
+      });
+
+      // Update local cache + UI
+      if (user) user[field] = afterValue;
+      if (currentEl) {
+        currentEl.textContent = field === 'tbBalance' ? fmt(afterValue) : `$${afterValue.toFixed(6)}`;
+      }
+      amountInput.value = '';
+      reasonInput.value = '';
+      okEl.style.display = 'inline';
+      setTimeout(() => okEl.style.display = 'none', 2500);
+
+      // Prepend to the on-screen log without a re-fetch
+      currentAdjustments = [{ field, delta, reason, createdAt, adminEmail }, ...currentAdjustments].slice(0, 10);
+      const logEl = document.getElementById('adjust-log');
+      if (logEl) logEl.innerHTML = renderAdjustLog(currentAdjustments);
+
+      renderTable(currentResults); // refresh table row (e.g. TB column)
+    } catch(e) {
+      console.error('addBalance failed:', e);
+      errEl.textContent = '\u2717 Failed';
+      errEl.style.display = 'inline';
+    }
+  };
 
   // ── Save a field ──────────────────────────────────────────────
   window.saveField = async (uid, field, inputId, type, okId, errId) => {
