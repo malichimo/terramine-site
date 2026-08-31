@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Redemptions</title>
+<link rel="icon" type="image/png" href="/logo.png?v=2" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07;
+    --surface: #1a1208;
+    --surface2: #241a0d;
+    --gold: #c8922a;
+    --gold-light: #f0b84a;
+    --amber: #e07b20;
+    --text: #f0e6d0;
+    --text-muted: #8a7560;
+    --green: #4caf6e;
+    --red: #e05050;
+    --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+    --purple: #9b7fe8;
+    --orange: #e07b20;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* Header */
+  .header {
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:20px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky;
+    top:0;
+    z-index:100;
+  }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { font-size:28px; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); letter-spacing:-0.5px; }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .admin-email { font-size:11px; color:var(--text-muted); }
+  .nav-btn {
+    background:var(--surface2);
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:8px 14px;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    text-decoration:none;
+    cursor:pointer;
+    transition:color 0.2s,border-color 0.2s;
+    display:inline-block;
+  }
+  .nav-btn:hover { color:var(--text); border-color:var(--gold); }
+  .logout-btn { background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; transition:color 0.2s,border-color 0.2s; }
+  .logout-btn:hover { color:var(--red); border-color:var(--red); }
+
+  /* Layout */
+  .main { padding:32px; max-width:1500px; margin:0 auto; }
+
+  /* Status filter tabs */
+  .period-tabs { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
+  .period-tab {
+    background:var(--surface2);
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:8px 18px;
+    border-radius:20px;
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .period-tab:hover { border-color:var(--gold); color:var(--text); }
+  .period-tab.active { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
+  .period-tab .count { opacity:0.7; margin-left:4px; }
+
+  /* Table */
+  .table-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .table-header {
+    padding:16px 24px;
+    border-bottom:1px solid var(--border);
+    font-family:'Syne',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    color:var(--gold-light);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; }
+  .table-scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th {
+    padding:10px 16px;
+    text-align:left;
+    font-size:9px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    border-bottom:1px solid var(--border);
+    background:var(--surface2);
+    cursor:pointer;
+    user-select:none;
+    white-space:nowrap;
+  }
+  thead th.no-sort { cursor:default; }
+  thead th:hover:not(.no-sort) { color:var(--gold-light); }
+  thead th.sorted { color:var(--gold); }
+  tbody tr { border-bottom:1px solid rgba(200,146,42,0.06); transition:background 0.15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  tbody td { padding:11px 16px; color:var(--text); vertical-align:top; white-space:nowrap; }
+  .td-muted { color:var(--text-muted); }
+  .td-gold { color:var(--gold-light); font-weight:500; }
+  .td-green { color:var(--green); }
+  .td-red { color:var(--red); }
+  .copy-cell { display:flex; align-items:center; gap:6px; }
+  .copy-id-btn {
+    background:none;
+    border:none;
+    color:var(--text-muted);
+    cursor:pointer;
+    font-size:12px;
+    padding:2px 4px;
+    line-height:1;
+    opacity:0.7;
+    transition:opacity 0.15s;
+  }
+  .copy-id-btn:hover { opacity:1; color:var(--gold-light); }
+  .net-amount { color:var(--gold-light); font-weight:600; }
+  .fee-note { color:var(--text-muted); font-size:10px; }
+
+  .badge {
+    display:inline-block;
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    padding:4px 9px;
+    border-radius:20px;
+  }
+  .badge-red { background:rgba(224,80,80,0.15); color:var(--red); }
+  .badge-green { background:rgba(76,175,110,0.15); color:var(--green); }
+  .badge-amber { background:rgba(224,123,32,0.15); color:var(--amber); }
+  .badge-blue { background:rgba(74,159,212,0.15); color:var(--blue); }
+  .badge-muted { background:rgba(138,117,96,0.1); color:var(--text-muted); }
+
+  .action-btn {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:5px 10px;
+    border-radius:6px;
+    font-family:'DM Mono',monospace;
+    font-size:10px;
+    cursor:pointer;
+    margin-right:6px;
+    margin-top:4px;
+    transition:all 0.15s;
+  }
+  .action-btn.paid { border-color:var(--green); color:var(--green); }
+  .action-btn.paid:hover { background:rgba(76,175,110,0.15); }
+  .action-btn.reject { border-color:var(--red); color:var(--red); }
+  .action-btn.reject:hover { background:rgba(224,80,80,0.15); }
+  .processed-note { font-size:10px; color:var(--text-muted); margin-top:4px; max-width:220px; white-space:normal; }
+
+  .empty-row td { padding:32px; text-align:center; color:var(--text-muted); font-size:12px; }
+
+  /* Login overlay */
+  #loginOverlay { position:fixed; inset:0; background:var(--bg); z-index:999; display:flex; align-items:center; justify-content:center; }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; text-align:center; }
+  .login-icon { font-size:36px; margin-bottom:16px; }
+  .login-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); margin-bottom:4px; }
+  .login-sub { font-size:11px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase; margin-bottom:32px; }
+  .login-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; margin-bottom:12px; outline:none; }
+  .login-btn { width:100%; background:var(--gold); color:var(--bg); border:none; border-radius:8px; padding:14px; font-family:'DM Mono',monospace; font-size:13px; font-weight:500; cursor:pointer; }
+  #loginError { color:var(--red); font-size:12px; margin-top:12px; display:none; }
+
+  /* Reject-reason modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:800; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:28px; width:420px; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--gold-light); margin-bottom:6px; }
+  .modal-sub { font-size:11px; color:var(--text-muted); margin-bottom:18px; }
+  .modal-textarea { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; min-height:80px; resize:vertical; outline:none; margin-bottom:16px; }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+  .modal-btn { padding:10px 18px; border-radius:8px; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; }
+  .modal-btn:hover { color:var(--text); border-color:var(--gold); }
+  .modal-btn.danger { background:var(--red); border-color:var(--red); color:#fff; }
+  .modal-btn.danger:hover { opacity:0.85; }
+  #modalError { color:var(--red); font-size:11px; margin-top:8px; display:none; }
+
+  /* Toast */
+  .toast { position:fixed; bottom:28px; right:28px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px; font-size:13px; color:var(--text); z-index:900; display:none; animation:slideUp 0.25s ease; }
+  .toast.show { display:block; }
+  .toast.success { border-color:var(--green); color:var(--green); }
+  .toast.error { border-color:var(--red); color:var(--red); }
+  @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">💸</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Redemptions</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/" class="nav-btn">⛏️ Main</a>
+    <a href="/admin/admin-users.html" class="nav-btn">👥 Users</a>
+    <a href="/admin/admin-properties.html" class="nav-btn">🏔 Properties</a>
+    <a href="/admin/admin-finance.html" class="nav-btn">💰 Finance</a>
+    <a href="/admin/admin-moderation.html" class="nav-btn">🛡 Moderation</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="period-tabs" id="statusTabs">
+    <button class="period-tab" data-tab="needsAttention" onclick="setTab('needsAttention', this)">Needs Attention <span class="count" id="count-needsAttention">0</span></button>
+    <button class="period-tab" data-tab="paid" onclick="setTab('paid', this)">Paid <span class="count" id="count-paid">0</span></button>
+    <button class="period-tab" data-tab="rejected" onclick="setTab('rejected', this)">Rejected <span class="count" id="count-rejected">0</span></button>
+    <button class="period-tab" data-tab="failed" onclick="setTab('failed', this)">Failed <span class="count" id="count-failed">0</span></button>
+    <button class="period-tab" data-tab="all" onclick="setTab('all', this)">All <span class="count" id="count-all">0</span></button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <span>Redemption Requests</span>
+      <span class="table-count" id="tableCount">— requests</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('nickname')">Username ↕</th>
+            <th onclick="sortBy('paypalEmail')">Email ↕</th>
+            <th onclick="sortBy('amountUsd')">Amount Requested ↕</th>
+            <th class="no-sort">Net Payout</th>
+            <th onclick="sortBy('requestedAt')">Date Requested ↕</th>
+            <th class="no-sort">Status</th>
+          </tr>
+        </thead>
+        <tbody id="reqTableBody">
+          <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Reject-reason modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-card">
+    <div class="modal-title">Reject Redemption</div>
+    <div class="modal-sub" id="rejectModalSub">—</div>
+    <textarea class="modal-textarea" id="rejectReason" placeholder="Reason (required — shown in the audit log, not to the player)"></textarea>
+    <div id="modalError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeRejectModal()">Cancel</button>
+      <button class="modal-btn danger" id="confirmRejectBtn" onclick="confirmReject()">Reject &amp; Refund</button>
+    </div>
+  </div>
+</div>
+
+<!-- Login overlay -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-icon">💸</div>
+    <div class="login-title">TerraMine Redemptions</div>
+    <div class="login-sub">Admin access required</div>
+    <input id="loginEmail" type="email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    <input id="loginPass" type="password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import {
+    getFirestore, collection, getDocs, doc, getDoc, query, orderBy
+  } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const functions = getFunctions(app);
+  const adminUpdateWithdrawalStatus = httpsCallable(functions, 'adminUpdateWithdrawalStatus');
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let allRequests = [];       // every withdrawalRequests doc, joined with nickname
+  let currentTab = 'needsAttention';
+  let sortKey = 'requestedAt';
+  let sortDir = -1;           // newest first by default
+  const nicknameCache = new Map(); // userId -> nickname, avoids refetching for repeat requesters
+
+  // ── Auth ───────────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      loadAll();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+    }
+  });
+
+  window.doLogout = async () => {
+    await signOut(auth);
+    location.reload();
+  };
+
+  window.doLogin = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (e) {
+      errEl.textContent = 'Sign-in failed. Check email and password.';
+      errEl.style.display = 'block';
+    }
+  };
+
+  // ── Load ───────────────────────────────────────────────────────────────
+  async function loadAll() {
+    document.getElementById('reqTableBody').innerHTML = '<tr class="empty-row"><td colspan="6">Loading…</td></tr>';
+
+    const snap = await getDocs(query(collection(db, 'withdrawalRequests'), orderBy('requestedAt', 'desc')));
+    const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Resolve nicknames — one getDoc per DISTINCT userId, cached across reloads.
+    const uniqueUserIds = [...new Set(raw.map(r => r.userId).filter(Boolean))];
+    await Promise.all(uniqueUserIds.map(async (uid) => {
+      if (nicknameCache.has(uid)) return;
+      try {
+        const uSnap = await getDoc(doc(db, 'users', uid));
+        const nickname = uSnap.exists() ? (uSnap.data().nickname || null) : null;
+        nicknameCache.set(uid, nickname || uid.substring(0, 8));
+      } catch (e) {
+        nicknameCache.set(uid, uid.substring(0, 8));
+      }
+    }));
+
+    allRequests = raw.map(r => ({ ...r, nickname: nicknameCache.get(r.userId) || '—' }));
+
+    updateTabCounts();
+    render();
+  }
+
+  function updateTabCounts() {
+    const needsAttention = allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').length;
+    document.getElementById('count-needsAttention').textContent = needsAttention;
+    document.getElementById('count-paid').textContent = allRequests.filter(r => r.status === 'paid').length;
+    document.getElementById('count-rejected').textContent = allRequests.filter(r => r.status === 'rejected').length;
+    document.getElementById('count-failed').textContent = allRequests.filter(r => r.status === 'failed').length;
+    document.getElementById('count-all').textContent = allRequests.length;
+  }
+
+  window.setTab = (tab, btnEl) => {
+    currentTab = tab;
+    document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+    render();
+  };
+
+  // ── Sort ───────────────────────────────────────────────────────────────
+  window.sortBy = (key) => {
+    if (sortKey === key) sortDir *= -1;
+    else { sortKey = key; sortDir = key === 'requestedAt' ? -1 : 1; }
+    render();
+  };
+
+  function filteredForTab() {
+    if (currentTab === 'all') return allRequests;
+    if (currentTab === 'needsAttention') return allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid');
+    return allRequests.filter(r => r.status === currentTab);
+  }
+
+  function render() {
+    const filtered = filteredForTab();
+    const sorted = [...filtered].sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === 'requestedAt') {
+        av = av ? new Date(av).getTime() : 0;
+        bv = bv ? new Date(bv).getTime() : 0;
+      }
+      av = av ?? 0; bv = bv ?? 0;
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      return av < bv ? -sortDir : av > bv ? sortDir : 0;
+    });
+
+    document.getElementById('tableCount').textContent = sorted.length + ' request' + (sorted.length === 1 ? '' : 's');
+    document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+
+    const body = document.getElementById('reqTableBody');
+    if (!sorted.length) {
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No requests in this view.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = sorted.map(r => {
+      const amountUsd = typeof r.amountUsd === 'number' ? r.amountUsd : 0;
+      const netAmountUsd = typeof r.netAmountUsd === 'number' ? r.netAmountUsd : amountUsd;
+      const feePct = typeof r.tierFeePercent === 'number' ? r.tierFeePercent : 0;
+      const dateStr = r.requestedAt ? new Date(r.requestedAt).toLocaleString() : '—';
+
+      return `
+        <tr>
+          <td class="td-gold">${escHtml(r.nickname)}</td>
+          <td>
+            <div class="copy-cell">
+              <span>${escHtml(r.paypalEmail || '—')}</span>
+              ${r.paypalEmail ? `<button class="copy-id-btn" title="Copy email" onclick="copyToClipboard('${escAttr(r.paypalEmail)}', this)">📋</button>` : ''}
+            </div>
+          </td>
+          <td>$${amountUsd.toFixed(2)}</td>
+          <td>
+            <div class="copy-cell">
+              <span class="net-amount">$${netAmountUsd.toFixed(2)}</span>
+              <button class="copy-id-btn" title="Copy net payout amount for PayPal" onclick="copyToClipboard('${netAmountUsd.toFixed(2)}', this)">📋</button>
+            </div>
+            ${feePct > 0 ? `<div class="fee-note">${feePct}% fee applied</div>` : ''}
+          </td>
+          <td class="td-muted">${dateStr}</td>
+          <td>${renderStatusCell(r)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderStatusCell(r) {
+    const badge = statusBadge(r.status);
+    let actions = '';
+    let note = '';
+
+    if (r.status === 'pending') {
+      actions = `<div><button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button></div>`;
+      note = `<div class="processed-note">Awaiting approval run (processWithdrawals.ts)</div>`;
+    } else if (r.status === 'approved_unpaid') {
+      actions = `
+        <div>
+          <button class="action-btn paid" onclick="markPaid('${r.id}','${escAttr(r.nickname)}')">Mark Paid</button>
+          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
+        </div>`;
+      note = `<div class="processed-note">Reviewed — pay via PayPal, then Mark Paid</div>`;
+    } else if (r.status === 'rejected' && r.rejectionReason) {
+      note = `<div class="processed-note">Reason: ${escHtml(r.rejectionReason)}</div>`;
+    } else if (r.status === 'failed' && r.rejectionReason) {
+      note = `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
+    }
+
+    return `${badge}${actions}${note}`;
+  }
+
+  function statusBadge(status) {
+    const map = {
+      pending: ['badge-amber', 'PENDING'],
+      approved_unpaid: ['badge-blue', 'APPROVED · UNPAID'],
+      paid: ['badge-green', 'PAID'],
+      rejected: ['badge-red', 'REJECTED'],
+      failed: ['badge-red', 'FAILED'],
+    };
+    const [cls, label] = map[status] || ['badge-muted', (status || 'UNKNOWN').toUpperCase()];
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────
+  window.markPaid = async (requestId, nickname) => {
+    if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nOnly do this after you've actually sent the net payout via PayPal.`)) return;
+    try {
+      await adminUpdateWithdrawalStatus({ requestId, newStatus: 'paid' });
+      showToast(`Marked ${nickname}'s redemption as paid`, 'success');
+      await loadAll();
+    } catch (e) {
+      console.error(e);
+      showToast(e?.message || 'Failed to update status', 'error');
+    }
+  };
+
+  let pendingRejectId = null;
+  window.openRejectModal = (requestId, nickname) => {
+    pendingRejectId = requestId;
+    document.getElementById('rejectModalSub').textContent = `${nickname} — this refunds the request amount back to their USD earnings.`;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('rejectModal').classList.add('open');
+  };
+  window.closeRejectModal = () => {
+    document.getElementById('rejectModal').classList.remove('open');
+    pendingRejectId = null;
+  };
+  window.confirmReject = async () => {
+    const reason = document.getElementById('rejectReason').value.trim();
+    const errEl = document.getElementById('modalError');
+    if (!reason) {
+      errEl.textContent = 'A reason is required.';
+      errEl.style.display = 'block';
+      return;
+    }
+    try {
+      await adminUpdateWithdrawalStatus({ requestId: pendingRejectId, newStatus: 'rejected', reason });
+      closeRejectModal();
+      showToast('Request rejected and refunded', 'success');
+      await loadAll();
+    } catch (e) {
+      console.error(e);
+      errEl.textContent = e?.message || 'Failed to reject request';
+      errEl.style.display = 'block';
+    }
+  };
+
+  // ── Utils ──────────────────────────────────────────────────────────────
+  window.copyToClipboard = async (text, btnEl) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (btnEl) {
+        const original = btnEl.textContent;
+        btnEl.textContent = '✓';
+        setTimeout(() => { btnEl.textContent = original; }, 1200);
+      }
+      showToast('Copied to clipboard', 'success');
+    } catch (e) {
+      console.error('Clipboard copy failed:', e);
+      showToast('Copy failed — see console', 'error');
+    }
+  };
+
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 3500);
+  }
+
+  function escHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  function escAttr(str) {
+    return escHtml(str).replace(/'/g, '&#39;');
+  }
+
+  // Default tab on load
+  document.querySelector('[data-tab="needsAttention"]').classList.add('active');
+</script>
+
+</body>
+</html>
