@@ -690,6 +690,7 @@
     doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, increment
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
@@ -703,6 +704,13 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
+  const functions = getFunctions(app);
+  // See functions/src/index.ts adminUpdateUserEmail header comment for why
+  // this has to go through a Cloud Function instead of a direct Firestore
+  // write like the other Edit Values fields — the authoritative email +
+  // verified state live on the Firebase Auth user record, which only the
+  // Admin SDK can change for someone other than the signed-in user.
+  const adminUpdateUserEmail = httpsCallable(functions, 'adminUpdateUserEmail');
 
   // ── Auth ──────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
@@ -1081,6 +1089,36 @@
         </div>
       </div>
 
+      <!-- Account Email (Aug 31, 2026) — goes through adminUpdateUserEmail
+           (Cloud Function), not a direct setDoc like nickname/check-ins
+           above. The real email + verified flag live on the Firebase Auth
+           user record, not Firestore — only the Admin SDK can change that
+           for someone other than the signed-in user, so this can't be a
+           plain client write. Changing the email always resets it to
+           unverified, same as it would if a real user changed their own
+           email — that's enforced server-side regardless of what this UI
+           sends. See the function's header comment in functions/src/index.ts
+           for the full rationale. -->
+      <div class="modal-section">
+        <div class="modal-section-title">Account Email</div>
+        <div class="edit-row" style="margin-bottom:10px;">
+          <span class="edit-label">Current</span>
+          <span style="flex:1;font-size:13px;">${user.email || '—'}</span>
+          ${renderEmailVerifiedBadge(user)}
+        </div>
+        <div class="edit-row">
+          <span class="edit-label">New Email</span>
+          <input class="edit-input" id="edit-email" type="email" value="" placeholder="new@address.com">
+          <button class="edit-save-btn" onclick="changeUserEmail('${uid}')">Change Email</button>
+          <span class="save-ok" id="ok-email">✓ Changed</span>
+          <span class="save-err" id="err-email">✗ Failed</span>
+        </div>
+        <textarea class="adjust-reason-input" id="edit-email-reason" rows="2" placeholder="Reason (optional) — e.g. 'TM-KVJ79 Discord ticket, lost access to old inbox'" style="margin-top:8px;width:100%;"></textarea>
+        <div style="margin-top:6px;font-size:10px;color:var(--text-muted);">
+          Changing this resets the account to <strong>not verified</strong> — the player will need to re-verify the new address wherever that's required. This is logged to adminEmailChanges.
+        </div>
+      </div>
+
       <!-- Balance Adjustments (Aug 25, 2026) — additive-only, reason-required,
            logged to adminBalanceAdjustments. See addBalance() below. -->
       <div class="modal-section">
@@ -1188,6 +1226,23 @@
             </div>`}
       </div>
     `;
+  }
+
+  // ── Email verified badge (Aug 31, 2026) ─────────────────────────
+  // emailVerified doesn't exist on OLDER Firestore user docs — it was only
+  // added as a field here alongside adminUpdateUserEmail, mirrored from
+  // Firebase Auth purely for display so this page doesn't need a second
+  // Admin SDK round-trip just to show a badge. undefined means "never
+  // tracked here," not "unverified" — shown distinctly so it doesn't read
+  // as a false claim about an account this page has never touched.
+  function renderEmailVerifiedBadge(user) {
+    if (user.emailVerified === true) {
+      return '<span class="badge badge-green" style="margin-left:8px;">✓ Verified</span>';
+    }
+    if (user.emailVerified === false) {
+      return '<span class="badge badge-red" style="margin-left:8px;">⚠ Not Verified</span>';
+    }
+    return '<span class="badge" style="margin-left:8px;background:rgba(138,117,96,0.15);color:var(--text-muted);">— not tracked</span>';
   }
 
   // ── Ban row markup (Aug 19, 2026 — added a reason field) ───────
@@ -1372,6 +1427,70 @@
     } catch(e) {
       console.error('saveField failed:', e);
       errEl.textContent = '✗ Failed';
+      errEl.style.display = 'inline';
+    }
+  };
+
+  // ── Change account email (Aug 31, 2026) ─────────────────────────
+  // Goes through the adminUpdateUserEmail Cloud Function, not a direct
+  // setDoc — see that function's header comment in functions/src/index.ts
+  // and the "Account Email" modal section above for why this can't be a
+  // plain client-side write like nickname/check-ins. The function is the
+  // one enforcing emailVerified -> false; this UI never sends that flag
+  // itself, it's just reflecting what the server already guarantees.
+  window.changeUserEmail = async (uid) => {
+    const input = document.getElementById('edit-email');
+    const reasonInput = document.getElementById('edit-email-reason');
+    const okEl = document.getElementById('ok-email');
+    const errEl = document.getElementById('err-email');
+    okEl.style.display = 'none';
+    errEl.style.display = 'none';
+
+    const newEmail = (input.value || '').trim();
+    const reason = (reasonInput.value || '').trim();
+    const user = currentResults.find(u => u.id === uid);
+    const oldEmail = (user && user.email) || '(none on file)';
+
+    if (!newEmail) {
+      alert('Enter a new email address.');
+      input.focus();
+      return;
+    }
+
+    const confirmed = confirm(
+      `Change this account's email?\n\n${oldEmail}\n  →  ${newEmail}\n\nThis resets the account to NOT VERIFIED. This cannot be undone from here.`
+    );
+    if (!confirmed) return;
+
+    errEl.textContent = '✗ Failed';
+
+    try {
+      const result = await adminUpdateUserEmail({ userId: uid, newEmail, reason: reason || undefined });
+      const { newEmail: confirmedEmail } = result.data;
+
+      // Update local cache + every place this modal/table shows the email.
+      if (user) {
+        user.email = confirmedEmail;
+        user.emailVerified = false;
+      }
+      document.getElementById('modalEmail').textContent = confirmedEmail;
+      input.value = '';
+      reasonInput.value = '';
+      okEl.style.display = 'inline';
+      setTimeout(() => okEl.style.display = 'none', 2500);
+
+      renderTable(currentResults);
+      // Re-render just the email section's "Current" line + badge in place,
+      // cheaper than re-fetching/re-rendering the whole modal body.
+      const currentRow = input.closest('.modal-section').querySelector('.edit-row');
+      if (currentRow) {
+        currentRow.querySelector('span[style*="flex:1"]').textContent = confirmedEmail;
+        const oldBadge = currentRow.querySelector('.badge');
+        if (oldBadge) oldBadge.outerHTML = renderEmailVerifiedBadge(user || { emailVerified: false });
+      }
+    } catch (e) {
+      console.error('changeUserEmail failed:', e);
+      errEl.textContent = '✗ ' + (e.message || 'Failed');
       errEl.style.display = 'inline';
     }
   };
