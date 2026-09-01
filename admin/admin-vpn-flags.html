@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TerraMine Redemptions</title>
+<title>TerraMine VPN Flags</title>
 <link rel="icon" type="image/png" href="/logo.png?v=2" />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -26,7 +26,6 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
 
-  /* Header */
   .header {
     background:var(--surface);
     border-bottom:1px solid var(--border);
@@ -61,10 +60,20 @@
   .logout-btn { background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; transition:color 0.2s,border-color 0.2s; }
   .logout-btn:hover { color:var(--red); border-color:var(--red); }
 
-  /* Layout */
   .main { padding:32px; max-width:1500px; margin:0 auto; }
 
-  /* Status filter tabs */
+  .info-banner {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 18px;
+    font-size:11px;
+    color:var(--text-muted);
+    margin-bottom:20px;
+    line-height:1.6;
+  }
+  .info-banner strong { color:var(--text); }
+
   .period-tabs { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
   .period-tab {
     background:var(--surface2);
@@ -81,7 +90,6 @@
   .period-tab.active { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
   .period-tab .count { opacity:0.7; margin-left:4px; }
 
-  /* Table */
   .table-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
   .table-header {
     padding:16px 24px;
@@ -119,8 +127,8 @@
   tbody td { padding:11px 16px; color:var(--text); vertical-align:top; white-space:nowrap; }
   .td-muted { color:var(--text-muted); }
   .td-gold { color:var(--gold-light); font-weight:500; }
-  .td-green { color:var(--green); }
-  .td-red { color:var(--red); }
+  .signal-badges { display:flex; gap:4px; flex-wrap:wrap; }
+
   .copy-cell { display:flex; align-items:center; gap:6px; }
   .copy-id-btn {
     background:none;
@@ -134,8 +142,6 @@
     transition:opacity 0.15s;
   }
   .copy-id-btn:hover { opacity:1; color:var(--gold-light); }
-  .net-amount { color:var(--gold-light); font-weight:600; }
-  .fee-note { color:var(--text-muted); font-size:10px; }
 
   .badge {
     display:inline-block;
@@ -151,6 +157,7 @@
   .badge-amber { background:rgba(224,123,32,0.15); color:var(--amber); }
   .badge-blue { background:rgba(74,159,212,0.15); color:var(--blue); }
   .badge-muted { background:rgba(138,117,96,0.1); color:var(--text-muted); }
+  .badge-purple { background:rgba(155,127,232,0.15); color:var(--purple); }
 
   .action-btn {
     background:var(--surface2);
@@ -165,15 +172,16 @@
     margin-top:4px;
     transition:all 0.15s;
   }
-  .action-btn.paid { border-color:var(--green); color:var(--green); }
-  .action-btn.paid:hover { background:rgba(76,175,110,0.15); }
-  .action-btn.reject { border-color:var(--red); color:var(--red); }
-  .action-btn.reject:hover { background:rgba(224,80,80,0.15); }
+  .action-btn.hold { border-color:var(--red); color:var(--red); }
+  .action-btn.hold:hover { background:rgba(224,80,80,0.15); }
+  .action-btn.unhold { border-color:var(--green); color:var(--green); }
+  .action-btn.unhold:hover { background:rgba(76,175,110,0.15); }
+  .action-btn.dismiss { border-color:var(--border); color:var(--text-muted); }
+  .action-btn.dismiss:hover { color:var(--text); border-color:var(--gold); }
   .processed-note { font-size:10px; color:var(--text-muted); margin-top:4px; max-width:220px; white-space:normal; }
 
   .empty-row td { padding:32px; text-align:center; color:var(--text-muted); font-size:12px; }
 
-  /* Login overlay */
   #loginOverlay { position:fixed; inset:0; background:var(--bg); z-index:999; display:flex; align-items:center; justify-content:center; }
   .login-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; text-align:center; }
   .login-icon { font-size:36px; margin-bottom:16px; }
@@ -183,7 +191,6 @@
   .login-btn { width:100%; background:var(--gold); color:var(--bg); border:none; border-radius:8px; padding:14px; font-family:'DM Mono',monospace; font-size:13px; font-weight:500; cursor:pointer; }
   #loginError { color:var(--red); font-size:12px; margin-top:12px; display:none; }
 
-  /* Reject-reason modal */
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:800; display:none; align-items:center; justify-content:center; }
   .modal-overlay.open { display:flex; }
   .modal-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:28px; width:420px; }
@@ -197,7 +204,6 @@
   .modal-btn.danger:hover { opacity:0.85; }
   #modalError { color:var(--red); font-size:11px; margin-top:8px; display:none; }
 
-  /* Toast */
   .toast { position:fixed; bottom:28px; right:28px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px; font-size:13px; color:var(--text); z-index:900; display:none; animation:slideUp 0.25s ease; }
   .toast.show { display:block; }
   .toast.success { border-color:var(--green); color:var(--green); }
@@ -209,10 +215,10 @@
 
 <div class="header">
   <div class="logo">
-    <span class="logo-icon">💸</span>
+    <span class="logo-icon">🌐</span>
     <div>
       <div class="logo-text">TerraMine</div>
-      <div class="logo-sub">Redemptions</div>
+      <div class="logo-sub">VPN Flags</div>
     </div>
   </div>
   <div class="header-right">
@@ -222,40 +228,45 @@
     <a href="/admin/admin-properties.html" class="nav-btn">🏔 Properties</a>
     <a href="/admin/admin-finance.html" class="nav-btn">💰 Finance</a>
     <a href="/admin/admin-moderation.html" class="nav-btn">🛡 Moderation</a>
-    <a href="/admin/admin-vpn-flags.html" class="nav-btn">🌐 VPN Flags</a>
+    <a href="/admin/admin-redemptions.html" class="nav-btn">💸 Redemptions</a>
     <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">Sign Out</button>
   </div>
 </div>
 
 <div class="main">
 
+  <div class="info-banner">
+    <strong>Silent by design.</strong> Players never see or get notified about anything on this page — the app quietly checks once per session (via IPQualityScore) and reports here. Nothing is auto-held; every VPN/proxy/Tor hit lands here for you to review and act on manually. "Put on Hold" is separate from a full ban — it's reversible and blocks purchases, check-in earnings, boosts, and withdrawals until you lift it.
+  </div>
+
   <div class="period-tabs" id="statusTabs">
-    <button class="period-tab" data-tab="needsAttention" onclick="setTab('needsAttention', this)">Needs Attention <span class="count" id="count-needsAttention">0</span></button>
-    <button class="period-tab" data-tab="paid" onclick="setTab('paid', this)">Paid <span class="count" id="count-paid">0</span></button>
-    <button class="period-tab" data-tab="rejected" onclick="setTab('rejected', this)">Rejected <span class="count" id="count-rejected">0</span></button>
-    <button class="period-tab" data-tab="failed" onclick="setTab('failed', this)">Failed <span class="count" id="count-failed">0</span></button>
+    <button class="period-tab" data-tab="needsReview" onclick="setTab('needsReview', this)">Needs Review <span class="count" id="count-needsReview">0</span></button>
+    <button class="period-tab" data-tab="onHold" onclick="setTab('onHold', this)">On Hold <span class="count" id="count-onHold">0</span></button>
+    <button class="period-tab" data-tab="reviewed" onclick="setTab('reviewed', this)">Reviewed <span class="count" id="count-reviewed">0</span></button>
     <button class="period-tab" data-tab="all" onclick="setTab('all', this)">All <span class="count" id="count-all">0</span></button>
   </div>
 
   <div class="table-card">
     <div class="table-header">
-      <span>Redemption Requests</span>
-      <span class="table-count" id="tableCount">— requests</span>
+      <span>VPN / Proxy Flags</span>
+      <span class="table-count" id="tableCount">— flags</span>
     </div>
     <div class="table-scroll">
       <table>
         <thead>
           <tr>
             <th onclick="sortBy('nickname')">Username ↕</th>
-            <th onclick="sortBy('paypalEmail')">Email ↕</th>
-            <th onclick="sortBy('amountUsd')">Amount Requested ↕</th>
-            <th class="no-sort">Net Payout</th>
-            <th onclick="sortBy('requestedAt')">Date Requested ↕</th>
-            <th class="no-sort">Status</th>
+            <th class="no-sort">IP / ISP</th>
+            <th class="no-sort">Location</th>
+            <th onclick="sortBy('fraudScore')">Fraud Score ↕</th>
+            <th class="no-sort">Signals</th>
+            <th onclick="sortBy('createdAt')">Detected ↕</th>
+            <th class="no-sort">Account</th>
+            <th class="no-sort">Actions</th>
           </tr>
         </thead>
-        <tbody id="reqTableBody">
-          <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+        <tbody id="flagTableBody">
+          <tr class="empty-row"><td colspan="8">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -263,16 +274,16 @@
 
 </div>
 
-<!-- Reject-reason modal -->
-<div class="modal-overlay" id="rejectModal">
+<!-- Hold-reason modal -->
+<div class="modal-overlay" id="holdModal">
   <div class="modal-card">
-    <div class="modal-title">Reject Redemption</div>
-    <div class="modal-sub" id="rejectModalSub">—</div>
-    <textarea class="modal-textarea" id="rejectReason" placeholder="Reason (required — shown in the audit log, not to the player)"></textarea>
+    <div class="modal-title">Put Account On Hold</div>
+    <div class="modal-sub" id="holdModalSub">—</div>
+    <textarea class="modal-textarea" id="holdReason" placeholder="Reason (required — internal audit log only, player never sees it)"></textarea>
     <div id="modalError"></div>
     <div class="modal-actions">
-      <button class="modal-btn" onclick="closeRejectModal()">Cancel</button>
-      <button class="modal-btn danger" id="confirmRejectBtn" onclick="confirmReject()">Reject &amp; Refund</button>
+      <button class="modal-btn" onclick="closeHoldModal()">Cancel</button>
+      <button class="modal-btn danger" id="confirmHoldBtn" onclick="confirmHold()">Put On Hold</button>
     </div>
   </div>
 </div>
@@ -280,8 +291,8 @@
 <!-- Login overlay -->
 <div id="loginOverlay">
   <div class="login-card">
-    <div class="login-icon">💸</div>
-    <div class="login-title">TerraMine Redemptions</div>
+    <div class="login-icon">🌐</div>
+    <div class="login-title">TerraMine VPN Flags</div>
     <div class="login-sub">Admin access required</div>
     <input id="loginEmail" type="email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
     <input id="loginPass" type="password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
@@ -296,7 +307,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
-    getFirestore, collection, getDocs, doc, getDoc, query, orderBy
+    getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
   import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
@@ -314,14 +325,14 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
   const functions = getFunctions(app);
-  const adminUpdateWithdrawalStatus = httpsCallable(functions, 'adminUpdateWithdrawalStatus');
+  const adminSetAccountHold = httpsCallable(functions, 'adminSetAccountHold');
 
   // ── State ──────────────────────────────────────────────────────────────
-  let allRequests = [];       // every withdrawalRequests doc, joined with nickname
-  let currentTab = 'needsAttention';
-  let sortKey = 'requestedAt';
+  let allFlags = [];          // every vpnFlags doc, joined with nickname + current account status
+  let currentTab = 'needsReview';
+  let sortKey = 'createdAt';
   let sortDir = -1;           // newest first by default
-  const nicknameCache = new Map(); // userId -> nickname, avoids refetching for repeat requesters
+  const userCache = new Map(); // userId -> { nickname, isBanned, accountOnHold }
 
   // ── Auth ───────────────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
@@ -356,37 +367,38 @@
 
   // ── Load ───────────────────────────────────────────────────────────────
   async function loadAll() {
-    document.getElementById('reqTableBody').innerHTML = '<tr class="empty-row"><td colspan="6">Loading…</td></tr>';
+    document.getElementById('flagTableBody').innerHTML = '<tr class="empty-row"><td colspan="8">Loading…</td></tr>';
 
-    const snap = await getDocs(query(collection(db, 'withdrawalRequests'), orderBy('requestedAt', 'desc')));
+    const snap = await getDocs(query(collection(db, 'vpnFlags'), orderBy('createdAt', 'desc')));
     const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Resolve nicknames — one getDoc per DISTINCT userId, cached across reloads.
     const uniqueUserIds = [...new Set(raw.map(r => r.userId).filter(Boolean))];
     await Promise.all(uniqueUserIds.map(async (uid) => {
-      if (nicknameCache.has(uid)) return;
+      if (userCache.has(uid)) return;
       try {
         const uSnap = await getDoc(doc(db, 'users', uid));
-        const nickname = uSnap.exists() ? (uSnap.data().nickname || null) : null;
-        nicknameCache.set(uid, nickname || uid.substring(0, 8));
+        const d = uSnap.exists() ? uSnap.data() : {};
+        userCache.set(uid, {
+          nickname: d.nickname || uid.substring(0, 8),
+          isBanned: d.isBanned === true,
+          accountOnHold: d.accountOnHold === true,
+        });
       } catch (e) {
-        nicknameCache.set(uid, uid.substring(0, 8));
+        userCache.set(uid, { nickname: uid.substring(0, 8), isBanned: false, accountOnHold: false });
       }
     }));
 
-    allRequests = raw.map(r => ({ ...r, nickname: nicknameCache.get(r.userId) || '—' }));
+    allFlags = raw.map(r => ({ ...r, ...(userCache.get(r.userId) || { nickname: '—', isBanned: false, accountOnHold: false }) }));
 
     updateTabCounts();
     render();
   }
 
   function updateTabCounts() {
-    const needsAttention = allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').length;
-    document.getElementById('count-needsAttention').textContent = needsAttention;
-    document.getElementById('count-paid').textContent = allRequests.filter(r => r.status === 'paid').length;
-    document.getElementById('count-rejected').textContent = allRequests.filter(r => r.status === 'rejected').length;
-    document.getElementById('count-failed').textContent = allRequests.filter(r => r.status === 'failed').length;
-    document.getElementById('count-all').textContent = allRequests.length;
+    document.getElementById('count-needsReview').textContent = allFlags.filter(r => !r.reviewed && !r.accountOnHold).length;
+    document.getElementById('count-onHold').textContent = allFlags.filter(r => r.accountOnHold).length;
+    document.getElementById('count-reviewed').textContent = allFlags.filter(r => r.reviewed && !r.accountOnHold).length;
+    document.getElementById('count-all').textContent = allFlags.length;
   }
 
   window.setTab = (tab, btnEl) => {
@@ -399,21 +411,22 @@
   // ── Sort ───────────────────────────────────────────────────────────────
   window.sortBy = (key) => {
     if (sortKey === key) sortDir *= -1;
-    else { sortKey = key; sortDir = key === 'requestedAt' ? -1 : 1; }
+    else { sortKey = key; sortDir = key === 'createdAt' ? -1 : 1; }
     render();
   };
 
   function filteredForTab() {
-    if (currentTab === 'all') return allRequests;
-    if (currentTab === 'needsAttention') return allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid');
-    return allRequests.filter(r => r.status === currentTab);
+    if (currentTab === 'all') return allFlags;
+    if (currentTab === 'onHold') return allFlags.filter(r => r.accountOnHold);
+    if (currentTab === 'reviewed') return allFlags.filter(r => r.reviewed && !r.accountOnHold);
+    return allFlags.filter(r => !r.reviewed && !r.accountOnHold); // needsReview
   }
 
   function render() {
     const filtered = filteredForTab();
     const sorted = [...filtered].sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey];
-      if (sortKey === 'requestedAt') {
+      if (sortKey === 'createdAt') {
         av = av ? new Date(av).getTime() : 0;
         bv = bv ? new Date(bv).getTime() : 0;
       }
@@ -423,123 +436,120 @@
       return av < bv ? -sortDir : av > bv ? sortDir : 0;
     });
 
-    document.getElementById('tableCount').textContent = sorted.length + ' request' + (sorted.length === 1 ? '' : 's');
+    document.getElementById('tableCount').textContent = sorted.length + ' flag' + (sorted.length === 1 ? '' : 's');
     document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
 
-    const body = document.getElementById('reqTableBody');
+    const body = document.getElementById('flagTableBody');
     if (!sorted.length) {
-      body.innerHTML = '<tr class="empty-row"><td colspan="6">No requests in this view.</td></tr>';
+      body.innerHTML = '<tr class="empty-row"><td colspan="8">No flags in this view.</td></tr>';
       return;
     }
 
     body.innerHTML = sorted.map(r => {
-      const amountUsd = typeof r.amountUsd === 'number' ? r.amountUsd : 0;
-      const netAmountUsd = typeof r.netAmountUsd === 'number' ? r.netAmountUsd : amountUsd;
-      const feePct = typeof r.tierFeePercent === 'number' ? r.tierFeePercent : 0;
-      const dateStr = r.requestedAt ? new Date(r.requestedAt).toLocaleString() : '—';
+      const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString() : '—';
+      const fraudScore = typeof r.fraudScore === 'number' ? r.fraudScore : null;
+      const location = [r.city, r.region, r.countryCode].filter(Boolean).join(', ') || '—';
 
       return `
         <tr>
           <td class="td-gold">${escHtml(r.nickname)}</td>
           <td>
             <div class="copy-cell">
-              <span>${escHtml(r.paypalEmail || '—')}</span>
-              ${r.paypalEmail ? `<button class="copy-id-btn" title="Copy email" onclick="copyToClipboard('${escAttr(r.paypalEmail)}', this)">📋</button>` : ''}
+              <span>${escHtml(r.ip || '—')}</span>
+              ${r.ip ? `<button class="copy-id-btn" title="Copy IP" onclick="copyToClipboard('${escAttr(r.ip)}', this)">📋</button>` : ''}
             </div>
+            <div class="td-muted" style="font-size:10px;">${escHtml(r.isp || '—')}${r.connectionType ? ' · ' + escHtml(r.connectionType) : ''}</div>
           </td>
-          <td>$${amountUsd.toFixed(2)}</td>
-          <td>
-            <div class="copy-cell">
-              <span class="net-amount">$${netAmountUsd.toFixed(2)}</span>
-              <button class="copy-id-btn" title="Copy net payout amount for PayPal" onclick="copyToClipboard('${netAmountUsd.toFixed(2)}', this)">📋</button>
-            </div>
-            ${feePct > 0 ? `<div class="fee-note">${feePct}% fee applied</div>` : ''}
-          </td>
+          <td class="td-muted">${escHtml(location)}</td>
+          <td>${fraudScore !== null ? fraudScoreBadge(fraudScore) : '<span class="td-muted">—</span>'}</td>
+          <td>${signalBadges(r)}</td>
           <td class="td-muted">${dateStr}</td>
-          <td>${renderStatusCell(r)}</td>
+          <td>${accountBadge(r)}</td>
+          <td>${renderActions(r)}</td>
         </tr>
       `;
     }).join('');
   }
 
-  function renderStatusCell(r) {
-    const badge = statusBadge(r.status);
-    let actions = '';
-    let note = '';
-
-    if (r.status === 'pending') {
-      actions = `
-        <div>
-          <button class="action-btn paid" onclick="approveRequest('${r.id}','${escAttr(r.nickname)}')">Approve</button>
-          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
-        </div>`;
-    } else if (r.status === 'approved_unpaid') {
-      actions = `
-        <div>
-          <button class="action-btn paid" onclick="markPaid('${r.id}','${escAttr(r.nickname)}')">Mark Paid</button>
-          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
-        </div>`;
-      note = `<div class="processed-note">Reviewed — pay via PayPal, then Mark Paid</div>`;
-    } else if (r.status === 'rejected' && r.rejectionReason) {
-      note = `<div class="processed-note">Reason: ${escHtml(r.rejectionReason)}</div>`;
-    } else if (r.status === 'failed' && r.rejectionReason) {
-      note = `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
-    }
-
-    return `${badge}${actions}${note}`;
+  function fraudScoreBadge(score) {
+    const cls = score >= 75 ? 'badge-red' : score >= 40 ? 'badge-amber' : 'badge-muted';
+    return `<span class="badge ${cls}">${score}</span>`;
   }
 
-  function statusBadge(status) {
-    const map = {
-      pending: ['badge-amber', 'PENDING'],
-      approved_unpaid: ['badge-blue', 'APPROVED · UNPAID'],
-      paid: ['badge-green', 'PAID'],
-      rejected: ['badge-red', 'REJECTED'],
-      failed: ['badge-red', 'FAILED'],
-    };
-    const [cls, label] = map[status] || ['badge-muted', (status || 'UNKNOWN').toUpperCase()];
-    return `<span class="badge ${cls}">${label}</span>`;
+  function signalBadges(r) {
+    const badges = [];
+    if (r.vpn || r.activeVpn) badges.push(`<span class="badge badge-blue">${r.activeVpn ? 'ACTIVE VPN' : 'VPN'}</span>`);
+    if (r.proxy) badges.push('<span class="badge badge-purple">PROXY</span>');
+    if (r.tor || r.activeTor) badges.push(`<span class="badge badge-red">${r.activeTor ? 'ACTIVE TOR' : 'TOR'}</span>`);
+    if (r.recentAbuse) badges.push('<span class="badge badge-amber">RECENT ABUSE</span>');
+    if (r.botStatus) badges.push('<span class="badge badge-amber">BOT</span>');
+    return `<div class="signal-badges">${badges.join('') || '<span class="td-muted">—</span>'}</div>`;
+  }
+
+  function accountBadge(r) {
+    if (r.isBanned) return '<span class="badge badge-red">BANNED</span>';
+    if (r.accountOnHold) return '<span class="badge badge-amber">ON HOLD</span>';
+    return '<span class="badge badge-muted">ACTIVE</span>';
+  }
+
+  function renderActions(r) {
+    if (r.isBanned) return '<span class="processed-note">Already banned — no action needed.</span>';
+
+    let actions = '';
+    if (r.accountOnHold) {
+      actions += `<button class="action-btn unhold" onclick="liftHold('${r.userId}','${escAttr(r.nickname)}')">Lift Hold</button>`;
+    } else {
+      actions += `<button class="action-btn hold" onclick="openHoldModal('${r.userId}','${escAttr(r.nickname)}')">Put On Hold</button>`;
+    }
+    if (!r.reviewed) {
+      actions += `<button class="action-btn dismiss" onclick="markReviewed('${r.id}')">Mark Reviewed</button>`;
+    }
+    return `<div>${actions}</div>`;
   }
 
   // ── Actions ────────────────────────────────────────────────────────────
-  window.approveRequest = async (requestId, nickname) => {
-    if (!confirm(`Approve ${nickname}'s redemption?\n\nThis re-checks the amount, PayPal email, account status, $200/30-day cap, and 24h cooldown against live data before approving. If anything's off, it'll tell you why instead of approving.`)) return;
+  window.markReviewed = async (flagId) => {
     try {
-      await adminUpdateWithdrawalStatus({ requestId, newStatus: 'approved_unpaid' });
-      showToast(`Approved ${nickname}'s redemption — ready to pay`, 'success');
-      await loadAll();
+      await updateDoc(doc(db, 'vpnFlags', flagId), { reviewed: true });
+      const flag = allFlags.find(f => f.id === flagId);
+      if (flag) flag.reviewed = true;
+      updateTabCounts();
+      render();
+      showToast('Marked reviewed', 'success');
     } catch (e) {
       console.error(e);
-      showToast(e?.message || 'Failed to approve request', 'error');
+      showToast(e?.message || 'Failed to mark reviewed', 'error');
     }
   };
 
-  window.markPaid = async (requestId, nickname) => {
-    if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nOnly do this after you've actually sent the net payout via PayPal.`)) return;
+  window.liftHold = async (userId, nickname) => {
+    if (!confirm(`Lift the hold on ${nickname}'s account? They'll immediately be able to purchase, check in, and withdraw again.`)) return;
     try {
-      await adminUpdateWithdrawalStatus({ requestId, newStatus: 'paid' });
-      showToast(`Marked ${nickname}'s redemption as paid`, 'success');
-      await loadAll();
+      await adminSetAccountHold({ userId, hold: false });
+      allFlags.forEach(f => { if (f.userId === userId) f.accountOnHold = false; });
+      updateTabCounts();
+      render();
+      showToast(`Lifted hold on ${nickname}`, 'success');
     } catch (e) {
       console.error(e);
-      showToast(e?.message || 'Failed to update status', 'error');
+      showToast(e?.message || 'Failed to lift hold', 'error');
     }
   };
 
-  let pendingRejectId = null;
-  window.openRejectModal = (requestId, nickname) => {
-    pendingRejectId = requestId;
-    document.getElementById('rejectModalSub').textContent = `${nickname} — this refunds the request amount back to their USD earnings.`;
-    document.getElementById('rejectReason').value = '';
+  let pendingHoldUserId = null;
+  window.openHoldModal = (userId, nickname) => {
+    pendingHoldUserId = userId;
+    document.getElementById('holdModalSub').textContent = `${nickname} — blocks purchases, check-in earnings, boosts, and withdrawals until you lift it. Reversible.`;
+    document.getElementById('holdReason').value = '';
     document.getElementById('modalError').style.display = 'none';
-    document.getElementById('rejectModal').classList.add('open');
+    document.getElementById('holdModal').classList.add('open');
   };
-  window.closeRejectModal = () => {
-    document.getElementById('rejectModal').classList.remove('open');
-    pendingRejectId = null;
+  window.closeHoldModal = () => {
+    document.getElementById('holdModal').classList.remove('open');
+    pendingHoldUserId = null;
   };
-  window.confirmReject = async () => {
-    const reason = document.getElementById('rejectReason').value.trim();
+  window.confirmHold = async () => {
+    const reason = document.getElementById('holdReason').value.trim();
     const errEl = document.getElementById('modalError');
     if (!reason) {
       errEl.textContent = 'A reason is required.';
@@ -547,13 +557,15 @@
       return;
     }
     try {
-      await adminUpdateWithdrawalStatus({ requestId: pendingRejectId, newStatus: 'rejected', reason });
-      closeRejectModal();
-      showToast('Request rejected and refunded', 'success');
-      await loadAll();
+      await adminSetAccountHold({ userId: pendingHoldUserId, hold: true, reason });
+      allFlags.forEach(f => { if (f.userId === pendingHoldUserId) { f.accountOnHold = true; f.reviewed = true; } });
+      closeHoldModal();
+      updateTabCounts();
+      render();
+      showToast('Account put on hold', 'success');
     } catch (e) {
       console.error(e);
-      errEl.textContent = e?.message || 'Failed to reject request';
+      errEl.textContent = e?.message || 'Failed to put account on hold';
       errEl.style.display = 'block';
     }
   };
@@ -594,8 +606,7 @@
     return escHtml(str).replace(/'/g, '&#39;');
   }
 
-  // Default tab on load
-  document.querySelector('[data-tab="needsAttention"]').classList.add('active');
+  document.querySelector('[data-tab="needsReview"]').classList.add('active');
 </script>
 
 </body>
