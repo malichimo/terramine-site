@@ -236,7 +236,7 @@
 <div class="main">
 
   <div class="info-banner">
-    <strong>Silent by design.</strong> Players never see or get notified about anything on this page — the app quietly checks once per session (via IPQualityScore) and reports here. Nothing is auto-held; every VPN/proxy/Tor hit lands here for you to review and act on manually. "Put on Hold" is separate from a full ban — it's reversible and blocks purchases, check-in earnings, boosts, and withdrawals until you lift it.
+    <strong>Silent by design.</strong> Players never see or get notified about anything on this page — the app quietly checks once per session (via proxycheck.io) and reports here. Nothing is auto-held; every VPN/proxy/Tor hit lands here for you to review and act on manually. "Put on Hold" is separate from a full ban — it's reversible and blocks purchases, check-in earnings, boosts, and withdrawals until you lift it.
   </div>
 
   <div class="period-tabs" id="statusTabs">
@@ -258,7 +258,7 @@
             <th onclick="sortBy('nickname')">Username ↕</th>
             <th class="no-sort">IP / ISP</th>
             <th class="no-sort">Location</th>
-            <th onclick="sortBy('fraudScore')">Fraud Score ↕</th>
+            <th onclick="sortBy('risk')">Risk Score ↕</th>
             <th class="no-sort">Signals</th>
             <th onclick="sortBy('createdAt')">Detected ↕</th>
             <th class="no-sort">Account</th>
@@ -447,7 +447,7 @@
 
     body.innerHTML = sorted.map(r => {
       const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString() : '—';
-      const fraudScore = typeof r.fraudScore === 'number' ? r.fraudScore : null;
+      const risk = typeof r.risk === 'number' ? r.risk : null;
       const location = [r.city, r.region, r.countryCode].filter(Boolean).join(', ') || '—';
 
       return `
@@ -458,11 +458,11 @@
               <span>${escHtml(r.ip || '—')}</span>
               ${r.ip ? `<button class="copy-id-btn" title="Copy IP" onclick="copyToClipboard('${escAttr(r.ip)}', this)">📋</button>` : ''}
             </div>
-            <div class="td-muted" style="font-size:10px;">${escHtml(r.isp || '—')}${r.connectionType ? ' · ' + escHtml(r.connectionType) : ''}</div>
+            <div class="td-muted" style="font-size:10px;">${escHtml(r.provider || '—')}${r.asn ? ' · ' + escHtml(r.asn) : ''}</div>
           </td>
           <td class="td-muted">${escHtml(location)}</td>
-          <td>${fraudScore !== null ? fraudScoreBadge(fraudScore) : '<span class="td-muted">—</span>'}</td>
-          <td>${signalBadges(r)}</td>
+          <td>${risk !== null ? riskBadge(risk) : '<span class="td-muted">—</span>'}</td>
+          <td>${typeBadge(r)}</td>
           <td class="td-muted">${dateStr}</td>
           <td>${accountBadge(r)}</td>
           <td>${renderActions(r)}</td>
@@ -471,19 +471,23 @@
     }).join('');
   }
 
-  function fraudScoreBadge(score) {
+  function riskBadge(score) {
     const cls = score >= 75 ? 'badge-red' : score >= 40 ? 'badge-amber' : 'badge-muted';
     return `<span class="badge ${cls}">${score}</span>`;
   }
 
-  function signalBadges(r) {
-    const badges = [];
-    if (r.vpn || r.activeVpn) badges.push(`<span class="badge badge-blue">${r.activeVpn ? 'ACTIVE VPN' : 'VPN'}</span>`);
-    if (r.proxy) badges.push('<span class="badge badge-purple">PROXY</span>');
-    if (r.tor || r.activeTor) badges.push(`<span class="badge badge-red">${r.activeTor ? 'ACTIVE TOR' : 'TOR'}</span>`);
-    if (r.recentAbuse) badges.push('<span class="badge badge-amber">RECENT ABUSE</span>');
-    if (r.botStatus) badges.push('<span class="badge badge-amber">BOT</span>');
-    return `<div class="signal-badges">${badges.join('') || '<span class="td-muted">—</span>'}</div>`;
+  // proxycheck.io returns a single "type" string per flagged IP rather than
+  // discrete vpn/proxy/tor booleans -- color-code by category.
+  function typeBadge(r) {
+    if (!r.type) return '<div class="signal-badges"><span class="td-muted">—</span></div>';
+    const t = String(r.type).toUpperCase();
+    let cls = 'badge-muted';
+    if (t === 'VPN' || t === 'OPENVPN') cls = 'badge-blue';
+    else if (t === 'TOR') cls = 'badge-red';
+    else if (t === 'RESIDENTIAL') cls = 'badge-purple';
+    else if (t === 'HOSTING' || t === 'COMPROMISED SERVER') cls = 'badge-amber';
+    else if (t.startsWith('SOCKS') || t === 'HTTP' || t === 'HTTPS' || t === 'SHADOWSOCKS') cls = 'badge-purple';
+    return `<div class="signal-badges"><span class="badge ${cls}">${escHtml(r.type)}</span></div>`;
   }
 
   function accountBadge(r) {
