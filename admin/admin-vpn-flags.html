@@ -452,7 +452,12 @@
 
       return `
         <tr>
-          <td class="td-gold">${escHtml(r.nickname)}</td>
+          <td class="td-gold">
+            <div class="copy-cell">
+              <span>${escHtml(r.nickname)}</span>
+              ${r.userId ? `<button class="copy-id-btn" title="Copy UID" onclick="copyToClipboard('${escAttr(r.userId)}', this)">📋</button>` : ''}
+            </div>
+          </td>
           <td>
             <div class="copy-cell">
               <span>${escHtml(r.ip || '—')}</span>
@@ -501,9 +506,9 @@
 
     let actions = '';
     if (r.accountOnHold) {
-      actions += `<button class="action-btn unhold" onclick="liftHold('${r.userId}','${escAttr(r.nickname)}')">Lift Hold</button>`;
+      actions += `<button class="action-btn unhold" onclick="liftHold('${r.userId}')">Lift Hold</button>`;
     } else {
-      actions += `<button class="action-btn hold" onclick="openHoldModal('${r.userId}','${escAttr(r.nickname)}')">Put On Hold</button>`;
+      actions += `<button class="action-btn hold" onclick="openHoldModal('${r.userId}')">Put On Hold</button>`;
     }
     if (!r.reviewed) {
       actions += `<button class="action-btn dismiss" onclick="markReviewed('${r.id}')">Mark Reviewed</button>`;
@@ -526,7 +531,17 @@
     }
   };
 
-  window.liftHold = async (userId, nickname) => {
+  // Looks up the current nickname from in-memory state rather than accepting it
+  // as an inline-onclick argument -- a nickname containing a quote or backslash
+  // (e.g. KenSTer'88) would otherwise break out of the JS string literal embedded
+  // in the onclick attribute and silently no-op the button.
+  function nicknameFor(userId) {
+    const flag = allFlags.find(f => f.userId === userId);
+    return (flag && flag.nickname) || userId;
+  }
+
+  window.liftHold = async (userId) => {
+    const nickname = nicknameFor(userId);
     if (!confirm(`Lift the hold on ${nickname}'s account? They'll immediately be able to purchase, check in, and withdraw again.`)) return;
     try {
       await adminSetAccountHold({ userId, hold: false });
@@ -541,7 +556,8 @@
   };
 
   let pendingHoldUserId = null;
-  window.openHoldModal = (userId, nickname) => {
+  window.openHoldModal = (userId) => {
+    const nickname = nicknameFor(userId);
     pendingHoldUserId = userId;
     document.getElementById('holdModalSub').textContent = `${nickname} — blocks purchases, check-in earnings, boosts, and withdrawals until you lift it. Reversible.`;
     document.getElementById('holdReason').value = '';
