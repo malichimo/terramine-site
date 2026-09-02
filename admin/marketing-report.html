@@ -21,6 +21,7 @@
     --accent-wash: rgba(156,115,37,0.10);
 
     --cat-1: #2a78d6;
+    --cat-2: #eb6834;
     --cat-3: #1baf7a;
 
     --good: #0ca30c;
@@ -251,6 +252,21 @@
     <section class="section">
       <div class="section-head">
         <div>
+          <span class="section-tag">§ Audience</span>
+          <h2>Platform split</h2>
+        </div>
+        <p class="section-desc">Only covers accounts created Sept 2, 2026 onward — see note below the chart.</p>
+      </div>
+      <div class="panel">
+        <div id="platformBars"></div>
+        <div id="platformEmpty" class="empty-state" style="display:none;"></div>
+        <p id="platformNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
           <span class="section-tag">§ Coming next</span>
           <h2>Progressively added, per our Sept 1 conversation</h2>
         </div>
@@ -260,13 +276,6 @@
           <div>
             <div class="name">App-store install counts</div>
             <div class="why">Needs Play Developer API / App Store Connect API integration — not wired up yet</div>
-          </div>
-          <span class="pill warn">Not started</span>
-        </li>
-        <li>
-          <div>
-            <div class="name">Platform split (iOS / Android)</div>
-            <div class="why">No platform field is currently written to the user record</div>
           </div>
           <span class="pill warn">Not started</span>
         </li>
@@ -434,6 +443,48 @@
     }
   }
 
+  function renderPlatform() {
+    const wrap = document.getElementById('platformBars');
+    const emptyEl = document.getElementById('platformEmpty');
+    const noteEl = document.getElementById('platformNote');
+    wrap.innerHTML = '';
+
+    // Only accounts created Sept 2, 2026 onward carry a platform field (see
+    // DatabaseService.ts's createUser()) — find the most recent snapshot
+    // that has it rather than assuming every day does, same guard as the
+    // activity stat tiles.
+    const withPlatform = [...snapshots].reverse().find(s => s.iosUsers !== undefined);
+    if (!withPlatform || (withPlatform.iosUsers + withPlatform.androidUsers) === 0) {
+      wrap.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'No accounts tracked with a platform field yet — this starts filling in as new signups come in from Sept 2, 2026 onward.';
+      noteEl.textContent = '';
+      return;
+    }
+    wrap.style.display = 'block';
+    emptyEl.style.display = 'none';
+
+    const ios = withPlatform.iosUsers;
+    const android = withPlatform.androidUsers;
+    const total = ios + android;
+    const rows = [
+      { label: 'iOS', pct: Math.round((ios / total) * 100), n: ios, color: 'var(--cat-1)' },
+      { label: 'Android', pct: Math.round((android / total) * 100), n: android, color: 'var(--cat-2)' },
+    ];
+    wrap.innerHTML = rows.map(r => `
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-secondary);margin-bottom:5px;">
+          <span>${r.label}</span><span style="font-family:'IBM Plex Mono',monospace;">${r.pct}% (${r.n.toLocaleString()})</span>
+        </div>
+        <div style="height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden;">
+          <div style="width:${r.pct}%;height:100%;background:${r.color};border-radius:5px;"></div>
+        </div>
+      </div>
+    `).join('');
+
+    noteEl.textContent = `Based on ${total.toLocaleString()} account${total === 1 ? '' : 's'} created since Sept 2, 2026 — the ${withPlatform.totalUsers.toLocaleString()} accounts created before that date aren't included, since they predate platform tracking.`;
+  }
+
   function styleOf(varName) {
     return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
   }
@@ -538,6 +589,7 @@
   function renderAll() {
     renderStats();
     renderCharts();
+    renderPlatform();
   }
 
   function setRange(r) {
