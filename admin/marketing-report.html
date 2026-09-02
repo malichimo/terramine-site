@@ -416,9 +416,22 @@
       totalUsersDelta !== null ? fmtPct(totalUsersDelta) : null, totalUsersDelta >= 0 ? 'up' : 'down', '--cat-1'));
     grid.appendChild(statTile('New users (period)', newUsersSum.toLocaleString(),
       newUsersDelta !== null ? fmtPct(newUsersDelta) : null, newUsersDelta >= 0 ? 'up' : 'down', '--cat-3'));
-    grid.appendChild(statTile('Daily active users', latest.dau.toLocaleString(), null, 'up', '--cat-1'));
-    grid.appendChild(statTile('Weekly active users', latest.wau.toLocaleString(), null, 'up', '--cat-1'));
-    grid.appendChild(statTile('Monthly active users', latest.mau.toLocaleString(), null, 'up', '--cat-1'));
+
+    // Backfilled days only carry totalUsers/newUsersToday (see
+    // backfillMarketingSnapshots.ts) — dau/wau/mau are undefined until the
+    // real refreshMarketingStats function has run at least once. Find the
+    // most recent snapshot that actually has them rather than assuming the
+    // latest day does.
+    const withActivity = [...snapshots].reverse().find(s => s.dau !== undefined);
+    if (withActivity) {
+      grid.appendChild(statTile('Daily active users', withActivity.dau.toLocaleString(), null, 'up', '--cat-1'));
+      grid.appendChild(statTile('Weekly active users', withActivity.wau.toLocaleString(), null, 'up', '--cat-1'));
+      grid.appendChild(statTile('Monthly active users', withActivity.mau.toLocaleString(), null, 'up', '--cat-1'));
+    } else {
+      ['Daily active users', 'Weekly active users', 'Monthly active users'].forEach(label => {
+        grid.appendChild(statTile(label, '—', null, 'up', '--cat-1'));
+      });
+    }
   }
 
   function styleOf(varName) {
@@ -513,8 +526,13 @@
     const dates = slice.map(s => s.date);
     lineOrBarChart('bar', 'growthChart', 'growthTooltip', 'growthEmpty', 'New users',
       slice.map(s => s.newUsersToday || 0), dates, 900, 200, styleOf('--cat-3'));
+
+    // Backfilled days (see backfillMarketingSnapshots.ts) have no dau field
+    // at all — only chart days where it's actually present, so the line
+    // doesn't dip to a fake zero for history that predates real tracking.
+    const withDau = slice.filter(s => s.dau !== undefined);
     lineOrBarChart('line', 'dauChart', 'dauTooltip', 'dauEmpty', 'DAU',
-      slice.map(s => s.dau || 0), dates, 900, 160, styleOf('--cat-1'));
+      withDau.map(s => s.dau), withDau.map(s => s.date), 900, 160, styleOf('--cat-1'));
   }
 
   function renderAll() {
