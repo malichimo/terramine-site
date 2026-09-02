@@ -129,6 +129,15 @@
     background: var(--surface); border:1px solid var(--border); border-radius:12px;
     padding:22px 22px 18px; box-shadow: var(--shadow);
   }
+  .panel-row{ display:grid; grid-template-columns: 1.55fr 1fr; gap:20px; }
+  @media (max-width: 780px){ .panel-row{ grid-template-columns: 1fr; } }
+  .side-stat{ padding:14px 0; border-top:1px solid var(--border); }
+  .side-stat:first-child{ border-top:none; padding-top:0; }
+  .side-stat .k{ font-size:12.5px; color: var(--text-secondary); }
+  .side-stat .v{
+    font-family:"IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+    font-size:19px; font-weight:600; margin-top:2px;
+  }
 
   .legend{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; }
   .legend-item{ display:flex; align-items:center; gap:7px; font-size:12.5px; color: var(--text-secondary); }
@@ -252,6 +261,35 @@
     <section class="section">
       <div class="section-head">
         <div>
+          <span class="section-tag">§ Engagement</span>
+          <h2>Daily product activity</h2>
+        </div>
+        <p class="section-desc">Check-ins, mini-games played, and properties purchased across all four mine types.</p>
+      </div>
+      <div class="panel panel-row">
+        <div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>Check-ins</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-3)"></span>Games played</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-2)"></span>Properties purchased</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="engChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="engTooltip"></div>
+          </div>
+          <div id="engEmpty" class="empty-state" style="display:none;"></div>
+        </div>
+        <div>
+          <div class="side-stat"><div class="k">Avg. check-ins / day</div><div class="v" id="avgCheckIns">—</div></div>
+          <div class="side-stat"><div class="k">Avg. games played / day</div><div class="v" id="avgGames">—</div></div>
+          <div class="side-stat"><div class="k">Avg. properties purchased / day</div><div class="v" id="avgPurchases">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
           <span class="section-tag">§ Audience</span>
           <h2>Platform split</h2>
         </div>
@@ -288,8 +326,15 @@
         </li>
         <li>
           <div>
-            <div class="name">Engagement, retention, monetization</div>
-            <div class="why">Check-ins, mini-games, cohort retention, ad revenue — next after the above</div>
+            <div class="name">Retention (Day 1/7/30 cohort curve)</div>
+            <div class="why">What share of each day's signups are still active 1/7/30 days later</div>
+          </div>
+          <span class="pill warn">Not started</span>
+        </li>
+        <li>
+          <div>
+            <div class="name">Ad revenue by platform</div>
+            <div class="why">Needs AdMob's reporting API — revenue data isn't in Firestore today</div>
           </div>
           <span class="pill warn">Not started</span>
         </li>
@@ -572,6 +617,105 @@
     }
   }
 
+  function stackedBarChart(svgId, tooltipId, emptyId, seriesLabels, seriesData, dates, w, h, colors) {
+    const svg = document.getElementById(svgId);
+    const tip = document.getElementById(tooltipId);
+    const emptyEl = document.getElementById(emptyId);
+    svg.innerHTML = '';
+
+    const n = dates.length;
+    if (!n) {
+      svg.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'No history yet for this range — this fills in as daily snapshots accumulate.';
+      return;
+    }
+    svg.style.display = 'block';
+    emptyEl.style.display = 'none';
+
+    const padL = 8, padB = 20;
+    const totals = dates.map((_, i) => seriesData.reduce((sum, series) => sum + (series[i] || 0), 0));
+    const max = Math.max(...totals, 1) * 1.15;
+    const groupW = (w - padL - 8) / n;
+    const barW = Math.max(2, groupW - 3);
+
+    for (let g = 0; g < 4; g++) {
+      const gy = 14 + g * ((h - padB - 14) / 3);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', w - 8);
+      line.setAttribute('y1', gy); line.setAttribute('y2', gy);
+      line.setAttribute('class', 'gridline');
+      svg.appendChild(line);
+    }
+
+    for (let i = 0; i < n; i++) {
+      let stackTop = h - padB;
+      for (let s = 0; s < seriesData.length; s++) {
+        const v = seriesData[s][i] || 0;
+        const barH = (v / max) * (h - padB - 14);
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', padL + i * groupW);
+        rect.setAttribute('y', stackTop - barH);
+        rect.setAttribute('width', barW);
+        rect.setAttribute('height', Math.max(0, barH));
+        rect.setAttribute('fill', colors[s]);
+        svg.appendChild(rect);
+        stackTop -= barH;
+      }
+    }
+
+    for (let i = 0; i < n; i++) {
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hit.setAttribute('x', padL + i * groupW - 2);
+      hit.setAttribute('y', 0);
+      hit.setAttribute('width', groupW + 4);
+      hit.setAttribute('height', h - padB + 14);
+      hit.setAttribute('fill', 'transparent');
+      hit.addEventListener('mouseenter', () => {
+        const rect = svg.getBoundingClientRect();
+        const parentRect = svg.parentElement.getBoundingClientRect();
+        tip.style.left = (rect.left + ((padL + i * groupW + groupW / 2) / w) * rect.width - parentRect.left) + 'px';
+        tip.style.top = (rect.top - parentRect.top + 30) + 'px';
+        const lines = seriesLabels.map((lbl, s) => `${lbl}: <strong>${(seriesData[s][i] || 0).toLocaleString()}</strong>`).join('<br>');
+        tip.innerHTML = `${dates[i]}<br>${lines}`;
+        tip.classList.add('show');
+      });
+      hit.addEventListener('mouseleave', () => tip.classList.remove('show'));
+      svg.appendChild(hit);
+    }
+  }
+
+  function avg(nums) {
+    if (!nums.length) return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+
+  function renderEngagement() {
+    const slice = rangeSlice(currentRange);
+    // Engagement fields only exist on days written by the Sept 2, 2026+
+    // refreshMarketingStats / backfillMarketingSnapshots update — older
+    // snapshots (if any ever predate that) won't carry them.
+    const withEngagement = slice.filter(s => s.checkInsToday !== undefined);
+    const dates = withEngagement.map(s => s.date);
+
+    document.getElementById('avgCheckIns').textContent =
+      withEngagement.length ? Math.round(avg(withEngagement.map(s => s.checkInsToday))).toLocaleString() : '—';
+    document.getElementById('avgGames').textContent =
+      withEngagement.length ? Math.round(avg(withEngagement.map(s => s.gamesPlayedToday))).toLocaleString() : '—';
+    document.getElementById('avgPurchases').textContent =
+      withEngagement.length ? Math.round(avg(withEngagement.map(s => s.purchasesToday))).toLocaleString() : '—';
+
+    stackedBarChart('engChart', 'engTooltip', 'engEmpty',
+      ['Check-ins', 'Games played', 'Properties purchased'],
+      [
+        withEngagement.map(s => s.checkInsToday || 0),
+        withEngagement.map(s => s.gamesPlayedToday || 0),
+        withEngagement.map(s => s.purchasesToday || 0),
+      ],
+      dates, 900, 180,
+      [styleOf('--cat-1'), styleOf('--cat-3'), styleOf('--cat-2')]);
+  }
+
   function renderCharts() {
     const slice = rangeSlice(currentRange);
     const dates = slice.map(s => s.date);
@@ -590,6 +734,7 @@
     renderStats();
     renderCharts();
     renderPlatform();
+    renderEngagement();
   }
 
   function setRange(r) {
@@ -604,7 +749,7 @@
     btn.addEventListener('click', () => setRange(Number(btn.dataset.range)));
   });
 
-  window.addEventListener('resize', renderCharts);
+  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); });
 </script>
 
 </body>
