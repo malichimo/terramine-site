@@ -290,6 +290,20 @@
     <section class="section">
       <div class="section-head">
         <div>
+          <span class="section-tag">§ Retention</span>
+          <h2>Signup cohort retention</h2>
+        </div>
+        <p class="section-desc">Of players who signed up in the selected range, the share still active by Day 1 / 7 / 30 after signup.</p>
+      </div>
+      <div class="panel">
+        <div class="stat-grid" id="retentionGrid" style="margin-bottom:0;"></div>
+        <div id="retentionNote" style="font-size:12px;color:var(--text-secondary);margin-top:14px;"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
           <span class="section-tag">§ Audience</span>
           <h2>Platform split</h2>
         </div>
@@ -321,13 +335,6 @@
           <div>
             <div class="name">Geography</div>
             <div class="why">No reliable per-user country field exists across the whole user base yet</div>
-          </div>
-          <span class="pill warn">Not started</span>
-        </li>
-        <li>
-          <div>
-            <div class="name">Retention (Day 1/7/30 cohort curve)</div>
-            <div class="why">What share of each day's signups are still active 1/7/30 days later</div>
           </div>
           <span class="pill warn">Not started</span>
         </li>
@@ -378,6 +385,7 @@
   const auth = getAuth(app);
 
   let snapshots = []; // [{date:'YYYY-MM-DD', totalUsers, newUsersToday, dau, wau, mau}], sorted ascending by date
+  let retentionCohorts = []; // [{cohortDate, cohortSize, retainedDay1?, retainedDay7?, retainedDay30?}], sorted ascending by cohortDate
   let currentRange = 30;
 
   onAuthStateChanged(auth, async (user) => {
@@ -393,8 +401,12 @@
     authErrEl.style.display = 'none';
 
     try {
-      const snap = await getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90)));
+      const [snap, retentionSnap] = await Promise.all([
+        getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90))),
+        getDocs(query(collection(db, 'retentionCohorts'), orderBy('cohortDate', 'desc'), limit(120))),
+      ]);
       snapshots = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
+      retentionCohorts = retentionSnap.docs.map(d => d.data()).sort((a, b) => a.cohortDate.localeCompare(b.cohortDate));
       document.getElementById('asOf').textContent = snapshots.length
         ? `Data through ${snapshots[snapshots.length - 1].date}`
         : 'No data yet';
@@ -730,11 +742,47 @@
       withDau.map(s => s.dau), withDau.map(s => s.date), 900, 160, styleOf('--cat-1'));
   }
 
+  function retentionRangeSlice(days) {
+    return retentionCohorts.slice(-days);
+  }
+
+  function weightedRetentionPct(cohorts, field) {
+    let retained = 0, total = 0;
+    for (const c of cohorts) {
+      if (c[field] === undefined || !c.cohortSize) continue;
+      retained += c[field];
+      total += c.cohortSize;
+    }
+    return total > 0 ? (retained / total) * 100 : null;
+  }
+
+  function renderRetention() {
+    const grid = document.getElementById('retentionGrid');
+    const noteEl = document.getElementById('retentionNote');
+    grid.innerHTML = '';
+
+    if (!retentionCohorts.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">No retention data yet — this fills in once the first signup cohort reaches its Day 1 milestone.</div>';
+      noteEl.textContent = '';
+      return;
+    }
+
+    const slice = retentionRangeSlice(currentRange);
+    const fmt = v => v === null ? '—' : `${v.toFixed(1)}%`;
+    grid.appendChild(statTile('Day 1 retention', fmt(weightedRetentionPct(slice, 'retainedDay1')), null, 'up', '--cat-1'));
+    grid.appendChild(statTile('Day 7 retention', fmt(weightedRetentionPct(slice, 'retainedDay7')), null, 'up', '--cat-1'));
+    grid.appendChild(statTile('Day 30 retention', fmt(weightedRetentionPct(slice, 'retainedDay30')), null, 'up', '--cat-1'));
+
+    const maturedFor = (field) => slice.filter(c => c[field] !== undefined).length;
+    noteEl.textContent = `Based on ${slice.length} signup day${slice.length === 1 ? '' : 's'} in this range — ${maturedFor('retainedDay1')} have reached Day 1, ${maturedFor('retainedDay7')} have reached Day 7, and ${maturedFor('retainedDay30')} have reached Day 30 so far (younger cohorts haven't hit later milestones yet).`;
+  }
+
   function renderAll() {
     renderStats();
     renderCharts();
     renderPlatform();
     renderEngagement();
+    renderRetention();
   }
 
   function setRange(r) {
