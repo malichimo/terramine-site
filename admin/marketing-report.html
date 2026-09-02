@@ -297,7 +297,7 @@
       </div>
       <div class="panel">
         <div class="stat-grid" id="retentionGrid" style="margin-bottom:0;"></div>
-        <div id="retentionNote" style="font-size:12px;color:var(--text-secondary);margin-top:14px;"></div>
+        <div id="retentionNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></div>
       </div>
     </section>
 
@@ -319,6 +319,21 @@
     <section class="section">
       <div class="section-head">
         <div>
+          <span class="section-tag">§ Geography</span>
+          <h2>Properties by country</h2>
+        </div>
+        <p class="section-desc">Counts properties, not distinct players — an owner with several properties in one country counts once per property. Resolved offline from each property's GPS coordinates at purchase time.</p>
+      </div>
+      <div class="panel">
+        <div id="geoBars"></div>
+        <div id="geoEmpty" class="empty-state" style="display:none;"></div>
+        <p id="geoNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
           <span class="section-tag">§ Coming next</span>
           <h2>Progressively added, per our Sept 1 conversation</h2>
         </div>
@@ -328,13 +343,6 @@
           <div>
             <div class="name">App-store install counts</div>
             <div class="why">Needs Play Developer API / App Store Connect API integration — not wired up yet</div>
-          </div>
-          <span class="pill warn">Not started</span>
-        </li>
-        <li>
-          <div>
-            <div class="name">Geography</div>
-            <div class="why">No reliable per-user country field exists across the whole user base yet</div>
           </div>
           <span class="pill warn">Not started</span>
         </li>
@@ -386,6 +394,7 @@
 
   let snapshots = []; // [{date:'YYYY-MM-DD', totalUsers, newUsersToday, dau, wau, mau}], sorted ascending by date
   let retentionCohorts = []; // [{cohortDate, cohortSize, retainedDay1?, retainedDay7?, retainedDay30?}], sorted ascending by cohortDate
+  let geoSnapshot = null; // {date, totalProperties, unresolvedProperties, countries: {CODE: count}} — latest only, not range-filtered
   let currentRange = 30;
 
   onAuthStateChanged(auth, async (user) => {
@@ -401,12 +410,14 @@
     authErrEl.style.display = 'none';
 
     try {
-      const [snap, retentionSnap] = await Promise.all([
+      const [snap, retentionSnap, geoSnap] = await Promise.all([
         getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'retentionCohorts'), orderBy('cohortDate', 'desc'), limit(120))),
+        getDocs(query(collection(db, 'geography_snapshots'), orderBy('date', 'desc'), limit(1))),
       ]);
       snapshots = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       retentionCohorts = retentionSnap.docs.map(d => d.data()).sort((a, b) => a.cohortDate.localeCompare(b.cohortDate));
+      geoSnapshot = geoSnap.docs.length ? geoSnap.docs[0].data() : null;
       document.getElementById('asOf').textContent = snapshots.length
         ? `Data through ${snapshots[snapshots.length - 1].date}`
         : 'No data yet';
@@ -777,12 +788,64 @@
     noteEl.textContent = `Based on ${slice.length} signup day${slice.length === 1 ? '' : 's'} in this range — ${maturedFor('retainedDay1')} have reached Day 1, ${maturedFor('retainedDay7')} have reached Day 7, and ${maturedFor('retainedDay30')} have reached Day 30 so far (younger cohorts haven't hit later milestones yet).`;
   }
 
+  function countryName(code) {
+    try {
+      return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) || code;
+    } catch (e) {
+      return code;
+    }
+  }
+
+  function renderGeography() {
+    const wrap = document.getElementById('geoBars');
+    const emptyEl = document.getElementById('geoEmpty');
+    const noteEl = document.getElementById('geoNote');
+    wrap.innerHTML = '';
+
+    const countries = geoSnapshot && geoSnapshot.countries ? geoSnapshot.countries : {};
+    const entries = Object.entries(countries).sort((a, b) => b[1] - a[1]);
+
+    if (!entries.length) {
+      wrap.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'No geography data yet — this fills in once the weekly aggregation function has run at least once.';
+      noteEl.textContent = '';
+      return;
+    }
+    wrap.style.display = 'block';
+    emptyEl.style.display = 'none';
+
+    const top = entries.slice(0, 10);
+    const otherCount = entries.length - top.length;
+    const otherTotal = entries.slice(10).reduce((s, [, n]) => s + n, 0);
+    const max = top[0][1];
+    const palette = [styleOf('--cat-1'), styleOf('--cat-2'), styleOf('--cat-3')];
+
+    wrap.innerHTML = top.map(([code, n], i) => {
+      const pct = Math.round((n / max) * 100);
+      return `
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-secondary);margin-bottom:5px;">
+            <span>${countryName(code)}</span><span style="font-family:'IBM Plex Mono',monospace;">${n.toLocaleString()}</span>
+          </div>
+          <div style="height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${palette[i % palette.length]};border-radius:5px;"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const resolvedTotal = entries.reduce((s, [, n]) => s + n, 0);
+    const otherNote = otherCount > 0 ? `, plus ${otherTotal.toLocaleString()} across ${otherCount} other countries` : '';
+    noteEl.textContent = `As of ${geoSnapshot.date} — ${resolvedTotal.toLocaleString()} of ${geoSnapshot.totalProperties.toLocaleString()} total properties resolved to a country${otherNote}. ${geoSnapshot.unresolvedProperties.toLocaleString()} unresolved (open ocean/unmapped territory).`;
+  }
+
   function renderAll() {
     renderStats();
     renderCharts();
     renderPlatform();
     renderEngagement();
     renderRetention();
+    renderGeography();
   }
 
   function setRange(r) {
