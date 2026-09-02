@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Partner Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #f6f1e6;
+    --surface: #fffcf6;
+    --surface-2: #efe6d3;
+    --border: #ddd0b3;
+    --text-primary: #241d14;
+    --text-secondary: #5c4f3c;
+    --text-muted: #8a7c64;
+    --accent: #9c7325;
+    --accent-strong: #7a5a1a;
+    --accent-wash: rgba(156,115,37,0.10);
+
+    --cat-1: #2a78d6;
+    --cat-3: #1baf7a;
+
+    --good: #0ca30c;
+    --warning: #b8790a;
+
+    --grid-line: #e5d9bd;
+    --shadow: 0 1px 2px rgba(36,29,20,0.06), 0 8px 24px -12px rgba(36,29,20,0.18);
+    color-scheme: light;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body{
+    font-family:"Source Sans 3", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: var(--text-primary); line-height:1.5;
+  }
+  h1,h2{ font-family:"Fraunces", Georgia, serif; }
+
+  .wrap{ max-width: 1040px; margin: 0 auto; padding: 40px 24px 64px; }
+
+  /* ── LOGIN OVERLAY ── */
+  #loginOverlay{
+    position:fixed; inset:0; background: var(--bg); display:flex;
+    align-items:center; justify-content:center; z-index: 1000;
+  }
+  .login-card{
+    background: var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding: 36px 34px; width: 340px; box-shadow: var(--shadow); text-align:center;
+  }
+  .login-card .brand-mark{ font-size:30px; margin-bottom:8px; }
+  .login-card h1{ font-size:20px; margin-bottom:4px; }
+  .login-card p{ font-size:13px; color: var(--text-muted); margin-bottom:20px; }
+  .login-card input{
+    width:100%; padding:10px 12px; margin-bottom:10px; border-radius:8px;
+    border:1px solid var(--border); background: var(--bg); color: var(--text-primary);
+    font-size:14px; font-family: inherit;
+  }
+  .login-card button{
+    width:100%; padding:11px; border-radius:8px; border:none;
+    background: var(--accent); color:#fff; font-weight:600; font-size:14px;
+    cursor:pointer; margin-top:4px;
+  }
+  .login-card button:hover{ background: var(--accent-strong); }
+  #loginError, #authError{
+    color:#b23434; font-size:12.5px; margin-top:10px; display:none;
+  }
+
+  #appRoot{ display:none; }
+
+  header.masthead{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:20px; margin-bottom: 26px; flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-mark{ font-size:32px; line-height:1; }
+  .brand-text h1{ font-size:24px; font-weight:600; }
+  .brand-text p{ font-size:13px; color: var(--text-muted); margin-top:2px; }
+  .meta{ text-align:right; font-size:12px; color: var(--text-muted); }
+  .meta button{
+    margin-top:8px; font-size:12px; background:none; border:1px solid var(--border);
+    border-radius:6px; padding:5px 10px; color: var(--text-secondary); cursor:pointer;
+  }
+
+  .controlbar{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    margin-bottom: 22px; flex-wrap:wrap;
+  }
+  .range-toggle{ display:flex; gap:4px; background: var(--surface-2); border-radius:9px; padding:3px; }
+  .range-btn{
+    border:none; background:none; padding:6px 14px; border-radius:7px; font-size:13px;
+    font-weight:600; color: var(--text-secondary); cursor:pointer; font-family:inherit;
+  }
+  .range-btn.active{ background: var(--surface); color: var(--accent-strong); box-shadow: var(--shadow); }
+  .scope-note{ font-size:12.5px; color: var(--text-muted); max-width:420px; }
+
+  .stat-grid{
+    display:grid; grid-template-columns: repeat(5, 1fr); gap:14px; margin-bottom: 32px;
+  }
+  @media (max-width: 900px){ .stat-grid{ grid-template-columns: repeat(2,1fr);} }
+  .stat-tile{
+    background: var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:16px 16px 14px; box-shadow: var(--shadow); border-top: 3px solid var(--tile-accent, var(--accent));
+  }
+  .stat-tile .label{ font-size:12px; color: var(--text-muted); margin-bottom:6px; }
+  .stat-tile .value{
+    font-family:"IBM Plex Mono", monospace; font-size:24px; font-weight:600;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-tile .delta{ font-size:12px; margin-top:6px; }
+  .stat-tile .delta.up{ color: var(--good); }
+  .stat-tile .delta.down{ color:#b23434; }
+  .stat-tile .delta .base{ color: var(--text-muted); }
+
+  .section{ margin-bottom: 30px; }
+  .section-head{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+    margin-bottom:14px; flex-wrap:wrap;
+  }
+  .section-tag{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.06em; color: var(--accent-strong);
+  }
+  .section-head h2{ font-size:19px; font-weight:600; margin-top:2px; }
+  .section-desc{ font-size:13px; color: var(--text-muted); max-width:460px; text-align:right; }
+
+  .panel{
+    background: var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:22px 22px 18px; box-shadow: var(--shadow);
+  }
+
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:12.5px; color: var(--text-secondary); }
+  .legend-swatch{ width:10px; height:10px; border-radius:2.5px; flex:none; }
+
+  .chart-svg{ width:100%; height:auto; overflow:visible; }
+  .chart-svg .gridline{ stroke: var(--grid-line); stroke-width:1; }
+  .tooltip{
+    position:absolute; pointer-events:none; opacity:0; transition:opacity .1s ease;
+    background: var(--text-primary); color: var(--bg); font-size:12px;
+    font-family:"IBM Plex Mono", monospace; padding:7px 10px; border-radius:7px;
+    white-space:nowrap; transform: translate(-50%, -130%); z-index:5; box-shadow: var(--shadow);
+  }
+  .tooltip.show{ opacity:1; }
+  .chart-wrap{ position:relative; }
+  .empty-state{
+    padding: 34px 10px; text-align:center; color: var(--text-muted); font-size:13.5px;
+  }
+
+  .roadmap-list{ list-style:none; display:grid; gap:10px; }
+  .roadmap-list li{
+    background: var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:12px 16px; display:flex; align-items:center; justify-content:space-between;
+    gap: 14px; font-size:13.5px;
+  }
+  .roadmap-list .name{ color: var(--text-primary); font-weight:600; }
+  .roadmap-list .why{ color: var(--text-muted); font-size:12.5px; margin-top:2px; }
+  .pill{
+    display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600;
+    padding:4px 10px; border-radius:100px; white-space:nowrap; flex:none;
+  }
+  .pill.warn{ background: color-mix(in srgb, var(--warning) 16%, transparent); color: var(--warning); }
+  .pill::before{ content:"●"; font-size:7px; }
+
+  .footnote{
+    margin-top:44px; padding-top:18px; border-top:1px solid var(--border);
+    font-size:12.5px; color: var(--text-muted); display:flex; justify-content:space-between;
+    gap:20px; flex-wrap:wrap;
+  }
+  .footnote strong{ color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="brand-mark">⛏️</div>
+    <h1>TerraMine Partner Report</h1>
+    <p>Sign in with the account provided to you</p>
+    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username">
+    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password">
+    <button onclick="window.doLogin()">Sign In</button>
+    <div id="loginError">Sign-in failed. Check email and password.</div>
+  </div>
+</div>
+
+<div id="appRoot">
+  <div class="wrap">
+
+    <header class="masthead">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">⛏️</div>
+        <div class="brand-text">
+          <h1>TerraMine Partner Report</h1>
+          <p>Prepared for Magnitude Digital</p>
+        </div>
+      </div>
+      <div class="meta">
+        <div id="asOf">—</div>
+        <button onclick="window.doLogout()">Sign out</button>
+      </div>
+    </header>
+
+    <div id="authError"></div>
+
+    <div class="controlbar">
+      <div class="range-toggle" role="group" aria-label="Date range">
+        <button data-range="7" class="range-btn">Last 7 days</button>
+        <button data-range="30" class="range-btn active">Last 30 days</button>
+        <button data-range="90" class="range-btn">Last 90 days</button>
+      </div>
+      <p class="scope-note">Live data. Figures below reflect exactly what's tracked today — see "Coming next" for what isn't yet.</p>
+    </div>
+
+    <div class="stat-grid" id="statGrid"></div>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Growth</span>
+          <h2>New registered users by day</h2>
+        </div>
+        <p class="section-desc">Signups only — app-store install counts aren't tracked yet (see "Coming next").</p>
+      </div>
+      <div class="panel">
+        <div class="chart-wrap">
+          <svg class="chart-svg" id="growthChart" viewBox="0 0 900 200" preserveAspectRatio="none"></svg>
+          <div class="tooltip" id="growthTooltip"></div>
+        </div>
+        <div id="growthEmpty" class="empty-state" style="display:none;"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Activity</span>
+          <h2>Daily active users</h2>
+        </div>
+        <p class="section-desc">DAU each day, over the selected range.</p>
+      </div>
+      <div class="panel">
+        <div class="chart-wrap">
+          <svg class="chart-svg" id="dauChart" viewBox="0 0 900 160" preserveAspectRatio="none"></svg>
+          <div class="tooltip" id="dauTooltip"></div>
+        </div>
+        <div id="dauEmpty" class="empty-state" style="display:none;"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Coming next</span>
+          <h2>Progressively added, per our Sept 1 conversation</h2>
+        </div>
+      </div>
+      <ul class="roadmap-list">
+        <li>
+          <div>
+            <div class="name">App-store install counts</div>
+            <div class="why">Needs Play Developer API / App Store Connect API integration — not wired up yet</div>
+          </div>
+          <span class="pill warn">Not started</span>
+        </li>
+        <li>
+          <div>
+            <div class="name">Platform split (iOS / Android)</div>
+            <div class="why">No platform field is currently written to the user record</div>
+          </div>
+          <span class="pill warn">Not started</span>
+        </li>
+        <li>
+          <div>
+            <div class="name">Geography</div>
+            <div class="why">No reliable per-user country field exists across the whole user base yet</div>
+          </div>
+          <span class="pill warn">Not started</span>
+        </li>
+        <li>
+          <div>
+            <div class="name">Engagement, retention, monetization</div>
+            <div class="why">Check-ins, mini-games, cohort retention, ad revenue — next after the above</div>
+          </div>
+          <span class="pill warn">Not started</span>
+        </li>
+        <li>
+          <div>
+            <div class="name">Paid-media attribution</div>
+            <div class="why">Requires an MMP integration — no paid channels are live yet either</div>
+          </div>
+          <span class="pill warn">Not started</span>
+        </li>
+      </ul>
+    </section>
+
+    <footer class="footnote">
+      <div><strong>Data boundary:</strong> this report shows product and audience metrics only. It does not include and will never include player TB balances, USD redemption requests, or payout/fraud-review data.</div>
+      <div><strong>Source:</strong> a daily Firestore snapshot (Cloud Function, refreshed every 24 hours). History accumulates one day at a time from when this report first went live.</div>
+    </footer>
+
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import {
+    getFirestore, collection, getDocs, query, orderBy, limit
+  } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  let snapshots = []; // [{date:'YYYY-MM-DD', totalUsers, newUsersToday, dau, wau, mau}], sorted ascending by date
+  let currentRange = 30;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('appRoot').style.display = 'none';
+      return;
+    }
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('appRoot').style.display = 'block';
+
+    const authErrEl = document.getElementById('authError');
+    authErrEl.style.display = 'none';
+
+    try {
+      const snap = await getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90)));
+      snapshots = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
+      document.getElementById('asOf').textContent = snapshots.length
+        ? `Data through ${snapshots[snapshots.length - 1].date}`
+        : 'No data yet';
+      renderAll();
+    } catch (e) {
+      console.error('marketing_snapshots load failed:', e);
+      authErrEl.textContent = "This account isn't authorized to view this report. Contact scott@terramine.app.";
+      authErrEl.style.display = 'block';
+      document.getElementById('statGrid').innerHTML = '';
+    }
+  });
+
+  window.doLogin = async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (e) {
+      errEl.textContent = 'Sign-in failed. Check email and password.';
+      errEl.style.display = 'block';
+    }
+  };
+
+  window.doLogout = async () => {
+    await signOut(auth);
+    location.reload();
+  };
+
+  function rangeSlice(days) {
+    return snapshots.slice(-days);
+  }
+
+  function fmtPct(delta) {
+    const sign = delta >= 0 ? '+' : '−';
+    return `${sign}${Math.abs(delta).toFixed(1)}%`;
+  }
+
+  function statTile(label, value, deltaLabel, dir, accent) {
+    const el = document.createElement('div');
+    el.className = 'stat-tile';
+    el.style.setProperty('--tile-accent', `var(${accent})`);
+    el.innerHTML = `
+      <div class="label">${label}</div>
+      <div class="value">${value}</div>
+      ${deltaLabel ? `<div class="delta ${dir}">${dir === 'up' ? '▲' : '▼'} ${deltaLabel} <span class="base">vs prior period</span></div>` : ''}
+    `;
+    return el;
+  }
+
+  function renderStats() {
+    const grid = document.getElementById('statGrid');
+    grid.innerHTML = '';
+
+    if (!snapshots.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">No snapshots recorded yet — the daily aggregation function writes its first data point at its next scheduled run. Check back tomorrow.</div>';
+      return;
+    }
+
+    const slice = rangeSlice(currentRange);
+    const latest = slice[slice.length - 1];
+    const prevSlice = snapshots.slice(Math.max(0, snapshots.length - currentRange * 2), snapshots.length - currentRange);
+
+    const newUsersSum = slice.reduce((sum, s) => sum + (s.newUsersToday || 0), 0);
+    const prevNewUsersSum = prevSlice.reduce((sum, s) => sum + (s.newUsersToday || 0), 0);
+    const newUsersDelta = prevNewUsersSum > 0 ? ((newUsersSum - prevNewUsersSum) / prevNewUsersSum) * 100 : null;
+
+    const first = slice[0];
+    const totalUsersDelta = (first && first.totalUsers) ? ((latest.totalUsers - first.totalUsers) / first.totalUsers) * 100 : null;
+
+    grid.appendChild(statTile('Total registered users', latest.totalUsers.toLocaleString(),
+      totalUsersDelta !== null ? fmtPct(totalUsersDelta) : null, totalUsersDelta >= 0 ? 'up' : 'down', '--cat-1'));
+    grid.appendChild(statTile('New users (period)', newUsersSum.toLocaleString(),
+      newUsersDelta !== null ? fmtPct(newUsersDelta) : null, newUsersDelta >= 0 ? 'up' : 'down', '--cat-3'));
+    grid.appendChild(statTile('Daily active users', latest.dau.toLocaleString(), null, 'up', '--cat-1'));
+    grid.appendChild(statTile('Weekly active users', latest.wau.toLocaleString(), null, 'up', '--cat-1'));
+    grid.appendChild(statTile('Monthly active users', latest.mau.toLocaleString(), null, 'up', '--cat-1'));
+  }
+
+  function styleOf(varName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  }
+
+  function lineOrBarChart(kind, svgId, tooltipId, emptyId, label, data, dates, w, h, color) {
+    const svg = document.getElementById(svgId);
+    const tip = document.getElementById(tooltipId);
+    const emptyEl = document.getElementById(emptyId);
+    svg.innerHTML = '';
+
+    if (!data.length) {
+      svg.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'No history yet for this range — this fills in as daily snapshots accumulate.';
+      return;
+    }
+    svg.style.display = 'block';
+    emptyEl.style.display = 'none';
+
+    const n = data.length;
+    const padL = 8, padB = 20;
+    const max = Math.max(...data, 1) * 1.15;
+    const x = i => n === 1 ? w / 2 : padL + (i / (n - 1)) * (w - padL - 12);
+    const y = v => (h - padB) - (v / max) * (h - padB - 14);
+
+    for (let g = 0; g < 4; g++) {
+      const gy = 14 + g * ((h - padB - 14) / 3);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', w - 8);
+      line.setAttribute('y1', gy); line.setAttribute('y2', gy);
+      line.setAttribute('class', 'gridline');
+      svg.appendChild(line);
+    }
+
+    if (kind === 'bar') {
+      const groupW = (w - padL - 8) / n;
+      const barW = Math.max(2, groupW - 3);
+      data.forEach((v, i) => {
+        const barH = (v / max) * (h - padB - 14);
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', padL + i * groupW);
+        rect.setAttribute('y', (h - padB) - barH);
+        rect.setAttribute('width', barW);
+        rect.setAttribute('height', Math.max(0, barH));
+        rect.setAttribute('rx', '2');
+        rect.setAttribute('fill', color);
+        svg.appendChild(rect);
+      });
+    } else {
+      let d = '';
+      data.forEach((v, i) => { d += (i === 0 ? 'M' : 'L') + x(i) + ' ' + y(v) + ' '; });
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('stroke-linejoin', 'round');
+      path.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(path);
+      const cx = x(n - 1), cy = y(data[n - 1]);
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.setAttribute('r', '4');
+      dot.setAttribute('fill', color);
+      svg.appendChild(dot);
+    }
+
+    for (let i = 0; i < n; i++) {
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const groupW = (w - padL - 8) / n;
+      hit.setAttribute('x', padL + i * groupW - 2);
+      hit.setAttribute('y', 0);
+      hit.setAttribute('width', groupW + 4);
+      hit.setAttribute('height', h - padB + 14);
+      hit.setAttribute('fill', 'transparent');
+      hit.addEventListener('mouseenter', () => {
+        const rect = svg.getBoundingClientRect();
+        const parentRect = svg.parentElement.getBoundingClientRect();
+        tip.style.left = (rect.left + ((padL + i * groupW + groupW / 2) / w) * rect.width - parentRect.left) + 'px';
+        tip.style.top = (rect.top - parentRect.top + 30) + 'px';
+        tip.innerHTML = `${dates[i]}<br>${label}: <strong>${data[i].toLocaleString()}</strong>`;
+        tip.classList.add('show');
+      });
+      hit.addEventListener('mouseleave', () => tip.classList.remove('show'));
+      svg.appendChild(hit);
+    }
+  }
+
+  function renderCharts() {
+    const slice = rangeSlice(currentRange);
+    const dates = slice.map(s => s.date);
+    lineOrBarChart('bar', 'growthChart', 'growthTooltip', 'growthEmpty', 'New users',
+      slice.map(s => s.newUsersToday || 0), dates, 900, 200, styleOf('--cat-3'));
+    lineOrBarChart('line', 'dauChart', 'dauTooltip', 'dauEmpty', 'DAU',
+      slice.map(s => s.dau || 0), dates, 900, 160, styleOf('--cat-1'));
+  }
+
+  function renderAll() {
+    renderStats();
+    renderCharts();
+  }
+
+  function setRange(r) {
+    currentRange = r;
+    document.querySelectorAll('.range-btn').forEach(b => {
+      b.classList.toggle('active', Number(b.dataset.range) === r);
+    });
+    renderAll();
+  }
+
+  document.querySelectorAll('.range-btn').forEach(btn => {
+    btn.addEventListener('click', () => setRange(Number(btn.dataset.range)));
+  });
+
+  window.addEventListener('resize', renderCharts);
+</script>
+
+</body>
+</html>
