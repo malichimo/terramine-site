@@ -151,6 +151,8 @@
   .badge-amber { background:rgba(224,123,32,0.15); color:var(--amber); }
   .badge-blue { background:rgba(74,159,212,0.15); color:var(--blue); }
   .badge-muted { background:rgba(138,117,96,0.1); color:var(--text-muted); }
+  .badge-purple { background:rgba(155,127,232,0.15); color:var(--purple); }
+  .flag-note { font-size:10px; color:var(--purple); margin-top:4px; max-width:220px; white-space:normal; }
 
   .action-btn {
     background:var(--surface2);
@@ -231,6 +233,7 @@
 
   <div class="period-tabs" id="statusTabs">
     <button class="period-tab" data-tab="needsAttention" onclick="setTab('needsAttention', this)">Needs Attention <span class="count" id="count-needsAttention">0</span></button>
+    <button class="period-tab" data-tab="flagged" onclick="setTab('flagged', this)">🚩 Flagged <span class="count" id="count-flagged">0</span></button>
     <button class="period-tab" data-tab="paid" onclick="setTab('paid', this)">Paid <span class="count" id="count-paid">0</span></button>
     <button class="period-tab" data-tab="rejected" onclick="setTab('rejected', this)">Rejected <span class="count" id="count-rejected">0</span></button>
     <button class="period-tab" data-tab="failed" onclick="setTab('failed', this)">Failed <span class="count" id="count-failed">0</span></button>
@@ -383,6 +386,7 @@
   function updateTabCounts() {
     const needsAttention = allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').length;
     document.getElementById('count-needsAttention').textContent = needsAttention;
+    document.getElementById('count-flagged').textContent = allRequests.filter(r => r.flaggedForReview).length;
     document.getElementById('count-paid').textContent = allRequests.filter(r => r.status === 'paid').length;
     document.getElementById('count-rejected').textContent = allRequests.filter(r => r.status === 'rejected').length;
     document.getElementById('count-failed').textContent = allRequests.filter(r => r.status === 'failed').length;
@@ -406,6 +410,7 @@
   function filteredForTab() {
     if (currentTab === 'all') return allRequests;
     if (currentTab === 'needsAttention') return allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid');
+    if (currentTab === 'flagged') return allRequests.filter(r => r.flaggedForReview);
     return allRequests.filter(r => r.status === currentTab);
   }
 
@@ -464,8 +469,14 @@
 
   function renderStatusCell(r) {
     const badge = statusBadge(r.status);
+    const flagBadge = r.flaggedForReview ? `<span class="badge badge-purple" title="${escAttr(r.flagReason || '')}">🚩 FLAGGED</span>` : '';
     let actions = '';
     let note = '';
+
+    if (r.flaggedForReview) {
+      const flaggedAtStr = r.flaggedAt ? new Date(r.flaggedAt).toLocaleString() : '';
+      note += `<div class="flag-note">${escHtml(r.flagReason || 'Flagged for review')}${flaggedAtStr ? ' — ' + escHtml(flaggedAtStr) : ''}</div>`;
+    }
 
     if (r.status === 'pending') {
       actions = `
@@ -479,14 +490,14 @@
           <button class="action-btn paid" onclick="markPaid('${r.id}','${escAttr(r.nickname)}')">Mark Paid</button>
           <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
         </div>`;
-      note = `<div class="processed-note">Reviewed — pay via PayPal, then Mark Paid</div>`;
+      note += `<div class="processed-note">Reviewed — pay via PayPal, then Mark Paid</div>`;
     } else if (r.status === 'rejected' && r.rejectionReason) {
-      note = `<div class="processed-note">Reason: ${escHtml(r.rejectionReason)}</div>`;
+      note += `<div class="processed-note">Reason: ${escHtml(r.rejectionReason)}</div>`;
     } else if (r.status === 'failed' && r.rejectionReason) {
-      note = `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
+      note += `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
     }
 
-    return `${badge}${actions}${note}`;
+    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${actions}${note}`;
   }
 
   function statusBadge(status) {
