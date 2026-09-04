@@ -230,7 +230,7 @@
           <span class="section-tag">§ Growth</span>
           <h2>New registered users by day</h2>
         </div>
-        <p class="section-desc">Signups only — app-store install counts aren't tracked yet (see "Coming next").</p>
+        <p class="section-desc">Registered signups — see the Installs section below for app-store install counts.</p>
       </div>
       <div class="panel">
         <div class="chart-wrap">
@@ -238,6 +238,24 @@
           <div class="tooltip" id="growthTooltip"></div>
         </div>
         <div id="growthEmpty" class="empty-state" style="display:none;"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Installs</span>
+          <h2>App-store installs by day</h2>
+        </div>
+        <p class="section-desc">Android device installs from Google Play. iOS isn't tracked yet — App Store Connect's Sales API reports paid transactions, not raw installs, for a free app; a real iOS count needs a separate App Analytics integration (see "Coming next").</p>
+      </div>
+      <div class="panel">
+        <div class="chart-wrap">
+          <svg class="chart-svg" id="installsChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+          <div class="tooltip" id="installsTooltip"></div>
+        </div>
+        <div id="installsEmpty" class="empty-state" style="display:none;"></div>
+        <p id="installsNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
       </div>
     </section>
 
@@ -319,6 +337,35 @@
     <section class="section">
       <div class="section-head">
         <div>
+          <span class="section-tag">§ Ad Revenue</span>
+          <h2>Estimated ad revenue by platform</h2>
+        </div>
+        <p class="section-desc">Estimated network earnings from AdMob, TerraMine's sole ad network. Reported ~1 day behind "today".</p>
+      </div>
+      <div class="panel panel-row">
+        <div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-2)"></span>Android</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>iOS</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="adRevenueChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="adRevenueTooltip"></div>
+          </div>
+          <div id="adRevenueEmpty" class="empty-state" style="display:none;"></div>
+          <p id="adRevenueNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+        </div>
+        <div>
+          <div class="side-stat"><div class="k">Android revenue (period)</div><div class="v" id="adRevAndroid">—</div></div>
+          <div class="side-stat"><div class="k">iOS revenue (period)</div><div class="v" id="adRevIos">—</div></div>
+          <div class="side-stat"><div class="k">Total revenue (period)</div><div class="v" id="adRevTotal">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
           <span class="section-tag">§ Geography</span>
           <h2>Properties by country</h2>
         </div>
@@ -341,15 +388,8 @@
       <ul class="roadmap-list">
         <li>
           <div>
-            <div class="name">App-store install counts</div>
-            <div class="why">Needs Play Developer API / App Store Connect API integration — not wired up yet</div>
-          </div>
-          <span class="pill warn">Not started</span>
-        </li>
-        <li>
-          <div>
-            <div class="name">Ad revenue by platform</div>
-            <div class="why">Needs AdMob's reporting API — revenue data isn't in Firestore today</div>
+            <div class="name">iOS install counts</div>
+            <div class="why">Android installs are now live above. iOS needs App Store Connect's separate App Analytics report flow — a different permission scope than the Sales API used for reconciliation reporting.</div>
           </div>
           <span class="pill warn">Not started</span>
         </li>
@@ -395,6 +435,8 @@
   let snapshots = []; // [{date:'YYYY-MM-DD', totalUsers, newUsersToday, dau, wau, mau}], sorted ascending by date
   let retentionCohorts = []; // [{cohortDate, cohortSize, retainedDay1?, retainedDay7?, retainedDay30?}], sorted ascending by cohortDate
   let geoSnapshot = null; // {date, totalProperties, unresolvedProperties, countries: {CODE: count}} — latest only, not range-filtered
+  let installsSnapshots = []; // [{date, androidInstalls, ...}], sorted ascending by date — iOS not tracked yet, see refreshInstalls
+  let adRevenueSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue}], sorted ascending by date
   let currentRange = 30;
 
   onAuthStateChanged(auth, async (user) => {
@@ -410,14 +452,18 @@
     authErrEl.style.display = 'none';
 
     try {
-      const [snap, retentionSnap, geoSnap] = await Promise.all([
+      const [snap, retentionSnap, geoSnap, installsSnap, adRevenueSnap] = await Promise.all([
         getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'retentionCohorts'), orderBy('cohortDate', 'desc'), limit(120))),
         getDocs(query(collection(db, 'geography_snapshots'), orderBy('date', 'desc'), limit(1))),
+        getDocs(query(collection(db, 'installs_snapshots'), orderBy('date', 'desc'), limit(90))),
+        getDocs(query(collection(db, 'ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
       ]);
       snapshots = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       retentionCohorts = retentionSnap.docs.map(d => d.data()).sort((a, b) => a.cohortDate.localeCompare(b.cohortDate));
       geoSnapshot = geoSnap.docs.length ? geoSnap.docs[0].data() : null;
+      installsSnapshots = installsSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
+      adRevenueSnapshots = adRevenueSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       document.getElementById('asOf').textContent = snapshots.length
         ? `Data through ${snapshots[snapshots.length - 1].date}`
         : 'No data yet';
@@ -839,12 +885,67 @@
     noteEl.textContent = `As of ${geoSnapshot.date} — ${resolvedTotal.toLocaleString()} of ${geoSnapshot.totalProperties.toLocaleString()} total properties resolved to a country${otherNote}. ${geoSnapshot.unresolvedProperties.toLocaleString()} unresolved (open ocean/unmapped territory).`;
   }
 
+  function installsRangeSlice(days) {
+    return installsSnapshots.slice(-days);
+  }
+
+  function renderInstalls() {
+    const slice = installsRangeSlice(currentRange);
+    const noteEl = document.getElementById('installsNote');
+
+    lineOrBarChart('bar', 'installsChart', 'installsTooltip', 'installsEmpty', 'Android installs',
+      slice.map(s => s.androidInstalls || 0), slice.map(s => s.date), 900, 180, styleOf('--cat-2'));
+
+    if (!slice.length) {
+      noteEl.textContent = '';
+      return;
+    }
+    const totalAndroid = slice.reduce((sum, s) => sum + (s.androidInstalls || 0), 0);
+    const latest = slice[slice.length - 1];
+    noteEl.textContent = `${totalAndroid.toLocaleString()} Android device installs over this range, from Google Play (typically 1-2 days behind "today" — most recent figure is for ${latest.date}). iOS install counts aren't available yet — see "Coming next".`;
+  }
+
+  function adRevenueRangeSlice(days) {
+    return adRevenueSnapshots.slice(-days);
+  }
+
+  function renderAdRevenue() {
+    const slice = adRevenueRangeSlice(currentRange);
+    const dates = slice.map(s => s.date);
+    const noteEl = document.getElementById('adRevenueNote');
+
+    stackedBarChart('adRevenueChart', 'adRevenueTooltip', 'adRevenueEmpty',
+      ['Android', 'iOS'],
+      [
+        slice.map(s => s.androidRevenue || 0),
+        slice.map(s => s.iosRevenue || 0),
+      ],
+      dates, 900, 180,
+      [styleOf('--cat-2'), styleOf('--cat-1')]);
+
+    const fmtUsd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const totalAndroid = slice.reduce((sum, s) => sum + (s.androidRevenue || 0), 0);
+    const totalIos = slice.reduce((sum, s) => sum + (s.iosRevenue || 0), 0);
+    document.getElementById('adRevAndroid').textContent = slice.length ? fmtUsd(totalAndroid) : '—';
+    document.getElementById('adRevIos').textContent = slice.length ? fmtUsd(totalIos) : '—';
+    document.getElementById('adRevTotal').textContent = slice.length ? fmtUsd(totalAndroid + totalIos) : '—';
+
+    if (!slice.length) {
+      noteEl.textContent = '';
+      return;
+    }
+    const latest = slice[slice.length - 1];
+    noteEl.textContent = `Estimated ad revenue from AdMob's network report (typically about 1 day behind "today" — most recent figure is for ${latest.date}). Estimates only — AdMob's own dashboard is authoritative for reconciliation/payment purposes.`;
+  }
+
   function renderAll() {
     renderStats();
     renderCharts();
     renderPlatform();
     renderEngagement();
     renderRetention();
+    renderInstalls();
+    renderAdRevenue();
     renderGeography();
   }
 
@@ -860,7 +961,7 @@
     btn.addEventListener('click', () => setRange(Number(btn.dataset.range)));
   });
 
-  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); });
+  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); });
 </script>
 
 </body>
