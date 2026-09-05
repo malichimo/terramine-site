@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Merch — TerraMine</title>
+  <meta name="description" content="Official TerraMine gear — tees, hoodies, caps, and pins for real-world miners. No account required to order." />
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080C10;
+      --surface: #0F1620;
+      --border:  rgba(255,255,255,0.07);
+      --gold:    #F5C542;
+      --gold2:   #E89B1A;
+      --cyan:    #5BE5D0;
+      --white:   #EEF2F8;
+      --muted:   #6B7C93;
+      --rock:    #8A9BAE;
+      --coal:    #7B8FA1;
+      --error:   #FF8B8B;
+    }
+
+    html { scroll-behavior: smooth; overflow-x: clip; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      overflow-x: clip;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── GRID TEXTURE (matches index.html) ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91,229,208,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,229,208,0.03) 1px, transparent 1px);
+      background-size: 56px 56px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV (same structure as index.html) ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 48px;
+      background: rgba(8,12,16,0.82);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      max-width: 1320px;
+      width: min(1320px, 100%);
+      margin: 0 auto;
+      border-radius: 0 0 16px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 24px;
+      letter-spacing: -0.5px;
+      color: var(--gold);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .nav-logo span { color: var(--white); }
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      flex: 1 1 auto;
+      justify-content: center;
+    }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      transition: color 0.18s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--white); }
+    .nav-links a.active { color: var(--gold); }
+    .nav-actions { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; }
+    .nav-actions a.nav-login {
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--cyan); text-decoration: none;
+      border: 1px solid var(--cyan);
+      padding: 11px 18px; border-radius: 10px; font-size: 15px;
+      transition: all 0.2s;
+    }
+    .nav-actions a.nav-login:hover { background: rgba(91,229,208,0.1); }
+
+    @media (max-width: 860px) {
+      nav { padding: 14px 18px; border-radius: 0; width: 100%; }
+      .nav-links { display: none; }
+      .nav-logo { font-size: 18px; }
+    }
+
+    /* ── HERO ── */
+    .merch-hero {
+      position: relative; z-index: 1;
+      max-width: 760px; margin: 0 auto;
+      text-align: center;
+      padding: clamp(120px, 16vh, 160px) 24px 48px;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 500; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--cyan); margin-bottom: 20px;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: ''; width: 28px; height: 1px; background: var(--cyan); opacity: 0.5;
+    }
+    .merch-hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(36px, 6vw, 58px);
+      letter-spacing: -1.5px;
+      line-height: 1.05;
+    }
+    .merch-hero h1 em { font-style: normal; color: var(--gold); }
+    .merch-hero p {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: clamp(16px, 2vw, 19px);
+      line-height: 1.6;
+      max-width: 520px;
+      margin-left: auto; margin-right: auto;
+    }
+    .no-login-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 22px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: rgba(91,229,208,0.1);
+      border: 1px solid rgba(91,229,208,0.25);
+      color: var(--cyan);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* ── PRODUCT GRID ── */
+    .shop {
+      position: relative; z-index: 1;
+      max-width: 1080px; margin: 0 auto;
+      padding: 40px 24px 100px;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 20px;
+    }
+    @media (min-width: 900px) {
+      .product-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    }
+    @media (max-width: 560px) {
+      .product-grid { grid-template-columns: 1fr; }
+    }
+
+    .product-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .product-card:hover { transform: translateY(-3px); }
+    .product-card.rock:hover    { border-color: var(--rock); }
+    .product-card.coal:hover    { border-color: var(--coal); }
+    .product-card.gold:hover    { border-color: var(--gold); }
+    .product-card.diamond:hover { border-color: var(--cyan); }
+
+    /*
+      📸 PLACEHOLDER PRODUCT PHOTOS
+      Swap this whole .product-photo div for a real <img src="/images/merch/rock-tee.jpg" alt="..." />
+      once you have product photography. Keep the aspect ratio ~1:1 for a clean grid.
+    */
+    .product-photo {
+      aspect-ratio: 1 / 1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 56px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .product-photo::after {
+      content: 'ADD PRODUCT PHOTO';
+      position: absolute;
+      bottom: 8px; left: 0; right: 0;
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      opacity: 0.6;
+    }
+    .product-card.rock .product-photo    { color: var(--rock); }
+    .product-card.coal .product-photo    { color: var(--coal); }
+    .product-card.gold .product-photo    { color: var(--gold); }
+    .product-card.diamond .product-photo { color: var(--cyan); }
+
+    .product-body { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
+    .product-tag {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .product-card.rock .product-tag    { color: var(--rock); }
+    .product-card.coal .product-tag    { color: var(--coal); }
+    .product-card.gold .product-tag    { color: var(--gold); }
+    .product-card.diamond .product-tag { color: var(--cyan); }
+    .product-name {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px;
+      letter-spacing: -0.3px; margin-bottom: 6px;
+    }
+    .product-desc { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; flex: 1; }
+    .product-price {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
+      color: var(--white); margin-bottom: 14px;
+    }
+
+    /* PayPal button container — PayPal renders its own iframe/button inside this div */
+    .paypal-btn-container { min-height: 45px; }
+
+    .order-note {
+      max-width: 640px; margin: 48px auto 0;
+      padding: 20px 24px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px dashed rgba(255,255,255,0.14);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      text-align: center;
+    }
+    .order-note strong { color: var(--white); }
+
+    /* ── CONFIRMATION TOAST ── */
+    #order-confirmation {
+      display: none;
+      position: fixed;
+      bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 200;
+      max-width: min(92vw, 460px);
+      background: var(--surface);
+      border: 1px solid rgba(91,229,208,0.35);
+      border-radius: 14px;
+      padding: 18px 22px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+    #order-confirmation.visible { display: block; }
+    #order-confirmation .conf-title {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px;
+      color: var(--cyan); margin-bottom: 6px;
+    }
+    #order-confirmation .conf-body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    #order-error {
+      display: none;
+      position: fixed;
+      bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 200;
+      max-width: min(92vw, 460px);
+      background: var(--surface);
+      border: 1px solid rgba(255,139,139,0.4);
+      border-radius: 14px;
+      padding: 16px 20px;
+      color: var(--error);
+      font-size: 13px;
+      text-align: center;
+    }
+    #order-error.visible { display: block; }
+
+    /* ── FOOTER (matches index.html) ── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+      max-width: 920px; width: 100%;
+      margin: 0 auto;
+      padding: 48px 24px 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 24px;
+    }
+    .footer-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
+      color: var(--gold); text-decoration: none;
+    }
+    .footer-links { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color 0.18s; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 13px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 28px; width: auto;" /> <span>TerraMine</span></a>
+    <div class="nav-links">
+      <a href="/#mines">Mine Types</a>
+      <a href="/#how">How It Works</a>
+      <a href="/heatmap.html">World Map</a>
+      <a href="/guide.html">Player's Guide</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/merch.html" class="active">Merch</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/portal.html" class="nav-login">My Portal</a>
+    </div>
+  </nav>
+
+  <!-- ── HERO ── -->
+  <section class="merch-hero">
+    <p class="hero-eyebrow">Official Merch</p>
+    <h1>Wear your <em>claim.</em></h1>
+    <p>Rock, coal, gold, or diamond — repped in real life. Every order ships worldwide.</p>
+    <span class="no-login-badge">🔓 No account needed — check out as a guest</span>
+  </section>
+
+  <!-- ── SHOP ── -->
+  <section class="shop">
+    <div class="product-grid">
+
+      <!-- Product 1: Rock -->
+      <div class="product-card rock" data-name="Rock Miner Tee" data-price="24.99">
+        <div class="product-photo">👕</div>
+        <div class="product-body">
+          <p class="product-tag">Rock</p>
+          <h3 class="product-name">Rock Miner Tee</h3>
+          <p class="product-desc">Soft cotton tee with the classic Rock Mine emblem. Unisex fit.</p>
+          <p class="product-price">$24.99</p>
+          <div class="paypal-btn-container" id="paypal-btn-1"></div>
+        </div>
+      </div>
+
+      <!-- Product 2: Coal -->
+      <div class="product-card coal" data-name="Coal Miner Hoodie" data-price="44.99">
+        <div class="product-photo">🧥</div>
+        <div class="product-body">
+          <p class="product-tag">Coal</p>
+          <h3 class="product-name">Coal Miner Hoodie</h3>
+          <p class="product-desc">Heavyweight fleece hoodie, embroidered Coal Mine patch on the chest.</p>
+          <p class="product-price">$44.99</p>
+          <div class="paypal-btn-container" id="paypal-btn-2"></div>
+        </div>
+      </div>
+
+      <!-- Product 3: Gold -->
+      <div class="product-card gold" data-name="Gold Rush Cap" data-price="19.99">
+        <div class="product-photo">🧢</div>
+        <div class="product-body">
+          <p class="product-tag">Gold</p>
+          <h3 class="product-name">Gold Rush Cap</h3>
+          <p class="product-desc">Structured snapback with gold-thread TerraMine logo.</p>
+          <p class="product-price">$19.99</p>
+          <div class="paypal-btn-container" id="paypal-btn-3"></div>
+        </div>
+      </div>
+
+      <!-- Product 4: Diamond -->
+      <div class="product-card diamond" data-name="Diamond Mine Pin Set" data-price="12.99">
+        <div class="product-photo">📌</div>
+        <div class="product-body">
+          <p class="product-tag">Diamond</p>
+          <h3 class="product-name">Diamond Mine Pin Set</h3>
+          <p class="product-desc">Set of 4 enamel pins — one for each mine type. Limited run.</p>
+          <p class="product-price">$12.99</p>
+          <div class="paypal-btn-container" id="paypal-btn-4"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="order-note">
+      <strong>Starter template:</strong> product names, prices, photos, and descriptions above are
+      placeholders — replace them with real merch before launch. Every order still goes through
+      PayPal's own checkout, so you don't need any extra backend to see orders and shipping
+      addresses — check your PayPal Business dashboard after each sale.
+    </p>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <a class="footer-logo" href="/">TerraMine</a>
+    <div class="footer-links">
+      <a href="/guide.html">Player's Guide</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/heatmap.html">World Map</a>
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+      <a href="/portal.html">My Portal</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+  </footer>
+
+  <div id="order-confirmation">
+    <div class="conf-title">✅ Order placed!</div>
+    <div class="conf-body">Thanks for your order — a confirmation has been sent by PayPal. We'll email you when it ships.</div>
+  </div>
+  <div id="order-error">Something went wrong starting checkout. Please try again in a moment.</div>
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+    PAYPAL SETUP — READ BEFORE GOING LIVE
+    ═══════════════════════════════════════════════════════════════════════
+
+    1. TESTING NOW: the SDK below loads with client-id=sb, PayPal's public
+       sandbox test ID. Buttons will render and you can test the full flow
+       with a PayPal Sandbox buyer account (developer.paypal.com → Sandbox
+       → Accounts) without any account of your own. No real money moves.
+
+    2. GOING LIVE: create a REST app at developer.paypal.com (use your
+       existing scott@terramine.app PayPal Business account, or a new
+       Business account if you don't have one yet) → get its live Client ID
+       → replace "sb" in the <script src="https://www.paypal.com/sdk/js...">
+       tag below with that Client ID. That's the only required change.
+
+    3. WHERE ORDERS SHOW UP: this page has no backend — every payment is
+       processed entirely by PayPal's own hosted checkout (the popup that
+       opens when a button is clicked). You do NOT need a database or
+       server to start selling: log into paypal.com → Activity to see every
+       order, buyer, and shipping address. shipping_preference is set to
+       GET_FROM_FILE below, so PayPal collects a shipping address at
+       checkout automatically.
+
+    4. LATER (optional): if you want orders to also land in Firestore
+       automatically (e.g. to show "X sold" counts, or trigger a fulfillment
+       email), that needs a small Cloud Function that verifies the order
+       server-side via PayPal's Orders API (client-side JS alone can't be
+       trusted for that — a malicious visitor could fake the onApprove
+       callback without actually paying). Not included in this starter
+       version; ask if you want that built when you're ready to scale past
+       manually checking the PayPal dashboard.
+
+    5. PRICES: each product's price lives in the `data-price` attribute on
+       its .product-card div in the HTML above — that's the only place you
+       need to update a price, the button JS below reads it automatically.
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+  <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD&intent=capture"></script>
+  <script>
+    function showConfirmation() {
+      var el = document.getElementById('order-confirmation');
+      el.classList.add('visible');
+      setTimeout(function () { el.classList.remove('visible'); }, 8000);
+    }
+    function showError() {
+      var el = document.getElementById('order-error');
+      el.classList.add('visible');
+      setTimeout(function () { el.classList.remove('visible'); }, 6000);
+    }
+
+    // Render one PayPal Buttons instance per product card.
+    document.querySelectorAll('.product-card').forEach(function (card, index) {
+      var name = card.getAttribute('data-name');
+      var price = card.getAttribute('data-price');
+      var containerId = 'paypal-btn-' + (index + 1);
+      var container = document.getElementById(containerId);
+      if (!container || typeof paypal === 'undefined') return;
+
+      paypal.Buttons({
+        style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'buynow', height: 40 },
+
+        createOrder: function (data, actions) {
+          return actions.order.create({
+            intent: 'CAPTURE',
+            purchase_units: [{
+              description: name,
+              amount: { currency_code: 'USD', value: price }
+            }],
+            // Collects a shipping address from the buyer during PayPal
+            // checkout — needed since this is physical merch, not a
+            // digital good. See setup note #3 above.
+            application_context: {
+              shipping_preference: 'GET_FROM_FILE'
+            }
+          });
+        },
+
+        onApprove: function (data, actions) {
+          return actions.order.capture().then(function (details) {
+            console.log('Order captured:', details.id, name);
+            showConfirmation();
+          });
+        },
+
+        onError: function (err) {
+          console.error('PayPal checkout error:', err);
+          showError();
+        }
+      }).render('#' + containerId);
+    });
+  </script>
+
+</body>
+</html>
