@@ -962,9 +962,28 @@
     return Math.floor(diff/86400) + 'd ago';
   }
 
-  function shortDate(iso) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
+  // Normalizes either an ISO string or a Firestore Timestamp object to
+  // epoch millis. Added Sept 6, 2026 — propertyDetails.lastUpdated is
+  // written as a mix of ISO strings and Firestore Timestamps depending on
+  // which code path last touched it (see ToS_Inactivity_Enforcement doc),
+  // and `new Date(timestampObject)` silently produces an Invalid Date, so
+  // anything reading that field needs to go through this first.
+  function toMillis(value) {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      const t = new Date(value).getTime();
+      return isNaN(t) ? null : t;
+    }
+    if (typeof value.toMillis === 'function') return value.toMillis();
+    if (typeof value.toDate === 'function') return value.toDate().getTime();
+    if (typeof value.seconds === 'number') return value.seconds * 1000;
+    return null;
+  }
+
+  function shortDate(value) {
+    const ms = toMillis(value);
+    if (ms === null) return '—';
+    return new Date(ms).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' });
   }
 
   function truncate(s, n) {
@@ -1284,6 +1303,15 @@
     return Math.floor((Date.now() - new Date(lastActiveAt).getTime()) / DAY_MS);
   }
 
+  // Same as daysIdle() but tolerant of Firestore Timestamp objects (see
+  // toMillis() above) — used for propertyDetails.lastUpdated, which is not
+  // consistently a string the way users.lastActiveAt is.
+  function daysIdleFromAny(value) {
+    const ms = toMillis(value);
+    if (ms === null) return 9999;
+    return Math.floor((Date.now() - ms) / DAY_MS);
+  }
+
   function inactivityStatus(days) {
     if (days >= THRESHOLDS.FORFEITED) return { label: '🔴 Forfeit', cls: 'badge-danger' };
     if (days >= THRESHOLDS.WARN_4)    return { label: '🔴 Forfeit Tomorrow', cls: 'badge-danger' };
@@ -1295,11 +1323,21 @@
     return null;
   }
 
-  function taInactivityStatus(days) {
+  // `earningsSuspended` is the live boolean enforcePropertyInactivity() /
+  // computePropertyRentRate() actually act on (functions/src/index.ts) —
+  // pass it in so the "stopped" tier reflects real enforcement state
+  // instead of re-deriving it from days alone. If `days` says a property
+  // is 180+ idle but the backend never actually flagged it, that's worth
+  // surfacing as its own state (possible missed sweep / field-type
+  // mismatch) rather than silently claiming earnings stopped when they
+  // may not have. Added Sept 6, 2026 alongside the lastUpdated field fix
+  // — see AdminDashboard_InactivityReport_StaleField_Bug_2026-09-06.
+  function taInactivityStatus(days, earningsSuspended) {
     if (days >= THRESHOLDS.FORFEITED) return { label: '🔴 TA Forfeit', cls: 'badge-danger' };
     if (days >= THRESHOLDS.WARN_4)    return { label: '🔴 Forfeit Tomorrow', cls: 'badge-danger' };
     if (days >= THRESHOLDS.WARN_3)    return { label: '🟠 11mo Warning', cls: 'badge-warn' };
-    if (days >= THRESHOLDS.SUSPENDED) return { label: '🔴 Earning Stopped', cls: 'badge-danger' };
+    if (earningsSuspended)            return { label: '🔴 Earning Stopped', cls: 'badge-danger' };
+    if (days >= THRESHOLDS.SUSPENDED) return { label: '🔶 Idle 180+, Not Flagged', cls: 'badge-warn' };
     if (days >= THRESHOLDS.WARN_2)    return { label: '🟠 Stop Tomorrow', cls: 'badge-warn' };
     if (days >= THRESHOLDS.WARN_1)    return { label: '🟡 5mo Warning', cls: 'badge-warn' };
     if (days >= THRESHOLDS.APPROACHING) return { label: '🟡 Approaching', cls: 'badge-amber' };
@@ -1334,16 +1372,40 @@
 
       // ── Load properties — narrowed to only docs that could possibly
       // qualify for ANY inactivity tier (120+ days idle, the lowest
-      // threshold below). purchaseProperty() unconditionally sets
-      // lastActivityAt at creation (functions/src/index.ts), so every
-      // property has this field — safe to filter on server-side instead of
-      // downloading all 656K+ docs just to throw away the ~99% that are
-      // recently active.
+      // threshold below).
+      //
+      // Sept 6, 2026 fix: this used to narrow on properties.lastActivityAt,
+      // but that field is only stamped at purchase, on a property
+      // name/photo edit, or by one narrow Cloud Function path — NOT by
+      // regular gameplay — so actively-played properties were showing up
+      // here as falsely "Earning Stopped" (confirmed on 417006_-711709:
+      // lastActivityAt said 191 days idle while the property had actually
+      // been played 28 days prior). The real enforcement function,
+      // enforcePropertyInactivity() in functions/src/index.ts, keys off
+      // propertyDetails/{id}.lastUpdated instead — that field IS bumped on
+      // every game completion / daily reset — so narrow on that same field
+      // here to match what's actually enforced. See
+      // AdminDashboard_InactivityReport_StaleField_Bug_2026-09-06 for the
+      // full writeup.
       const cutoffISO = new Date(Date.now() - THRESHOLDS.APPROACHING * DAY_MS).toISOString();
-      const propsSnap = await getDocs(
-        query(propsCol, where('lastActivityAt', '<', cutoffISO))
+      const propertyDetailsCol = collection(db, 'propertyDetails');
+      const idleDetailsSnap = await getDocs(
+        query(propertyDetailsCol, where('lastUpdated', '<', cutoffISO))
       );
-      const props = propsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const idleDetails = idleDetailsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // propertyDetails carries no ownerId/mineType/earningsSuspended of its
+      // own — join against properties/{id} for those, same as the
+      // enforcement function itself does. A missing properties doc means
+      // the property was already demolished/forfeited (orphaned
+      // propertyDetails) — skip it, nothing to flag.
+      const props = (await Promise.all(
+        idleDetails.map(async (details) => {
+          const propSnap = await getDoc(doc(db, 'properties', details.id));
+          if (!propSnap.exists()) return null;
+          return { id: details.id, ...propSnap.data(), _lastUpdated: details.lastUpdated };
+        })
+      )).filter(Boolean);
 
       // Build owner lookup
       const ownerMap = {};
@@ -1398,12 +1460,16 @@
       const atRiskTAs = [];
 
       props.forEach(p => {
-        const lastActivity = p.lastActivityAt || p.purchasedAt || null;
-        const days = daysIdle(lastActivity);
-        const st = taInactivityStatus(days);
+        // _lastUpdated is propertyDetails.lastUpdated (the real activity
+        // clock, see the load step above) — may be an ISO string or a
+        // Firestore Timestamp depending on which write path last touched
+        // it, hence daysIdleFromAny() rather than daysIdle().
+        const lastActivity = p._lastUpdated;
+        const days = daysIdleFromAny(lastActivity);
+        const st = taInactivityStatus(days, p.earningsSuspended === true);
         if (!st) return;
         const owner = ownerMap[p.ownerId];
-        atRiskTAs.push({ ...p, days, status: st, ownerNickname: owner?.nickname || p.ownerId?.substring(0,8) || '—' });
+        atRiskTAs.push({ ...p, days, lastActivity, status: st, ownerNickname: owner?.nickname || p.ownerId?.substring(0,8) || '—' });
       });
 
       atRiskTAs.sort((a, b) => b.days - a.days);
@@ -1416,7 +1482,7 @@
             <td class="td-muted" style="font-size:10px;">${p.id.substring(0,14)}</td>
             <td>${truncate(p.ownerNickname, 16)}</td>
             <td>${mineEmoji[p.mineType] || '⛏️'} ${p.mineType || '—'}</td>
-            <td class="td-muted">${p.lastActivityAt ? shortDate(p.lastActivityAt) : (p.purchasedAt ? shortDate(p.purchasedAt) : 'Unknown')}</td>
+            <td class="td-muted">${p.lastActivity ? shortDate(p.lastActivity) : (p.purchasedAt ? shortDate(p.purchasedAt) : 'Unknown')}</td>
             <td class="${p.days >= THRESHOLDS.SUSPENDED ? 'td-gold' : 'td-muted'}">${p.days === 9999 ? '∞' : p.days}d</td>
             <td><span class="stat-badge ${p.status.cls}">${p.status.label}</span></td>
           </tr>`).join('')
