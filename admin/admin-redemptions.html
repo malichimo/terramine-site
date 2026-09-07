@@ -22,6 +22,7 @@
     --border: rgba(200,146,42,0.15);
     --purple: #9b7fe8;
     --orange: #e07b20;
+    --teal: #3fb8a8;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
@@ -81,6 +82,22 @@
   .period-tab.active { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
   .period-tab .count { opacity:0.7; margin-left:4px; }
 
+  /* Search */
+  .search-input {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 14px;
+    color:var(--text);
+    font-family:'DM Mono',monospace;
+    font-size:12px;
+    outline:none;
+    width:300px;
+    transition:border-color 0.15s;
+  }
+  .search-input::placeholder { color:var(--text-muted); }
+  .search-input:focus { border-color:var(--gold); }
+
   /* Table */
   .table-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
   .table-header {
@@ -93,8 +110,11 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
   }
-  .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; }
+  .table-header-right { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; white-space:nowrap; }
   .table-scroll { overflow-x:auto; }
   table { width:100%; border-collapse:collapse; font-size:12px; }
   thead th {
@@ -121,6 +141,7 @@
   .td-gold { color:var(--gold-light); font-weight:500; }
   .td-green { color:var(--green); }
   .td-red { color:var(--red); }
+  .ref-code { font-size:10px; color:var(--text-muted); margin-top:2px; letter-spacing:0.5px; }
   .copy-cell { display:flex; align-items:center; gap:6px; }
   .copy-id-btn {
     background:none;
@@ -152,7 +173,9 @@
   .badge-blue { background:rgba(74,159,212,0.15); color:var(--blue); }
   .badge-muted { background:rgba(138,117,96,0.1); color:var(--text-muted); }
   .badge-purple { background:rgba(155,127,232,0.15); color:var(--purple); }
+  .badge-teal { background:rgba(63,184,168,0.15); color:var(--teal); }
   .flag-note { font-size:10px; color:var(--purple); margin-top:4px; max-width:220px; white-space:normal; }
+  .info-note { font-size:10px; color:var(--teal); margin-top:4px; max-width:220px; white-space:normal; }
 
   .action-btn {
     background:var(--surface2);
@@ -171,6 +194,10 @@
   .action-btn.paid:hover { background:rgba(76,175,110,0.15); }
   .action-btn.reject { border-color:var(--red); color:var(--red); }
   .action-btn.reject:hover { background:rgba(224,80,80,0.15); }
+  .action-btn.info { border-color:var(--teal); color:var(--teal); }
+  .action-btn.info:hover { background:rgba(63,184,168,0.15); }
+  .action-btn.reopen { border-color:var(--blue); color:var(--blue); }
+  .action-btn.reopen:hover { background:rgba(74,159,212,0.15); }
   .processed-note { font-size:10px; color:var(--text-muted); margin-top:4px; max-width:220px; white-space:normal; }
 
   .empty-row td { padding:32px; text-align:center; color:var(--text-muted); font-size:12px; }
@@ -233,6 +260,7 @@
 
   <div class="period-tabs" id="statusTabs">
     <button class="period-tab" data-tab="needsAttention" onclick="setTab('needsAttention', this)">Needs Attention <span class="count" id="count-needsAttention">0</span></button>
+    <button class="period-tab" data-tab="needsInfo" onclick="setTab('needsInfo', this)">💬 Needs Info <span class="count" id="count-needsInfo">0</span></button>
     <button class="period-tab" data-tab="flagged" onclick="setTab('flagged', this)">🚩 Flagged <span class="count" id="count-flagged">0</span></button>
     <button class="period-tab" data-tab="paid" onclick="setTab('paid', this)">Paid <span class="count" id="count-paid">0</span></button>
     <button class="period-tab" data-tab="rejected" onclick="setTab('rejected', this)">Rejected <span class="count" id="count-rejected">0</span></button>
@@ -243,7 +271,10 @@
   <div class="table-card">
     <div class="table-header">
       <span>Redemption Requests</span>
-      <span class="table-count" id="tableCount">— requests</span>
+      <div class="table-header-right">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, or referral code…" oninput="onSearchInput()">
+        <span class="table-count" id="tableCount">— requests</span>
+      </div>
     </div>
     <div class="table-scroll">
       <table>
@@ -276,6 +307,20 @@
     <div class="modal-actions">
       <button class="modal-btn" onclick="closeRejectModal()">Cancel</button>
       <button class="modal-btn danger" id="confirmRejectBtn" onclick="confirmReject()">Reject &amp; Refund</button>
+    </div>
+  </div>
+</div>
+
+<!-- Needs-Info note modal -->
+<div class="modal-overlay" id="needsInfoModal">
+  <div class="modal-card">
+    <div class="modal-title">Mark as Needs Info</div>
+    <div class="modal-sub" id="needsInfoModalSub">—</div>
+    <textarea class="modal-textarea" id="needsInfoNote" placeholder="Note (required — internal only, never shown to the player)"></textarea>
+    <div id="needsInfoModalError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeNeedsInfoModal()">Cancel</button>
+      <button class="modal-btn danger" style="background:var(--teal);border-color:var(--teal);" onclick="confirmNeedsInfo()">Mark Needs Info</button>
     </div>
   </div>
 </div>
@@ -320,11 +365,13 @@
   const adminUpdateWithdrawalStatus = httpsCallable(functions, 'adminUpdateWithdrawalStatus');
 
   // ── State ──────────────────────────────────────────────────────────────
-  let allRequests = [];       // every withdrawalRequests doc, joined with nickname
+  let allRequests = [];       // every withdrawalRequests doc, joined with nickname + referralCode
   let currentTab = 'needsAttention';
   let sortKey = 'requestedAt';
   let sortDir = -1;           // newest first by default
-  const nicknameCache = new Map(); // userId -> nickname, avoids refetching for repeat requesters
+  let searchQuery = '';       // lowercased, matched against amount/date/email/referralCode
+  const nicknameCache = new Map();     // userId -> nickname, avoids refetching for repeat requesters
+  const referralCodeCache = new Map(); // userId -> referralCode, fetched alongside nickname (same doc read)
 
   // ── Auth ───────────────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
@@ -364,28 +411,37 @@
     const snap = await getDocs(query(collection(db, 'withdrawalRequests'), orderBy('requestedAt', 'desc')));
     const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Resolve nicknames — one getDoc per DISTINCT userId, cached across reloads.
+    // Resolve nickname + referralCode — one getDoc per DISTINCT userId, cached across reloads.
     const uniqueUserIds = [...new Set(raw.map(r => r.userId).filter(Boolean))];
     await Promise.all(uniqueUserIds.map(async (uid) => {
       if (nicknameCache.has(uid)) return;
       try {
         const uSnap = await getDoc(doc(db, 'users', uid));
-        const nickname = uSnap.exists() ? (uSnap.data().nickname || null) : null;
-        nicknameCache.set(uid, nickname || uid.substring(0, 8));
+        const udata = uSnap.exists() ? uSnap.data() : null;
+        nicknameCache.set(uid, (udata && udata.nickname) || uid.substring(0, 8));
+        referralCodeCache.set(uid, (udata && udata.referralCode) || null);
       } catch (e) {
         nicknameCache.set(uid, uid.substring(0, 8));
+        referralCodeCache.set(uid, null);
       }
     }));
 
-    allRequests = raw.map(r => ({ ...r, nickname: nicknameCache.get(r.userId) || '—' }));
+    allRequests = raw.map(r => ({
+      ...r,
+      nickname: nicknameCache.get(r.userId) || '—',
+      referralCode: referralCodeCache.get(r.userId) || null,
+    }));
 
     updateTabCounts();
     render();
   }
 
   function updateTabCounts() {
+    // Counts always reflect the full set for the current tab (unaffected by
+    // search) so the admin can see true totals at a glance.
     const needsAttention = allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').length;
     document.getElementById('count-needsAttention').textContent = needsAttention;
+    document.getElementById('count-needsInfo').textContent = allRequests.filter(r => r.status === 'needs_info').length;
     document.getElementById('count-flagged').textContent = allRequests.filter(r => r.flaggedForReview).length;
     document.getElementById('count-paid').textContent = allRequests.filter(r => r.status === 'paid').length;
     document.getElementById('count-rejected').textContent = allRequests.filter(r => r.status === 'rejected').length;
@@ -400,6 +456,28 @@
     render();
   };
 
+  // ── Search ─────────────────────────────────────────────────────────────
+  window.onSearchInput = () => {
+    searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+    render();
+  };
+
+  function applySearch(list) {
+    if (!searchQuery) return list;
+    return list.filter(r => {
+      const amountUsd = typeof r.amountUsd === 'number' ? r.amountUsd.toFixed(2) : '';
+      const netAmountUsd = typeof r.netAmountUsd === 'number' ? r.netAmountUsd.toFixed(2) : amountUsd;
+      const dateOnly = r.requestedAt ? new Date(r.requestedAt).toLocaleDateString().toLowerCase() : '';
+      const email = (r.paypalEmail || '').toLowerCase();
+      const refCode = (r.referralCode || '').toLowerCase();
+      return amountUsd.includes(searchQuery)
+        || netAmountUsd.includes(searchQuery)
+        || dateOnly.includes(searchQuery)
+        || email.includes(searchQuery)
+        || refCode.includes(searchQuery);
+    });
+  }
+
   // ── Sort ───────────────────────────────────────────────────────────────
   window.sortBy = (key) => {
     if (sortKey === key) sortDir *= -1;
@@ -410,12 +488,13 @@
   function filteredForTab() {
     if (currentTab === 'all') return allRequests;
     if (currentTab === 'needsAttention') return allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid');
+    if (currentTab === 'needsInfo') return allRequests.filter(r => r.status === 'needs_info');
     if (currentTab === 'flagged') return allRequests.filter(r => r.flaggedForReview);
     return allRequests.filter(r => r.status === currentTab);
   }
 
   function render() {
-    const filtered = filteredForTab();
+    const filtered = applySearch(filteredForTab());
     const sorted = [...filtered].sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey];
       if (sortKey === 'requestedAt') {
@@ -445,7 +524,10 @@
 
       return `
         <tr>
-          <td class="td-gold">${escHtml(r.nickname)}</td>
+          <td class="td-gold">
+            ${escHtml(r.nickname)}
+            ${r.referralCode ? `<div class="ref-code">${escHtml(r.referralCode)}</div>` : ''}
+          </td>
           <td>
             <div class="copy-cell">
               <span>${escHtml(r.paypalEmail || '—')}</span>
@@ -481,16 +563,26 @@
     if (r.status === 'pending') {
       actions = `
         <div>
-          <button class="action-btn paid" onclick="approveRequest('${r.id}','${escAttr(r.nickname)}')">Approve</button>
+          <button class="action-btn paid" onclick="approveAndPay('${r.id}','${escAttr(r.nickname)}')">Paid</button>
+          <button class="action-btn info" onclick="openNeedsInfoModal('${r.id}','${escAttr(r.nickname)}')">Needs Info</button>
           <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
         </div>`;
     } else if (r.status === 'approved_unpaid') {
       actions = `
         <div>
           <button class="action-btn paid" onclick="markPaid('${r.id}','${escAttr(r.nickname)}')">Mark Paid</button>
+          <button class="action-btn info" onclick="openNeedsInfoModal('${r.id}','${escAttr(r.nickname)}')">Needs Info</button>
           <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
         </div>`;
       note += `<div class="processed-note">Reviewed — pay via PayPal, then Mark Paid</div>`;
+    } else if (r.status === 'needs_info') {
+      actions = `
+        <div>
+          <button class="action-btn reopen" onclick="reopenRequest('${r.id}','${escAttr(r.nickname)}')">Reopen</button>
+          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
+        </div>`;
+      const infoAtStr = r.infoRequestedAt ? new Date(r.infoRequestedAt).toLocaleString() : '';
+      note += `<div class="info-note">Internal note: ${escHtml(r.infoRequestNote || '—')}${infoAtStr ? ' — ' + escHtml(infoAtStr) : ''}</div>`;
     } else if (r.status === 'rejected' && r.rejectionReason) {
       note += `<div class="processed-note">Reason: ${escHtml(r.rejectionReason)}</div>`;
     } else if (r.status === 'failed' && r.rejectionReason) {
@@ -504,6 +596,7 @@
     const map = {
       pending: ['badge-amber', 'PENDING'],
       approved_unpaid: ['badge-blue', 'APPROVED · UNPAID'],
+      needs_info: ['badge-teal', 'NEEDS INFO'],
       paid: ['badge-green', 'PAID'],
       rejected: ['badge-red', 'REJECTED'],
       failed: ['badge-red', 'FAILED'],
@@ -513,18 +606,35 @@
   }
 
   // ── Actions ────────────────────────────────────────────────────────────
-  window.approveRequest = async (requestId, nickname) => {
-    if (!confirm(`Approve ${nickname}'s redemption?\n\nThis re-checks the amount, PayPal email, account status, $200/30-day cap, and 24h cooldown against live data before approving. If anything's off, it'll tell you why instead of approving.`)) return;
+  // Paid (from 'pending'): does the same re-validation "Approve" used to do
+  // (amount, PayPal email, account status, $200/30-day cap, 24h cooldown),
+  // then immediately marks paid — one click instead of two, since in
+  // practice both happen in the same sitting during the morning batch.
+  window.approveAndPay = async (requestId, nickname) => {
+    if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nThis re-checks the amount, PayPal email, account status, $200/30-day cap, and 24h cooldown, then marks it paid in one step. Only do this AFTER you've actually sent the net payout via PayPal — if anything's off, it'll tell you why instead of marking paid.`)) return;
+
     try {
       await adminUpdateWithdrawalStatus({ requestId, newStatus: 'approved_unpaid' });
-      showToast(`Approved ${nickname}'s redemption — ready to pay`, 'success');
-      await loadAll();
     } catch (e) {
       console.error(e);
       showToast(e?.message || 'Failed to approve request', 'error');
+      await loadAll();
+      return;
     }
+
+    try {
+      await adminUpdateWithdrawalStatus({ requestId, newStatus: 'paid' });
+      showToast(`Marked ${nickname}'s redemption as paid`, 'success');
+    } catch (e) {
+      console.error(e);
+      showToast(`Approved, but marking paid failed — use "Mark Paid" below to finish. (${e?.message || 'unknown error'})`, 'error');
+    }
+    await loadAll();
   };
 
+  // Mark Paid (from 'approved_unpaid'): unchanged — still needed for any
+  // request already sitting in the approved-but-unpaid state (e.g. a prior
+  // approval, or the fallback above if the second step failed).
   window.markPaid = async (requestId, nickname) => {
     if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nOnly do this after you've actually sent the net payout via PayPal.`)) return;
     try {
@@ -566,6 +676,55 @@
       console.error(e);
       errEl.textContent = e?.message || 'Failed to reject request';
       errEl.style.display = 'block';
+    }
+  };
+
+  // Needs Info: parks a request (from 'pending' or 'approved_unpaid') pending
+  // something further from the player. No money moves. The note is internal
+  // only — shown in the admin table, never surfaced to the player.
+  let pendingNeedsInfoId = null;
+  window.openNeedsInfoModal = (requestId, nickname) => {
+    pendingNeedsInfoId = requestId;
+    document.getElementById('needsInfoModalSub').textContent = `${nickname} — this note is internal only and won't be shown to the player.`;
+    document.getElementById('needsInfoNote').value = '';
+    document.getElementById('needsInfoModalError').style.display = 'none';
+    document.getElementById('needsInfoModal').classList.add('open');
+  };
+  window.closeNeedsInfoModal = () => {
+    document.getElementById('needsInfoModal').classList.remove('open');
+    pendingNeedsInfoId = null;
+  };
+  window.confirmNeedsInfo = async () => {
+    const reason = document.getElementById('needsInfoNote').value.trim();
+    const errEl = document.getElementById('needsInfoModalError');
+    if (!reason) {
+      errEl.textContent = 'A note is required.';
+      errEl.style.display = 'block';
+      return;
+    }
+    try {
+      await adminUpdateWithdrawalStatus({ requestId: pendingNeedsInfoId, newStatus: 'needs_info', reason });
+      closeNeedsInfoModal();
+      showToast('Marked as needing more info', 'success');
+      await loadAll();
+    } catch (e) {
+      console.error(e);
+      errEl.textContent = e?.message || 'Failed to update status';
+      errEl.style.display = 'block';
+    }
+  };
+
+  // Reopen: the only way back from 'needs_info' to 'pending', once whatever
+  // was needed from the player has come in.
+  window.reopenRequest = async (requestId, nickname) => {
+    if (!confirm(`Reopen ${nickname}'s request back to Pending?`)) return;
+    try {
+      await adminUpdateWithdrawalStatus({ requestId, newStatus: 'pending' });
+      showToast(`Reopened ${nickname}'s request`, 'success');
+      await loadAll();
+    } catch (e) {
+      console.error(e);
+      showToast(e?.message || 'Failed to reopen request', 'error');
     }
   };
 
