@@ -3,14 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ✅ Sept 7, 2026: noindex — this is a login-gated app shell with no
+       content for an anonymous visitor or crawler (AdSense flagged the
+       site for "Low value content"; see claude/AdSense_LowValueContent_Fix_2026-09-07.md). -->
+  <meta name="robots" content="noindex, nofollow" />
   <title>TerraMine Portal</title>
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="portal.css" />
+  <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
+       shell with no content for a logged-out visitor; serving/requesting
+       ads here was a likely contributor to AdSense's "Low value content"
+       rejection. See claude/AdSense_LowValueContent_Fix_2026-09-07.md. -->
   <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
        already verified via ads.txt at the site root). -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4502698429383902" crossorigin="anonymous"></script>
+  <!-- (adsbygoogle.js removed — see comment above) -->
 </head>
 <body>
 
@@ -100,16 +108,8 @@
         </div>
       </nav>
 
-      <!-- ═══ AD BANNER ═══ -->
-      <!-- ✅ Aug 25, 2026: real AdSense slot ID applied (TerraMine Site Banner, slot 5814017695) -->
-      <div class="ad-banner-wrap">
-        <span class="ad-banner-label">Advertisement</span>
-        <ins class="adsbygoogle"
-             style="display:inline-block;width:728px;height:90px;max-width:100%;"
-             data-ad-client="ca-pub-4502698429383902"
-             data-ad-slot="5814017695"></ins>
-      </div>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      <!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
+           login-gated shell — see claude/AdSense_LowValueContent_Fix_2026-09-07.md -->
 
       <!-- Main -->
       <main class="main" id="main-content">
