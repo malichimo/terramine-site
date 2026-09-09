@@ -200,6 +200,12 @@
   .action-btn.reopen:hover { background:rgba(74,159,212,0.15); }
   .processed-note { font-size:10px; color:var(--text-muted); margin-top:4px; max-width:220px; white-space:normal; }
 
+  .fraud-check { margin:6px 0; }
+  .fraud-check label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); cursor:pointer; user-select:none; }
+  .fraud-check input[type="checkbox"] { accent-color:var(--gold); width:13px; height:13px; cursor:pointer; }
+  .fraud-check.checked label { color:var(--green); }
+  .fraud-check-note { font-size:9px; color:var(--text-muted); margin-top:2px; margin-left:19px; }
+
   .empty-row td { padding:32px; text-align:center; color:var(--text-muted); font-size:12px; }
 
   /* Login overlay */
@@ -344,7 +350,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
-    getFirestore, collection, getDocs, doc, getDoc, query, orderBy
+    getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
   import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
@@ -555,6 +561,23 @@
     let actions = '';
     let note = '';
 
+    // Fraud-check checkbox — a manual "I looked at this requester's referral
+    // history before paying" flag (Sept 9, 2026, Scott). Independent of
+    // status: doesn't move money or affect adminUpdateWithdrawalStatus's own
+    // validation, it's purely a personal review record so a held/pending
+    // request shows whether it's already been vetted. Written directly to
+    // Firestore (isAdmin() already grants update on this collection) rather
+    // than through the Cloud Function, since nothing here needs server-side
+    // validation.
+    const fraudCheck = `
+      <div class="fraud-check${r.fraudChecked ? ' checked' : ''}">
+        <label>
+          <input type="checkbox" ${r.fraudChecked ? 'checked' : ''} onchange="toggleFraudCheck('${r.id}', this.checked)">
+          ${r.fraudChecked ? '✅ Referral fraud checked' : 'Referral fraud checked?'}
+        </label>
+        ${r.fraudChecked && r.fraudCheckedAt ? `<div class="fraud-check-note">${escHtml(r.fraudCheckedBy || '—')} — ${new Date(r.fraudCheckedAt).toLocaleString()}</div>` : ''}
+      </div>`;
+
     if (r.flaggedForReview) {
       const flaggedAtStr = r.flaggedAt ? new Date(r.flaggedAt).toLocaleString() : '';
       note += `<div class="flag-note">${escHtml(r.flagReason || 'Flagged for review')}${flaggedAtStr ? ' — ' + escHtml(flaggedAtStr) : ''}</div>`;
@@ -589,7 +612,7 @@
       note += `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
     }
 
-    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${actions}${note}`;
+    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${fraudCheck}${actions}${note}`;
   }
 
   function statusBadge(status) {
@@ -725,6 +748,33 @@
     } catch (e) {
       console.error(e);
       showToast(e?.message || 'Failed to reopen request', 'error');
+    }
+  };
+
+  // Fraud-check toggle: writes straight to Firestore (isAdmin() already
+  // grants update on withdrawalRequests — see firestore.rules), records who
+  // checked it and when. Updates local state + re-renders instead of a full
+  // loadAll() so the table doesn't flicker/reset scroll on every click.
+  window.toggleFraudCheck = async (requestId, checked) => {
+    const nowIso = new Date().toISOString();
+    const byEmail = auth.currentUser?.email || null;
+    try {
+      await updateDoc(doc(db, 'withdrawalRequests', requestId), {
+        fraudChecked: checked,
+        fraudCheckedAt: checked ? nowIso : null,
+        fraudCheckedBy: checked ? byEmail : null,
+      });
+      const req = allRequests.find(r => r.id === requestId);
+      if (req) {
+        req.fraudChecked = checked;
+        req.fraudCheckedAt = checked ? nowIso : null;
+        req.fraudCheckedBy = checked ? byEmail : null;
+      }
+      render();
+    } catch (e) {
+      console.error(e);
+      showToast(e?.message || 'Failed to update fraud-check flag', 'error');
+      await loadAll(); // resync the checkbox to actual Firestore state
     }
   };
 
