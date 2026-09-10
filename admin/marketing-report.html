@@ -95,6 +95,26 @@
   .range-btn.active{ background: var(--surface); color: var(--accent-strong); box-shadow: var(--shadow); }
   .scope-note{ font-size:12.5px; color: var(--text-muted); max-width:420px; }
 
+  .custom-range-panel{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background: var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px; margin-bottom:18px; box-shadow: var(--shadow);
+  }
+  .custom-range-panel label{
+    display:flex; align-items:center; gap:6px; font-size:12.5px; color: var(--text-secondary);
+  }
+  .custom-range-panel input[type=date]{
+    font-family: inherit; font-size:12.5px; padding:5px 8px; border-radius:7px;
+    border:1px solid var(--border); background: var(--bg); color: var(--text-primary);
+  }
+  .custom-range-panel button{
+    font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:7px; border:none;
+    background: var(--accent); color:#fff; cursor:pointer; font-family:inherit;
+  }
+  .custom-range-panel button:hover{ background: var(--accent-strong); }
+  #customRangeError{ font-size:12px; color:#b23434; }
+  .active-range-label{ font-size:12px; color: var(--text-muted); margin-bottom:18px; }
+
   .stat-grid{
     display:grid; grid-template-columns: repeat(5, 1fr); gap:14px; margin-bottom: 32px;
   }
@@ -112,6 +132,17 @@
   .stat-tile .delta.up{ color: var(--good); }
   .stat-tile .delta.down{ color:#b23434; }
   .stat-tile .delta .base{ color: var(--text-muted); }
+
+  /* Sept 10, 2026 (Scott) -- GA4-style comparative-period deltas, rolled out
+     from the one stat-tile that already had this (New users) to the
+     Installs, DAU, Engagement, and Ad Revenue side-stats too. Same visual
+     language (▲/▼, good/bad color, "vs prior period"), just scoped to
+     .side-stat instead of .stat-tile since those live in a different panel
+     layout. */
+  .side-stat .delta{ font-size:12px; margin-top:4px; }
+  .side-stat .delta.up{ color: var(--good); }
+  .side-stat .delta.down{ color:#b23434; }
+  .side-stat .delta .base{ color: var(--text-muted); }
 
   .section{ margin-bottom: 30px; }
   .section-head{
@@ -218,9 +249,26 @@
         <button data-range="7" class="range-btn">Last 7 days</button>
         <button data-range="30" class="range-btn active">Last 30 days</button>
         <button data-range="90" class="range-btn">Last 90 days</button>
+        <button id="customRangeToggle" class="range-btn">Custom…</button>
       </div>
       <p class="scope-note">Live data. Figures below reflect exactly what's tracked today — see "Coming next" for what isn't yet.</p>
     </div>
+
+    <!-- Sept 10, 2026 (Mike/Scott) -- custom date range, one of Mike's five
+         asks. Hidden until "Custom…" is clicked; applying it switches every
+         section below from the day-count presets to an exact date window
+         (see customRange in the script below), so a specific campaign
+         window or reporting period can be pulled up directly instead of
+         only ever "last 7/30/90 days from today." Bounded to whatever
+         history is actually loaded (up to 90 days back, same ceiling the
+         presets already have) via min/max set once data loads. -->
+    <div class="custom-range-panel" id="customRangePanel" style="display:none;">
+      <label>From <input type="date" id="customStart"></label>
+      <label>To <input type="date" id="customEnd"></label>
+      <button id="applyCustomRange">Apply</button>
+      <span id="customRangeError"></span>
+    </div>
+    <div id="activeRangeLabel" class="active-range-label"></div>
 
     <div class="stat-grid" id="statGrid"></div>
 
@@ -267,12 +315,17 @@
         </div>
         <p class="section-desc">DAU each day, over the selected range.</p>
       </div>
-      <div class="panel">
-        <div class="chart-wrap">
-          <svg class="chart-svg" id="dauChart" viewBox="0 0 900 160" preserveAspectRatio="none"></svg>
-          <div class="tooltip" id="dauTooltip"></div>
+      <div class="panel panel-row">
+        <div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="dauChart" viewBox="0 0 900 160" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="dauTooltip"></div>
+          </div>
+          <div id="dauEmpty" class="empty-state" style="display:none;"></div>
         </div>
-        <div id="dauEmpty" class="empty-state" style="display:none;"></div>
+        <div>
+          <div class="side-stat"><div class="k">Avg. DAU / day (period)</div><div class="v" id="avgDau">—</div><div class="delta" id="avgDauDelta"></div></div>
+        </div>
       </div>
     </section>
 
@@ -298,9 +351,9 @@
           <div id="engEmpty" class="empty-state" style="display:none;"></div>
         </div>
         <div>
-          <div class="side-stat"><div class="k">Avg. check-ins / day</div><div class="v" id="avgCheckIns">—</div></div>
-          <div class="side-stat"><div class="k">Avg. games played / day</div><div class="v" id="avgGames">—</div></div>
-          <div class="side-stat"><div class="k">Avg. properties purchased / day</div><div class="v" id="avgPurchases">—</div></div>
+          <div class="side-stat"><div class="k">Avg. check-ins / day</div><div class="v" id="avgCheckIns">—</div><div class="delta" id="avgCheckInsDelta"></div></div>
+          <div class="side-stat"><div class="k">Avg. games played / day</div><div class="v" id="avgGames">—</div><div class="delta" id="avgGamesDelta"></div></div>
+          <div class="side-stat"><div class="k">Avg. properties purchased / day</div><div class="v" id="avgPurchases">—</div><div class="delta" id="avgPurchasesDelta"></div></div>
         </div>
       </div>
     </section>
@@ -356,9 +409,9 @@
           <p id="adRevenueNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
         </div>
         <div>
-          <div class="side-stat"><div class="k">Android revenue (period)</div><div class="v" id="adRevAndroid">—</div></div>
-          <div class="side-stat"><div class="k">iOS revenue (period)</div><div class="v" id="adRevIos">—</div></div>
-          <div class="side-stat"><div class="k">Total revenue (period)</div><div class="v" id="adRevTotal">—</div></div>
+          <div class="side-stat"><div class="k">Android revenue (period)</div><div class="v" id="adRevAndroid">—</div><div class="delta" id="adRevAndroidDelta"></div></div>
+          <div class="side-stat"><div class="k">iOS revenue (period)</div><div class="v" id="adRevIos">—</div><div class="delta" id="adRevIosDelta"></div></div>
+          <div class="side-stat"><div class="k">Total revenue (period)</div><div class="v" id="adRevTotal">—</div><div class="delta" id="adRevTotalDelta"></div></div>
         </div>
       </div>
     </section>
@@ -438,6 +491,7 @@
   let installsSnapshots = []; // [{date, androidInstalls, ...}], sorted ascending by date — iOS not tracked yet, see refreshInstalls
   let adRevenueSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue}], sorted ascending by date
   let currentRange = 30;
+  let customRange = null; // {start, end} (YYYY-MM-DD, inclusive) when the "Custom…" range is active, else null
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -467,6 +521,7 @@
       document.getElementById('asOf').textContent = snapshots.length
         ? `Data through ${snapshots[snapshots.length - 1].date}`
         : 'No data yet';
+      initCustomRangeInputs();
       renderAll();
     } catch (e) {
       console.error('marketing_snapshots load failed:', e);
@@ -494,13 +549,90 @@
     location.reload();
   };
 
+  // Sept 10, 2026 (Mike/Scott) -- custom date range. Shared by every section
+  // below instead of each having its own trailing-window slice: when
+  // customRange is set, filter the array to an exact inclusive date window;
+  // otherwise fall back to the existing "last N array entries" behavior,
+  // completely unchanged from before this date-range feature existed.
+  function dateRangeSlice(arr, dateField, days) {
+    if (customRange) {
+      return arr.filter(s => s[dateField] >= customRange.start && s[dateField] <= customRange.end);
+    }
+    return arr.slice(-days);
+  }
+
+  // Date-string arithmetic on plain 'YYYY-MM-DD' values (no Timestamp/locale
+  // involved anywhere here) -- used only for computing the prior comparison
+  // window under a custom range, parallel to what array-slicing already
+  // does implicitly for the day-count presets.
+  function shiftDateStr(dateStr, deltaDays) {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + deltaDays);
+    return d.toISOString().slice(0, 10);
+  }
+  function calendarDaysBetween(startStr, endStr) {
+    return Math.round((new Date(endStr + 'T00:00:00Z') - new Date(startStr + 'T00:00:00Z')) / 86400000);
+  }
+
+  // GA4-style "prior period" comparison window, shared by every section's
+  // delta calculation. Preset mode is untouched from before this feature --
+  // same-length prior window by ARRAY POSITION. Custom mode instead takes
+  // the same number of calendar days immediately preceding customRange.start,
+  // matched by actual DATE rather than array position (arrays may not all
+  // share the same length/history depth).
+  function priorWindowSlice(arr, dateField, days) {
+    if (!customRange) {
+      return arr.slice(Math.max(0, arr.length - days * 2), arr.length - days);
+    }
+    const rangeDays = calendarDaysBetween(customRange.start, customRange.end) + 1;
+    const prevEnd = shiftDateStr(customRange.start, -1);
+    const prevStart = shiftDateStr(customRange.start, -rangeDays);
+    return arr.filter(s => s[dateField] >= prevStart && s[dateField] <= prevEnd);
+  }
+
+  // Number of days actually being shown right now -- currentRange under a
+  // preset, or the real length of the chosen window under a custom range
+  // (which won't generally match whichever preset was last active).
+  function activeWindowDays() {
+    if (customRange) return calendarDaysBetween(customRange.start, customRange.end) + 1;
+    return currentRange;
+  }
+
   function rangeSlice(days) {
-    return snapshots.slice(-days);
+    return dateRangeSlice(snapshots, 'date', days);
   }
 
   function fmtPct(delta) {
     const sign = delta >= 0 ? '+' : '−';
     return `${sign}${Math.abs(delta).toFixed(1)}%`;
+  }
+
+  // Sept 10, 2026 (Scott) -- shared GA4-style comparative-period helpers.
+  // renderStats() already computed a prior-period delta inline just for the
+  // "New users" tile; these two pull that same technique out so Installs,
+  // DAU, Engagement, and Ad Revenue can each reuse it identically instead of
+  // re-deriving their own version. computeDeltaPct mirrors renderStats()'s
+  // existing null-guard (no prior-period baseline of 0 or less -- can't
+  // divide by it, and a 0 baseline makes "+infinity%" meaningless anyway).
+  function computeDeltaPct(curr, prev) {
+    if (!(prev > 0)) return null;
+    return ((curr - prev) / prev) * 100;
+  }
+
+  // Applies the same "▲ +12.3% vs prior period" markup the New users tile
+  // already uses to a .side-stat's delta <div>. Takes the element directly
+  // (rather than returning a string to inject) so it can also toggle the
+  // up/down class, same as statTile() does for stat-tiles.
+  function applyDelta(el, pct) {
+    if (!el) return;
+    if (pct === null) {
+      el.className = 'delta';
+      el.innerHTML = '';
+      return;
+    }
+    const dir = pct >= 0 ? 'up' : 'down';
+    el.className = `delta ${dir}`;
+    el.innerHTML = `${dir === 'up' ? '▲' : '▼'} ${fmtPct(pct)} <span class="base">vs prior period</span>`;
   }
 
   function statTile(label, value, deltaLabel, dir, accent) {
@@ -526,7 +658,7 @@
 
     const slice = rangeSlice(currentRange);
     const latest = slice[slice.length - 1];
-    const prevSlice = snapshots.slice(Math.max(0, snapshots.length - currentRange * 2), snapshots.length - currentRange);
+    const prevSlice = priorWindowSlice(snapshots, 'date', currentRange);
 
     const newUsersSum = slice.reduce((sum, s) => sum + (s.newUsersToday || 0), 0);
     const prevNewUsersSum = prevSlice.reduce((sum, s) => sum + (s.newUsersToday || 0), 0);
@@ -585,8 +717,29 @@
       { label: 'iOS', pct: Math.round((ios / total) * 100), n: ios, color: 'var(--cat-1)' },
       { label: 'Android', pct: Math.round((android / total) * 100), n: android, color: 'var(--cat-2)' },
     ];
-    wrap.innerHTML = rows.map(r => `
-      <div style="margin-bottom:14px;">
+
+    // Sept 10, 2026 (Mike/Scott) -- Mike (Magnitude Digital) flagged this
+    // section as "broken" on Discord. It isn't -- the split is computed
+    // correctly from real data (see the note below) -- the problem is
+    // presentational: with only a handful of accounts tracked so far
+    // (platform tracking only started Sept 2, 2026), a two-bar 100%-stacked
+    // chart LOOKS like a confident, stable split even when it's really just
+    // a few individual signups that could flip entirely with the next
+    // handful of users. Below this floor, show an explicit low-sample
+    // warning and visually de-emphasize the bars instead of letting them
+    // imply more confidence than the underlying count supports. 30 is a
+    // reasonable, not rigorously derived, threshold -- the point is having
+    // SOME cutoff rather than presenting a 3-account split and a
+    // 3,000-account split identically.
+    const LOW_SAMPLE_THRESHOLD = 30;
+    const lowSample = total < LOW_SAMPLE_THRESHOLD;
+
+    const warningHtml = lowSample
+      ? `<div class="pill warn" style="margin-bottom:14px;">Small sample (${total} account${total === 1 ? '' : 's'}) — this split can swing a lot with just a few more signups</div>`
+      : '';
+
+    wrap.innerHTML = warningHtml + rows.map(r => `
+      <div style="margin-bottom:14px;${lowSample ? 'opacity:0.65;' : ''}">
         <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-secondary);margin-bottom:5px;">
           <span>${r.label}</span><span style="font-family:'IBM Plex Mono',monospace;">${r.pct}% (${r.n.toLocaleString()})</span>
         </div>
@@ -767,12 +920,27 @@
     const withEngagement = slice.filter(s => s.checkInsToday !== undefined);
     const dates = withEngagement.map(s => s.date);
 
-    document.getElementById('avgCheckIns').textContent =
-      withEngagement.length ? Math.round(avg(withEngagement.map(s => s.checkInsToday))).toLocaleString() : '—';
-    document.getElementById('avgGames').textContent =
-      withEngagement.length ? Math.round(avg(withEngagement.map(s => s.gamesPlayedToday))).toLocaleString() : '—';
-    document.getElementById('avgPurchases').textContent =
-      withEngagement.length ? Math.round(avg(withEngagement.map(s => s.purchasesToday))).toLocaleString() : '—';
+    // GA4-style comparative period, same technique as renderStats()'s
+    // prevSlice / renderInstalls()'s prevSlice / renderDauSummary()'s
+    // prevSlice above -- same-length prior window, same backfilled-days guard.
+    const prevEngagement = priorWindowSlice(snapshots, 'date', currentRange).filter(s => s.checkInsToday !== undefined);
+
+    function setAvgWithDelta(valueId, deltaId, field) {
+      const valueEl = document.getElementById(valueId);
+      const deltaEl = document.getElementById(deltaId);
+      if (!withEngagement.length) {
+        valueEl.textContent = '—';
+        applyDelta(deltaEl, null);
+        return;
+      }
+      const currAvg = avg(withEngagement.map(s => s[field] || 0));
+      valueEl.textContent = Math.round(currAvg).toLocaleString();
+      applyDelta(deltaEl, prevEngagement.length ? computeDeltaPct(currAvg, avg(prevEngagement.map(s => s[field] || 0))) : null);
+    }
+
+    setAvgWithDelta('avgCheckIns', 'avgCheckInsDelta', 'checkInsToday');
+    setAvgWithDelta('avgGames', 'avgGamesDelta', 'gamesPlayedToday');
+    setAvgWithDelta('avgPurchases', 'avgPurchasesDelta', 'purchasesToday');
 
     stackedBarChart('engChart', 'engTooltip', 'engEmpty',
       ['Check-ins', 'Games played', 'Properties purchased'],
@@ -799,8 +967,35 @@
       withDau.map(s => s.dau), withDau.map(s => s.date), 900, 160, styleOf('--cat-1'));
   }
 
+  // Sept 10, 2026 (Scott) -- new side-stat added alongside the DAU chart:
+  // average DAU over the selected period, with the same GA4-style
+  // comparative-period delta as the other sections. Separate from
+  // renderCharts() above (which just draws the day-by-day line) since this
+  // doesn't need to re-run on window resize.
+  function renderDauSummary() {
+    const avgEl = document.getElementById('avgDau');
+    const deltaEl = document.getElementById('avgDauDelta');
+
+    // Same backfilled-days guard as renderCharts()'s withDau above: only
+    // average over days where dau is actually present, and only compare
+    // against a prior period that also has at least one real day -- so a
+    // period straddling the backfill boundary doesn't get compared against
+    // an empty (and therefore meaningless) prior window.
+    const slice = rangeSlice(currentRange).filter(s => s.dau !== undefined);
+    const prevSlice = priorWindowSlice(snapshots, 'date', currentRange).filter(s => s.dau !== undefined);
+
+    if (!slice.length) {
+      avgEl.textContent = '—';
+      applyDelta(deltaEl, null);
+      return;
+    }
+    const avgCurr = avg(slice.map(s => s.dau));
+    avgEl.textContent = Math.round(avgCurr).toLocaleString();
+    applyDelta(deltaEl, prevSlice.length ? computeDeltaPct(avgCurr, avg(prevSlice.map(s => s.dau))) : null);
+  }
+
   function retentionRangeSlice(days) {
-    return retentionCohorts.slice(-days);
+    return dateRangeSlice(retentionCohorts, 'cohortDate', days);
   }
 
   function weightedRetentionPct(cohorts, field) {
@@ -886,7 +1081,7 @@
   }
 
   function installsRangeSlice(days) {
-    return installsSnapshots.slice(-days);
+    return dateRangeSlice(installsSnapshots, 'date', days);
   }
 
   function renderInstalls() {
@@ -902,11 +1097,21 @@
     }
     const totalAndroid = slice.reduce((sum, s) => sum + (s.androidInstalls || 0), 0);
     const latest = slice[slice.length - 1];
-    noteEl.textContent = `${totalAndroid.toLocaleString()} Android device installs over this range, from Google Play (typically 1-2 days behind "today" — most recent figure is for ${latest.date}). iOS install counts aren't available yet — see "Coming next".`;
+
+    // GA4-style comparative period, same same-length-prior-window technique
+    // as renderStats()'s prevSlice -- pulled from the full installsSnapshots
+    // history, not the already-range-sliced one, so a 7-day view still
+    // compares against the 7 days immediately before it.
+    const prevSlice = priorWindowSlice(installsSnapshots, 'date', currentRange);
+    const prevTotal = prevSlice.reduce((sum, s) => sum + (s.androidInstalls || 0), 0);
+    const deltaPct = computeDeltaPct(totalAndroid, prevTotal);
+    const deltaText = deltaPct !== null ? ` (${fmtPct(deltaPct)} vs the prior ${activeWindowDays()} days)` : '';
+
+    noteEl.textContent = `${totalAndroid.toLocaleString()} Android device installs over this range${deltaText}, from Google Play (typically 1-2 days behind "today" — most recent figure is for ${latest.date}). iOS install counts aren't available yet — see "Coming next".`;
   }
 
   function adRevenueRangeSlice(days) {
-    return adRevenueSnapshots.slice(-days);
+    return dateRangeSlice(adRevenueSnapshots, 'date', days);
   }
 
   function renderAdRevenue() {
@@ -930,6 +1135,18 @@
     document.getElementById('adRevIos').textContent = slice.length ? fmtUsd(totalIos) : '—';
     document.getElementById('adRevTotal').textContent = slice.length ? fmtUsd(totalAndroid + totalIos) : '—';
 
+    // GA4-style comparative period, same technique as the other sections.
+    // With backfillAdRevenueSnapshots.ts now filling in real AdMob history
+    // (see that script), this prior window has actual data to compare
+    // against instead of coming back empty for most range selections.
+    const prevSlice = priorWindowSlice(adRevenueSnapshots, 'date', currentRange);
+    const prevAndroid = prevSlice.reduce((sum, s) => sum + (s.androidRevenue || 0), 0);
+    const prevIos = prevSlice.reduce((sum, s) => sum + (s.iosRevenue || 0), 0);
+    const hasPrev = prevSlice.length > 0;
+    applyDelta(document.getElementById('adRevAndroidDelta'), hasPrev ? computeDeltaPct(totalAndroid, prevAndroid) : null);
+    applyDelta(document.getElementById('adRevIosDelta'), hasPrev ? computeDeltaPct(totalIos, prevIos) : null);
+    applyDelta(document.getElementById('adRevTotalDelta'), hasPrev ? computeDeltaPct(totalAndroid + totalIos, prevAndroid + prevIos) : null);
+
     if (!slice.length) {
       noteEl.textContent = '';
       return;
@@ -939,8 +1156,10 @@
   }
 
   function renderAll() {
+    updateActiveRangeLabel();
     renderStats();
     renderCharts();
+    renderDauSummary();
     renderPlatform();
     renderEngagement();
     renderRetention();
@@ -951,15 +1170,77 @@
 
   function setRange(r) {
     currentRange = r;
+    customRange = null; // a preset click always overrides any active custom range
+    document.getElementById('customRangePanel').style.display = 'none';
     document.querySelectorAll('.range-btn').forEach(b => {
       b.classList.toggle('active', Number(b.dataset.range) === r);
     });
     renderAll();
   }
 
-  document.querySelectorAll('.range-btn').forEach(btn => {
+  // Only the three day-count presets carry data-range -- "Custom…" is wired
+  // separately below, since clicking it toggles a panel rather than
+  // immediately changing what's shown.
+  document.querySelectorAll('.range-btn[data-range]').forEach(btn => {
     btn.addEventListener('click', () => setRange(Number(btn.dataset.range)));
   });
+
+  const customRangeToggle = document.getElementById('customRangeToggle');
+  const customRangePanel = document.getElementById('customRangePanel');
+  customRangeToggle.addEventListener('click', () => {
+    customRangePanel.style.display = customRangePanel.style.display === 'none' ? 'flex' : 'none';
+  });
+
+  function initCustomRangeInputs() {
+    if (!snapshots.length) return;
+    const minDate = snapshots[0].date;
+    const maxDate = snapshots[snapshots.length - 1].date;
+    const startEl = document.getElementById('customStart');
+    const endEl = document.getElementById('customEnd');
+    // Bounded to what's actually loaded (up to 90 days back, same ceiling
+    // the presets already have via their own limit(90) queries) -- picking
+    // a date outside this range would just come back empty anyway.
+    [startEl, endEl].forEach(el => { el.min = minDate; el.max = maxDate; });
+    if (!startEl.value) startEl.value = minDate;
+    if (!endEl.value) endEl.value = maxDate;
+  }
+
+  document.getElementById('applyCustomRange').addEventListener('click', () => {
+    const startEl = document.getElementById('customStart');
+    const endEl = document.getElementById('customEnd');
+    const errEl = document.getElementById('customRangeError');
+    const start = startEl.value;
+    const end = endEl.value;
+    errEl.textContent = '';
+
+    if (!start || !end) {
+      errEl.textContent = 'Pick both a start and end date.';
+      return;
+    }
+    if (start > end) {
+      errEl.textContent = 'Start date must be on or before the end date.';
+      return;
+    }
+
+    customRange = { start, end };
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    customRangeToggle.classList.add('active');
+    renderAll();
+  });
+
+  function updateActiveRangeLabel() {
+    const el = document.getElementById('activeRangeLabel');
+    // snapshots is the one array guaranteed to be fetched every load and is
+    // what "Data through {date}" up in the header is already anchored to --
+    // using it here keeps this label consistent with that, rather than
+    // picking whichever section happened to render last.
+    const slice = rangeSlice(currentRange);
+    if (!slice.length) { el.textContent = ''; return; }
+    const start = slice[0].date, end = slice[slice.length - 1].date;
+    el.textContent = customRange
+      ? `Showing custom range: ${start} – ${end}`
+      : `Showing: ${start} – ${end}`;
+  }
 
   window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); });
 </script>
