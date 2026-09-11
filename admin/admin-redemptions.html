@@ -23,6 +23,8 @@
     --purple: #9b7fe8;
     --orange: #e07b20;
     --teal: #3fb8a8;
+    --paypal: #0070BA;
+    --tango: #F5821F;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
@@ -81,6 +83,30 @@
   .period-tab:hover { border-color:var(--gold); color:var(--text); }
   .period-tab.active { background:var(--gold); color:var(--bg); border-color:var(--gold); font-weight:500; }
   .period-tab .count { opacity:0.7; margin-left:4px; }
+
+  /* Method filter tabs — separates PayPal from Tango within whichever
+     status tab is active (added Sept 11, 2026, Scott). Same shape as
+     .period-tab, but the active color matches each method's own brand
+     color instead of gold, so it reads as a distinct second axis rather
+     than a second status filter. */
+  .method-tabs { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
+  .method-tab {
+    background:var(--surface2);
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    padding:6px 16px;
+    border-radius:20px;
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    cursor:pointer;
+    transition:all 0.15s;
+  }
+  .method-tab:hover { border-color:var(--gold); color:var(--text); }
+  .method-tab .count { opacity:0.7; margin-left:4px; }
+  .method-tab.active { color:#fff; font-weight:500; }
+  .method-tab.active[data-method="all"] { background:var(--gold); color:var(--bg); border-color:var(--gold); }
+  .method-tab.active[data-method="paypal"] { background:var(--paypal); border-color:var(--paypal); }
+  .method-tab.active[data-method="tango"] { background:var(--tango); border-color:var(--tango); }
 
   /* Search */
   .search-input {
@@ -182,6 +208,9 @@
   .badge-muted { background:rgba(138,117,96,0.1); color:var(--text-muted); }
   .badge-purple { background:rgba(155,127,232,0.15); color:var(--purple); }
   .badge-teal { background:rgba(63,184,168,0.15); color:var(--teal); }
+  .badge-paypal { background:rgba(0,112,186,0.15); color:var(--paypal); }
+  .badge-tango { background:rgba(245,130,31,0.15); color:var(--tango); }
+  .email-hint { font-size:10px; color:var(--text-muted); margin-top:2px; }
   .flag-note { font-size:10px; color:var(--purple); margin-top:4px; max-width:220px; white-space:normal; }
   .info-note { font-size:10px; color:var(--teal); margin-top:4px; max-width:220px; white-space:normal; }
 
@@ -206,6 +235,8 @@
   .action-btn.info:hover { background:rgba(63,184,168,0.15); }
   .action-btn.reopen { border-color:var(--blue); color:var(--blue); }
   .action-btn.reopen:hover { background:rgba(74,159,212,0.15); }
+  .action-btn.flag { border-color:var(--purple); color:var(--purple); }
+  .action-btn.flag:hover { background:rgba(155,127,232,0.15); }
   .processed-note { font-size:10px; color:var(--text-muted); margin-top:4px; max-width:220px; white-space:normal; }
 
   .fraud-check { margin:6px 0; }
@@ -282,11 +313,17 @@
     <button class="period-tab" data-tab="all" onclick="setTab('all', this)">All <span class="count" id="count-all">0</span></button>
   </div>
 
+  <div class="method-tabs" id="methodTabs">
+    <button class="method-tab active" data-method="all" onclick="setMethodTab('all', this)">All Methods <span class="count" id="mcount-all">0</span></button>
+    <button class="method-tab" data-method="paypal" onclick="setMethodTab('paypal', this)">🅿️ PayPal <span class="count" id="mcount-paypal">0</span></button>
+    <button class="method-tab" data-method="tango" onclick="setMethodTab('tango', this)">🎁 Tango <span class="count" id="mcount-tango">0</span></button>
+  </div>
+
   <div class="table-card">
     <div class="table-header">
       <span>Redemption Requests</span>
       <div class="table-header-right">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, or referral code…" oninput="onSearchInput()">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, referral code, or method…" oninput="onSearchInput()">
         <span class="table-count" id="tableCount">— requests</span>
       </div>
     </div>
@@ -295,6 +332,7 @@
         <thead>
           <tr>
             <th onclick="sortBy('nickname')">Username ↕</th>
+            <th onclick="sortBy('payoutMethod')">Method ↕</th>
             <th onclick="sortBy('paypalEmail')">Email ↕</th>
             <th onclick="sortBy('amountUsd')">Amount Requested ↕</th>
             <th class="no-sort">Net Payout</th>
@@ -303,7 +341,7 @@
           </tr>
         </thead>
         <tbody id="reqTableBody">
-          <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+          <tr class="empty-row"><td colspan="7">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -381,6 +419,9 @@
   // ── State ──────────────────────────────────────────────────────────────
   let allRequests = [];       // every withdrawalRequests doc, joined with nickname + referralCode
   let currentTab = 'needsAttention';
+  let currentMethod = 'all';  // 'all' | 'paypal' | 'tango' — added Sept 11, 2026, second filter
+                               // axis alongside currentTab, so PayPal and Tango requests can be
+                               // viewed separately within whatever status tab is active.
   let sortKey = 'requestedAt';
   let sortDir = -1;           // newest first by default
   let searchQuery = '';       // lowercased, matched against amount/date/email/referralCode
@@ -429,7 +470,7 @@
 
   // ── Load ───────────────────────────────────────────────────────────────
   async function loadAll() {
-    document.getElementById('reqTableBody').innerHTML = '<tr class="empty-row"><td colspan="6">Loading…</td></tr>';
+    document.getElementById('reqTableBody').innerHTML = '<tr class="empty-row"><td colspan="7">Loading…</td></tr>';
 
     const snap = await getDocs(query(collection(db, 'withdrawalRequests'), orderBy('requestedAt', 'desc')));
     const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -456,6 +497,11 @@
       nickname: nicknameCache.get(r.userId) || '—',
       referralCode: referralCodeCache.get(r.userId) || null,
       referralCount: referralCountCache.get(r.userId) ?? 0,
+      // Older requests predate the Sept 4, 2026 Tango rollout and have no
+      // payoutMethod field at all — same default the Cloud Function itself
+      // uses when the field is omitted, so a pre-Tango request is treated
+      // as PayPal here too, not as an "unknown" third bucket.
+      payoutMethod: r.payoutMethod || 'paypal',
     }));
 
     updateTabCounts();
@@ -482,6 +528,17 @@
     render();
   };
 
+  // Method tab — orthogonal to the status tab above. Switching status tabs
+  // does NOT reset this, so "Needs Attention" + "Tango" stays selected while
+  // paging through statuses, matching how an admin actually works a batch
+  // (pick your payout method for the morning, then work every status within it).
+  window.setMethodTab = (method, btnEl) => {
+    currentMethod = method;
+    document.querySelectorAll('.method-tab').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+    render();
+  };
+
   // ── Search ─────────────────────────────────────────────────────────────
   window.onSearchInput = () => {
     searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -496,11 +553,13 @@
       const dateOnly = r.requestedAt ? new Date(r.requestedAt).toLocaleDateString().toLowerCase() : '';
       const email = (r.paypalEmail || '').toLowerCase();
       const refCode = (r.referralCode || '').toLowerCase();
+      const method = (r.payoutMethod || 'paypal').toLowerCase();
       return amountUsd.includes(searchQuery)
         || netAmountUsd.includes(searchQuery)
         || dateOnly.includes(searchQuery)
         || email.includes(searchQuery)
-        || refCode.includes(searchQuery);
+        || refCode.includes(searchQuery)
+        || method.includes(searchQuery);
     });
   }
 
@@ -519,8 +578,26 @@
     return allRequests.filter(r => r.status === currentTab);
   }
 
+  function filteredForMethod(list) {
+    if (currentMethod === 'all') return list;
+    return list.filter(r => r.payoutMethod === currentMethod);
+  }
+
+  // Method-tab counts are scoped to the CURRENT status tab (unlike the status
+  // tabs' own counts, which always reflect the full set) — so switching to
+  // "Paid" shows how many of the paid requests were PayPal vs. Tango, and
+  // switching back to "Needs Attention" updates the same three numbers to
+  // reflect what's actually outstanding right now.
+  function updateMethodCounts(statusFiltered) {
+    document.getElementById('mcount-all').textContent = statusFiltered.length;
+    document.getElementById('mcount-paypal').textContent = statusFiltered.filter(r => r.payoutMethod === 'paypal').length;
+    document.getElementById('mcount-tango').textContent = statusFiltered.filter(r => r.payoutMethod === 'tango').length;
+  }
+
   function render() {
-    const filtered = applySearch(filteredForTab());
+    const statusFiltered = filteredForTab();
+    updateMethodCounts(statusFiltered);
+    const filtered = applySearch(filteredForMethod(statusFiltered));
     const sorted = [...filtered].sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey];
       if (sortKey === 'requestedAt') {
@@ -538,7 +615,7 @@
 
     const body = document.getElementById('reqTableBody');
     if (!sorted.length) {
-      body.innerHTML = '<tr class="empty-row"><td colspan="6">No requests in this view.</td></tr>';
+      body.innerHTML = '<tr class="empty-row"><td colspan="7">No requests in this view.</td></tr>';
       return;
     }
 
@@ -548,23 +625,27 @@
       const feePct = typeof r.tierFeePercent === 'number' ? r.tierFeePercent : 0;
       const dateStr = r.requestedAt ? new Date(r.requestedAt).toLocaleString() : '—';
 
+      const isTango = r.payoutMethod === 'tango';
+
       return `
         <tr>
           <td class="td-gold">
             ${escHtml(r.nickname)}
             ${renderReferralCodeRow(r)}
           </td>
+          <td>${methodBadge(r.payoutMethod)}</td>
           <td>
             <div class="copy-cell">
               <span>${escHtml(r.paypalEmail || '—')}</span>
               ${r.paypalEmail ? `<button class="copy-id-btn" title="Copy email" onclick="copyToClipboard('${escAttr(r.paypalEmail)}', this)">📋</button>` : ''}
             </div>
+            <div class="email-hint">${isTango ? 'Tango claim-link recipient' : 'PayPal account email'}</div>
           </td>
           <td>$${amountUsd.toFixed(2)}</td>
           <td>
             <div class="copy-cell">
               <span class="net-amount">$${netAmountUsd.toFixed(2)}</span>
-              <button class="copy-id-btn" title="Copy net payout amount for PayPal" onclick="copyToClipboard('${netAmountUsd.toFixed(2)}', this)">📋</button>
+              <button class="copy-id-btn" title="Copy net payout amount for ${isTango ? 'Tango' : 'PayPal'}" onclick="copyToClipboard('${netAmountUsd.toFixed(2)}', this)">📋</button>
             </div>
             ${feePct > 0 ? `<div class="fee-note">${feePct}% fee applied</div>` : ''}
           </td>
@@ -621,6 +702,16 @@
         ${r.fraudChecked && r.fraudCheckedAt ? `<div class="fraud-check-note">${escHtml(r.fraudCheckedBy || '—')} — ${new Date(r.fraudCheckedAt).toLocaleString()}</div>` : ''}
       </div>`;
 
+    // Flag toggle — for the "looks fake but not enough evidence to ban"
+    // case (Sept 9, 2026, Scott/ossmedia-TM-MCGZ2): approve the redemption
+    // but mark the account for a closer look next time. Independent of
+    // status like the fraud-check box above, same direct-Firestore-write
+    // pattern (isAdmin() already grants update on this collection).
+    const flagToggle = `
+      <button class="action-btn flag" onclick="toggleFlag('${r.id}','${escAttr(r.nickname)}', ${r.flaggedForReview ? 'true' : 'false'})">
+        ${r.flaggedForReview ? 'Unflag' : '🚩 Flag'}
+      </button>`;
+
     if (r.flaggedForReview) {
       const flaggedAtStr = r.flaggedAt ? new Date(r.flaggedAt).toLocaleString() : '';
       note += `<div class="flag-note">${escHtml(r.flagReason || 'Flagged for review')}${flaggedAtStr ? ' — ' + escHtml(flaggedAtStr) : ''}</div>`;
@@ -640,7 +731,7 @@
           <button class="action-btn info" onclick="openNeedsInfoModal('${r.id}','${escAttr(r.nickname)}')">Needs Info</button>
           <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
         </div>`;
-      note += `<div class="processed-note">Reviewed — pay via PayPal, then Mark Paid</div>`;
+      note += `<div class="processed-note">Reviewed — pay via ${r.payoutMethod === 'tango' ? 'Tango' : 'PayPal'}, then Mark Paid</div>`;
     } else if (r.status === 'needs_info') {
       actions = `
         <div>
@@ -655,7 +746,16 @@
       note += `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
     }
 
-    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${fraudCheck}${actions}${note}`;
+    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${fraudCheck}<div>${flagToggle}</div>${actions}${note}`;
+  }
+
+  // Payout-method badge — added Sept 11, 2026, alongside the method tabs, so
+  // the method is visible even in the "All Methods" view, not just usable as
+  // a filter. Missing/unrecognized values fall back to PayPal, matching the
+  // Cloud Function's own default when payoutMethod is omitted.
+  function methodBadge(method) {
+    if (method === 'tango') return `<span class="badge badge-tango">🎁 TANGO</span>`;
+    return `<span class="badge badge-paypal">🅿️ PAYPAL</span>`;
   }
 
   function statusBadge(status) {
@@ -677,7 +777,9 @@
   // then immediately marks paid — one click instead of two, since in
   // practice both happen in the same sitting during the morning batch.
   window.approveAndPay = async (requestId, nickname) => {
-    if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nThis re-checks the amount, PayPal email, account status, $200/30-day cap, and 24h cooldown, then marks it paid in one step. Only do this AFTER you've actually sent the net payout via PayPal — if anything's off, it'll tell you why instead of marking paid.`)) return;
+    const req = allRequests.find(r => r.id === requestId);
+    const methodLabel = req?.payoutMethod === 'tango' ? 'Tango gift card' : 'PayPal';
+    if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nThis re-checks the amount, email, account status, $200/30-day cap, and 24h cooldown, then marks it paid in one step. Only do this AFTER you've actually sent the ${methodLabel} payout — if anything's off, it'll tell you why instead of marking paid.`)) return;
 
     try {
       await adminUpdateWithdrawalStatus({ requestId, newStatus: 'approved_unpaid' });
@@ -702,7 +804,9 @@
   // request already sitting in the approved-but-unpaid state (e.g. a prior
   // approval, or the fallback above if the second step failed).
   window.markPaid = async (requestId, nickname) => {
-    if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nOnly do this after you've actually sent the net payout via PayPal.`)) return;
+    const req = allRequests.find(r => r.id === requestId);
+    const methodLabel = req?.payoutMethod === 'tango' ? 'Tango gift card' : 'PayPal';
+    if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nOnly do this after you've actually sent the ${methodLabel} payout.`)) return;
     try {
       await adminUpdateWithdrawalStatus({ requestId, newStatus: 'paid' });
       showToast(`Marked ${nickname}'s redemption as paid`, 'success');
@@ -818,6 +922,51 @@
       console.error(e);
       showToast(e?.message || 'Failed to update fraud-check flag', 'error');
       await loadAll(); // resync the checkbox to actual Firestore state
+    }
+  };
+
+  // Flag toggle: for a redemption that gets approved despite a fraud check
+  // turning up something suspicious but not ban-worthy (Sept 9, 2026) — puts
+  // the 🚩 FLAGGED badge and reason on the request so it's not treated as a
+  // clean slate later. Same direct-Firestore-write pattern as the fraud-check
+  // checkbox above. Unflagging needs no reason; flagging does.
+  window.toggleFlag = async (requestId, nickname, currentlyFlagged) => {
+    if (currentlyFlagged) {
+      if (!confirm(`Remove the flag from ${nickname}'s redemption?`)) return;
+      try {
+        await updateDoc(doc(db, 'withdrawalRequests', requestId), {
+          flaggedForReview: false,
+          flagReason: null,
+          flaggedAt: null,
+        });
+        const req = allRequests.find(r => r.id === requestId);
+        if (req) { req.flaggedForReview = false; req.flagReason = null; req.flaggedAt = null; }
+        render();
+      } catch (e) {
+        console.error(e);
+        showToast(e?.message || 'Failed to unflag request', 'error');
+        await loadAll();
+      }
+      return;
+    }
+
+    const reason = prompt(`Flag ${nickname}'s account for review — why? (internal only, never shown to the player)`);
+    if (!reason || !reason.trim()) return;
+    const nowIso = new Date().toISOString();
+    try {
+      await updateDoc(doc(db, 'withdrawalRequests', requestId), {
+        flaggedForReview: true,
+        flagReason: reason.trim(),
+        flaggedAt: nowIso,
+      });
+      const req = allRequests.find(r => r.id === requestId);
+      if (req) { req.flaggedForReview = true; req.flagReason = reason.trim(); req.flaggedAt = nowIso; }
+      render();
+      showToast(`Flagged ${nickname}'s redemption`, 'success');
+    } catch (e) {
+      console.error(e);
+      showToast(e?.message || 'Failed to flag request', 'error');
+      await loadAll();
     }
   };
 
