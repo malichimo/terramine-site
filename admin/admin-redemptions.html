@@ -141,8 +141,29 @@
   }
   .table-header-right { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; white-space:nowrap; }
-  .table-scroll { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; font-size:12px; }
+  /* ✅ Sept 11, 2026 — Hillary reported the right side of the table (Status
+     column's action buttons especially) getting cut off on a narrower
+     window. Root cause: this div already had overflow-x:auto, but the
+     <table> below was pinned to width:100% — capping it at the container's
+     width instead of letting it grow to its natural (wider) content width,
+     so the browser had nothing to scroll to and just squeezed/clipped the
+     nowrap columns instead. min-width:100% (not width:100%) lets the table
+     still fill the container on wide screens but grow past it when 7
+     columns of nowrap content + buttons actually need more room — that's
+     what makes overflow-x:auto below actually kick in. Scrollbar styled
+     explicitly (rather than relying on the OS default, which can be an
+     easy-to-miss overlay/auto-hide bar) so the fact that it scrolls is
+     obvious at a glance. */
+  .table-scroll {
+    overflow-x:auto;
+    scrollbar-width:thin;
+    scrollbar-color:var(--gold) var(--surface2);
+  }
+  .table-scroll::-webkit-scrollbar { height:10px; }
+  .table-scroll::-webkit-scrollbar-track { background:var(--surface2); }
+  .table-scroll::-webkit-scrollbar-thumb { background:var(--gold); border-radius:5px; }
+  .table-scroll::-webkit-scrollbar-thumb:hover { background:var(--gold-light); }
+  table { min-width:100%; border-collapse:collapse; font-size:12px; }
   thead th {
     padding:10px 16px;
     text-align:left;
