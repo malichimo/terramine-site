@@ -176,6 +176,8 @@
   .action-btn.hold:hover { background:rgba(224,80,80,0.15); }
   .action-btn.unhold { border-color:var(--green); color:var(--green); }
   .action-btn.unhold:hover { background:rgba(76,175,110,0.15); }
+  .action-btn.warn { border-color:var(--amber); color:var(--amber); }
+  .action-btn.warn:hover { background:rgba(224,123,32,0.15); }
   .action-btn.dismiss { border-color:var(--border); color:var(--text-muted); }
   .action-btn.dismiss:hover { color:var(--text); border-color:var(--gold); }
   .processed-note { font-size:10px; color:var(--text-muted); margin-top:4px; max-width:220px; white-space:normal; }
@@ -236,7 +238,7 @@
 <div class="main">
 
   <div class="info-banner">
-    <strong>Silent by design.</strong> Players never see or get notified about anything on this page — the app quietly checks once per session (via proxycheck.io) and reports here. Nothing is auto-held; every VPN/proxy/Tor hit lands here for you to review and act on manually. "Put on Hold" is separate from a full ban — it's reversible and blocks purchases, check-in earnings, boosts, and withdrawals until you lift it.
+    <strong>Detection is silent; warnings are not.</strong> The app quietly checks once per session (via proxycheck.io) and reports here — nothing is auto-held or auto-warned. "⚠️ Warn" sends the player a direct in-app + push notification that VPN/proxy use violates our Terms of Service, and stamps their account so a later hit shows here as a repeat. "Put on Hold" is separate and reversible — it blocks purchases, check-in earnings, boosts, and withdrawals until you lift it. A row badged <span class="badge badge-red" style="vertical-align:middle;">⚠️ REPEAT</span> was detected again after already being warned.
   </div>
 
   <div class="period-tabs" id="statusTabs">
@@ -326,6 +328,7 @@
   const auth = getAuth(app);
   const functions = getFunctions(app);
   const adminSetAccountHold = httpsCallable(functions, 'adminSetAccountHold');
+  const adminWarnVpnUser = httpsCallable(functions, 'adminWarnVpnUser');
 
   // ── State ──────────────────────────────────────────────────────────────
   let allFlags = [];          // every vpnFlags doc, joined with nickname + current account status
@@ -382,13 +385,15 @@
           nickname: d.nickname || uid.substring(0, 8),
           isBanned: d.isBanned === true,
           accountOnHold: d.accountOnHold === true,
+          vpnWarned: d.vpnWarned === true,
+          vpnWarnedAt: d.vpnWarnedAt || null,
         });
       } catch (e) {
-        userCache.set(uid, { nickname: uid.substring(0, 8), isBanned: false, accountOnHold: false });
+        userCache.set(uid, { nickname: uid.substring(0, 8), isBanned: false, accountOnHold: false, vpnWarned: false, vpnWarnedAt: null });
       }
     }));
 
-    allFlags = raw.map(r => ({ ...r, ...(userCache.get(r.userId) || { nickname: '—', isBanned: false, accountOnHold: false }) }));
+    allFlags = raw.map(r => ({ ...r, ...(userCache.get(r.userId) || { nickname: '—', isBanned: false, accountOnHold: false, vpnWarned: false, vpnWarnedAt: null }) }));
 
     updateTabCounts();
     render();
@@ -484,27 +489,45 @@
   // proxycheck.io returns a single "type" string per flagged IP rather than
   // discrete vpn/proxy/tor booleans -- color-code by category.
   function typeBadge(r) {
-    if (!r.type) return '<div class="signal-badges"><span class="td-muted">—</span></div>';
-    const t = String(r.type).toUpperCase();
-    let cls = 'badge-muted';
-    if (t === 'VPN' || t === 'OPENVPN') cls = 'badge-blue';
-    else if (t === 'TOR') cls = 'badge-red';
-    else if (t === 'RESIDENTIAL') cls = 'badge-purple';
-    else if (t === 'HOSTING' || t === 'COMPROMISED SERVER') cls = 'badge-amber';
-    else if (t.startsWith('SOCKS') || t === 'HTTP' || t === 'HTTPS' || t === 'SHADOWSOCKS') cls = 'badge-purple';
-    return `<div class="signal-badges"><span class="badge ${cls}">${escHtml(r.type)}</span></div>`;
+    let typeHtml;
+    if (!r.type) {
+      typeHtml = '<span class="td-muted">—</span>';
+    } else {
+      const t = String(r.type).toUpperCase();
+      let cls = 'badge-muted';
+      if (t === 'VPN' || t === 'OPENVPN') cls = 'badge-blue';
+      else if (t === 'TOR') cls = 'badge-red';
+      else if (t === 'RESIDENTIAL') cls = 'badge-purple';
+      else if (t === 'HOSTING' || t === 'COMPROMISED SERVER') cls = 'badge-amber';
+      else if (t.startsWith('SOCKS') || t === 'HTTP' || t === 'HTTPS' || t === 'SHADOWSOCKS') cls = 'badge-purple';
+      typeHtml = `<span class="badge ${cls}">${escHtml(r.type)}</span>`;
+    }
+    // ✅ Sept 15, 2026: this specific flag happened after the account was
+    // already warned once (see checkVpnStatus's warnedBefore stamp) --
+    // surface that distinctly so repeat offenses stand out from first hits.
+    const repeatHtml = r.warnedBefore
+      ? `<span class="badge badge-red" title="Detected again after already being warned">⚠️ REPEAT</span>`
+      : '';
+    return `<div class="signal-badges">${typeHtml}${repeatHtml}</div>`;
   }
 
   function accountBadge(r) {
-    if (r.isBanned) return '<span class="badge badge-red">BANNED</span>';
-    if (r.accountOnHold) return '<span class="badge badge-amber">ON HOLD</span>';
-    return '<span class="badge badge-muted">ACTIVE</span>';
+    let primary;
+    if (r.isBanned) primary = '<span class="badge badge-red">BANNED</span>';
+    else if (r.accountOnHold) primary = '<span class="badge badge-amber">ON HOLD</span>';
+    else primary = '<span class="badge badge-muted">ACTIVE</span>';
+
+    const warnedNote = r.vpnWarned
+      ? `<div class="td-muted" style="font-size:10px;margin-top:4px;white-space:normal;">⚠️ Warned${r.vpnWarnedAt ? ' ' + new Date(r.vpnWarnedAt).toLocaleDateString() : ''}</div>`
+      : '';
+    return primary + warnedNote;
   }
 
   function renderActions(r) {
     if (r.isBanned) return '<span class="processed-note">Already banned — no action needed.</span>';
 
     let actions = '';
+    actions += `<button class="action-btn warn" onclick="warnUser('${r.userId}')">${r.vpnWarned ? '⚠️ Warn Again' : '⚠️ Warn'}</button>`;
     if (r.accountOnHold) {
       actions += `<button class="action-btn unhold" onclick="liftHold('${r.userId}')">Lift Hold</button>`;
     } else {
@@ -539,6 +562,31 @@
     const flag = allFlags.find(f => f.userId === userId);
     return (flag && flag.nickname) || userId;
   }
+
+  // ✅ Sept 15, 2026 (Scott: "create a warn button that notifies them, and
+  // marks it"): sends the player a direct in-app + push notification via
+  // adminWarnVpnUser and stamps vpnWarned on their account so a later VPN
+  // hit shows up here badged ⚠️ REPEAT instead of looking like a first-time
+  // flag. Does not hold or ban the account — purely a heads-up.
+  window.warnUser = async (userId) => {
+    const nickname = nicknameFor(userId);
+    const cached = userCache.get(userId) || {};
+    const msg = cached.vpnWarned
+      ? `Send ANOTHER warning to ${nickname}? They were already warned before — this account has continued triggering VPN detection.`
+      : `Send a warning notification to ${nickname}? This tells them directly (push + in-app) that VPN/proxy use violates our Terms of Service.`;
+    if (!confirm(msg)) return;
+    try {
+      await adminWarnVpnUser({ userId });
+      const nowIso = new Date().toISOString();
+      allFlags.forEach(f => { if (f.userId === userId) { f.vpnWarned = true; f.vpnWarnedAt = nowIso; } });
+      userCache.set(userId, { ...cached, vpnWarned: true, vpnWarnedAt: nowIso });
+      render();
+      showToast(`Warning sent to ${nickname}`, 'success');
+    } catch (e) {
+      console.error(e);
+      showToast(e?.message || 'Failed to send warning', 'error');
+    }
+  };
 
   window.liftHold = async (userId) => {
     const nickname = nicknameFor(userId);
