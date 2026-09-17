@@ -124,6 +124,29 @@
             <div class="stat-card-label">Properties</div>
             <div class="stat-card-value cyan" id="stat-props">—</div>
             <div class="stat-card-sub">TerraAcres owned</div>
+            <div class="prop-breakdown" id="prop-breakdown">
+              <div class="prop-type">
+                <div class="prop-type-icon" aria-hidden="true">🪨</div>
+                <div class="prop-type-count" id="stat-type-rock">—</div>
+                <div class="prop-type-name">Rock Mines</div>
+              </div>
+              <div class="prop-type">
+                <div class="prop-type-icon" aria-hidden="true">⚫</div>
+                <div class="prop-type-count" id="stat-type-coal">—</div>
+                <div class="prop-type-name">Coal Mines</div>
+              </div>
+              <div class="prop-type">
+                <div class="prop-type-icon" aria-hidden="true">🟡</div>
+                <div class="prop-type-count" id="stat-type-gold">—</div>
+                <div class="prop-type-name">Gold Mines</div>
+              </div>
+              <div class="prop-type">
+                <div class="prop-type-icon" aria-hidden="true">💎</div>
+                <div class="prop-type-count" id="stat-type-diamond">—</div>
+                <div class="prop-type-name">Diamond Mines</div>
+              </div>
+              <div class="prop-type-other" id="stat-type-other" hidden></div>
+            </div>
           </div>
           <div class="stat-card">
             <div class="stat-card-label">Total Check-ins</div>
@@ -259,6 +282,51 @@
     return { rock: '🪨', coal: '🖤', gold: '⭐', diamond: '💎' }[type] || '⛏';
   }
 
+  // Card icons are the mines.html mineIcon() glyphs (rock/coal/gold/diamond).
+  var KNOWN_MINE_TYPES = ['rock', 'coal', 'gold', 'diamond'];
+
+  // mines.html displays a missing mineType as rock (p.mineType || 'rock').
+  // Any other stored value stays out of the four buckets so it is not dropped
+  // from the total and can be shown under the breakdown.
+  function bucketMineType(mineType) {
+    if (mineType == null || mineType === '') return 'rock';
+    var key = String(mineType).trim().toLowerCase();
+    if (!key) return 'rock';
+    return KNOWN_MINE_TYPES.indexOf(key) === -1 ? null : key;
+  }
+
+  function renderPropertyBreakdown(props) {
+    var counts = { rock: 0, coal: 0, gold: 0, diamond: 0 };
+    var unmapped = {};
+    props.forEach(function(p) {
+      var key = bucketMineType(p.mineType);
+      if (key) {
+        counts[key]++;
+      } else {
+        var label = String(p.mineType).trim() || '(blank)';
+        unmapped[label] = (unmapped[label] || 0) + 1;
+      }
+    });
+    $('stat-props').textContent = fmtNum(props.length);
+    KNOWN_MINE_TYPES.forEach(function(k) {
+      var el = $('stat-type-' + k);
+      if (el) el.textContent = fmtNum(counts[k]);
+    });
+    var other = $('stat-type-other');
+    if (other) {
+      var labels = Object.keys(unmapped);
+      if (!labels.length) {
+        other.hidden = true;
+        other.textContent = '';
+      } else {
+        other.hidden = false;
+        other.textContent = 'Also owned: ' + labels.map(function(label) {
+          return unmapped[label] + ' ' + label;
+        }).join(', ');
+      }
+    }
+  }
+
   function initials(name) {
     if (!name) return '?';
     return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -389,11 +457,12 @@
         $('nav-avatar').textContent = initials(nickname);
       }
 
+      // No .limit(): the previous cap of 50 made this card disagree with
+      // mines.html, which loads every property owned by the signed-in user.
       const props = options.preview ? PREVIEW_PROPERTIES : (await db.collection('properties')
         .where('ownerId', '==', user.uid)
-        .limit(50)
         .get()).docs.map(d => ({ id: d.id, ...d.data() }));
-      $('stat-props').textContent = fmtNum(props.length);
+      renderPropertyBreakdown(props);
 
       // Render mine cards (first 6)
       await renderMineCards(props.slice(0, 6), user.uid, options);

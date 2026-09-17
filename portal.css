@@ -274,6 +274,7 @@ body.auth-pending #portal {
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 28px;
+  align-items: start;
 }
 .stat-card {
   background: white;
@@ -298,6 +299,49 @@ body.auth-pending #portal {
 .stat-card-value.cyan  { color: var(--brown); }
 .stat-card-value.amber { color: var(--amber2); }
 .stat-card-sub { font-size: 11px; color: var(--text-mid); margin-top: 4px; }
+
+/* Properties card type breakdown. Icons match mines.html mineIcon(). */
+.prop-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 4px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--brown-light);
+}
+.prop-type {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+.prop-type-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.prop-type-count {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+  color: var(--brown);
+  line-height: 1;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.prop-type-name {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--text-mid);
+  margin-top: 3px;
+}
+.prop-type-other {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-mid);
+  text-align: center;
+}
 
 /* ── Section header ── */
 .section-header {
@@ -623,4 +667,6 @@ body.auth-pending #portal {
 @media (max-width: 480px) {
   .stat-row { grid-template-columns: 1fr 1fr; }
   .mines-grid { grid-template-columns: 1fr; }
+  .prop-type-count { font-size: 18px; }
+  .prop-type-name { font-size: 9px; }
 }
