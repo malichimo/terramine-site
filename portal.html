@@ -126,22 +126,22 @@
             <div class="stat-card-sub">TerraAcres owned</div>
             <div class="prop-breakdown" id="prop-breakdown">
               <div class="prop-type">
-                <div class="prop-type-icon" aria-hidden="true">🪨</div>
+                <div class="prop-type-icon" data-prop-icon="rock" aria-hidden="true">🪨</div>
                 <div class="prop-type-count" id="stat-type-rock">—</div>
                 <div class="prop-type-name">Rock Mines</div>
               </div>
               <div class="prop-type">
-                <div class="prop-type-icon" aria-hidden="true">⚫</div>
+                <div class="prop-type-icon" data-prop-icon="coal" aria-hidden="true">⚫</div>
                 <div class="prop-type-count" id="stat-type-coal">—</div>
                 <div class="prop-type-name">Coal Mines</div>
               </div>
               <div class="prop-type">
-                <div class="prop-type-icon" aria-hidden="true">🟡</div>
+                <div class="prop-type-icon" data-prop-icon="gold" aria-hidden="true">🟡</div>
                 <div class="prop-type-count" id="stat-type-gold">—</div>
                 <div class="prop-type-name">Gold Mines</div>
               </div>
               <div class="prop-type">
-                <div class="prop-type-icon" aria-hidden="true">💎</div>
+                <div class="prop-type-icon" data-prop-icon="diamond" aria-hidden="true">💎</div>
                 <div class="prop-type-count" id="stat-type-diamond">—</div>
                 <div class="prop-type-name">Diamond Mines</div>
               </div>
@@ -285,6 +285,12 @@
   // Card icons are the mines.html mineIcon() glyphs (rock/coal/gold/diamond).
   var KNOWN_MINE_TYPES = ['rock', 'coal', 'gold', 'diamond'];
 
+  // Exact copy of mines.html mineIcon(). Only the Properties type stacks use this.
+  // mineTypeEmoji() is the mine-card badge map and is intentionally not used here.
+  function propertyStackIcon(type) {
+    return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[type] || '⛏';
+  }
+
   // mines.html displays a missing mineType as rock (p.mineType || 'rock').
   // Any other stored value stays out of the four buckets so it is not dropped
   // from the total and can be shown under the breakdown.
@@ -311,6 +317,8 @@
     KNOWN_MINE_TYPES.forEach(function(k) {
       var el = $('stat-type-' + k);
       if (el) el.textContent = fmtNum(counts[k]);
+      var iconEl = document.querySelector('[data-prop-icon="' + k + '"]');
+      if (iconEl) iconEl.textContent = propertyStackIcon(k);
     });
     var other = $('stat-type-other');
     if (other) {
