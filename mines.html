@@ -117,20 +117,28 @@
     .mine-group-head img { width:36px; height:36px; object-fit:contain; }
     .mine-group-head h2 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); }
     .mine-group-count { font-size:12px; color:#64748b; font-weight:700; }
-    .mine-grid { display:flex; flex-wrap:wrap; justify-content:flex-start; gap:14px; width:100%; }
+    .mine-grid {
+      display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; width:100%;
+    }
     .mine-card {
-      position:relative; border-radius:16px; overflow:hidden; min-height:220px; aspect-ratio:3 / 2;
-      flex:0 0 auto; width:600px; min-width:600px; max-width:100%;
+      position:relative; border-radius:16px; overflow:visible; min-height:220px; height:auto;
+      width:100%; min-width:0; max-width:100%;
       background:#1b2430; box-shadow:0 10px 24px rgba(13,27,42,.18); color:#fff;
     }
-    .mine-card-art { position:absolute; inset:0; background:#243044 center/cover no-repeat; transform:scaleX(-1); transform-origin:center; }
+    .mine-card-art {
+      position:absolute; inset:0; border-radius:16px;
+      background-color:#243044;
+      background-size:cover; background-repeat:no-repeat; background-position:left bottom;
+      transform:scaleX(-1); transform-origin:center;
+    }
     .mine-card-scrim {
-      position:absolute; inset:0; pointer-events:none;
+      position:absolute; inset:0; pointer-events:none; border-radius:16px;
       background: linear-gradient(90deg, rgba(6,10,16,0) 0%, rgba(6,10,16,.12) 32%, rgba(6,10,16,.42) 58%, rgba(6,10,16,.78) 82%, rgba(6,10,16,.92) 100%);
     }
     .mine-card-left {
-      position:relative; z-index:2; height:100%; width:100%; max-width:80%; margin-left:auto;
+      position:relative; z-index:2; min-height:220px; height:auto; width:100%; max-width:80%; margin-left:auto;
       display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:5px; padding:12px 14px 12px 12px;
+      box-sizing:border-box;
     }
     .mine-card-left > .inner { max-width:280px; width:100%; margin-left:auto; }
     .mine-card-left > .inner:has(> .mine-photo) { display:flex; justify-content:center; }
@@ -147,7 +155,7 @@
     .vo-detail-panel .land-detail-header .vo-mine-meta { max-width:none; flex:1; min-width:0; }
     .vo-detail-panel .land-detail-photo { cursor:default; }
     .mine-head { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; align-self:stretch; margin-top:5px; margin-bottom:5px; }
-    .mine-title { flex:1; min-width:0; text-align:right; font-size:22px; font-weight:700; line-height:1.15; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .mine-title { flex:1; min-width:0; text-align:right; font-size:22px; font-weight:700; line-height:1.15; overflow-wrap:anywhere; word-break:break-word; }
     .gps-pin { width:26px; height:26px; flex-shrink:0; }
     .gps-pin.is-missing { opacity:0.38; }
     .prod-box {
@@ -259,12 +267,16 @@
     .is-missing { font-style:italic; font-weight:500; opacity:.8; }
     .mine-empty { padding:48px 16px; text-align:center; color:#64748b; font-size:14px; }
     .mine-sentinel { text-align:center; color:#889; font-size:12px; padding:14px; }
+    /* Wide / default content: 3 cols at ≥1920px, 2 cols below, 1 col on small */
+    @media (min-width:1920px) {
+      .mine-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+    }
     @container minegroup (max-width: 640px) {
-      .mine-card { min-width:0; width:100%; max-width:100%; flex-basis:100%; }
+      .mine-grid { grid-template-columns:1fr; }
     }
     @media (max-width:700px) {
       .sidebar { display:none; }
-      .mine-card { min-width:0; width:100%; max-width:100%; flex-basis:100%; }
+      .mine-grid { grid-template-columns:1fr; }
       .mine-card-left { width:92%; max-width:none; }
     }
 
