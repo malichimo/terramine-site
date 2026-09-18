@@ -241,8 +241,6 @@
           </select>
         </label>
         <button type="button" class="sort-btn" id="sort-date" data-sort="date" disabled>Date</button>
-        <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
-        <button type="button" class="sort-btn" id="sort-prod" data-sort="prod" disabled>Mine Production Level</button>
         <button type="button" class="sort-btn" id="sort-mine" data-sort="mine" disabled>Mine Name</button>
         <button type="button" class="sort-btn" id="sort-visitor" data-sort="visitor" disabled>Visitor Name</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search visitor or mine name" autocomplete="off" disabled />
@@ -300,7 +298,7 @@
   let loadedUid = null;
   let allVisits = [];
   let visitsTruncated = false;
-  let mineMap = {}; // propertyId -> { id, mineType, customName, gameLevel, productionLevel, _raw, _details }
+  let mineMap = {}; // propertyId -> { id, mineType, customName, _raw, _details }
   let sortKey = 'date';
   let sortDir = 1; // 1 = newest / high / A→Z depending on key
   let visitorUserCache = new Map();
@@ -450,14 +448,6 @@
       btn.classList.toggle('active', on);
       btn.textContent = on ? base + (sortDir > 0 ? ' ▲' : ' ▼') : base;
     });
-  }
-  function cmpNumMissingLast(a, b, dir) {
-    const aMissing = a == null || !Number.isFinite(a);
-    const bMissing = b == null || !Number.isFinite(b);
-    if (aMissing && bMissing) return 0;
-    if (aMissing) return 1;
-    if (bMissing) return -1;
-    return (a - b) * dir;
   }
   function cmpStr(a, b, dir) {
     return String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' }) * dir;
@@ -736,12 +726,6 @@
     list.sort((a, b) => {
       const ma = mineMap[a.propertyId] || {};
       const mb = mineMap[b.propertyId] || {};
-      if (sortKey === 'game') {
-        return cmpNumMissingLast(numOrNull(ma.gameLevel), numOrNull(mb.gameLevel), dir);
-      }
-      if (sortKey === 'prod') {
-        return cmpNumMissingLast(numOrNull(ma.productionLevel), numOrNull(mb.productionLevel), dir);
-      }
       if (sortKey === 'mine') {
         return cmpStr(mineTitle(ma, a), mineTitle(mb, b), dir);
       }
@@ -791,8 +775,6 @@
         id: m.id,
         mineType: m.mineType || 'rock',
         customName: custom || null,
-        gameLevel: numOrNull(d.gameLevel),
-        productionLevel: numOrNull(d.productionLevel),
         _raw: m,
         _details: d
       };
