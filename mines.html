@@ -45,7 +45,7 @@
     .sidebar-footer { margin-top:auto; padding:12px 20px; font-size:11px; color:#556070; border-top:1px solid var(--border); }
     .sidebar-footer a { color:#556070; text-decoration:none; }
     .sidebar-footer a:hover { color:#8899AA; }
-    .main { flex:1; overflow-x:hidden; overflow-y:auto; background:#eef1f4; }
+    .main { flex:1; overflow-x:hidden; overflow-y:auto; background:#eef1f4; position:relative; }
     #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:24px; }
     .login-card { width:100%; max-width:380px; background:white; border:3px solid var(--brown-mid); border-radius:15px; overflow:hidden; box-shadow:0 4px 20px rgba(139,69,19,0.2); }
     .login-card-header { background:var(--brown); padding:24px 28px 20px; text-align:center; border-bottom:3px solid var(--brown-dark); }
@@ -259,6 +259,80 @@
       .mine-card { min-width:0; width:100%; max-width:100%; flex-basis:100%; }
       .mine-card-left { width:92%; max-width:none; }
     }
+
+    /* ── Visitors overlay (mine-scoped check-ins) ── */
+    .visitors-overlay {
+      position:absolute; inset:0; z-index:80;
+      display:flex; flex-direction:column;
+      background:rgba(13,27,42,0.78);
+    }
+    .visitors-overlay[hidden] { display:none !important; }
+    .visitors-overlay-panel {
+      position:relative; flex:1; min-height:0; display:flex; flex-direction:column;
+      margin:12px; background:#f5f0e8; border:2px solid var(--brown-mid); border-radius:14px;
+      box-shadow:0 16px 40px rgba(0,0,0,.28); overflow:hidden;
+    }
+    .visitors-overlay-close {
+      position:absolute; top:10px; right:12px; z-index:2;
+      width:36px; height:36px; border:0; border-radius:999px;
+      background:rgba(92,51,23,0.12); color:var(--brown-dark);
+      font:700 22px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .visitors-overlay-close:hover { background:rgba(92,51,23,0.22); }
+    .visitors-overlay-head {
+      flex-shrink:0; padding:14px 52px 10px 16px;
+      background:var(--brown); border-bottom:2px solid var(--brown-dark);
+    }
+    .visitors-overlay-title {
+      font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--gold);
+    }
+    .visitors-overlay-sub { font-size:12px; color:rgba(255,215,0,0.65); margin-top:2px; }
+    .visitors-overlay-toolbar {
+      flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+      padding:10px 16px; background:#e8d5b7; border-bottom:1px solid var(--brown-mid);
+    }
+    .visitors-overlay-toolbar .tool-search { flex:1; min-width:140px; }
+    .visitors-overlay-toolbar select {
+      font:500 13px 'DM Sans',sans-serif; color:#0D1B2A; background:#fff;
+      border:1px solid #d0d5dc; border-radius:999px; padding:7px 12px; outline:none;
+    }
+    .visitors-overlay-note { font-size:11px; color:var(--text-mid); font-weight:600; }
+    .visitors-overlay-count { margin-left:auto; font-size:12px; color:#64748b; font-weight:600; white-space:nowrap; }
+    .visitors-overlay-body { flex:1; min-height:0; overflow-y:auto; padding:14px 16px 20px; }
+    .visitors-grid {
+      display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; align-content:start;
+    }
+    @media (max-width:1100px) { .visitors-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+    @media (max-width:640px) { .visitors-grid { grid-template-columns:1fr; } }
+    .vo-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-width:0; }
+    .vo-card:hover { border-color:var(--brown); }
+    .vo-card-header { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--bg); border-bottom:1px solid #e0d0c0; }
+    .vo-avatar { width:36px; height:36px; border-radius:50%; background:#D2B48C; border:2px solid var(--brown-mid); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--brown); flex-shrink:0; overflow:hidden; }
+    .vo-avatar img { width:100%; height:100%; object-fit:cover; }
+    .vo-info { flex:1; min-width:0; }
+    .vo-name { font-size:13px; font-weight:700; color:var(--text-dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vo-time { font-size:11px; color:var(--text-light); margin-top:1px; }
+    .vo-mine-meta { display:flex; align-items:center; gap:6px; flex-shrink:0; max-width:48%; }
+    .vo-mine-badge { display:flex; align-items:center; gap:5px; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700; background:rgba(139,69,19,0.1); color:var(--brown); border:1px solid var(--brown-mid); min-width:0; }
+    .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vo-type-icon { width:16px; height:16px; flex-shrink:0; object-fit:contain; }
+    .vo-pin { width:22px; height:22px; color:var(--brown); flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; }
+    .vo-pin svg { width:22px; height:22px; display:block; }
+    .vo-pin.is-missing { opacity:0.38; pointer-events:none; }
+    .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; }
+    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; }
+    .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
+    .vo-message { font-size:13px; color:var(--text-dark); font-style:italic; line-height:1.45; }
+    .vo-message::before { content:'"'; }
+    .vo-message::after { content:'"'; }
+    .vo-no-message { font-size:12px; color:var(--text-light); font-style:italic; }
+    .vo-empty, .vo-loading { text-align:center; padding:48px 16px; color:var(--text-mid); font-size:14px; }
+    .vo-loading .skeleton {
+      height:14px; width:160px; margin:0 auto; border-radius:4px;
+      background:linear-gradient(90deg,#ddd 25%,#eee 50%,#ddd 75%); background-size:200% 100%;
+      animation:vo-shimmer 1.4s infinite;
+    }
+    @keyframes vo-shimmer { to { background-position:-200% 0; } }
   </style>
 </head>
 <body>
@@ -372,6 +446,28 @@
       <div class="mine-board-wrap">
         <div id="mine-board"></div>
         <div class="mine-sentinel" id="mine-sentinel" hidden></div>
+      </div>
+
+      <div id="visitors-overlay" class="visitors-overlay" hidden aria-hidden="true">
+        <div class="visitors-overlay-panel" role="dialog" aria-modal="true" aria-labelledby="visitors-overlay-title">
+          <button type="button" class="visitors-overlay-close" id="visitors-overlay-close" aria-label="Close visitors">×</button>
+          <div class="visitors-overlay-head">
+            <div class="visitors-overlay-title" id="visitors-overlay-title">Visitors</div>
+            <div class="visitors-overlay-sub" id="visitors-overlay-sub"></div>
+          </div>
+          <div class="visitors-overlay-toolbar">
+            <input class="tool-search" id="visitors-overlay-search" type="search" placeholder="Search visitor name" autocomplete="off" />
+            <select id="visitors-overlay-sort" aria-label="Sort visitors">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+            <span class="visitors-overlay-note" id="visitors-overlay-note" hidden>Showing newest 200</span>
+            <span class="visitors-overlay-count" id="visitors-overlay-count"></span>
+          </div>
+          <div class="visitors-overlay-body" id="visitors-overlay-body">
+            <div class="vo-loading"><div class="skeleton"></div></div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -1068,25 +1164,208 @@
     visitorCountPending.push({ mineId, btn });
     scheduleVisitorCountFlush();
   }
-  async function logMineVisitors(mineId) {
+  const visitorListCache = new Map(); // mineId -> { list, truncated, mine }
+  let visitorsOverlayMineId = null;
+  let visitorsOverlayBound = false;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  function visitorTimeAgo(ts) {
+    if (!ts) return '';
+    const ms = visitorTsMillis(ts);
+    if (!ms) return '';
+    const s = Math.floor((Date.now() - ms) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    if (s < 86400 * 7) return Math.floor(s / 86400) + 'd ago';
+    const d = new Date(ms);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function visitorFullDate(ts) {
+    const ms = visitorTsMillis(ts);
+    if (!ms) return '';
+    return new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  function visitorAvatarUrl(v) {
+    const candidates = [v.visitorPhotoURL, v.visitorAvatarUrl, v.avatarUrl, v.userPhotoURL, v.profilePhotoURL];
+    for (const u of candidates) {
+      if (typeof u === 'string' && u.startsWith('https://')) return u;
+    }
+    return null;
+  }
+  function visitorCheckInPhoto(v) {
+    if (v.hasPhoto === false) return null;
+    const u = v.photoURL || v.photoUrl || null;
+    return (typeof u === 'string' && u.startsWith('https://')) ? u : null;
+  }
+  function pinSvgHtml() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.8"></path><circle cx="12" cy="10" r="2.2" fill="currentColor"></circle></svg>';
+  }
+  function findMineById(mineId) {
+    return allMines.find(m => String(m.id) === String(mineId)) || null;
+  }
+  function closeVisitorsOverlay() {
+    const overlay = $('visitors-overlay');
+    if (!overlay || overlay.hidden) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    const main = $('portal-main');
+    if (main) {
+      main.style.overflow = '';
+      delete main.dataset.visitorsOverlayOpen;
+    }
+    visitorsOverlayMineId = null;
+  }
+  function bindVisitorsOverlayOnce() {
+    if (visitorsOverlayBound) return;
+    visitorsOverlayBound = true;
+    const closeBtn = $('visitors-overlay-close');
+    if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeVisitorsOverlay(); });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const overlay = $('visitors-overlay');
+      if (overlay && !overlay.hidden) {
+        e.preventDefault();
+        closeVisitorsOverlay();
+      }
+    });
+    const search = $('visitors-overlay-search');
+    const sort = $('visitors-overlay-sort');
+    if (search) search.addEventListener('input', () => renderVisitorsOverlayList());
+    if (sort) sort.addEventListener('change', () => renderVisitorsOverlayList());
+  }
+  function renderVisitOverlayCard(v, mine) {
+    const name = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
+    const safeName = escapeHtml(name);
+    const avatar = visitorAvatarUrl(v);
+    const avatarInner = avatar
+      ? '<img src="' + escapeHtml(avatar) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+      : escapeHtml(initials(name));
+    const typeRaw = (mine && mine.mineType != null) ? mine.mineType : (v.mineType || 'rock');
+    const typeKey = String(typeRaw).trim().toLowerCase();
+    const type = TYPE_ORDER.includes(typeKey) ? typeKey : 'rock';
+    const mineName = mine ? titleOf(mine) : (v.propertyName || 'Mine');
+    const iconSrc = ICONS[type] || ICONS.rock;
+    const gps = mine ? findGps(mine) : null;
+    let pinHtml;
+    if (gps) {
+      const href = 'https://www.google.com/maps?q=' + encodeURIComponent(gps.lat + ',' + gps.lng);
+      pinHtml = '<a class="vo-pin" href="' + href + '" target="_blank" rel="noopener noreferrer" title="Open in Maps" aria-label="Open mine in Maps">' + pinSvgHtml() + '</a>';
+    } else {
+      pinHtml = '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
+    }
+    const photo = visitorCheckInPhoto(v);
+    const photoHtml = photo
+      ? '<img class="vo-photo" src="' + escapeHtml(photo) + '" alt="Check-in photo" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;vo-photo-empty&quot;>No photo</div>\'">'
+      : '<div class="vo-photo-empty">No photo</div>';
+    const msg = (typeof v.message === 'string' && v.message.trim()) ? v.message.trim() : '';
+    const msgHtml = msg
+      ? '<div class="vo-message">' + escapeHtml(msg) + '</div>'
+      : '<div class="vo-no-message">No message left</div>';
+    return '<article class="vo-card">'
+      + '<div class="vo-card-header">'
+      + '<div class="vo-avatar">' + avatarInner + '</div>'
+      + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
+      + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
+      + '<div class="vo-mine-meta">'
+      + '<div class="vo-mine-badge" title="' + escapeHtml(mineName) + '">'
+      + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
+      + '<span>' + escapeHtml(mineName) + '</span></div>'
+      + pinHtml
+      + '</div></div>'
+      + '<div class="vo-card-body">' + photoHtml + msgHtml + '</div>'
+      + '</article>';
+  }
+  function renderVisitorsOverlayList() {
+    const body = $('visitors-overlay-body');
+    const countEl = $('visitors-overlay-count');
+    if (!body || !visitorsOverlayMineId) return;
+    const cached = visitorListCache.get(visitorsOverlayMineId);
+    if (!cached) return;
+    const q = (($('visitors-overlay-search') || {}).value || '').trim().toLowerCase();
+    const sort = (($('visitors-overlay-sort') || {}).value || 'newest');
+    let list = cached.list.slice();
+    if (q) {
+      list = list.filter(v => {
+        const name = (v.visitorNickname || v.nickname || v.userId || '').toLowerCase();
+        return name.includes(q);
+      });
+    }
+    list.sort((a, b) => {
+      const tA = visitorTsMillis(a.timestamp);
+      const tB = visitorTsMillis(b.timestamp);
+      return sort === 'oldest' ? (tA - tB) : (tB - tA);
+    });
+    if (countEl) countEl.textContent = list.length + ' visit' + (list.length === 1 ? '' : 's');
+    if (!list.length) {
+      body.innerHTML = '<div class="vo-empty">No check-ins match your filters.</div>';
+      return;
+    }
+    body.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitOverlayCard(v, cached.mine)).join('') + '</div>';
+  }
+  async function fetchMineVisitors(mineId) {
     const snap = await db.collection('checkIns')
       .where('propertyId', '==', mineId)
       .orderBy('timestamp', 'desc')
       .limit(VISITOR_LIST_LIMIT)
       .get();
-    const list = snap.docs.map(d => {
-      const v = d.data() || {};
-      return {
-        id: d.id,
-        userId: v.userId || null,
-        visitorNickname: v.visitorNickname || v.nickname || null,
-        timestamp: v.timestamp || null,
-        timestampMs: visitorTsMillis(v.timestamp),
-        propertyId: v.propertyId || mineId
-      };
-    });
+    const list = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
     const truncated = snap.size >= VISITOR_LIST_LIMIT;
-    console.log('[mines] visitors for', mineId, { count: list.length, truncated, visitors: list });
+    return { list, truncated };
+  }
+  async function openVisitorsOverlay(mineId) {
+    bindVisitorsOverlayOnce();
+    const overlay = $('visitors-overlay');
+    const main = $('portal-main');
+    const mine = findMineById(mineId);
+    if (!overlay || !main) return;
+    visitorsOverlayMineId = mineId;
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    main.style.overflow = 'hidden';
+    main.dataset.visitorsOverlayOpen = '1';
+    const title = mine ? titleOf(mine) : 'Visitors';
+    const countCached = visitorCountCache.has(mineId) ? visitorCountCache.get(mineId) : null;
+    $('visitors-overlay-title').textContent = title;
+    $('visitors-overlay-sub').textContent = countCached != null
+      ? (countCached + ' visitor' + (countCached === 1 ? '' : 's'))
+      : 'Check-ins at this mine';
+    const search = $('visitors-overlay-search');
+    const sort = $('visitors-overlay-sort');
+    if (search) search.value = '';
+    if (sort) sort.value = 'newest';
+    $('visitors-overlay-note').hidden = true;
+    $('visitors-overlay-count').textContent = '';
+    $('visitors-overlay-body').innerHTML = '<div class="vo-loading"><div class="skeleton"></div></div>';
+
+    try {
+      let cached = visitorListCache.get(mineId);
+      if (!cached) {
+        const fetched = await fetchMineVisitors(mineId);
+        cached = { list: fetched.list, truncated: fetched.truncated, mine };
+        visitorListCache.set(mineId, cached);
+      } else {
+        cached.mine = mine || cached.mine;
+      }
+      if (visitorsOverlayMineId !== mineId) return;
+      $('visitors-overlay-note').hidden = !cached.truncated;
+      if (countCached == null) {
+        $('visitors-overlay-sub').textContent = cached.list.length + ' check-in' + (cached.list.length === 1 ? '' : 's')
+          + (cached.truncated ? '+' : '');
+      }
+      renderVisitorsOverlayList();
+    } catch (err) {
+      console.warn('[mines] visitor list failed', mineId, err);
+      if (visitorsOverlayMineId !== mineId) return;
+      $('visitors-overlay-body').innerHTML = '<div class="vo-empty">Could not load visitors.</div>';
+    }
   }
   function ensureObs() {
     const root = $('portal-main');
@@ -1275,7 +1554,7 @@
       visitBtn.addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
-        logMineVisitors(mid).catch(err => console.warn('[mines] visitor list failed', mid, err));
+        openVisitorsOverlay(mid);
       });
       if (visitorCountCache.has(mid)) applyVisitorCountUI(visitBtn, visitorCountCache.get(mid));
     }
