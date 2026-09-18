@@ -7,7 +7,8 @@
        content for an anonymous visitor or crawler (AdSense flagged the
        site for "Low value content"; see claude/AdSense_LowValueContent_Fix_2026-09-07.md). -->
   <meta name="robots" content="noindex, nofollow" />
-  <title>My Activity — TerraMine</title>
+  <title>OLD Visitors — TerraMine</title>
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
   <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
@@ -25,6 +26,7 @@
       --brown:       #8B4513;
       --brown-mid:   #8B7355;
       --brown-light: #D2B48C;
+      --chocolate:   #D2691E;
       --gold:        #FFD700;
       --amber:       #FF9800;
       --white:       #ffffff;
@@ -45,6 +47,7 @@
     body.auth-pending #login-screen,
     body.auth-pending #portal { visibility: hidden; }
 
+    /* ── Top Nav ── */
     .top-nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(13,27,42,0.97); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
     .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--cyan); text-decoration:none; }
     .nav-user { display:flex; align-items:center; gap:12px; }
@@ -68,8 +71,10 @@
     .ad-banner-wrap .adsbygoogle { max-width: 100%; }
     @media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; max-height: 64px; } }
 
+    /* ── Layout ── */
     .layout { display:flex; flex:1; min-height:0; }
 
+    /* ── Sidebar ── */
     .sidebar { width:220px; flex-shrink:0; background:var(--navy2); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 0 16px; }
     .tb-readout { margin:0 16px 28px; background:linear-gradient(135deg,rgba(79,195,247,0.08),rgba(79,195,247,0.03)); border:1px solid rgba(79,195,247,0.2); border-radius:8px; padding:14px 16px; }
     .tb-label { font-size:10px; letter-spacing:2px; color:var(--cyan); font-family:'Bebas Neue',sans-serif; margin-bottom:4px; }
@@ -87,44 +92,53 @@
     .sidebar-footer { margin-top:auto; padding:12px 20px; font-size:11px; color:#556070; border-top:1px solid var(--border); }
     .sidebar-footer a { color:#556070; text-decoration:none; }
 
+    /* ── Main ── */
     .main { flex:1; overflow-y:auto; background:var(--off-white); }
 
-    .page-header { background:var(--brown); padding:16px 20px; border-bottom:3px solid var(--brown-dark); position:sticky; top:0; z-index:10; }
+    /* ── Page header (brown app-style) ── */
+    .page-header { background:var(--brown); padding:16px 20px; border-bottom:3px solid var(--brown-dark); position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
     .page-header-left { display:flex; align-items:center; gap:10px; }
     .page-header-icon { font-size:22px; }
     .page-header-title { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--gold); }
     .page-header-sub { font-size:12px; color:rgba(255,215,0,0.6); margin-top:1px; }
 
-    /* ── Stats grid (mirrors app's activityTab statsGrid) ── */
-    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:16px; }
-    .stat-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; padding:16px; text-align:center; }
-    .stat-number { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--brown); line-height:1; margin-bottom:4px; }
-    .stat-label { font-size:11px; color:var(--text-mid); }
-
-    /* ── Filter toolbar ── */
-    .toolbar { display:flex; align-items:center; gap:10px; padding:0 16px 12px; flex-wrap:wrap; }
+    /* ── Toolbar ── */
+    .toolbar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--bg2); border-bottom:2px solid var(--brown-mid); flex-wrap:wrap; }
+    .search-input { flex:1; min-width:160px; padding:8px 12px; border:2px solid var(--brown-mid); border-radius:8px; font-size:13px; font-family:'DM Sans',sans-serif; color:var(--text-dark); background:white; outline:none; }
+    .search-input:focus { border-color:var(--brown); }
+    .filter-select { padding:8px 10px; border:2px solid var(--brown-mid); border-radius:8px; font-size:12px; font-family:'DM Sans',sans-serif; background:white; color:var(--text-dark); outline:none; cursor:pointer; }
     .filter-btn { padding:7px 14px; border-radius:8px; border:2px solid var(--brown-mid); background:white; color:var(--text-mid); font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
     .filter-btn.active { background:var(--brown); color:var(--gold); border-color:var(--brown); font-weight:700; }
     .result-count { font-size:12px; color:var(--text-mid); margin-left:auto; white-space:nowrap; }
 
-    /* ── Section ── */
-    .section-label { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:2px; color:var(--brown); padding:8px 16px; }
+    /* ── Visit cards ── */
+    .visits-container { padding:16px; }
+    .visit-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; margin-bottom:12px; overflow:hidden; transition:border-color 0.15s; }
+    .visit-card:hover { border-color:var(--brown); }
 
-    /* ── Activity feed cards ── */
-    .feed-container { padding:0 16px 24px; }
-    .feed-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; margin-bottom:10px; overflow:hidden; }
-    .feed-card-row { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; }
-    .feed-icon { font-size:24px; flex-shrink:0; width:32px; text-align:center; }
-    .feed-content { flex:1; min-width:0; }
-    .feed-label { font-size:13px; color:var(--text-dark); font-weight:600; line-height:1.4; }
-    .feed-meta-row { display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
-    .feed-mine-badge { font-size:11px; font-weight:700; color:var(--brown); background:rgba(139,69,19,0.08); border:1px solid var(--brown-mid); border-radius:10px; padding:2px 8px; }
-    .feed-time { font-size:11px; color:var(--text-light); }
-    .feed-tb { font-size:12px; font-weight:700; color:var(--amber); flex-shrink:0; }
-    .feed-photo { width:100%; max-height:200px; object-fit:cover; cursor:pointer; display:block; border-top:1px solid #e0d0c0; }
-    .feed-message { font-size:12px; color:var(--text-mid); font-style:italic; margin-top:4px; }
+    .visit-card-header { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--bg); border-bottom:1px solid #e0d0c0; }
+    .visitor-avatar { width:40px; height:40px; border-radius:50%; background:var(--brown-light); border:2px solid var(--brown-mid); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--brown); flex-shrink:0; overflow:hidden; }
+    .visitor-avatar img { width:100%; height:100%; object-fit:cover; }
+    .visitor-info { flex:1; min-width:0; }
+    .visitor-name { font-size:14px; font-weight:700; color:var(--text-dark); }
+    .visitor-time { font-size:11px; color:var(--text-light); margin-top:1px; }
+    .visit-mine-badge { display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:700; background:rgba(139,69,19,0.1); color:var(--brown); border:1px solid var(--brown-mid); flex-shrink:0; }
 
-    /* ── Lightbox ── */
+    .visit-card-body { padding:12px 14px; }
+    .visit-message { font-size:13px; color:var(--text-dark); font-style:italic; margin-bottom:10px; line-height:1.5; }
+    .visit-message::before { content:'"'; }
+    .visit-message::after  { content:'"'; }
+    .visit-no-message { font-size:12px; color:var(--text-light); font-style:italic; }
+
+    .visit-photo { width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:8px; cursor:pointer; border:1px solid #e0d0c0; }
+
+    .visit-meta-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .visit-prop-id { font-size:11px; color:var(--text-light); font-family:monospace; }
+    .hidden-badge { background:#ffebee; color:var(--red); border:1px solid #ffcdd2; border-radius:4px; font-size:10px; padding:2px 6px; font-weight:700; }
+    .adult-badge  { background:#fff3e0; color:var(--amber); border:1px solid #ffe0b2; border-radius:4px; font-size:10px; padding:2px 6px; font-weight:700; }
+    .reported-badge { background:#fce4ec; color:#c2185b; border:1px solid #f48fb1; border-radius:4px; font-size:10px; padding:2px 6px; font-weight:700; }
+
+    /* ── Photo lightbox ── */
     #lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; }
     #lightbox.open { display:flex; }
     #lightbox img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; }
@@ -137,51 +151,46 @@
     .skeleton { background:linear-gradient(90deg,#ddd 25%,#eee 50%,#ddd 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:4px; }
     @keyframes shimmer { to { background-position:-200% 0; } }
 
+    /* ── Load more ── */
     .load-more-btn { display:block; width:calc(100% - 32px); margin:0 16px 20px; padding:12px; background:var(--brown-mid); color:white; border:none; border-radius:8px; font-size:14px; font-weight:700; font-family:'DM Sans',sans-serif; cursor:pointer; text-align:center; transition:background 0.15s; }
     .load-more-btn:hover { background:var(--brown); }
 
+    /* ── Toast ── */
     #toast { position:fixed; bottom:24px; right:24px; background:var(--brown-dark); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:12px 18px; font-size:13px; color:white; z-index:200; transform:translateY(80px); opacity:0; transition:all 0.25s; pointer-events:none; }
     #toast.show { transform:none; opacity:1; }
     #toast.success { border-color:var(--green); }
     #toast.error { border-color:var(--red); }
 
-    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:24px; }
-    .login-card { width:100%; max-width:380px; background:white; border:3px solid var(--brown-mid); border-radius:15px; overflow:hidden; box-shadow:0 4px 20px rgba(139,69,19,0.2); }
-    .login-card-header { background:var(--brown); padding:24px 28px 20px; text-align:center; border-bottom:3px solid var(--brown-dark); }
-    .login-card-body { padding:24px 28px 28px; }
-    .login-logo { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; color:var(--gold); margin-bottom:4px; }
-    .login-sub { font-size:13px; color:rgba(255,215,0,0.7); }
+    /* ── Login ── */
+    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--navy); padding:24px; }
+    .login-card { width:100%; max-width:380px; background:#111F30; border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:36px 32px; }
+    .login-logo { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:3px; color:var(--cyan); margin-bottom:4px; }
+    .login-sub { font-size:13px; color:#556070; margin-bottom:28px; }
     .input-group { margin-bottom:14px; }
-    .input-label { font-size:11px; color:var(--text-mid); margin-bottom:5px; display:block; font-weight:600; }
-    .input-field { width:100%; background:var(--off-white); border:2px solid var(--brown-mid); border-radius:8px; padding:10px 12px; font-size:14px; color:var(--text-dark); font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s; }
-    .input-field:focus { border-color:var(--brown); }
-    .input-field::placeholder { color:var(--text-light); }
-    .btn-primary { width:100%; padding:12px; background:var(--brown); color:var(--gold); border:none; border-radius:8px; font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; cursor:pointer; margin-top:4px; transition:background 0.15s; }
-    .btn-primary:hover { background:var(--brown-dark); }
-    .btn-primary:disabled { background:var(--brown-mid); cursor:not-allowed; }
-    .btn-google { width:100%; padding:10px; background:var(--off-white); color:var(--text-dark); border:2px solid var(--brown-mid); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:border-color 0.15s; }
-    .btn-google:hover { border-color:var(--brown); }
-    .login-divider { display:flex; align-items:center; gap:12px; margin:16px 0; font-size:11px; color:var(--text-light); }
-    .login-divider::before, .login-divider::after { content:''; flex:1; height:1px; background:var(--brown-mid); opacity:0.4; }
-    .login-error { font-size:12px; color:var(--red); margin-top:8px; min-height:16px; }
-    .login-toggle { text-align:center; font-size:12px; color:var(--text-mid); margin-top:16px; }
-    .login-toggle a { color:var(--brown); text-decoration:none; cursor:pointer; font-weight:700; }
+    .input-label { font-size:11px; color:#8899AA; margin-bottom:5px; display:block; }
+    .input-field { width:100%; background:var(--navy); border:1px solid rgba(255,255,255,0.07); border-radius:6px; padding:10px 12px; font-size:14px; color:white; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s; }
+    .input-field:focus { border-color:var(--cyan); }
+    .input-field::placeholder { color:#556070; }
+    .btn-primary { width:100%; padding:11px; background:var(--cyan); color:var(--navy); border:none; border-radius:6px; font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1.5px; cursor:pointer; margin-top:4px; }
+    .btn-google { width:100%; padding:10px; background:rgba(255,255,255,0.04); color:white; border:1px solid rgba(255,255,255,0.07); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .btn-google:hover { border-color:#8899AA; }
+    .login-divider { display:flex; align-items:center; gap:12px; margin:20px 0; font-size:11px; color:#556070; }
+    .login-divider::before,.login-divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.07); }
+    .login-error { font-size:12px; color:#EF5350; margin-top:8px; min-height:16px; }
+    .login-toggle { text-align:center; font-size:12px; color:#556070; margin-top:16px; }
+    .login-toggle a { color:var(--cyan); text-decoration:none; cursor:pointer; }
 
-    @media (max-width:900px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
     @media (max-width:700px) { .sidebar { display:none; } }
+    @media (max-width:500px) { .toolbar { gap:6px; } .filter-btn { padding:6px 10px; } }
   </style>
 </head>
 <body>
 
 <!-- LOGIN -->
-  <link rel="icon" type="image/png" href="/logo.png?v=2" />
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-card-header">
-      <div class="login-logo">⛏ TERRAMINE</div>
-      <div class="login-sub">Sign in to view your activity</div>
-    </div>
-    <div class="login-card-body">
+    <div class="login-logo">⛏ TerraMine</div>
+    <div class="login-sub">Sign in to view your visitors</div>
     <button class="btn-google" id="btn-google-signin">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
       Continue with Google
@@ -192,7 +201,6 @@
     <div class="login-error" id="login-error"></div>
     <button class="btn-primary" id="btn-email-signin">Sign In</button>
     <div class="login-toggle">Forgot password? <a id="btn-reset">Send reset email</a></div>
-    </div>
   </div>
 </div>
 
@@ -228,8 +236,8 @@
         <li><a href="mines.html"><span class="icon">⛏</span> My Mines</a></li>
         <li><a href="old-mines.html"><span class="icon">⛏</span> OLD Mines</a></li>
         <li><a href="visitors.html"><span class="icon">👥</span> Visitors</a></li>
-        <li><a href="old-visitors.html"><span class="icon">👥</span> OLD Visitors</a></li>
-        <li><a href="activity.html" class="active"><span class="icon">⚡</span> Activity</a></li>
+        <li><a href="old-visitors.html" class="active"><span class="icon">👥</span> OLD Visitors</a></li>
+        <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
         <li><a href="account.html"><span class="icon">⚙️</span> Account</a></li>
       </ul>
       <div class="sidebar-section">Games</div>
@@ -245,58 +253,49 @@
     <main class="main">
       <div class="page-header">
         <div class="page-header-left">
-          <span class="page-header-icon">⚡</span>
+          <span class="page-header-icon">👥</span>
           <div>
-            <div class="page-header-title">My Activity</div>
-            <div class="page-header-sub" id="header-sub">Loading your history…</div>
+            <div class="page-header-title">OLD Visitor Log</div>
+            <div class="page-header-sub" id="header-sub">Loading check-ins…</div>
           </div>
         </div>
       </div>
 
-      <!-- Stats grid — mirrors app's Profile > Activity tab -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-number" id="stat-checkins">—</div>
-          <div class="stat-label">Check-ins Made</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="stat-tb-earned">—</div>
-          <div class="stat-label">TB Earned</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="stat-photos-card">—</div>
-          <div class="stat-label">Photos Shared</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="stat-properties">—</div>
-          <div class="stat-label">Properties</div>
-        </div>
-      </div>
-
-      <div class="section-label">My Check-in History</div>
-
+      <!-- Toolbar -->
       <div class="toolbar">
-        <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">All</button>
-        <button class="filter-btn" data-filter="photo" onclick="setFilter('photo', this)">📸 With Photo</button>
-        <button class="filter-btn" data-filter="message" onclick="setFilter('message', this)">💬 With Message</button>
+        <input class="search-input" type="search" id="search-input" placeholder="Search visitor name or message…" />
+        <select class="filter-select" id="mine-filter">
+          <option value="all">All Mines</option>
+        </select>
+        <select class="filter-select" id="sort-select" onchange="setSortOrder(this.value)">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+        </select>
+        <button class="filter-btn active" data-filter="all" onclick="setTypeFilter('all', this)">All</button>
+        <button class="filter-btn" data-filter="message" onclick="setTypeFilter('message', this)">💬 With Message</button>
+        <button class="filter-btn" data-filter="photo" onclick="setTypeFilter('photo', this)">📸 With Photo</button>
+        <button class="filter-btn" data-filter="hidden" onclick="setTypeFilter('hidden', this)">🚫 Hidden</button>
         <span class="result-count" id="result-count">—</span>
       </div>
 
-      <div class="feed-container" id="feed-container">
-        ${[1,2,3,4].map(() => `
-          <div class="feed-card">
-            <div class="feed-card-row">
-              <div class="skeleton" style="width:24px;height:24px;border-radius:4px;flex-shrink:0;"></div>
-              <div style="flex:1"><div class="skeleton" style="height:13px;width:200px;margin-bottom:6px;"></div><div class="skeleton" style="height:11px;width:100px;"></div></div>
+      <div class="visits-container" id="visits-container">
+        <!-- Skeletons while loading -->
+        ${[1,2,3,4,5].map(() => `
+          <div class="visit-card">
+            <div class="visit-card-header">
+              <div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;"></div>
+              <div style="flex:1"><div class="skeleton" style="height:14px;width:120px;margin-bottom:6px;"></div><div class="skeleton" style="height:11px;width:80px;"></div></div>
             </div>
+            <div class="visit-card-body"><div class="skeleton" style="height:13px;width:200px;"></div></div>
           </div>`).join('')}
       </div>
 
-      <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMore()">Load More</button>
+      <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMore()">Load More Visitors</button>
     </main>
   </div>
 </div>
 
+<!-- Photo lightbox -->
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="Check-in photo" />
@@ -324,15 +323,22 @@
   document.body.classList.add('auth-pending');
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
-  const $ = id => document.getElementById(id);
-  let currentUser = null;
-  let allMyCheckIns = [];
-  let filteredCheckIns = [];
-  let displayedCount = 0;
-  let activeFilter = 'all';
-  let propertyMineTypes = {}; // propertyId -> mineType (for badge display)
-  const PAGE_SIZE = 20;
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentUser   = null;
+  let allVisits     = [];       // all loaded check-ins
+  let filteredVisits= [];       // after filters
+  let displayedCount= 0;
+  let myPropertyIds = new Set();
+  let myPropertyMap = {};       // id → { customName, mineType }
+  const PAGE_SIZE   = 20;
 
+  let activeTypeFilter = 'all';
+  let activeMineFilter = 'all';
+  let searchQuery      = '';
+  let sortOrder        = 'newest';
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
   function showToast(msg, type='') { const t=$('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',3000); }
   function fmtNum(n) { if(!n)return'0'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return Math.round(n).toLocaleString(); }
   function fmtUSD(n) { return '$'+(parseFloat(n)||0).toFixed(2); }
@@ -343,18 +349,20 @@
     if (!ts) return '';
     const d = typeof ts === 'string' ? new Date(ts) : ts.toDate ? ts.toDate() : new Date(ts);
     const s = Math.floor((Date.now() - d) / 1000);
-    if (s < 60) return 'just now';
-    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 60)    return 'just now';
+    if (s < 3600)  return Math.floor(s/60) + 'm ago';
     if (s < 86400) return Math.floor(s/3600) + 'h ago';
     if (s < 86400*7) return Math.floor(s/86400) + 'd ago';
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   }
+
   function fullDate(ts) {
     if (!ts) return '';
     const d = typeof ts === 'string' ? new Date(ts) : ts.toDate ? ts.toDate() : new Date(ts);
     return d.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
   }
 
+  // ── Auth ───────────────────────────────────────────────────────────────────
   auth.onAuthStateChanged(user => {
     if (!authResolved) {
       document.body.classList.remove('auth-pending');
@@ -393,6 +401,7 @@
   });
   $('btn-signout').addEventListener('click', () => auth.signOut());
 
+  // ── Load portal ────────────────────────────────────────────────────────────
   async function loadPortal(user) {
     const uSnap = await db.collection('users').doc(user.uid).get();
     const ud = uSnap.data() || {};
@@ -404,96 +413,180 @@
       $('nav-avatar').innerHTML = `<img src="${user.photoURL}" alt="${nick}">`;
     else $('nav-avatar').textContent = initials(nick);
 
-    // Stat cards from user doc (matches app's Profile > Activity tab summary cards)
-    $('stat-checkins').textContent   = fmtNum(ud.totalCheckIns || 0);
-    $('stat-tb-earned').textContent  = fmtNum(ud.totalTBEarned || 0);
-
-    // Properties count
+    // Load properties
     const propsSnap = await db.collection('properties').where('ownerId','==',user.uid).get();
     const props = propsSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-    $('stat-properties').textContent = fmtNum(props.length);
-    props.forEach(p => { propertyMineTypes[p.id] = p.mineType || 'rock'; });
+    myPropertyIds = new Set(props.map(p => p.id));
 
-    await loadMyCheckIns(user.uid);
+    // Fetch custom names from propertyDetails
+    const detSnaps = await Promise.all(props.map(p => db.collection('propertyDetails').doc(p.id).get()));
+    props.forEach((p,i) => {
+      const det = detSnaps[i].exists ? detSnaps[i].data() : {};
+      myPropertyMap[p.id] = { customName: det.customName || p.id, mineType: p.mineType || 'rock' };
+    });
+
+    // Populate mine filter dropdown
+    const sel = $('mine-filter');
+    props.sort((a,b) => (myPropertyMap[a.id]?.customName||'').localeCompare(myPropertyMap[b.id]?.customName||'')).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${mineIcon(p.mineType||'rock')} ${myPropertyMap[p.id]?.customName || p.id}`;
+      sel.appendChild(opt);
+    });
+
+    // Open mine from URL hash
+    const hash = location.hash.replace('#','');
+    if (hash && myPropertyIds.has(hash)) {
+      sel.value = hash;
+      activeMineFilter = hash;
+    }
+
+    await loadVisits(user.uid);
   }
 
-  async function loadMyCheckIns(uid) {
+  // ── Load check-ins ─────────────────────────────────────────────────────────
+  async function loadVisits(uid) {
     try {
-      const snap = await db.collection('checkIns')
-        .where('userId','==', uid)
-        .orderBy('timestamp','desc')
-        .limit(200)
-        .get();
+      let snap;
+      if (activeMineFilter !== 'all') {
+        snap = await db.collection('checkIns')
+          .where('propertyId','==', activeMineFilter)
+          .orderBy('timestamp','desc')
+          .limit(200)
+          .get();
+      } else {
+        snap = await db.collection('checkIns')
+          .where('propertyOwnerId','==', uid)
+          .orderBy('timestamp','desc')
+          .limit(200)
+          .get();
+      }
 
-      allMyCheckIns = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-
-      const photoCount = allMyCheckIns.filter(c => c.hasPhoto || c.photoURL || c.photoUrl).length;
-      $('stat-photos-card').textContent = fmtNum(photoCount);
-      $('header-sub').textContent = `${allMyCheckIns.length} check-ins to other players' mines`;
-
-      applyFilter();
+      allVisits = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      $('header-sub').textContent = `${allVisits.length} total check-ins across your mines`;
+      applyFilters();
     } catch(e) {
-      console.error('Load activity error:', e);
-      $('feed-container').innerHTML = `<div class="empty-state"><div class="empty-text">Error loading activity: ${e.message}</div></div>`;
+      console.error('Load visits error:', e);
+      $('visits-container').innerHTML = `<div class="empty-state"><div class="empty-text">Error loading visitors: ${e.message}</div></div>`;
     }
   }
 
-  function applyFilter() {
-    filteredCheckIns = allMyCheckIns.filter(c => {
-      if (activeFilter === 'photo'   && !(c.hasPhoto || c.photoURL || c.photoUrl)) return false;
-      if (activeFilter === 'message' && !c.message) return false;
+  // ── Filters ────────────────────────────────────────────────────────────────
+  function applyFilters() {
+    const q = searchQuery.toLowerCase();
+    filteredVisits = allVisits.filter(v => {
+      // Type filter
+      if (activeTypeFilter === 'message' && !v.message) return false;
+      if (activeTypeFilter === 'photo'   && !(v.hasPhoto || v.photoURL || v.photoUrl)) return false;
+      if (activeTypeFilter === 'hidden'  && !v.isHidden) return false;
+      // Mine filter
+      if (activeMineFilter !== 'all' && v.propertyId !== activeMineFilter) return false;
+      // Search
+      if (q) {
+        const name = (v.visitorNickname || v.nickname || '').toLowerCase();
+        const msg  = (v.message || '').toLowerCase();
+        if (!name.includes(q) && !msg.includes(q)) return false;
+      }
       return true;
     });
+
+    // Sort
+    filteredVisits.sort((a, b) => {
+      const tA = toMillis(a.timestamp);
+      const tB = toMillis(b.timestamp);
+      return sortOrder === 'newest' ? tB - tA : tA - tB;
+    });
+
     displayedCount = 0;
     renderPage();
   }
 
-  function renderPage() {
-    const toShow = filteredCheckIns.slice(0, displayedCount + PAGE_SIZE);
-    displayedCount = toShow.length;
-    $('result-count').textContent = `${filteredCheckIns.length} check-in${filteredCheckIns.length !== 1 ? 's' : ''}`;
+  function toMillis(ts) {
+    if (!ts) return 0;
+    if (typeof ts === 'string') return new Date(ts).getTime();
+    if (ts.toDate) return ts.toDate().getTime();
+    return new Date(ts).getTime();
+  }
 
-    if (!filteredCheckIns.length) {
-      $('feed-container').innerHTML = `<div class="empty-state"><div class="empty-icon">⛏</div><div class="empty-text">No check-ins match this filter. Go explore other players' mines!</div></div>`;
+  window.setSortOrder = function(order) {
+    sortOrder = order;
+    applyFilters();
+  };
+
+  function renderPage() {
+    const toShow = filteredVisits.slice(0, displayedCount + PAGE_SIZE);
+    displayedCount = toShow.length;
+
+    $('result-count').textContent = `${filteredVisits.length} visit${filteredVisits.length !== 1 ? 's' : ''}`;
+
+    if (!filteredVisits.length) {
+      $('visits-container').innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No check-ins match your filters.</div></div>`;
       $('load-more-btn').style.display = 'none';
       return;
     }
 
-    $('feed-container').innerHTML = toShow.map(c => renderFeedCard(c)).join('');
-    $('load-more-btn').style.display = displayedCount < filteredCheckIns.length ? 'block' : 'none';
+    $('visits-container').innerHTML = toShow.map(v => renderVisitCard(v)).join('');
+    $('load-more-btn').style.display = displayedCount < filteredVisits.length ? 'block' : 'none';
   }
 
-  function renderFeedCard(c) {
-    const photoURL = c.photoURL || c.photoUrl || null;
-    const type = propertyMineTypes[c.propertyId] || 'rock';
-    const tbEarned = c.tbEarned || c.visitorTBEarned || 0;
+  function renderVisitCard(v) {
+    const name     = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
+    const photoURL = v.photoURL || v.photoUrl || null;
+    const mine     = myPropertyMap[v.propertyId] || { customName: v.propertyId, mineType: 'rock' };
+    const badges   = [
+      v.isHidden  ? '<span class="hidden-badge">🚫 HIDDEN</span>'  : '',
+      v.isAdult   ? '<span class="adult-badge">🔞 ADULT</span>'    : '',
+      (v.reportCount||0) > 0 ? `<span class="reported-badge">⚠️ ${v.reportCount} REPORT${v.reportCount>1?'S':''}</span>` : '',
+    ].filter(Boolean).join('');
 
-    return `<div class="feed-card">
-      <div class="feed-card-row">
-        <span class="feed-icon">✅</span>
-        <div class="feed-content">
-          <div class="feed-label">Checked in to ${mineIcon(type)} a ${type} mine</div>
-          ${c.message ? `<div class="feed-message">"${c.message}"</div>` : ''}
-          <div class="feed-meta-row">
-            <span class="feed-mine-badge">${c.propertyId}</span>
-            <span class="feed-time" title="${fullDate(c.timestamp)}">${timeAgo(c.timestamp)}</span>
-            ${tbEarned ? `<span class="feed-tb">+${tbEarned} TB</span>` : ''}
-          </div>
+    return `<div class="visit-card">
+      <div class="visit-card-header">
+        <div class="visitor-avatar">${initials(name)}</div>
+        <div class="visitor-info">
+          <div class="visitor-name">${name}</div>
+          <div class="visitor-time" title="${fullDate(v.timestamp)}">${timeAgo(v.timestamp)}</div>
+        </div>
+        <div class="visit-mine-badge">${mineIcon(mine.mineType)} ${mine.customName}</div>
+      </div>
+      <div class="visit-card-body">
+        ${photoURL
+          ? `<img class="visit-photo" src="${photoURL}" alt="Check-in photo" onclick="openLightbox('${photoURL}')" loading="lazy" onerror="this.style.display='none'" />`
+          : ''}
+        ${v.message
+          ? `<div class="visit-message">${v.message}</div>`
+          : `<div class="visit-no-message">No message left</div>`}
+        <div class="visit-meta-row">
+          <span class="visit-prop-id">${v.propertyId}</span>
+          ${badges}
         </div>
       </div>
-      ${photoURL ? `<img class="feed-photo" src="${photoURL}" alt="My check-in photo" onclick="openLightbox('${photoURL}')" loading="lazy" onerror="this.style.display='none'" />` : ''}
     </div>`;
   }
 
-  function loadMore() { renderPage(); }
+  function loadMore() {
+    renderPage();
+  }
 
-  window.setFilter = function(type, btn) {
+  // ── Filter controls ────────────────────────────────────────────────────────
+  window.setTypeFilter = function(type, btn) {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    activeFilter = type;
-    applyFilter();
+    activeTypeFilter = type;
+    applyFilters();
   };
 
+  $('mine-filter').addEventListener('change', async e => {
+    activeMineFilter = e.target.value;
+    $('visits-container').innerHTML = '<div class="empty-state"><div class="empty-text">Loading…</div></div>';
+    await loadVisits(currentUser.uid);
+  });
+
+  $('search-input').addEventListener('input', e => {
+    searchQuery = e.target.value;
+    applyFilters();
+  });
+
+  // ── Lightbox ───────────────────────────────────────────────────────────────
   window.openLightbox = function(url) {
     $('lightbox-img').src = url;
     $('lightbox').classList.add('open');
