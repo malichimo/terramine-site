@@ -136,7 +136,7 @@
     .mine-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .mine-photo.has-img { border-style:solid; }
     .mine-head { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; }
-    .mine-title { flex:1; min-width:0; text-align:left; font-size:22px; font-weight:700; line-height:1.15; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .mine-title { flex:1; min-width:0; text-align:right; font-size:22px; font-weight:700; line-height:1.15; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     .gps-pin { width:26px; height:26px; flex-shrink:0; }
     .gps-pin.is-missing { opacity:0.38; }
     .prod-box {
@@ -298,6 +298,7 @@
             <div class="page-settings-title">Page settings</div>
             <label class="page-settings-field">Period
               <select id="display-period">
+                <option value="sec">Per Second</option>
                 <option value="min">Per Min</option>
                 <option value="day">Per Day</option>
                 <option value="month">Per Month</option>
@@ -445,15 +446,16 @@
   }
   function periodAmount(perMin, period) {
     const day = perMin * 60 * 24;
+    if (period === 'sec') return perMin / 60;
     if (period === 'min') return perMin;
     if (period === 'day') return day;
     if (period === 'year') return day * 365;
     return day * 30;
   }
   const DISPLAY_KEY = 'terramine.mines.display';
-  const DISPLAY_PERIODS = ['min', 'day', 'month', 'year'];
+  const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
   const DISPLAY_RATES = ['base', 'bonus', '12', '18', '24'];
-  const PERIOD_SUFFIX = { min: '/min', day: '/day', month: '/mo', year: '/yr' };
+  const PERIOD_SUFFIX = { sec: '/sec', min: '/min', day: '/day', month: '/mo', year: '/yr' };
   const RATE_INDEX = { base: 0, bonus: 1, '12': 2, '18': 3, '24': 4 };
   function defaultDisplay() { return { period: 'month', rate: 'bonus' }; }
   function loadDisplay() {
@@ -479,13 +481,8 @@
       return;
     }
     const amount = displayAmount(type, level, displayPref);
-    if (displayPref.period === 'month' && displayPref.rate === 'bonus') {
-      el.textContent = fmtMonthly(amount);
-      el.title = 'USD per month, same figure Old Mines shows.';
-    } else {
-      el.textContent = fmtRate(amount) + PERIOD_SUFFIX[displayPref.period];
-      el.title = '';
-    }
+    el.textContent = fmtRate(amount, displayPref.period) + PERIOD_SUFFIX[displayPref.period];
+    el.title = '';
     el.className = 'prod-value';
     if (displayPref.rate !== 'base' && level > 1) el.classList.add('is-boosted');
   }
@@ -502,8 +499,9 @@
     if (level == null) return null;
     return displayAmount(typeKey(p), level, { period: 'month', rate: 'bonus' });
   }
-  function fmtRate(n) {
-    let s = n.toFixed(14);
+  function fmtRate(n, period) {
+    const digits = (period === 'sec' || period === 'min') ? 10 : 8;
+    let s = n.toFixed(digits);
     if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
     return '$' + s;
   }
@@ -572,7 +570,7 @@
     const tip = ensureProdTip();
     const perMins = perMinColumns(type, level);
     const colClass = ['c-base', 'c-bonus', 'c-12', 'c-18', 'c-24'];
-    const rows = [['Per Min', 'min'], ['Per Day', 'day'], ['Per Month', 'month'], ['Per Year', 'year']];
+    const rows = [['Per Sec', 'sec'], ['Per Min', 'min'], ['Per Day', 'day'], ['Per Month', 'month'], ['Per Year', 'year']];
     const tbody = tip.querySelector('tbody');
     tbody.textContent = '';
     rows.forEach(row => {
@@ -584,7 +582,7 @@
       perMins.forEach((perMin, ci) => {
         const td = document.createElement('td');
         td.className = colClass[ci];
-        td.textContent = fmtRate(periodAmount(perMin, row[1]));
+        td.textContent = fmtRate(periodAmount(perMin, row[1]), row[1]);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -616,9 +614,6 @@
     box.addEventListener('mouseleave', () => {
       if (prodTipTarget === box) dismissProdTip();
     });
-  }
-  function fmtMonthly(n) {
-    return '$' + n.toFixed(6) + '/mo';
   }
   function bgTier(level) {
     if (level == null || level < 1 || level > 100) return 1;
