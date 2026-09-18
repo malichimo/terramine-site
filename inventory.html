@@ -240,6 +240,21 @@
     { key: 'diamond', field: 'diamondResources', title: 'Diamond Mine Resources', icon: ICONS.diamond, sortByRarity: true }
   ];
   const RARITY_RANK = { common: 0, uncommon: 1, rare: 2, epic: 3 };
+  /** Static display names for mine resource rarities (mine key → rarity → label). */
+  const RESOURCE_DISPLAY_NAMES = {
+    rock: { common: 'Gravel', uncommon: 'Slate', rare: 'Granit', epic: 'Marble' },
+    coal: { common: 'Coal Dust', uncommon: 'Lignite', rare: 'Anthracite', epic: 'Diamond Coal' },
+    gold: { common: 'Gold Flakes', uncommon: 'Gold Nugget', rare: 'Gold Bar', epic: 'Gold Ingot' },
+    diamond: { common: 'Diamond Chip', uncommon: 'Raw Diamond', rare: 'Cut Diamond', epic: 'Flawless Diamond' }
+  };
+
+  function resourceDisplayName(mineKey, rarity, fallback) {
+    const byMine = RESOURCE_DISPLAY_NAMES[mineKey];
+    if (!byMine) return fallback;
+    const rk = normalizeRarity(rarity);
+    if (rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
+    return fallback;
+  }
 
   let loadedUid = null;
   let groupData = {}; // key -> parsed items[]
@@ -419,7 +434,12 @@
     title.className = 'inv-card-title';
     const nameEl = document.createElement('div');
     nameEl.className = 'inv-card-name';
-    nameEl.textContent = item.name || 'Untitled';
+    const fallbackName = item.name || 'Untitled';
+    // Resource groups: map mine type + rarity → display name; inventory unchanged.
+    const mappedName = (opts.mineKey && opts.mineKey !== 'inventory')
+      ? resourceDisplayName(opts.mineKey, item.rarity, fallbackName)
+      : fallbackName;
+    nameEl.textContent = mappedName;
     title.appendChild(nameEl);
     if (item.rarity) {
       const r = document.createElement('span');
@@ -488,7 +508,7 @@
       head.append(img, h, c);
       const grid = document.createElement('div');
       grid.className = 'inv-grid';
-      filtered.forEach(it => grid.appendChild(renderCard(it, { orderByRarity: !!g.sortByRarity })));
+      filtered.forEach(it => grid.appendChild(renderCard(it, { orderByRarity: !!g.sortByRarity, mineKey: g.key })));
       sec.append(head, grid);
       board.appendChild(sec);
     });
