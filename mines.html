@@ -113,13 +113,19 @@
     }
     .mine-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .mine-photo.has-img { border-style:solid; }
-    .mine-title { width:100%; text-align:right; font-size:15px; font-weight:700; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .mine-title { width:100%; text-align:right; font-size:22px; font-weight:700; line-height:1.15; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     .gps-pin-wrap { display:flex; align-items:center; justify-content:flex-end; width:100%; }
     .gps-pin { width:26px; height:26px; flex-shrink:0; }
     .gps-pin.is-missing { opacity:0.38; }
-    .mine-rate { width:100%; display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+    .prod-box {
+      width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
+      text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
+    }
+    .prod-box small { display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8; padding-top:6px; text-align:center; }
+    .prod-box .prod-boost { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:center; padding:2px 0 4px; }
+    .mine-rate { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; padding:0 8px 8px; }
     .mine-rate img { width:36px; height:36px; flex-shrink:0; object-fit:contain; }
-    .mine-rate span { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+    .mine-rate span { font-size:17.6px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
     .game-lv {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
       text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
@@ -529,12 +535,21 @@
     if (!g) pin.classList.add('is-missing');
     gps.append(pin);
 
+    const pl = numOrNull((mine._details || {}).productionLevel);
+    const prod = document.createElement('div');
+    prod.className = 'prod-box';
+    const prodLabel = document.createElement('small');
+    prodLabel.textContent = 'PRODUCTION (' + (pl == null ? '—' : fmtPlain(pl)) + ')';
+    const boost = document.createElement('b');
+    boost.className = 'prod-boost';
+    if (pl == null) { boost.textContent = '—'; boost.classList.add('is-missing'); }
+    else boost.textContent = fmtPlain(pl - 1) + '%';
     const rate = document.createElement('div');
     rate.className = 'mine-rate';
     const tb = document.createElement('img');
     tb.src = ICONS.tb;
     tb.alt = '';
-    tb.width = 18; tb.height = 18;
+    tb.width = 36; tb.height = 36;
     const rt = document.createElement('span');
     const monthly = monthlyUsd(mine);
     if (monthly == null) { rt.textContent = 'No monthly rate'; rt.className = 'is-missing'; }
@@ -542,8 +557,8 @@
       rt.textContent = fmtMonthly(monthly);
       rt.title = 'USD per month, same figure Old Mines shows.';
     }
-    tb.width = 36; tb.height = 36;
     rate.append(rt, tb);
+    prod.append(prodLabel, boost, rate);
 
     const lv = document.createElement('div');
     lv.className = 'game-lv';
@@ -561,7 +576,7 @@
     track.appendChild(fill);
     lv.append(sm, b, track);
 
-    left.append(ph, title, gps, rate, lv);
+    left.append(ph, title, gps, prod, lv);
     art.append(bg, scrim, left);
     currentGrid.appendChild(art);
     if (cardObs) cardObs.observe(art);
