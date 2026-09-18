@@ -1175,6 +1175,9 @@
     scheduleVisitorCountFlush();
   }
   const visitorListCache = new Map(); // mineId -> { list, truncated, mine }
+  const visitorUserCache = new Map(); // uid -> avatarUrl string|null (session)
+  const visitorUserInflight = new Map(); // uid -> Promise
+  const VISITOR_AVATAR_CONCURRENCY = 8;
   let visitorsOverlayMineId = null;
   let visitorsOverlaySort = 'newest';
   let visitorsOverlayBound = false;
@@ -1204,12 +1207,90 @@
     if (!ms) return '';
     return new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
-  function visitorAvatarUrl(v) {
+  function visitorUid(v) {
+    const id = v.userId || v.uid || v.visitorId || null;
+    return (typeof id === 'string' && id) ? id : null;
+  }
+  function checkInAvatarFallback(v) {
     const candidates = [v.visitorPhotoURL, v.visitorAvatarUrl, v.avatarUrl, v.userPhotoURL, v.profilePhotoURL];
     for (const u of candidates) {
       if (typeof u === 'string' && u.startsWith('https://')) return u;
     }
     return null;
+  }
+  function visitorAvatarUrl(v) {
+    const uid = visitorUid(v);
+    if (uid && visitorUserCache.has(uid)) {
+      const cached = visitorUserCache.get(uid);
+      if (typeof cached === 'string' && cached.startsWith('https://')) return cached;
+    }
+    return checkInAvatarFallback(v);
+  }
+  function applyVisitorAvatarToDom(uid) {
+    const url = visitorUserCache.get(uid);
+    if (typeof url !== 'string' || !url.startsWith('https://')) return;
+    const overlay = $('visitors-overlay');
+    if (!overlay || overlay.hidden) return;
+    overlay.querySelectorAll('.vo-avatar[data-uid]').forEach(el => {
+      if (el.getAttribute('data-uid') !== uid) return;
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === url) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.src = url;
+      img.addEventListener('error', () => {
+        el.textContent = el.getAttribute('data-initials') || '?';
+      });
+      el.replaceChildren(img);
+    });
+  }
+  function fetchUserAvatarUrl(uid) {
+    if (visitorUserCache.has(uid)) return Promise.resolve(visitorUserCache.get(uid));
+    if (visitorUserInflight.has(uid)) return visitorUserInflight.get(uid);
+    const p = db.collection('users').doc(uid).get().then(snap => {
+      const ud = snap.exists ? (snap.data() || {}) : {};
+      const raw = ud.avatarUrl;
+      const url = (typeof raw === 'string' && raw.startsWith('https://')) ? raw : null;
+      visitorUserCache.set(uid, url);
+      visitorUserInflight.delete(uid);
+      return url;
+    }).catch(err => {
+      console.warn('[mines] user avatar failed', uid, err);
+      visitorUserCache.set(uid, null);
+      visitorUserInflight.delete(uid);
+      return null;
+    });
+    visitorUserInflight.set(uid, p);
+    return p;
+  }
+  function ensureVisitorAvatars(list) {
+    if (!list || !list.length) return Promise.resolve();
+    const uids = [];
+    const seen = new Set();
+    for (const v of list) {
+      const uid = visitorUid(v);
+      if (!uid || seen.has(uid) || visitorUserCache.has(uid)) continue;
+      seen.add(uid);
+      uids.push(uid);
+    }
+    if (!uids.length) {
+      for (const v of list) {
+        const uid = visitorUid(v);
+        if (uid && visitorUserCache.has(uid)) applyVisitorAvatarToDom(uid);
+      }
+      return Promise.resolve();
+    }
+    let idx = 0;
+    async function worker() {
+      while (idx < uids.length) {
+        const uid = uids[idx++];
+        await fetchUserAvatarUrl(uid);
+        applyVisitorAvatarToDom(uid);
+      }
+    }
+    const n = Math.min(VISITOR_AVATAR_CONCURRENCY, uids.length);
+    return Promise.all(Array.from({ length: n }, () => worker()));
   }
   function visitorCheckInPhoto(v) {
     if (v.hasPhoto === false) return null;
@@ -1294,10 +1375,14 @@
   function renderVisitOverlayCard(v, mine) {
     const name = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
     const safeName = escapeHtml(name);
+    const init = initials(name);
+    const uid = visitorUid(v);
     const avatar = visitorAvatarUrl(v);
     const avatarInner = avatar
-      ? '<img src="' + escapeHtml(avatar) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-      : escapeHtml(initials(name));
+      ? '<img src="' + escapeHtml(avatar) + '" alt="" loading="lazy" onerror="var p=this.parentNode;if(p)p.textContent=p.getAttribute(\'data-initials\')||\'?\';">'
+      : escapeHtml(init);
+    const avatarAttrs = (uid ? ' data-uid="' + escapeHtml(uid) + '"' : '')
+      + ' data-initials="' + escapeHtml(init) + '"';
     const typeRaw = (mine && mine.mineType != null) ? mine.mineType : (v.mineType || 'rock');
     const typeKey = String(typeRaw).trim().toLowerCase();
     const type = TYPE_ORDER.includes(typeKey) ? typeKey : 'rock';
@@ -1321,7 +1406,7 @@
       : '<div class="vo-no-message">No message left</div>';
     return '<article class="vo-card">'
       + '<div class="vo-card-header">'
-      + '<div class="vo-avatar">' + avatarInner + '</div>'
+      + '<div class="vo-avatar"' + avatarAttrs + '>' + avatarInner + '</div>'
       + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
@@ -1359,6 +1444,7 @@
       return;
     }
     body.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitOverlayCard(v, cached.mine)).join('') + '</div>';
+    ensureVisitorAvatars(list);
   }
   async function fetchMineVisitors(mineId) {
     const snap = await db.collection('checkIns')
