@@ -1176,6 +1176,10 @@
     scheduleVisitorCountFlush();
   }
   const visitorListCache = new Map(); // mineId -> { list, truncated, mine }
+  const visitorUserCache = new Map(); // uid -> avatarUrl string|null (session)
+  const visitorUserInflight = new Map(); // uid -> Promise
+  const VISITOR_AVATAR_CONCURRENCY = 8;
+  let visitorUserDocAvatarBlockedNoted = false;
   let visitorsOverlayMineId = null;
   let visitorsOverlaySort = 'newest';
   let visitorsOverlayBound = false;
@@ -1210,8 +1214,7 @@
     if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
     return (typeof id === 'string' && id) ? id : null;
   }
-  // Profile avatar from check-in only — users/{uid} reads for other users are denied by rules.
-  // Do not use v.photoURL / v.photoUrl here; those are check-in mine photos (card body).
+  // Check-in profile avatar fields (not v.photoURL / v.photoUrl — those are mine check-in photos).
   function checkInAvatarUrl(v) {
     const candidates = [
       v.visitorPhotoURL, v.visitorPhotoUrl,
@@ -1228,8 +1231,99 @@
     }
     return null;
   }
+  function pickUserDocAvatarUrl(ud) {
+    if (!ud || typeof ud !== 'object') return null;
+    const candidates = [ud.avatarUrl, ud.avatarURL, ud.photoURL, ud.photoUrl, ud.profilePhotoURL];
+    for (const u of candidates) {
+      if (typeof u === 'string') {
+        const t = u.trim();
+        if (t.startsWith('https://')) return t;
+      }
+    }
+    return null;
+  }
   function visitorAvatarUrl(v) {
+    const uid = visitorUid(v);
+    if (uid && visitorUserCache.has(uid)) {
+      const cached = visitorUserCache.get(uid);
+      if (typeof cached === 'string' && cached.startsWith('https://')) return cached;
+    }
     return checkInAvatarUrl(v);
+  }
+  function applyVisitorAvatarToDom(uid) {
+    const url = visitorUserCache.get(uid);
+    if (typeof url !== 'string' || !url.startsWith('https://')) return;
+    const overlay = $('visitors-overlay');
+    if (!overlay || overlay.hidden) return;
+    overlay.querySelectorAll('.vo-avatar[data-uid]').forEach(el => {
+      if (el.getAttribute('data-uid') !== uid) return;
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === url) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.src = url;
+      img.addEventListener('error', () => {
+        el.textContent = el.getAttribute('data-initials') || '?';
+      });
+      el.replaceChildren(img);
+    });
+  }
+  function noteVisitorUserDocAvatarBlocked() {
+    if (visitorUserDocAvatarBlockedNoted) return;
+    visitorUserDocAvatarBlockedNoted = true;
+    console.info('[mines] visitor user-doc avatars blocked by Firestore rules; using check-in fields or initials');
+  }
+  function fetchUserAvatarUrl(uid) {
+    if (visitorUserCache.has(uid)) return Promise.resolve(visitorUserCache.get(uid));
+    if (visitorUserInflight.has(uid)) return visitorUserInflight.get(uid);
+    const p = db.collection('users').doc(uid).get().then(snap => {
+      const ud = snap.exists ? (snap.data() || {}) : {};
+      const url = pickUserDocAvatarUrl(ud);
+      visitorUserCache.set(uid, url);
+      visitorUserInflight.delete(uid);
+      return url;
+    }).catch(err => {
+      const msg = String(err && err.message ? err.message : err);
+      if (/insufficient permissions|permission-denied|Missing or insufficient/i.test(msg)) {
+        noteVisitorUserDocAvatarBlocked();
+      } else {
+        console.warn('[mines] user avatar failed', uid, err);
+      }
+      visitorUserCache.set(uid, null);
+      visitorUserInflight.delete(uid);
+      return null;
+    });
+    visitorUserInflight.set(uid, p);
+    return p;
+  }
+  function ensureVisitorAvatars(list) {
+    if (!list || !list.length) return Promise.resolve();
+    const uids = [];
+    const seen = new Set();
+    for (const v of list) {
+      const uid = visitorUid(v);
+      if (!uid || seen.has(uid) || visitorUserCache.has(uid)) continue;
+      seen.add(uid);
+      uids.push(uid);
+    }
+    if (!uids.length) {
+      for (const v of list) {
+        const uid = visitorUid(v);
+        if (uid && visitorUserCache.has(uid)) applyVisitorAvatarToDom(uid);
+      }
+      return Promise.resolve();
+    }
+    let idx = 0;
+    async function worker() {
+      while (idx < uids.length) {
+        const uid = uids[idx++];
+        await fetchUserAvatarUrl(uid);
+        applyVisitorAvatarToDom(uid);
+      }
+    }
+    const n = Math.min(VISITOR_AVATAR_CONCURRENCY, uids.length);
+    return Promise.all(Array.from({ length: n }, () => worker()));
   }
   function checkInAvatarDebugFields(v) {
     return {
@@ -1270,15 +1364,20 @@
     const uidAttr = el.getAttribute('data-uid');
     const v = findCheckInForAvatarEl(el);
     const uid = visitorUid(v || {}) || uidAttr || null;
-    const attemptedAvatarUrl = v ? checkInAvatarUrl(v) : null;
+    const cachedUrl = (uid && visitorUserCache.has(uid)) ? visitorUserCache.get(uid) : undefined;
+    const checkInUrl = v ? checkInAvatarUrl(v) : null;
+    const attemptedAvatarUrl = (typeof cachedUrl === 'string' && cachedUrl.startsWith('https://'))
+      ? cachedUrl
+      : checkInUrl;
     const img = el.querySelector('img');
     const displayedSrc = img ? img.getAttribute('src') : null;
     console.log('visitor avatar click', {
       resolvedUid: uid,
       attemptedAvatarUrl: attemptedAvatarUrl,
+      checkInAvatarUrl: checkInUrl,
+      cachedUserDocAvatarUrl: cachedUrl === undefined ? '(not fetched)' : cachedUrl,
       displayedImgSrc: displayedSrc,
-      checkInVisitorFields: v ? checkInAvatarDebugFields(v) : null,
-      note: 'Avatars load from check-in profile fields only; users/{uid} is not readable for other users.'
+      checkInVisitorFields: v ? checkInAvatarDebugFields(v) : null
     });
     if (!uid) {
       console.log('visitor user data', { uid: null, exists: false, reason: 'no uid on check-in/avatar' });
@@ -1287,11 +1386,16 @@
     try {
       const snap = await db.collection('users').doc(uid).get();
       const data = snap.exists ? (snap.data() || {}) : null;
+      const avatarUrl = pickUserDocAvatarUrl(data);
+      if (avatarUrl) {
+        visitorUserCache.set(uid, avatarUrl);
+        applyVisitorAvatarToDom(uid);
+      }
       console.log('visitor user data', {
         uid: uid,
         exists: snap.exists,
         data: data,
-        avatarUrl: data ? (data.avatarUrl || data.avatarURL || null) : null
+        avatarUrl: avatarUrl
       });
     } catch (err) {
       console.log('visitor user data', {
@@ -1300,7 +1404,8 @@
         permissionDenied: true,
         error: String(err && err.message ? err.message : err),
         checkInVisitorFields: v ? checkInAvatarDebugFields(v) : null,
-        note: 'Firestore rules block client reads of other users\' docs; use check-in avatar fields instead.'
+        attemptedAvatarUrl: attemptedAvatarUrl,
+        note: "Firestore rules block client reads of other users' docs for this uid."
       });
     }
   }
