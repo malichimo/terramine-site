@@ -8,6 +8,5 @@ Disallow: /old-visitors.html
 Disallow: /visitors.html
 Disallow: /activity.html
 Disallow: /account.html
-Disallow: /inventory.html
 
 Sitemap: https://terramine.app/sitemap.xml
