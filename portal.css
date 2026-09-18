@@ -300,7 +300,7 @@ body.auth-pending #portal {
 .stat-card-value.amber { color: var(--amber2); }
 .stat-card-sub { font-size: 11px; color: var(--text-mid); margin-top: 4px; }
 
-/* Properties card type breakdown. Icons match mines.html mineIcon(). */
+/* Properties card type breakdown. Icons match old-mines.html mineIcon(). */
 .prop-breakdown {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

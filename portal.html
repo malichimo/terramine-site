@@ -79,6 +79,7 @@
       <ul class="sidebar-nav">
         <li><a href="dashboard.html" class="active"><span class="icon">📊</span> Dashboard</a></li>
         <li><a href="mines.html"><span class="icon">⛏</span> My Mines</a></li>
+        <li><a href="old-mines.html"><span class="icon">⛏</span> OLD Mines</a></li>
         <li><a href="visitors.html"><span class="icon">👥</span> Visitors</a></li>
         <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
         <li><a href="account.html"><span class="icon">⚙️</span> Account</a></li>
@@ -168,7 +169,7 @@
         <!-- My Mines -->
         <div class="section-header">
           <div class="section-title">My Mines</div>
-          <a class="section-action" href="mines.html">View all →</a>
+          <a class="section-action" href="old-mines.html">View all →</a>
         </div>
         <div class="mines-grid" id="mines-grid">
           <!-- populated by JS -->
@@ -282,16 +283,16 @@
     return { rock: '🪨', coal: '🖤', gold: '⭐', diamond: '💎' }[type] || '⛏';
   }
 
-  // Card icons are the mines.html mineIcon() glyphs (rock/coal/gold/diamond).
+  // Card icons are the old-mines.html mineIcon() glyphs (rock/coal/gold/diamond).
   var KNOWN_MINE_TYPES = ['rock', 'coal', 'gold', 'diamond'];
 
-  // Exact copy of mines.html mineIcon(). Only the Properties type stacks use this.
+  // Exact copy of old-mines.html mineIcon(). Only the Properties type stacks use this.
   // mineTypeEmoji() is the mine-card badge map and is intentionally not used here.
   function propertyStackIcon(type) {
     return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[type] || '⛏';
   }
 
-  // mines.html displays a missing mineType as rock (p.mineType || 'rock').
+  // old-mines.html displays a missing mineType as rock (p.mineType || 'rock').
   // Any other stored value stays out of the four buckets so it is not dropped
   // from the total and can be shown under the breakdown.
   function bucketMineType(mineType) {
@@ -466,7 +467,7 @@
       }
 
       // No .limit(): the previous cap of 50 made this card disagree with
-      // mines.html, which loads every property owned by the signed-in user.
+      // old-mines.html, which loads every property owned by the signed-in user.
       const props = options.preview ? PREVIEW_PROPERTIES : (await db.collection('properties')
         .where('ownerId', '==', user.uid)
         .get()).docs.map(d => ({ id: d.id, ...d.data() }));
@@ -502,7 +503,7 @@
         const level = p.upgradeLevel || 1;
         const visitors = p.totalCheckIns || 0;
         return `
-          <div class="mine-card" onclick="window.location='mines.html#${p.id}'">
+          <div class="mine-card" onclick="window.location='old-mines.html#${p.id}'">
             <div class="mine-card-top">
               <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
               <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
@@ -515,7 +516,7 @@
               <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
             </div>
             <div class="mine-action-row">
-              <a class="mine-btn primary" href="mines.html#${p.id}">Maintain</a>
+              <a class="mine-btn primary" href="old-mines.html#${p.id}">Maintain</a>
               <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
             </div>
           </div>`;
@@ -552,7 +553,7 @@
       const level = d.upgradeLevel || 1;
       const visitors = d.totalCheckIns || 0;
       return `
-        <div class="mine-card" onclick="window.location='mines.html#${p.id}'">
+        <div class="mine-card" onclick="window.location='old-mines.html#${p.id}'">
           <div class="mine-card-top">
             <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
             <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
@@ -565,7 +566,7 @@
             <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
           </div>
           <div class="mine-action-row">
-            <a class="mine-btn primary" href="mines.html#${p.id}">Maintain</a>
+            <a class="mine-btn primary" href="old-mines.html#${p.id}">Maintain</a>
             <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
           </div>
         </div>`;
