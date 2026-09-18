@@ -654,7 +654,7 @@
     return displayAmount(typeKey(p), level, { period: 'month', rate: 'bonus' });
   }
   function fmtRate(n, period) {
-    const digits = (period === 'sec' || period === 'min') ? 10 : 8;
+    const digits = period === 'sec' ? 11 : (period === 'min' ? 10 : 8);
     let s = n.toFixed(digits);
     if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
     return '$' + s;
