@@ -127,6 +127,48 @@
     .mine-rate img { width:36px; height:36px; flex-shrink:0; object-fit:contain; }
     .mine-rate span { font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; line-height:1; }
     .mine-rate span.is-boosted { color:#f0c56e; }
+    .prod-tip {
+      position:fixed; z-index:200; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:7px 7px 5px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:11px; line-height:1.2; max-width:calc(100vw - 16px);
+    }
+    .prod-tip table { border-collapse:separate; border-spacing:0; }
+    .prod-tip th, .prod-tip td { padding:3px 6px; font-variant-numeric:tabular-nums; }
+    .prod-tip thead th {
+      font-size:10px; font-weight:700; letter-spacing:.15px; text-align:center;
+      vertical-align:bottom; line-height:1.15; color:#c5ced8; background-color:#141c27;
+      white-space:normal; max-width:5.2em;
+    }
+    .prod-tip thead th.stub { max-width:none; width:4.6em; }
+    .prod-tip td { text-align:right; font-weight:600; white-space:nowrap; }
+    .prod-tip td.stub, .prod-tip th.stub { text-align:left; font-weight:700; color:#d5dde6; }
+    .prod-tip tbody tr:nth-child(odd) td { background-color:#1a2330; }
+    .prod-tip tbody tr:nth-child(even) td { background-color:#2b384a; }
+    .prod-tip th.c-base, .prod-tip td.c-base {
+      background-image:linear-gradient(rgba(79,163,199,.22), rgba(79,163,199,.22));
+      color:#d7ebf6;
+    }
+    .prod-tip th.c-bonus, .prod-tip td.c-bonus {
+      background-image:linear-gradient(rgba(240,197,110,.15), rgba(240,197,110,.15));
+      color:#f0c56e;
+    }
+    .prod-tip th.c-12, .prod-tip td.c-12 {
+      background-image:linear-gradient(rgba(196,164,120,.16), rgba(196,164,120,.16));
+      color:#f4efe6;
+    }
+    .prod-tip th.c-18, .prod-tip td.c-18 {
+      background-image:linear-gradient(rgba(206,150,70,.30), rgba(206,150,70,.30));
+      color:#fff6e8;
+    }
+    .prod-tip th.c-24, .prod-tip td.c-24 {
+      background-image:linear-gradient(rgba(184,112,42,.48), rgba(184,112,42,.48));
+      color:#fffaf3;
+    }
+    .prod-tip-note {
+      margin-top:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,.08);
+      font-size:9px; line-height:1.3; color:#8e9aab; font-weight:500; text-align:left;
+    }
     .game-lv {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
       text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
@@ -341,17 +383,141 @@
     }
     return null;
   }
+  function productionBase(type) {
+    return { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
+  }
   function productionBonus(level) { return Math.max(0, level - 1); }
   function productionRate(type, level) {
-    const base = { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
-    return base * (1 + productionBonus(level) / 100);
+    return productionBase(type) * (1 + productionBonus(level) / 100);
   }
   function monthlyUsd(p) {
     const d = p._details || {};
     const level = numOrNull(d.productionLevel);
     if (level == null) return null;
-    // Additive percent, not compounded: base monthly * (1 + (level - 1) / 100).
-    return productionRate(typeKey(p), level) * 60 * 24 * 30;
+    // Month from the per-minute base, then the additive bonus (not compounded).
+    // Same dollars as boostedPerMin * 60 * 24 * 30.
+    const baseMonth = productionBase(typeKey(p)) * 60 * 24 * 30;
+    return baseMonth * (1 + productionBonus(level) / 100);
+  }
+  function fmtRate(n) {
+    let s = n.toFixed(14);
+    if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return '$' + s;
+  }
+  let prodTip = null;
+  let prodTipTimer = null;
+  let prodTipTarget = null;
+  let prodTipX = 0;
+  let prodTipY = 0;
+  function dismissProdTip() {
+    if (prodTipTimer) { clearTimeout(prodTipTimer); prodTipTimer = null; }
+    prodTipTarget = null;
+    if (prodTip) prodTip.style.display = 'none';
+  }
+  function placeProdTip(x, y) {
+    const tip = prodTip;
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function ensureProdTip() {
+    if (prodTip) return prodTip;
+    const tip = document.createElement('div');
+    tip.className = 'prod-tip';
+    tip.setAttribute('role', 'tooltip');
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    [['stub', ''], ['c-base', 'Base Rate'], ['c-bonus', 'Base + Bonus'], ['c-12', '20\u00d7 12h'], ['c-18', '20\u00d7 18h'], ['c-24', '20\u00d7 24h']].forEach(pair => {
+      const th = document.createElement('th');
+      th.className = pair[0];
+      th.textContent = pair[1];
+      hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    table.appendChild(thead);
+    table.appendChild(document.createElement('tbody'));
+    const note = document.createElement('div');
+    note.className = 'prod-tip-note';
+    note.textContent = '12h and 18h include the other hours at the bonus rate, not at 20\u00d7.';
+    tip.append(table, note);
+    document.body.appendChild(tip);
+    prodTip = tip;
+    return tip;
+  }
+  function fillProdTip(type, level) {
+    const tip = ensureProdTip();
+    const base = productionBase(type);
+    const boosted = level == null ? base : productionRate(type, level);
+    const blend = (h) => boosted * (h * 20 + (24 - h) * 1) / 24;
+    const perMins = [base, boosted, blend(12), blend(18), blend(24)];
+    const colClass = ['c-base', 'c-bonus', 'c-12', 'c-18', 'c-24'];
+    const labels = ['Per Min', 'Per Day', 'Per Month', 'Per Year'];
+    const tbody = tip.querySelector('tbody');
+    tbody.textContent = '';
+    labels.forEach((label, ri) => {
+      const tr = document.createElement('tr');
+      const stub = document.createElement('td');
+      stub.className = 'stub';
+      stub.textContent = label;
+      tr.appendChild(stub);
+      perMins.forEach((perMin, ci) => {
+        const day = perMin * 60 * 24;
+        const amount = ri === 0 ? perMin : ri === 1 ? day : ri === 2 ? day * 30 : day * 365;
+        const td = document.createElement('td');
+        td.className = colClass[ci];
+        td.textContent = fmtRate(amount);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+  function showProdTip(box, type, level) {
+    if (prodTipTarget !== box || !box.isConnected) return;
+    fillProdTip(type, level);
+    placeProdTip(prodTipX, prodTipY);
+  }
+  function bindProdTip(box, type, level) {
+    box.addEventListener('mouseenter', (e) => {
+      if (prodTipTimer) { clearTimeout(prodTipTimer); prodTipTimer = null; }
+      prodTipTarget = box;
+      prodTipX = e.clientX;
+      prodTipY = e.clientY;
+      if (prodTip) prodTip.style.display = 'none';
+      prodTipTimer = setTimeout(() => {
+        prodTipTimer = null;
+        showProdTip(box, type, level);
+      }, 1000);
+    });
+    box.addEventListener('mousemove', (e) => {
+      if (prodTipTarget !== box) return;
+      prodTipX = e.clientX;
+      prodTipY = e.clientY;
+      if (prodTip && prodTip.style.display === 'block' && !prodTipTimer) placeProdTip(prodTipX, prodTipY);
+    });
+    box.addEventListener('mouseleave', () => {
+      if (prodTipTarget === box) dismissProdTip();
+    });
   }
   function fmtMonthly(n) {
     return '$' + n.toFixed(6) + '/mo';
@@ -564,6 +730,7 @@
     }
     rate.append(rt, tb);
     prod.append(prodLabel, boost, rate);
+    bindProdTip(prod, type, pl);
 
     const lv = document.createElement('div');
     lv.className = 'game-lv';
@@ -623,6 +790,7 @@
     currentGrid = null;
     const board = $('mine-board');
     board.innerHTML = '';
+    dismissProdTip();
     const owned = allMines.length;
     $('mine-count').textContent = owned ? (built.matchCount + ' match · ' + owned + ' owned') : '';
     if (!owned) {
@@ -666,6 +834,7 @@
     } else {
       loadedUid = null;
       allMines = [];
+      dismissProdTip();
       $('login-screen').style.display = 'flex';
       $('portal').style.display = 'none';
     }
@@ -710,6 +879,7 @@
     setToolbar(false);
     setStatus('Loading your mines…');
     $('mine-board').innerHTML = '';
+    dismissProdTip();
     $('mine-count').textContent = '';
     const snap = await db.collection('properties').where('ownerId', '==', uid).get();
     const mines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
