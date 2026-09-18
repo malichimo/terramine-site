@@ -126,6 +126,7 @@
     .mine-rate { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; padding:0 8px 8px; }
     .mine-rate img { width:36px; height:36px; flex-shrink:0; object-fit:contain; }
     .mine-rate span { font-size:17.6px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+    .mine-rate span.is-boosted { color:#f0c56e; }
     .game-lv {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
       text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
@@ -543,21 +544,18 @@
     const boost = document.createElement('b');
     boost.className = 'prod-boost';
     if (pl == null) { boost.textContent = '—'; boost.classList.add('is-missing'); }
-    else boost.textContent = fmtPlain(pl - 1) + '%';
+    else boost.textContent = fmtPlain(productionBonus(pl)) + '%';
     const rate = document.createElement('div');
     rate.className = 'mine-rate';
-    const tb = document.createElement('img');
-    tb.src = ICONS.tb;
-    tb.alt = '';
-    tb.width = 36; tb.height = 36;
     const rt = document.createElement('span');
     const monthly = monthlyUsd(mine);
     if (monthly == null) { rt.textContent = 'No monthly rate'; rt.className = 'is-missing'; }
     else {
       rt.textContent = fmtMonthly(monthly);
       rt.title = 'USD per month, same figure Old Mines shows.';
+      if (pl != null && pl > 1) rt.classList.add('is-boosted');
     }
-    rate.append(rt, tb);
+    rate.append(rt);
     prod.append(prodLabel, boost, rate);
 
     const lv = document.createElement('div');
@@ -691,6 +689,7 @@
   async function loadHeader(user) {
     const userSnap = await db.collection('users').doc(user.uid).get();
     const ud = userSnap.data() || {};
+    console.log('user data', ud);
     const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
     $('nav-nickname').textContent = nick;
     $('sb-tb').textContent = fmtNum(ud.tbBalance || 0);
@@ -723,6 +722,7 @@
       withGps++;
       gpsFields[g.field] = (gpsFields[g.field] || 0) + 1;
     });
+    console.log('mine data', mines);
     console.info('[mines] loaded', mines.length, 'gps', withGps, gpsFields);
     setStatus('');
     setToolbar(true);
