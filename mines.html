@@ -102,8 +102,8 @@
       background: linear-gradient(90deg, rgba(6,10,16,0) 0%, rgba(6,10,16,.12) 32%, rgba(6,10,16,.42) 58%, rgba(6,10,16,.78) 82%, rgba(6,10,16,.92) 100%);
     }
     .mine-card-left {
-      position:relative; z-index:2; height:100%; width:min(62%, 280px); margin-left:auto;
-      display:flex; flex-direction:column; align-items:flex-end; gap:5px; padding:12px 14px 12px 12px;
+      position:relative; z-index:2; height:100%; width:min(78%, 420px); margin-left:auto;
+      display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:5px; padding:12px 14px 12px 12px;
     }
     .mine-photo {
       width:48px; height:48px; border-radius:8px; overflow:hidden; flex-shrink:0;
@@ -119,13 +119,13 @@
     .gps-pin.is-missing { opacity:0.38; }
     .prod-box {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
-      text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
+      text-align:right; background:rgba(0,0,0,.25); flex-shrink:0;
     }
-    .prod-box small { display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8; padding-top:6px; text-align:center; }
-    .prod-box .prod-boost { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:center; padding:2px 0 4px; }
-    .mine-rate { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; padding:0 8px 8px; }
+    .prod-box small { display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8; padding:6px 8px 0; text-align:right; }
+    .prod-box .prod-boost { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:right; padding:2px 8px 4px; }
+    .mine-rate { width:100%; display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; padding:0 8px 8px; }
     .mine-rate img { width:36px; height:36px; flex-shrink:0; object-fit:contain; }
-    .mine-rate span { font-size:17.6px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+    .mine-rate span { font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; line-height:1; }
     .mine-rate span.is-boosted { color:#f0c56e; }
     .game-lv {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
@@ -140,11 +140,15 @@
     .mine-sentinel { text-align:center; color:#889; font-size:12px; padding:14px; }
     @container minegroup (max-width: 640px) {
       .mine-card { min-width:0; width:100%; max-width:100%; flex-basis:100%; }
+      .mine-rate img { width:28px; height:28px; }
+      .mine-rate span { font-size:20px; }
     }
     @media (max-width:700px) {
       .sidebar { display:none; }
       .mine-card { min-width:0; width:100%; max-width:100%; flex-basis:100%; }
-      .mine-card-left { width:72%; }
+      .mine-card-left { width:92%; }
+      .mine-rate img { width:28px; height:28px; }
+      .mine-rate span { font-size:20px; }
     }
   </style>
 </head>
@@ -547,6 +551,9 @@
     else boost.textContent = fmtPlain(productionBonus(pl)) + '%';
     const rate = document.createElement('div');
     rate.className = 'mine-rate';
+    const tb = document.createElement('img');
+    tb.src = ICONS.tb;
+    tb.alt = '';
     const rt = document.createElement('span');
     const monthly = monthlyUsd(mine);
     if (monthly == null) { rt.textContent = 'No monthly rate'; rt.className = 'is-missing'; }
@@ -555,13 +562,13 @@
       rt.title = 'USD per month, same figure Old Mines shows.';
       if (pl != null && pl > 1) rt.classList.add('is-boosted');
     }
-    rate.append(rt);
+    rate.append(rt, tb);
     prod.append(prodLabel, boost, rate);
 
     const lv = document.createElement('div');
     lv.className = 'game-lv';
     const sm = document.createElement('small');
-    sm.textContent = 'GAME LEVEL';
+    sm.textContent = 'GAME LV';
     const b = document.createElement('b');
     if (gl == null) { b.textContent = '—'; b.className = 'is-missing'; b.title = 'Game level not set'; }
     else b.textContent = fmtPlain(gl);
