@@ -774,7 +774,14 @@
     return `${h}h ${m}m`;
   }
 
-  function productionBonus(level) { return Math.min((level-1)*5, 495); }
+  // BUG fix Sept 18, 2026: this was Math.min((level-1)*5, 495) — a stray
+  // ×5 that made the web portal show a 5x-inflated production bonus vs. the
+  // app (e.g. level 4 showed +15% here instead of the correct +3%). The
+  // canonical formula lives in services/DatabaseServicePhase2.ts
+  // (getProductionBonus) and functions/src/index.ts (syncPassiveEarnings)
+  // in the app repo — level 1-100 gives +0% to +99%, additive 1%/level, no
+  // compounding. Keep this in sync with those if the design ever changes.
+  function productionBonus(level) { return Math.min(level-1, 99); }
 
   function productionRate(type, level) {
     const base = { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
