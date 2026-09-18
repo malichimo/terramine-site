@@ -373,19 +373,20 @@
     .vo-showcase-pin {
       position:absolute; top:8px; right:8px; z-index:3;
       width:34px; height:34px; padding:0; margin:0;
-      border:1px solid rgba(0,0,0,.2); border-radius:8px;
-      background:rgba(255,255,255,.92); color:#1a2330;
+      border:1px solid #fff; border-radius:8px;
+      background:transparent; color:#fff;
       display:flex; align-items:center; justify-content:center;
       cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25);
       line-height:0;
     }
-    .vo-showcase-pin:hover { background:#fff; }
+    .vo-showcase-pin:hover { background:rgba(255,255,255,.12); }
     .vo-showcase-pin:focus-visible { outline:2px solid #3d8bfd; outline-offset:2px; }
     .vo-showcase-pin.is-active {
-      background:rgba(46,160,67,.55);
-      border-color:rgba(30,110,45,.5);
-      color:#0b2f12;
+      background:#2ea043;
+      border-color:#fff;
+      color:#fff;
     }
+    .vo-showcase-pin.is-active:hover { background:#2ea043; }
     .vo-showcase-pin svg { width:18px; height:18px; display:block; pointer-events:none; }
     .vo-showcase-tip {
       position:fixed; z-index:340; pointer-events:none; display:none;
