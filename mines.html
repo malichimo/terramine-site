@@ -199,6 +199,22 @@
     .game-lv b { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:center; padding-bottom:6px; }
     .game-lv .xp-track { height:7px; border-radius:0; background:rgba(255,255,255,.22); overflow:hidden; }
     .game-lv .xp-fill { height:100%; width:0; background:linear-gradient(90deg,#f6c453,#fff1c2); }
+    .maint-box {
+      position:relative; width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
+      text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
+    }
+    .maint-box small { display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8; padding:6px 22px 0; text-align:center; }
+    .maint-dot { position:absolute; top:8px; right:8px; width:10px; height:10px; border-radius:50%; }
+    .maint-dot.is-green { background:#3cba6a; }
+    .maint-dot.is-red { background:#e25b5b; }
+    .maint-box b { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:center; padding:2px 0 0; }
+    .maint-sub { display:block; font-size:10px; letter-spacing:.3px; font-weight:600; opacity:.75; text-align:center; padding:2px 0 4px; }
+    .maint-track { height:7px; background:rgba(255,255,255,.22); overflow:hidden; }
+    .maint-track.is-muted { background:rgba(255,255,255,.12); }
+    .maint-fill { height:100%; width:0; }
+    .maint-fill.is-green { background:#3cba6a; }
+    .maint-fill.is-yellow { background:#e6c15a; }
+    .maint-fill.is-red { background:#e25b5b; }
     .is-missing { font-style:italic; font-weight:500; opacity:.8; }
     .mine-empty { padding:48px 16px; text-align:center; color:#64748b; font-size:14px; }
     .mine-sentinel { text-align:center; color:#889; font-size:12px; padding:14px; }
@@ -284,6 +300,7 @@
         </label>
         <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-prod" data-sort="prod" disabled>Mine Production Level</button>
+        <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
         <button type="button" class="sort-btn" id="sort-name" data-sort="name" disabled>Mine Name</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search mine name" autocomplete="off" disabled />
         <span class="mine-count" id="mine-count"></span>
@@ -623,6 +640,97 @@
     if (level <= 80) return 4;
     return 5;
   }
+  const MAINT_DAY_MS = 86400000;
+  const MAINT_WINDOW_DAYS = 180;
+  function activityMs(value) {
+    if (value == null || value === '') return null;
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return null;
+      return Math.abs(value) < 1e12 ? value * 1000 : value;
+    }
+    if (typeof value === 'string') {
+      const t = value.trim();
+      if (!t) return null;
+      if (/^[+-]?\d+(\.\d+)?$/.test(t)) {
+        const n = Number(t);
+        if (!Number.isFinite(n)) return null;
+        return Math.abs(n) < 1e12 ? n * 1000 : n;
+      }
+      const parsed = Date.parse(t);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (typeof value === 'object') {
+      if (typeof value.toMillis === 'function') {
+        try {
+          const ms = value.toMillis();
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      if (typeof value.toDate === 'function') {
+        try {
+          const d = value.toDate();
+          const ms = d && typeof d.getTime === 'function' ? d.getTime() : NaN;
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      const sec = typeof value.seconds === 'number' ? value.seconds : (typeof value._seconds === 'number' ? value._seconds : null);
+      if (sec != null && Number.isFinite(sec)) {
+        const ns = typeof value.nanoseconds === 'number' ? value.nanoseconds : (typeof value._nanoseconds === 'number' ? value._nanoseconds : 0);
+        return sec * 1000 + (Number.isFinite(ns) ? Math.floor(ns / 1e6) : 0);
+      }
+    }
+    return null;
+  }
+  function daysLeftOf(mine, now) {
+    const ms = activityMs(mine && mine.lastActivityAt);
+    if (ms == null) return null;
+    const wholeDaysSince = Math.floor((now - ms) / MAINT_DAY_MS);
+    let daysLeft = MAINT_WINDOW_DAYS - wholeDaysSince;
+    if (daysLeft < 0) daysLeft = 0;
+    if (daysLeft > MAINT_WINDOW_DAYS) daysLeft = MAINT_WINDOW_DAYS;
+    return daysLeft;
+  }
+  function maintenanceView(mine, now) {
+    const ms = activityMs(mine && mine.lastActivityAt);
+    if (ms == null) return { missing: true, recent: false, daysLeft: null, bar: 0, tone: '' };
+    const msSince = now - ms;
+    const daysLeft = daysLeftOf(mine, now);
+    let tone = 'is-red';
+    if (daysLeft > 120) tone = 'is-green';
+    else if (daysLeft >= 60) tone = 'is-yellow';
+    return {
+      missing: false,
+      recent: msSince < MAINT_DAY_MS,
+      daysLeft: daysLeft,
+      bar: Math.max(0, Math.min(100, (daysLeft / MAINT_WINDOW_DAYS) * 100)),
+      tone: tone
+    };
+  }
+  function userMineLastActivity(minesField, id) {
+    if (minesField == null || id == null) return null;
+    const sid = String(id);
+    if (Array.isArray(minesField)) {
+      for (let i = 0; i < minesField.length; i++) {
+        const item = minesField[i];
+        if (!item || typeof item !== 'object') continue;
+        const iid = item.id != null ? item.id : (item.propertyId != null ? item.propertyId : item.mineId);
+        if (iid != null && String(iid) === sid && item.lastActivityAt != null && item.lastActivityAt !== '') return item.lastActivityAt;
+      }
+      return null;
+    }
+    if (typeof minesField === 'object') {
+      const item = minesField[sid];
+      if (item && typeof item === 'object' && item.lastActivityAt != null && item.lastActivityAt !== '') return item.lastActivityAt;
+    }
+    return null;
+  }
+  function applyMineActivity(mine, userMines) {
+    if (mine.lastActivityAt != null && mine.lastActivityAt !== '') return;
+    const fromDetails = mine._details && mine._details.lastActivityAt;
+    if (fromDetails != null && fromDetails !== '') { mine.lastActivityAt = fromDetails; return; }
+    const fromUser = userMineLastActivity(userMines, mine.id);
+    if (fromUser != null && fromUser !== '') mine.lastActivityAt = fromUser;
+  }
   function cmpTitle(a, b) {
     const c = titleOf(a).localeCompare(titleOf(b), undefined, { sensitivity: 'base', numeric: true });
     if (c) return c;
@@ -638,10 +746,13 @@
   function sortGroup(list) {
     const arr = list.slice();
     const dir = sortKey ? sortDir : 1;
+    const now = Date.now();
     arr.sort((a, b) => {
       let c = 0;
       if (!sortKey || sortKey === 'name') c = cmpTitle(a, b) * dir;
       else if (sortKey === 'game') c = cmpNumMissingLast(numOrNull((a._details || {}).gameLevel), numOrNull((b._details || {}).gameLevel), dir);
+      else if (sortKey === 'prod') c = cmpNumMissingLast(numOrNull((a._details || {}).productionLevel), numOrNull((b._details || {}).productionLevel), dir);
+      else if (sortKey === 'activity') c = cmpNumMissingLast(daysLeftOf(a, now), daysLeftOf(b, now), -dir);
       else c = cmpNumMissingLast(numOrNull((a._details || {}).productionLevel), numOrNull((b._details || {}).productionLevel), dir);
       if (!c) c = cmpTitle(a, b);
       return c;
@@ -820,7 +931,7 @@
     const lv = document.createElement('div');
     lv.className = 'game-lv';
     const sm = document.createElement('small');
-    sm.textContent = 'GAME LV';
+    sm.textContent = 'Game Level';
     const b = document.createElement('b');
     if (gl == null) { b.textContent = '—'; b.className = 'is-missing'; b.title = 'Game level not set'; }
     else b.textContent = fmtPlain(gl);
@@ -833,7 +944,29 @@
     track.appendChild(fill);
     lv.append(sm, b, track);
 
-    left.append(ph, head, prod, lv);
+    const st = maintenanceView(mine, Date.now());
+    const maint = document.createElement('div');
+    maint.className = 'maint-box';
+    const mLabel = document.createElement('small');
+    mLabel.textContent = 'Mine Maintenance';
+    const dot = document.createElement('span');
+    dot.className = 'maint-dot ' + (st.recent ? 'is-red' : 'is-green');
+    dot.title = st.recent ? 'Maintained in the last 24 hours' : 'Ready for maintenance';
+    const num = document.createElement('b');
+    if (st.missing) { num.textContent = '\u2014'; num.className = 'is-missing'; }
+    else num.textContent = String(st.daysLeft);
+    const sub = document.createElement('span');
+    sub.className = 'maint-sub';
+    sub.textContent = 'days left';
+    const mTrack = document.createElement('div');
+    mTrack.className = 'maint-track' + (st.missing ? ' is-muted' : '');
+    const mFill = document.createElement('div');
+    mFill.className = 'maint-fill' + (st.tone ? ' ' + st.tone : '');
+    mFill.style.width = (st.missing ? 0 : st.bar) + '%';
+    mTrack.appendChild(mFill);
+    maint.append(mLabel, dot, num, sub, mTrack);
+
+    left.append(ph, head, prod, lv, maint);
     art.append(bg, scrim, left);
     currentGrid.appendChild(art);
     if (cardObs) cardObs.observe(art);
@@ -975,6 +1108,13 @@
       snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
       setStatus('Loading mine details ' + Math.min(i + FETCH, mines.length) + ' / ' + mines.length + '…');
     }
+    let userMines = null;
+    try {
+      const userSnap = await db.collection('users').doc(uid).get();
+      const ud = (userSnap && userSnap.exists) ? (userSnap.data() || {}) : {};
+      if (ud && ud.mines != null) userMines = ud.mines;
+    } catch (e) {}
+    mines.forEach(m => applyMineActivity(m, userMines));
     allMines = mines;
     const gpsFields = {};
     let withGps = 0;
