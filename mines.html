@@ -253,9 +253,9 @@
     .maint-track { height:7px; background:rgba(255,255,255,.22); overflow:hidden; }
     .maint-track.is-muted { background:rgba(255,255,255,.12); }
     .maint-fill { height:100%; width:0; }
-    .maint-fill.is-green { background:#3cba6a; }
-    .maint-fill.is-yellow { background:#e6c15a; }
-    .maint-fill.is-red { background:#e25b5b; }
+    .maint-fill.is-green, .xp-fill.is-green { background:#3cba6a; }
+    .maint-fill.is-yellow, .xp-fill.is-yellow { background:#e6c15a; }
+    .maint-fill.is-red, .xp-fill.is-red { background:#e25b5b; }
     .mine-visitors {
       display:none; align-items:center; justify-content:flex-end; gap:6px;
       width:100%; margin-top:2px; padding:2px 2px 0; border:0; background:transparent;
@@ -2485,7 +2485,13 @@
     const track = document.createElement('div');
     track.className = 'xp-track';
     const fill = document.createElement('div');
-    fill.className = 'xp-fill';
+    let xpTone = '';
+    if (gl != null) {
+      if (gl <= 30) xpTone = ' is-red';
+      else if (gl <= 70) xpTone = ' is-yellow';
+      else xpTone = ' is-green';
+    }
+    fill.className = 'xp-fill' + xpTone;
     fill.style.width = Math.max(0, Math.min(100, Number(gl) || 0)) + '%';
     track.appendChild(fill);
     lv.append(sm, b, track);
