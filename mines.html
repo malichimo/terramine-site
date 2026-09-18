@@ -617,6 +617,7 @@
   const visitorCountPending = [];
   const VISITOR_COUNT_BATCH = 15;
   let visitorCountFlushScheduled = false;
+  let visitorCountFlushRunning = false;
   let visitorSortRefreshScheduled = false;
   const VISITOR_LIST_LIMIT = 200;
 
@@ -1114,13 +1115,25 @@
     });
     return arr;
   }
-  function visibleMines() {
+  function minesMatchingFilters() {
     const q = ($('filter-search').value || '').trim().toLowerCase();
     const type = $('filter-type').value;
     return allMines.filter(p => {
       if (type !== 'all' && typeKey(p) !== type) return false;
       if (q && titleOf(p).toLowerCase().indexOf(q) === -1) return false;
       return true;
+    });
+  }
+  function visibleMines() {
+    const mines = minesMatchingFilters();
+    if (sortKey !== 'visitors') return mines;
+    // While sorting by visitor count: hide known zeros; keep pending out of the
+    // list until counted (background queue fills cache, then re-render).
+    return mines.filter(p => {
+      if (!p || p.id == null) return false;
+      const id = String(p.id);
+      if (!visitorCountCache.has(id)) return false;
+      return (Number(visitorCountCache.get(id)) || 0) > 0;
     });
   }
   function buildFlat() {
@@ -1230,15 +1243,19 @@
   }
   function flushVisitorCountQueue() {
     visitorCountFlushScheduled = false;
+    if (visitorCountFlushRunning) return;
     if (!visitorCountPending.length) return;
+    visitorCountFlushRunning = true;
     const batch = visitorCountPending.splice(0, VISITOR_COUNT_BATCH);
-    batch.forEach(({ mineId, btn }) => {
+    Promise.all(batch.map(({ mineId, btn }) =>
       ensureVisitorCount(mineId).then(n => {
         applyVisitorCountUI(btn, n);
         scheduleVisitorSortRefresh();
-      }).catch(() => {});
+      }).catch(() => {})
+    )).then(() => {
+      visitorCountFlushRunning = false;
+      if (visitorCountPending.length) scheduleVisitorCountFlush();
     });
-    if (visitorCountPending.length) scheduleVisitorCountFlush();
   }
   function scheduleVisitorCountFlush() {
     if (visitorCountFlushScheduled) return;
@@ -1246,13 +1263,40 @@
     Promise.resolve().then(flushVisitorCountQueue);
   }
   function queueVisitorCount(mineId, btn) {
-    if (!mineId || !btn) return;
+    if (!mineId) return;
+    mineId = String(mineId);
     if (visitorCountCache.has(mineId)) {
-      applyVisitorCountUI(btn, visitorCountCache.get(mineId));
+      if (btn) applyVisitorCountUI(btn, visitorCountCache.get(mineId));
       return;
     }
-    visitorCountPending.push({ mineId, btn });
+    const existing = visitorCountPending.find(x => x.mineId === mineId);
+    if (existing) {
+      if (btn) existing.btn = btn;
+      scheduleVisitorCountFlush();
+      return;
+    }
+    if (visitorCountInflight.has(mineId)) {
+      if (btn) {
+        visitorCountInflight.get(mineId).then(n => applyVisitorCountUI(btn, n)).catch(() => {});
+      }
+      return;
+    }
+    visitorCountPending.push({ mineId, btn: btn || null });
     scheduleVisitorCountFlush();
+  }
+  function queueMissingVisitorCountsForSort() {
+    if (sortKey !== 'visitors' || !loadedUid) return;
+    const pendingIds = new Set(visitorCountPending.map(x => x.mineId));
+    minesMatchingFilters().forEach(m => {
+      if (!m || m.id == null) return;
+      const id = String(m.id);
+      if (visitorCountCache.has(id)) return;
+      if (visitorCountInflight.has(id)) return;
+      if (pendingIds.has(id)) return;
+      visitorCountPending.push({ mineId: id, btn: null });
+      pendingIds.add(id);
+    });
+    if (visitorCountPending.length) scheduleVisitorCountFlush();
   }
   const visitorListCache = new Map(); // mineId -> { list, truncated, mine }
   const visitorUserCache = new Map(); // uid -> avatarUrl string|null (session)
@@ -2474,15 +2518,19 @@
     if (!cardTotal) {
       const empty = document.createElement('div');
       empty.className = 'mine-empty';
-      empty.textContent = 'No mines match that filter.';
+      const matching = minesMatchingFilters();
+      const stillCounting = sortKey === 'visitors' && matching.some(m => m && m.id != null && !visitorCountCache.has(String(m.id)));
+      empty.textContent = stillCounting ? 'Counting visitors…' : 'No mines match that filter.';
       board.appendChild(empty);
       $('mine-sentinel').hidden = true;
+      queueMissingVisitorCountsForSort();
       return;
     }
     $('mine-sentinel').hidden = false;
     $('mine-sentinel').textContent = 'Loading more…';
     paintBatch();
     fillViewport();
+    queueMissingVisitorCountsForSort();
   }
 
   function sidebarGameComingSoon(e, link) {
@@ -2599,7 +2647,7 @@
   }
 
 
-  const VISITORS_SORT_TIP_TEXT = 'Warning: Visitor counts load as mine cards appear on screen. This sort only rearranges cards that already have a count. Scroll down to load more — those mines will sort into place once their counts arrive.';
+  const VISITORS_SORT_TIP_TEXT = 'Warning: Visitor counts load in the background while this sort is active. Mines rearrange as counts arrive. Mines with zero visitors are hidden while this sort is active.';
   let visitorsSortTip = null;
   let visitorsSortTipTimer = null;
   let visitorsSortTipTarget = null;
