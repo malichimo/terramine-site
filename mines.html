@@ -1573,6 +1573,7 @@
       return;
     }
     body.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitOverlayCard(v, cached.mine)).join('') + '</div>';
+    ensureVisitorAvatars(list);
   }
   async function fetchMineVisitors(mineId) {
     const snap = await db.collection('checkIns')
