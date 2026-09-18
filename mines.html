@@ -723,6 +723,10 @@
       gpsFields[g.field] = (gpsFields[g.field] || 0) + 1;
     });
     console.log('mine data', mines);
+    ['Strip Club 1', '422096_-858905'].forEach(name => {
+      const hit = mines.filter(m => titleOf(m) === name || String(m.id) === name);
+      console.log('mine ' + name, hit.length ? hit : 'not found');
+    });
     console.info('[mines] loaded', mines.length, 'gps', withGps, gpsFields);
     setStatus('');
     setToolbar(true);
