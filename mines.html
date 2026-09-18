@@ -651,6 +651,7 @@
     }
     return null;
   }
+  // Hardcoded bases are PER SECOND (not per minute).
   function productionBase(type) {
     return { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
   }
@@ -658,20 +659,20 @@
   function productionRate(type, level) {
     return productionBase(type) * (1 + productionBonus(level) / 100);
   }
-  // Shared with the hover table. 60 * 24 is 1440 minutes in a day.
-  function perMinColumns(type, level) {
+  // Shared with the hover table. Columns are boosted-or-base rates per second.
+  function perSecColumns(type, level) {
     const base = productionBase(type);
     const boosted = level == null ? base : productionRate(type, level);
     const blend = (h) => boosted * (h * 20 + (24 - h)) / 24;
     return [base, boosted, blend(12), blend(18), blend(24)];
   }
-  function periodAmount(perMin, period) {
-    const day = perMin * 60 * 24;
-    if (period === 'sec') return perMin / 60;
-    if (period === 'min') return perMin;
-    if (period === 'day') return day;
-    if (period === 'year') return day * 365;
-    return day * 30;
+  function periodAmount(perSec, period) {
+    // Scale from per-second: min=*60, day=*86400, month=*86400*30, year=*86400*365
+    if (period === 'sec') return perSec;
+    if (period === 'min') return perSec * 60;
+    if (period === 'day') return perSec * 60 * 60 * 24;
+    if (period === 'year') return perSec * 60 * 60 * 24 * 365;
+    return perSec * 60 * 60 * 24 * 30;
   }
   const DISPLAY_KEY = 'terramine.mines.display';
   const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
@@ -692,7 +693,7 @@
   }
   let displayPref = loadDisplay();
   function displayAmount(type, level, pref) {
-    return periodAmount(perMinColumns(type, level)[RATE_INDEX[pref.rate]], pref.period);
+    return periodAmount(perSecColumns(type, level)[RATE_INDEX[pref.rate]], pref.period);
   }
   function applyProdValue(el, type, level) {
     if (level == null || !Number.isFinite(level)) {
@@ -789,7 +790,7 @@
   }
   function fillProdTip(type, level) {
     const tip = ensureProdTip();
-    const perMins = perMinColumns(type, level);
+    const perSecs = perSecColumns(type, level);
     const colClass = ['c-base', 'c-bonus', 'c-12', 'c-18', 'c-24'];
     const rows = [['Per Sec', 'sec'], ['Per Min', 'min'], ['Per Day', 'day'], ['Per Month', 'month'], ['Per Year', 'year']];
     const tbody = tip.querySelector('tbody');
@@ -800,10 +801,10 @@
       stub.className = 'stub';
       stub.textContent = row[0];
       tr.appendChild(stub);
-      perMins.forEach((perMin, ci) => {
+      perSecs.forEach((perSec, ci) => {
         const td = document.createElement('td');
         td.className = colClass[ci];
-        td.textContent = fmtRate(periodAmount(perMin, row[1]), row[1]);
+        td.textContent = fmtRate(periodAmount(perSec, row[1]), row[1]);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
