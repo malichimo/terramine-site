@@ -109,6 +109,12 @@
     .inv-card-rarity.r-uncommon { color:#4ade80; }
     .inv-card-rarity.r-rare { color:#60a5fa; }
     .inv-card-rarity.r-epic { color:#c084fc; }
+    /* Resource card left-to-right order by rarity (flex order) */
+    .inv-card.rarity-common { order: 1; }
+    .inv-card.rarity-uncommon { order: 2; }
+    .inv-card.rarity-rare { order: 3; }
+    .inv-card.rarity-epic { order: 4; }
+    .inv-card.rarity-unknown { order: 99; }
     .inv-card-body { display:flex; flex-direction:column; align-items:center; gap:10px; padding:12px 10px 14px; }
     .mine-photo {
       width:72px; height:72px; border-radius:8px; overflow:hidden; flex-shrink:0;
@@ -388,10 +394,15 @@
     return parts.join(' ');
   }
 
-  function renderCard(item) {
+  function renderCard(item, opts) {
+    opts = opts || {};
     const art = document.createElement('article');
     art.className = 'inv-card';
     art.dataset.name = item.name || '';
+    if (opts.orderByRarity) {
+      const rk = normalizeRarity(item.rarity);
+      art.classList.add(RARITY_RANK.hasOwnProperty(rk) ? ('rarity-' + rk) : 'rarity-unknown');
+    }
 
     const title = document.createElement('div');
     title.className = 'inv-card-title';
@@ -466,7 +477,7 @@
       head.append(img, h, c);
       const grid = document.createElement('div');
       grid.className = 'inv-grid';
-      filtered.forEach(it => grid.appendChild(renderCard(it)));
+      filtered.forEach(it => grid.appendChild(renderCard(it, { orderByRarity: !!g.sortByRarity })));
       sec.append(head, grid);
       board.appendChild(sec);
     });
