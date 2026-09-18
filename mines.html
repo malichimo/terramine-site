@@ -619,6 +619,7 @@
   let visitorCountFlushScheduled = false;
   let visitorCountFlushRunning = false;
   let visitorSortRefreshScheduled = false;
+  let visitorSortSettling = false;
   const VISITOR_LIST_LIMIT = 200;
 
   function fmtNum(n) { if (!n) return '0'; if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'; if (n >= 1000) return (n / 1000).toFixed(1) + 'K'; return Math.round(n).toLocaleString(); }
@@ -1127,14 +1128,74 @@
   function visibleMines() {
     const mines = minesMatchingFilters();
     if (sortKey !== 'visitors') return mines;
+    // During settle: hide the whole grid until every filtered mine has a count.
+    if (visitorSortSettling) return [];
     // While sorting by visitor count: hide known zeros; keep pending out of the
-    // list until counted (background queue fills cache, then re-render).
+    // list until counted (settle finishes with one paint).
     return mines.filter(p => {
       if (!p || p.id == null) return false;
       const id = String(p.id);
       if (!visitorCountCache.has(id)) return false;
       return (Number(visitorCountCache.get(id)) || 0) > 0;
     });
+  }
+  function filteredMinesMissingVisitorCounts() {
+    if (sortKey !== 'visitors' || !loadedUid) return [];
+    const missing = [];
+    minesMatchingFilters().forEach(m => {
+      if (!m || m.id == null) return;
+      const id = String(m.id);
+      if (!visitorCountCache.has(id)) missing.push(id);
+    });
+    return missing;
+  }
+  function cancelVisitorSortSettle() {
+    visitorSortSettling = false;
+  }
+  function maybeFinishVisitorSortSettle() {
+    if (!visitorSortSettling) return;
+    if (sortKey !== 'visitors' || !loadedUid) {
+      visitorSortSettling = false;
+      return;
+    }
+    if (visitorCountPending.length || visitorCountFlushRunning) return;
+    const missing = filteredMinesMissingVisitorCounts();
+    if (missing.length) {
+      // Still waiting on inflight, or need to re-queue stragglers.
+      let waiting = false;
+      missing.forEach(id => {
+        if (visitorCountInflight.has(id)) {
+          waiting = true;
+          visitorCountInflight.get(id).then(() => maybeFinishVisitorSortSettle()).catch(() => maybeFinishVisitorSortSettle());
+        }
+      });
+      if (waiting) return;
+      queueMissingVisitorCountsForSort();
+      return;
+    }
+    visitorSortSettling = false;
+    renderFromFilters();
+  }
+  function beginVisitorSortSettleIfNeeded() {
+    if (sortKey !== 'visitors' || !loadedUid) {
+      cancelVisitorSortSettle();
+      return false;
+    }
+    const missing = filteredMinesMissingVisitorCounts();
+    if (!missing.length) {
+      // All cached — paint immediately (warm cache path).
+      if (visitorSortSettling) visitorSortSettling = false;
+      return false;
+    }
+    visitorSortSettling = true;
+    // Attach finish hooks for any already-inflight counts (e.g. viewport lazy).
+    missing.forEach(id => {
+      if (visitorCountInflight.has(id)) {
+        visitorCountInflight.get(id).then(() => maybeFinishVisitorSortSettle()).catch(() => maybeFinishVisitorSortSettle());
+      }
+    });
+    queueMissingVisitorCountsForSort();
+    return true;
   }
   function buildFlat() {
     const mines = visibleMines();
@@ -1223,10 +1284,16 @@
     const p = fetchVisitorCount(mineId).then(n => {
       visitorCountCache.set(mineId, n);
       visitorCountInflight.delete(mineId);
+      if (visitorSortSettling) maybeFinishVisitorSortSettle();
       return n;
     }).catch(err => {
       visitorCountInflight.delete(mineId);
       console.warn('[mines] visitor count failed', mineId, err);
+      if (visitorSortSettling) {
+        // Cache 0 so settle can finish (treat as no visitors for sort).
+        if (!visitorCountCache.has(mineId)) visitorCountCache.set(mineId, 0);
+        maybeFinishVisitorSortSettle();
+      }
       throw err;
     });
     visitorCountInflight.set(mineId, p);
@@ -1234,27 +1301,34 @@
   }
   function scheduleVisitorSortRefresh() {
     if (sortKey !== 'visitors' || !loadedUid) return;
+    // Settle mode: cache-only updates; single paint when the queue finishes.
+    if (visitorSortSettling) return;
     if (visitorSortRefreshScheduled) return;
     visitorSortRefreshScheduled = true;
     Promise.resolve().then(() => {
       visitorSortRefreshScheduled = false;
+      if (visitorSortSettling) return;
       if (sortKey === 'visitors' && loadedUid) renderFromFilters();
     });
   }
   function flushVisitorCountQueue() {
     visitorCountFlushScheduled = false;
     if (visitorCountFlushRunning) return;
-    if (!visitorCountPending.length) return;
+    if (!visitorCountPending.length) {
+      if (visitorSortSettling) maybeFinishVisitorSortSettle();
+      return;
+    }
     visitorCountFlushRunning = true;
     const batch = visitorCountPending.splice(0, VISITOR_COUNT_BATCH);
     Promise.all(batch.map(({ mineId, btn }) =>
       ensureVisitorCount(mineId).then(n => {
         applyVisitorCountUI(btn, n);
-        scheduleVisitorSortRefresh();
+        if (!visitorSortSettling) scheduleVisitorSortRefresh();
       }).catch(() => {})
     )).then(() => {
       visitorCountFlushRunning = false;
       if (visitorCountPending.length) scheduleVisitorCountFlush();
+      else if (visitorSortSettling) maybeFinishVisitorSortSettle();
     });
   }
   function scheduleVisitorCountFlush() {
@@ -2496,6 +2570,8 @@
   }
   function renderFromFilters() {
     ensureObs();
+    if (sortKey !== 'visitors') cancelVisitorSortSettle();
+    else beginVisitorSortSettleIfNeeded();
     const built = buildFlat();
     flat = built.items;
     flatIndex = 0;
@@ -2506,7 +2582,10 @@
     board.innerHTML = '';
     dismissProdTip(); dismissGameTip(); dismissVoImgTip(); closeVoDetail();
     const owned = allMines.length;
-    $('mine-count').textContent = owned ? (built.matchCount + ' match · ' + owned + ' owned') : '';
+    // During settle, matchCount reflects the eventual visitor-sorted set (zeros
+    // hidden); show filtered total until counts are ready so the toolbar is stable.
+    const matchLabel = visitorSortSettling ? minesMatchingFilters().length : built.matchCount;
+    $('mine-count').textContent = owned ? (matchLabel + ' match · ' + owned + ' owned') : '';
     if (!owned) {
       const empty = document.createElement('div');
       empty.className = 'mine-empty';
@@ -2518,19 +2597,18 @@
     if (!cardTotal) {
       const empty = document.createElement('div');
       empty.className = 'mine-empty';
-      const matching = minesMatchingFilters();
-      const stillCounting = sortKey === 'visitors' && matching.some(m => m && m.id != null && !visitorCountCache.has(String(m.id)));
+      const stillCounting = visitorSortSettling || (sortKey === 'visitors' && filteredMinesMissingVisitorCounts().length > 0);
       empty.textContent = stillCounting ? 'Counting visitors…' : 'No mines match that filter.';
       board.appendChild(empty);
       $('mine-sentinel').hidden = true;
-      queueMissingVisitorCountsForSort();
+      if (sortKey === 'visitors' && !visitorSortSettling) queueMissingVisitorCountsForSort();
       return;
     }
     $('mine-sentinel').hidden = false;
     $('mine-sentinel').textContent = 'Loading more…';
     paintBatch();
     fillViewport();
-    queueMissingVisitorCountsForSort();
+    if (sortKey === 'visitors' && !visitorSortSettling) queueMissingVisitorCountsForSort();
   }
 
   function sidebarGameComingSoon(e, link) {
@@ -2647,7 +2725,7 @@
   }
 
 
-  const VISITORS_SORT_TIP_TEXT = 'Warning: Visitor counts load in the background while this sort is active. Mines rearrange as counts arrive. Mines with zero visitors are hidden while this sort is active.';
+  const VISITORS_SORT_TIP_TEXT = 'Warning: Visitor counts load in the background while this sort is active. The first sort may take a moment while counts load, then mines appear in one pass. Mines with zero visitors are hidden while this sort is active.';
   let visitorsSortTip = null;
   let visitorsSortTipTimer = null;
   let visitorsSortTipTarget = null;
