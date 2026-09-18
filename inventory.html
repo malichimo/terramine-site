@@ -332,9 +332,20 @@
     const name = asString(pickFirst(raw, [
       'name', 'title', 'displayName', 'itemName', 'label', 'resourceName', 'resource', 'type', 'id'
     ])) || ('Item ' + (idx + 1));
-    const rarity = normalizeRarity(pickFirst(raw, [
+    let rarity = normalizeRarity(pickFirst(raw, [
       'rarity', 'tier', 'quality', 'grade', 'rarityTier', 'rarityLevel'
     ]));
+    // Map form { common: N, ... }: keys are rarity tiers with no rarity field.
+    // Fall back to name / map key when it is itself a known rarity.
+    if (!rarity) {
+      const fromName = normalizeRarity(name);
+      if (RARITY_RANK.hasOwnProperty(fromName)) {
+        rarity = fromName;
+      } else {
+        const fromKey = normalizeRarity(asString(pickFirst(raw, ['id', 'key'])));
+        if (RARITY_RANK.hasOwnProperty(fromKey)) rarity = fromKey;
+      }
+    }
     const image = asUrl(pickFirst(raw, [
       'image', 'imageUrl', 'imageURL', 'img', 'photo', 'photoUrl', 'photoURL',
       'icon', 'iconUrl', 'iconURL', 'url', 'thumbnail', 'thumb', 'assetUrl', 'assetURL'
