@@ -85,7 +85,17 @@
       border:1px solid #d0d5dc; border-radius:999px; padding:7px 12px; cursor:pointer;
     }
     .sort-btn.active { border-color:#4FC3F7; background:#e8f7fe; }
-    .sort-btn:disabled, .tool-field select:disabled, .tool-search:disabled { opacity:.55; cursor:not-allowed; }
+    .sort-btn:disabled, .tool-field select:disabled, .tool-search:disabled, .type-filter-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .type-filter { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+    .type-filter-btn {
+      width:34px; height:34px; padding:3px; box-sizing:border-box;
+      display:flex; align-items:center; justify-content:center;
+      border:2px solid #d0d5dc; border-radius:10px; background:#fff;
+      cursor:pointer; transition:border-color .15s, background .15s;
+    }
+    .type-filter-btn img { width:24px; height:24px; object-fit:contain; display:block; pointer-events:none; }
+    .type-filter-btn.active { border-color:#4FC3F7; background:#e8f7fe; }
+    .type-filter-btn:focus-visible { outline:2px solid #4FC3F7; outline-offset:2px; }
     .tool-search { flex:1; min-width:160px; }
     .mine-count { margin-left:auto; font-size:12px; color:#64748b; font-weight:600; }
     .page-settings { position:absolute; top:10px; right:12px; z-index:3; }
@@ -481,17 +491,22 @@
     </aside>
     <main class="main" id="portal-main">
       <div class="mine-toolbar" id="mine-toolbar">
-        <label class="tool-field">Mine Type
-          <select id="filter-type" disabled>
-            <option value="all">All</option>
-            <option value="rock">Rock</option>
-            <option value="coal">Coal</option>
-            <option value="gold">Gold</option>
-            <option value="diamond">Diamond</option>
-          </select>
-        </label>
-        <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
+        <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
+          <button type="button" class="type-filter-btn" data-type="diamond" aria-label="Filter Diamond" aria-pressed="false" disabled>
+            <img src="images/mine-icons/diamond.svg" alt="">
+          </button>
+          <button type="button" class="type-filter-btn" data-type="gold" aria-label="Filter Gold" aria-pressed="false" disabled>
+            <img src="images/mine-icons/gold.svg" alt="">
+          </button>
+          <button type="button" class="type-filter-btn" data-type="coal" aria-label="Filter Coal" aria-pressed="false" disabled>
+            <img src="images/mine-icons/coal.svg" alt="">
+          </button>
+          <button type="button" class="type-filter-btn" data-type="rock" aria-label="Filter Rock" aria-pressed="false" disabled>
+            <img src="images/mine-icons/rock.svg" alt="">
+          </button>
+        </div>
         <button type="button" class="sort-btn" id="sort-prod" data-sort="prod" disabled>Mine Production Level</button>
+        <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
         <button type="button" class="sort-btn" id="sort-visitors" data-sort="visitors" disabled>Visitor Count</button>
         <button type="button" class="sort-btn" id="sort-name" data-sort="name" disabled>Mine Name</button>
@@ -601,6 +616,22 @@
   ];
   const GPS_NESTS = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng'];
 
+  const FILTER_TYPES_KEY = 'terramine.mines.filterTypes';
+  function loadSelectedTypes() {
+    try {
+      const raw = sessionStorage.getItem(FILTER_TYPES_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Set();
+      return new Set(arr.filter(t => TYPE_ORDER.indexOf(t) !== -1));
+    } catch (e) { return new Set(); }
+  }
+  function saveSelectedTypes() {
+    try {
+      sessionStorage.setItem(FILTER_TYPES_KEY, JSON.stringify(Array.from(selectedTypes)));
+    } catch (e) {}
+  }
+  let selectedTypes = loadSelectedTypes();
   let allMines = [];
   let loadedUid = null;
   let sortKey = null;
@@ -1118,9 +1149,9 @@
   }
   function minesMatchingFilters() {
     const q = ($('filter-search').value || '').trim().toLowerCase();
-    const type = $('filter-type').value;
+    const typeFilterOn = selectedTypes.size > 0;
     return allMines.filter(p => {
-      if (type !== 'all' && typeKey(p) !== type) return false;
+      if (typeFilterOn && !selectedTypes.has(typeKey(p))) return false;
       if (q && titleOf(p).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
@@ -1212,6 +1243,13 @@
     $('mine-toolbar').querySelectorAll('button,input,select').forEach(el => { el.disabled = !on; });
   }
   function setStatus(text) { $('mine-status').textContent = text || ''; }
+  function updateTypeFilterButtons() {
+    document.querySelectorAll('.type-filter-btn').forEach(btn => {
+      const on = selectedTypes.has(btn.dataset.type);
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
   function updateSortButtons() {
     document.querySelectorAll('.sort-btn').forEach(btn => {
       const on = sortKey === btn.dataset.sort;
@@ -2809,7 +2847,17 @@
     });
   }
 
-  $('filter-type').addEventListener('change', () => { if (loadedUid) renderFromFilters(); });
+  updateTypeFilterButtons();
+  document.querySelectorAll('.type-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.type;
+      if (selectedTypes.has(t)) selectedTypes.delete(t);
+      else selectedTypes.add(t);
+      saveSelectedTypes();
+      updateTypeFilterButtons();
+      if (loadedUid) renderFromFilters();
+    });
+  });
   $('filter-search').addEventListener('input', () => { if (loadedUid) renderFromFilters(); });
   document.querySelectorAll('.sort-btn').forEach(btn => {
     btn.addEventListener('click', () => {
