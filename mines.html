@@ -368,6 +368,40 @@
     .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
     .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:pointer; }
     .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
+    .vo-photo-wrap { position:relative; width:100%; }
+    .vo-photo-wrap > .vo-photo { display:block; width:100%; }
+    .vo-showcase-pin {
+      position:absolute; top:8px; right:8px; z-index:3;
+      width:34px; height:34px; padding:0; margin:0;
+      border:1px solid rgba(0,0,0,.2); border-radius:8px;
+      background:rgba(255,255,255,.92); color:#1a2330;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25);
+      line-height:0;
+    }
+    .vo-showcase-pin:hover { background:#fff; }
+    .vo-showcase-pin:focus-visible { outline:2px solid #3d8bfd; outline-offset:2px; }
+    .vo-showcase-pin.is-active {
+      background:rgba(46,160,67,.55);
+      border-color:rgba(30,110,45,.5);
+      color:#0b2f12;
+    }
+    .vo-showcase-pin svg { width:18px; height:18px; display:block; pointer-events:none; }
+    .vo-showcase-tip {
+      position:fixed; z-index:340; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+      max-width:min(280px, calc(100vw - 16px));
+    }
+    .vo-showcase-flash {
+      position:fixed; z-index:350; pointer-events:none; display:none;
+      left:50%; transform:translateX(-50%);
+      background:#8B1E1E; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:8px 12px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:13px; font-weight:600; max-width:min(420px, calc(100vw - 24px));
+      text-align:center;
+    }
     .vo-img-tip {
       position:fixed; z-index:320; pointer-events:none; display:none;
       background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
@@ -1659,6 +1693,278 @@
   function pinSvgHtml() {
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.8"></path><circle cx="12" cy="10" r="2.2" fill="currentColor"></circle></svg>';
   }
+  function thumbtackSvgHtml() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 12V4h1a1 1 0 1 0 0-2H7a1 1 0 1 0 0 2h1v8l-2 2v2h5.2V22h1.6v-6H18v-2l-2-2z"></path></svg>';
+  }
+  const SHOWCASE_PIN_TIP_SET = 'Selecting this sets this image as the mine\'s showcase visitor image.';
+  const SHOWCASE_PIN_TIP_CLEAR = 'Selecting this clears the mine\'s showcase visitor image.';
+  let showcaseTip = null;
+  let showcaseTipTimer = null;
+  let showcaseTipTarget = null;
+  let showcaseTipX = 0;
+  let showcaseTipY = 0;
+  let showcaseFlashEl = null;
+  let showcaseFlashTimer = null;
+  function photosMatchUrl(a, b) {
+    const ka = normalizePhotoUrlKey(a);
+    const kb = normalizePhotoUrlKey(b);
+    return !!(ka && kb && ka === kb);
+  }
+  function isMineShowcasePhoto(mine, url) {
+    if (!mine || !url) return false;
+    return photosMatchUrl(photoUrl(mine), url);
+  }
+  function showcasePinHtml(mine, photo, checkInId) {
+    if (!photo) return '';
+    const mineId = mine && mine.id != null ? String(mine.id) : (visitorsOverlayMineId || '');
+    const active = isMineShowcasePhoto(mine, photo);
+    const tip = active ? SHOWCASE_PIN_TIP_CLEAR : SHOWCASE_PIN_TIP_SET;
+    return '<button type="button" class="vo-showcase-pin' + (active ? ' is-active' : '') + '"'
+      + ' data-showcase-pin="1"'
+      + (mineId ? ' data-mine-id="' + escapeHtml(mineId) + '"' : '')
+      + ' data-photo-url="' + escapeHtml(photo) + '"'
+      + (checkInId ? ' data-checkin-id="' + escapeHtml(String(checkInId)) + '"' : '')
+      + ' aria-pressed="' + (active ? 'true' : 'false') + '"'
+      + ' aria-label="' + escapeHtml(tip) + '"'
+      + '>' + thumbtackSvgHtml() + '</button>';
+  }
+  function wrapVisitorPhotoHtml(mine, photo, checkInId, extraImgClass) {
+    if (!photo) return '<div class="vo-photo-empty">No photo</div>';
+    const cls = 'vo-photo' + (extraImgClass ? ' ' + extraImgClass : '');
+    const pin = showcasePinHtml(mine, photo, checkInId);
+    const onerr = 'var w=this.closest(\'.vo-photo-wrap\');if(w)w.outerHTML=\'<div class=&quot;vo-photo-empty&quot;>No photo</div>\';';
+    return '<div class="vo-photo-wrap">'
+      + '<img class="' + cls + '" src="' + escapeHtml(photo) + '" alt="Check-in photo" loading="lazy" onerror="' + onerr + '">'
+      + pin
+      + '</div>';
+  }
+  function dismissShowcaseTip() {
+    if (showcaseTipTimer) { clearTimeout(showcaseTipTimer); showcaseTipTimer = null; }
+    showcaseTipTarget = null;
+    if (showcaseTip) showcaseTip.style.display = 'none';
+  }
+  function ensureShowcaseTip() {
+    if (showcaseTip) return showcaseTip;
+    const tip = document.createElement('div');
+    tip.className = 'vo-showcase-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    showcaseTip = tip;
+    return tip;
+  }
+  function placeShowcaseTip(x, y) {
+    const tip = ensureShowcaseTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function showShowcaseTip(btn) {
+    if (showcaseTipTarget !== btn || !btn.isConnected) return;
+    const tip = ensureShowcaseTip();
+    tip.textContent = btn.classList.contains('is-active') ? SHOWCASE_PIN_TIP_CLEAR : SHOWCASE_PIN_TIP_SET;
+    placeShowcaseTip(showcaseTipX, showcaseTipY);
+  }
+  function bindShowcasePinTip(btn) {
+    if (!btn || btn.dataset.showcaseTipBound === '1') return;
+    btn.dataset.showcaseTipBound = '1';
+    btn.addEventListener('mouseenter', (e) => {
+      if (showcaseTipTimer) { clearTimeout(showcaseTipTimer); showcaseTipTimer = null; }
+      dismissVoImgTip();
+      showcaseTipTarget = btn;
+      showcaseTipX = e.clientX;
+      showcaseTipY = e.clientY;
+      if (showcaseTip) showcaseTip.style.display = 'none';
+      showcaseTipTimer = setTimeout(() => {
+        showcaseTipTimer = null;
+        showShowcaseTip(btn);
+      }, 200);
+    });
+    btn.addEventListener('mousemove', (e) => {
+      if (showcaseTipTarget !== btn) return;
+      showcaseTipX = e.clientX;
+      showcaseTipY = e.clientY;
+      if (showcaseTip && showcaseTip.style.display === 'block' && !showcaseTipTimer) {
+        placeShowcaseTip(showcaseTipX, showcaseTipY);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (showcaseTipTarget === btn) dismissShowcaseTip();
+    });
+  }
+  function bindShowcasePinTips(root) {
+    if (!root) return;
+    root.querySelectorAll('.vo-showcase-pin').forEach(bindShowcasePinTip);
+  }
+  function flashShowcaseNote(msg) {
+    if (!showcaseFlashEl) {
+      showcaseFlashEl = document.createElement('div');
+      showcaseFlashEl.className = 'vo-showcase-flash';
+      showcaseFlashEl.setAttribute('role', 'status');
+      document.body.appendChild(showcaseFlashEl);
+    }
+    showcaseFlashEl.textContent = msg || '';
+    const overlay = $('visitors-overlay');
+    const main = $('portal-main');
+    const box = (overlay && !overlay.hidden) ? overlay : main;
+    if (box) {
+      const r = box.getBoundingClientRect();
+      showcaseFlashEl.style.top = Math.max(12, r.top + 16) + 'px';
+    } else {
+      showcaseFlashEl.style.top = '24px';
+    }
+    showcaseFlashEl.style.display = 'block';
+    if (showcaseFlashTimer) clearTimeout(showcaseFlashTimer);
+    showcaseFlashTimer = setTimeout(() => {
+      showcaseFlashTimer = null;
+      if (showcaseFlashEl) showcaseFlashEl.style.display = 'none';
+    }, 3200);
+  }
+  async function safeUpdatePropertyDetails(mineId, updates, removeFields) {
+    const detailsRef = db.collection('propertyDetails').doc(String(mineId));
+    const now = new Date().toISOString();
+    const existing = await detailsRef.get();
+    const payload = Object.assign({}, updates || {});
+    if (removeFields && removeFields.length) {
+      removeFields.forEach(k => {
+        payload[k] = firebase.firestore.FieldValue.delete();
+      });
+    }
+    payload.updatedAt = now;
+    if (!existing.exists) {
+      if (removeFields && removeFields.length && (!updates || !Object.keys(updates).length)) {
+        return; // nothing to clear on a missing doc
+      }
+      await detailsRef.set(Object.assign({
+        propertyId: String(mineId),
+        productionLevel: 1,
+        gameLevel: 1,
+        gameXP: 0,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        dailyActivitiesRemaining: 1,
+        doubleRewardAvailable: true,
+        lastDailyReset: now,
+        createdAt: now,
+        lastUpdated: now
+      }, payload));
+    } else {
+      payload.lastUpdated = now;
+      await detailsRef.set(payload, { merge: true });
+    }
+  }
+  function findMineCardEl(mineId) {
+    const id = String(mineId);
+    return Array.from(document.querySelectorAll('article.mine-card')).find(el => el.dataset.mineId === id) || null;
+  }
+  function updateMineLandCardPhoto(mineId, url) {
+    const art = findMineCardEl(mineId);
+    if (!art) return;
+    const slot = art.querySelector('.mine-photo');
+    if (!slot) return;
+    const clean = (typeof url === 'string' && /^https?:\/\//i.test(url.trim())) ? url.trim() : '';
+    if (!clean) {
+      delete art.dataset.photo;
+      slot.classList.remove('has-img');
+      slot.replaceChildren();
+      slot.textContent = 'No photo';
+      delete slot.dataset.landTipBound;
+      return;
+    }
+    art.dataset.photo = clean;
+    let img = slot.querySelector('img');
+    if (!img) {
+      slot.textContent = '';
+      img = document.createElement('img');
+      img.alt = art.dataset.title || 'Mine photo';
+      img.decoding = 'async';
+      img.addEventListener('error', () => {
+        slot.classList.remove('has-img');
+        slot.replaceChildren();
+        slot.textContent = 'No photo';
+      });
+      slot.appendChild(img);
+      slot.classList.add('has-img');
+      delete slot.dataset.landTipBound;
+      bindLandPhotoInteractions(slot);
+    } else {
+      img.src = clean;
+      slot.classList.add('has-img');
+    }
+  }
+  function syncLocalShowcaseState(mineId, url) {
+    const mine = findMineById(mineId);
+    if (mine) {
+      if (!mine._details) mine._details = {};
+      if (url) mine._details.profilePhotoURL = url;
+      else delete mine._details.profilePhotoURL;
+    }
+    const cached = visitorListCache.get(String(mineId));
+    if (cached && cached.mine) {
+      if (!cached.mine._details) cached.mine._details = {};
+      if (url) cached.mine._details.profilePhotoURL = url;
+      else delete cached.mine._details.profilePhotoURL;
+    }
+    updateMineLandCardPhoto(mineId, url || '');
+    // Refresh active pin styles in open overlay / detail without losing scroll if possible
+    const roots = [];
+    const body = $('visitors-overlay-body');
+    if (body) roots.push(body);
+    const detailBody = $('vo-detail-body');
+    if (detailBody) roots.push(detailBody);
+    roots.forEach(root => {
+      root.querySelectorAll('.vo-showcase-pin').forEach(btn => {
+        const photo = btn.getAttribute('data-photo-url') || '';
+        const active = !!(url && photosMatchUrl(photo, url));
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        const tip = active ? SHOWCASE_PIN_TIP_CLEAR : SHOWCASE_PIN_TIP_SET;
+        btn.setAttribute('aria-label', tip);
+      });
+    });
+  }
+  async function toggleShowcaseVisitorImage(btn) {
+    if (!btn) return;
+    const mineId = btn.getAttribute('data-mine-id') || visitorsOverlayMineId;
+    const photo = btn.getAttribute('data-photo-url') || '';
+    if (!mineId || !photo) return;
+    const clearing = btn.classList.contains('is-active');
+    dismissShowcaseTip();
+    try {
+      if (clearing) {
+        await safeUpdatePropertyDetails(mineId, null, ['profilePhotoURL']);
+        syncLocalShowcaseState(mineId, '');
+      } else {
+        await safeUpdatePropertyDetails(mineId, { profilePhotoURL: photo }, null);
+        syncLocalShowcaseState(mineId, photo);
+      }
+    } catch (err) {
+      console.warn('[mines] showcase photo update failed', mineId, err);
+      const msg = (err && err.code === 'permission-denied')
+        ? 'Could not update showcase photo (permission denied).'
+        : ('Could not update showcase photo' + (err && err.message ? ': ' + err.message : '.'));
+      flashShowcaseNote(msg);
+    }
+  }
   function findMineById(mineId) {
     return allMines.find(m => String(m.id) === String(mineId)) || null;
   }
@@ -2080,6 +2386,7 @@
   function closeVoDetail() {
     const detail = $('vo-detail-overlay');
     if (!detail || detail.hidden) return;
+    dismissShowcaseTip();
     detail.hidden = true;
     detail.setAttribute('aria-hidden', 'true');
     const body = $('vo-detail-body');
@@ -2096,6 +2403,7 @@
     const panel = detail.querySelector('.vo-detail-panel');
     if (panel) panel.setAttribute('aria-label', 'Visitor check-in detail');
     body.innerHTML = renderVisitOverlayCard(v, mine);
+    bindShowcasePinTips(body);
     const av = body.querySelector('.vo-avatar');
     if (av) {
       av.removeAttribute('title');
@@ -2139,6 +2447,18 @@
     voDetailBound = true;
     const closeBtn = $('vo-detail-close');
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeVoDetail(); });
+    const detail = $('vo-detail-overlay');
+    if (detail) {
+      detail.addEventListener('click', e => {
+        const pinBtn = e.target.closest('.vo-showcase-pin');
+        if (!pinBtn || !detail.contains(pinBtn)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        dismissVoImgTip();
+        dismissShowcaseTip();
+        toggleShowcaseVisitorImage(pinBtn);
+      });
+    }
   }
 
   function syncVisitorsOverlayBounds() {
@@ -2164,6 +2484,7 @@
     if (!overlay || overlay.hidden) return;
     closeVoDetail();
     dismissVoImgTip();
+    dismissShowcaseTip();
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
     clearVisitorsOverlayBounds();
@@ -2218,11 +2539,21 @@
     const body = $('visitors-overlay-body');
     if (body) {
       body.addEventListener('click', e => {
+        const pinBtn = e.target.closest('.vo-showcase-pin');
+        if (pinBtn && body.contains(pinBtn)) {
+          e.preventDefault();
+          e.stopPropagation();
+          dismissVoImgTip();
+          dismissShowcaseTip();
+          toggleShowcaseVisitorImage(pinBtn);
+          return;
+        }
         const photo = e.target.closest('img.vo-photo');
         if (photo && body.contains(photo) && hasRealVoPhotoSrc(photo)) {
           e.preventDefault();
           e.stopPropagation();
           dismissVoImgTip();
+          dismissShowcaseTip();
           const visit = findVisitForPhotoEl(photo);
           const cached = visitorsOverlayMineId ? visitorListCache.get(visitorsOverlayMineId) : null;
           if (visit) openVoDetail(visit, cached ? cached.mine : null);
@@ -2271,9 +2602,7 @@
       pinHtml = '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
     }
     const photo = visitorCheckInPhoto(v);
-    const photoHtml = photo
-      ? '<img class="vo-photo" src="' + escapeHtml(photo) + '" alt="Check-in photo" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;vo-photo-empty&quot;>No photo</div>\'">'
-      : '<div class="vo-photo-empty">No photo</div>';
+    const photoHtml = wrapVisitorPhotoHtml(mine, photo, v.id);
     const msg = (typeof v.message === 'string' && v.message.trim()) ? v.message.trim() : '';
     const msgHtml = msg
       ? '<div class="vo-message">' + escapeHtml(msg) + '</div>'
@@ -2320,6 +2649,7 @@
     body.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitOverlayCard(v, cached.mine)).join('') + '</div>';
     ensureVisitorAvatars(list);
     bindVisitorPhotoTips();
+    bindShowcasePinTips(body);
   }
   async function fetchMineVisitors(mineId) {
     const snap = await db.collection('checkIns')
