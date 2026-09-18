@@ -434,6 +434,21 @@
     <section class="section">
       <div class="section-head">
         <div>
+          <span class="section-tag">§ Geography</span>
+          <h2>Players by country</h2>
+        </div>
+        <p class="section-desc">Distinct players, one per account. Resolved from each player's IP address the next time they open the app — added Sept 18, 2026, so this fills in gradually as the existing userbase returns rather than covering everyone immediately.</p>
+      </div>
+      <div class="panel">
+        <div id="geoPlayerBars"></div>
+        <div id="geoPlayerEmpty" class="empty-state" style="display:none;"></div>
+        <p id="geoPlayerNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
           <span class="section-tag">§ Coming next</span>
           <h2>Progressively added, per our Sept 1 conversation</h2>
         </div>
@@ -1080,6 +1095,55 @@
     noteEl.textContent = `As of ${geoSnapshot.date} — ${resolvedTotal.toLocaleString()} of ${geoSnapshot.totalProperties.toLocaleString()} total properties resolved to a country${otherNote}. ${geoSnapshot.unresolvedProperties.toLocaleString()} unresolved (open ocean/unmapped territory).`;
   }
 
+  // Sept 18, 2026 — Players by Country, added at Magnitude's request
+  // (Discord: "Is it possible to add Players by Country to the report
+  // dashboard as well?"). Mirrors renderGeography() above but reads the
+  // playerCountries/totalUsers/unresolvedUsers fields instead of
+  // countries/totalProperties/unresolvedProperties — same geoSnapshot doc,
+  // both sides written together by refreshGeography.
+  function renderGeographyPlayers() {
+    const wrap = document.getElementById('geoPlayerBars');
+    const emptyEl = document.getElementById('geoPlayerEmpty');
+    const noteEl = document.getElementById('geoPlayerNote');
+    wrap.innerHTML = '';
+
+    const countries = geoSnapshot && geoSnapshot.playerCountries ? geoSnapshot.playerCountries : {};
+    const entries = Object.entries(countries).sort((a, b) => b[1] - a[1]);
+
+    if (!entries.length) {
+      wrap.style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'No player geography data yet — this fills in as players open the app after Sept 18, 2026 (see the note above the chart).';
+      noteEl.textContent = '';
+      return;
+    }
+    wrap.style.display = 'block';
+    emptyEl.style.display = 'none';
+
+    const top = entries.slice(0, 10);
+    const otherCount = entries.length - top.length;
+    const otherTotal = entries.slice(10).reduce((s, [, n]) => s + n, 0);
+    const max = top[0][1];
+    const palette = [styleOf('--cat-1'), styleOf('--cat-2'), styleOf('--cat-3')];
+
+    wrap.innerHTML = top.map(([code, n], i) => {
+      const pct = Math.round((n / max) * 100);
+      return `
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-secondary);margin-bottom:5px;">
+            <span>${countryName(code)}</span><span style="font-family:'IBM Plex Mono',monospace;">${n.toLocaleString()}</span>
+          </div>
+          <div style="height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${palette[i % palette.length]};border-radius:5px;"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const resolvedTotal = entries.reduce((s, [, n]) => s + n, 0);
+    const otherNote = otherCount > 0 ? `, plus ${otherTotal.toLocaleString()} across ${otherCount} other countries` : '';
+    noteEl.textContent = `As of ${geoSnapshot.date} — ${resolvedTotal.toLocaleString()} of ${geoSnapshot.totalUsers.toLocaleString()} total players resolved to a country${otherNote}. ${geoSnapshot.unresolvedUsers.toLocaleString()} not yet resolved (haven't opened the app since this was added).`;
+  }
+
   function installsRangeSlice(days) {
     return dateRangeSlice(installsSnapshots, 'date', days);
   }
@@ -1166,6 +1230,7 @@
     renderInstalls();
     renderAdRevenue();
     renderGeography();
+    renderGeographyPlayers();
   }
 
   function setRange(r) {
