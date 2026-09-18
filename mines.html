@@ -334,8 +334,46 @@
     .vo-pin svg { width:33px; height:33px; display:block; }
     .vo-pin.is-missing { opacity:0.38; pointer-events:none; }
     .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
-    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; }
+    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:pointer; }
     .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
+    .vo-img-tip {
+      position:fixed; z-index:320; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:6px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      max-width:calc(100vw - 16px);
+    }
+    .vo-img-tip img {
+      display:block; max-width:min(420px, 60vmin); max-height:60vmin;
+      width:auto; height:auto; object-fit:contain; border-radius:4px;
+      background:#0d1b2a;
+    }
+    .vo-detail-overlay {
+      position:fixed; z-index:280;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(13,27,42,0.78);
+      box-sizing:border-box; padding:12px;
+    }
+    .vo-detail-overlay[hidden] { display:none !important; }
+    .vo-detail-panel {
+      position:relative; width:min(440px, 100%); max-height:100%;
+      overflow:auto; background:#eef1f4; color:#fff;
+      border:1px solid rgba(255,255,255,.22); border-radius:14px;
+      box-shadow:0 12px 28px rgba(6,10,16,.55);
+    }
+    .vo-detail-close {
+      position:absolute; top:10px; right:12px; z-index:2;
+      width:36px; height:36px; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 22px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .vo-detail-close:hover { background:rgba(255,255,255,0.22); }
+    .vo-detail-panel .vo-card { border-radius:0; border:0; }
+    .vo-detail-panel .vo-card-header { padding-right:52px; }
+    .vo-detail-panel .vo-photo {
+      aspect-ratio:auto; max-height:min(60vh, 520px); object-fit:contain;
+      background:#0d1b2a; cursor:default;
+    }
+    .vo-detail-panel .vo-avatar { cursor:default; }
     .vo-message { font-size:20px; color:var(--text-dark); font-style:italic; line-height:1.45; }
     .vo-message::before { content:'"'; }
     .vo-message::after { content:'"'; }
@@ -478,6 +516,13 @@
           <div class="visitors-overlay-body" id="visitors-overlay-body">
             <div class="vo-loading"><div class="skeleton"></div></div>
           </div>
+        </div>
+      </div>
+
+      <div id="vo-detail-overlay" class="vo-detail-overlay" hidden aria-hidden="true">
+        <div class="vo-detail-panel" role="dialog" aria-modal="true" aria-label="Visitor check-in detail">
+          <button type="button" class="vo-detail-close" id="vo-detail-close" aria-label="Close visitor detail">×</button>
+          <div id="vo-detail-body"></div>
         </div>
       </div>
     </main>
@@ -1183,6 +1228,12 @@
   let visitorsOverlayMineId = null;
   let visitorsOverlaySort = 'newest';
   let visitorsOverlayBound = false;
+  let voImgTip = null;
+  let voImgTipTimer = null;
+  let voImgTipTarget = null;
+  let voImgTipX = 0;
+  let voImgTipY = 0;
+  let voDetailBound = false;
 
   function escapeHtml(s) {
     return String(s == null ? '' : s)
@@ -1420,6 +1471,173 @@
   function findMineById(mineId) {
     return allMines.find(m => String(m.id) === String(mineId)) || null;
   }
+  function hasRealVoPhotoSrc(img) {
+    if (!img || img.tagName !== 'IMG' || !img.classList.contains('vo-photo')) return false;
+    const src = (img.getAttribute('src') || '').trim();
+    return !!src && src !== '#' && !src.startsWith('data:,');
+  }
+  function dismissVoImgTip() {
+    if (voImgTipTimer) { clearTimeout(voImgTipTimer); voImgTipTimer = null; }
+    voImgTipTarget = null;
+    if (voImgTip) voImgTip.style.display = 'none';
+  }
+  function ensureVoImgTip() {
+    if (voImgTip) return voImgTip;
+    const tip = document.createElement('div');
+    tip.className = 'vo-img-tip';
+    tip.setAttribute('role', 'tooltip');
+    const img = document.createElement('img');
+    img.alt = '';
+    tip.appendChild(img);
+    document.body.appendChild(tip);
+    voImgTip = tip;
+    return tip;
+  }
+  function placeVoImgTip(x, y) {
+    const tip = voImgTip;
+    if (!tip) return;
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function showVoImgTip(img) {
+    if (voImgTipTarget !== img || !img.isConnected) return;
+    if (!hasRealVoPhotoSrc(img)) return;
+    const tip = ensureVoImgTip();
+    const tipImg = tip.querySelector('img');
+    tipImg.src = img.getAttribute('src');
+    tipImg.alt = img.getAttribute('alt') || 'Check-in photo';
+    placeVoImgTip(voImgTipX, voImgTipY);
+  }
+  function bindVoPhotoTip(img) {
+    if (!hasRealVoPhotoSrc(img) || img.dataset.voTipBound === '1') return;
+    img.dataset.voTipBound = '1';
+    img.addEventListener('mouseenter', (e) => {
+      if (voImgTipTimer) { clearTimeout(voImgTipTimer); voImgTipTimer = null; }
+      voImgTipTarget = img;
+      voImgTipX = e.clientX;
+      voImgTipY = e.clientY;
+      if (voImgTip) voImgTip.style.display = 'none';
+      voImgTipTimer = setTimeout(() => {
+        voImgTipTimer = null;
+        showVoImgTip(img);
+      }, 1000);
+    });
+    img.addEventListener('mousemove', (e) => {
+      if (voImgTipTarget !== img) return;
+      voImgTipX = e.clientX;
+      voImgTipY = e.clientY;
+      if (voImgTip && voImgTip.style.display === 'block' && !voImgTipTimer) placeVoImgTip(voImgTipX, voImgTipY);
+    });
+    img.addEventListener('mouseleave', () => {
+      if (voImgTipTarget === img) dismissVoImgTip();
+    });
+  }
+  function bindVisitorPhotoTips() {
+    const body = $('visitors-overlay-body');
+    if (!body) return;
+    body.querySelectorAll('img.vo-photo').forEach(bindVoPhotoTip);
+  }
+  function syncVoDetailBounds() {
+    const detail = $('vo-detail-overlay');
+    const main = $('portal-main');
+    if (!detail || !main || detail.hidden) return;
+    const r = main.getBoundingClientRect();
+    detail.style.left = r.left + 'px';
+    detail.style.top = r.top + 'px';
+    detail.style.width = r.width + 'px';
+    detail.style.height = r.height + 'px';
+  }
+  function clearVoDetailBounds() {
+    const detail = $('vo-detail-overlay');
+    if (!detail) return;
+    detail.style.left = '';
+    detail.style.top = '';
+    detail.style.width = '';
+    detail.style.height = '';
+  }
+  function closeVoDetail() {
+    const detail = $('vo-detail-overlay');
+    if (!detail || detail.hidden) return;
+    detail.hidden = true;
+    detail.setAttribute('aria-hidden', 'true');
+    const body = $('vo-detail-body');
+    if (body) body.innerHTML = '';
+    clearVoDetailBounds();
+  }
+  function openVoDetail(v, mine) {
+    const detail = $('vo-detail-overlay');
+    const main = $('portal-main');
+    const body = $('vo-detail-body');
+    if (!detail || !main || !body || !v) return;
+    dismissVoImgTip();
+    bindVoDetailOnce();
+    body.innerHTML = renderVisitOverlayCard(v, mine);
+    const av = body.querySelector('.vo-avatar');
+    if (av) {
+      av.removeAttribute('title');
+      av.style.cursor = 'default';
+    }
+    detail.hidden = false;
+    detail.setAttribute('aria-hidden', 'false');
+    syncVoDetailBounds();
+    const uid = visitorUid(v);
+    if (uid && visitorUserCache.has(uid)) applyVisitorAvatarToDetail(uid);
+    else if (uid) fetchUserAvatarUrl(uid).then(() => applyVisitorAvatarToDetail(uid));
+  }
+  function applyVisitorAvatarToDetail(uid) {
+    const url = visitorUserCache.get(uid);
+    if (typeof url !== 'string' || !url.startsWith('https://')) return;
+    const body = $('vo-detail-body');
+    if (!body) return;
+    body.querySelectorAll('.vo-avatar[data-uid]').forEach(el => {
+      if (el.getAttribute('data-uid') !== uid) return;
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === url) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.src = url;
+      img.addEventListener('error', () => {
+        el.textContent = el.getAttribute('data-initials') || '?';
+      });
+      el.replaceChildren(img);
+    });
+  }
+  function findVisitForPhotoEl(img) {
+    const card = img.closest('.vo-card');
+    if (!card) return null;
+    const av = card.querySelector('.vo-avatar');
+    if (av) return findCheckInForAvatarEl(av);
+    return null;
+  }
+  function bindVoDetailOnce() {
+    if (voDetailBound) return;
+    voDetailBound = true;
+    const closeBtn = $('vo-detail-close');
+    if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeVoDetail(); });
+  }
+
   function syncVisitorsOverlayBounds() {
     const overlay = $('visitors-overlay');
     const main = $('portal-main');
@@ -1441,6 +1659,8 @@
   function closeVisitorsOverlay() {
     const overlay = $('visitors-overlay');
     if (!overlay || overlay.hidden) return;
+    closeVoDetail();
+    dismissVoImgTip();
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
     clearVisitorsOverlayBounds();
@@ -1458,17 +1678,29 @@
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeVisitorsOverlay(); });
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
+      const detail = $('vo-detail-overlay');
+      if (detail && !detail.hidden) {
+        e.preventDefault();
+        closeVoDetail();
+        return;
+      }
       const overlay = $('visitors-overlay');
       if (overlay && !overlay.hidden) {
         e.preventDefault();
         closeVisitorsOverlay();
       }
     });
-    window.addEventListener('resize', () => syncVisitorsOverlayBounds());
+    window.addEventListener('resize', () => {
+      syncVisitorsOverlayBounds();
+      syncVoDetailBounds();
+    });
     if (typeof ResizeObserver !== 'undefined') {
       const main = $('portal-main');
       if (main) {
-        const ro = new ResizeObserver(() => syncVisitorsOverlayBounds());
+        const ro = new ResizeObserver(() => {
+          syncVisitorsOverlayBounds();
+          syncVoDetailBounds();
+        });
         ro.observe(main);
       }
     }
@@ -1483,6 +1715,16 @@
     const body = $('visitors-overlay-body');
     if (body) {
       body.addEventListener('click', e => {
+        const photo = e.target.closest('img.vo-photo');
+        if (photo && body.contains(photo) && hasRealVoPhotoSrc(photo)) {
+          e.preventDefault();
+          e.stopPropagation();
+          dismissVoImgTip();
+          const visit = findVisitForPhotoEl(photo);
+          const cached = visitorsOverlayMineId ? visitorListCache.get(visitorsOverlayMineId) : null;
+          if (visit) openVoDetail(visit, cached ? cached.mine : null);
+          return;
+        }
         const av = e.target.closest('.vo-avatar');
         if (!av || !body.contains(av)) return;
         e.preventDefault();
@@ -1574,6 +1816,7 @@
     }
     body.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitOverlayCard(v, cached.mine)).join('') + '</div>';
     ensureVisitorAvatars(list);
+    bindVisitorPhotoTips();
   }
   async function fetchMineVisitors(mineId) {
     const snap = await db.collection('checkIns')
