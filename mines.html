@@ -731,6 +731,31 @@
     const fromUser = userMineLastActivity(userMines, mine.id);
     if (fromUser != null && fromUser !== '') mine.lastActivityAt = fromUser;
   }
+  function userMineDailyActivities(minesField, id) {
+    if (minesField == null || id == null) return null;
+    const sid = String(id);
+    if (Array.isArray(minesField)) {
+      for (let i = 0; i < minesField.length; i++) {
+        const item = minesField[i];
+        if (!item || typeof item !== 'object') continue;
+        const iid = item.id != null ? item.id : (item.propertyId != null ? item.propertyId : item.mineId);
+        if (iid != null && String(iid) === sid && item.dailyActivitiesRemaining != null && item.dailyActivitiesRemaining !== '') return item.dailyActivitiesRemaining;
+      }
+      return null;
+    }
+    if (typeof minesField === 'object') {
+      const item = minesField[sid];
+      if (item && typeof item === 'object' && item.dailyActivitiesRemaining != null && item.dailyActivitiesRemaining !== '') return item.dailyActivitiesRemaining;
+    }
+    return null;
+  }
+  function applyDailyActivities(mine, userMines) {
+    if (mine.dailyActivitiesRemaining != null && mine.dailyActivitiesRemaining !== '') return;
+    const fromDetails = mine._details && mine._details.dailyActivitiesRemaining;
+    if (fromDetails != null && fromDetails !== '') { mine.dailyActivitiesRemaining = fromDetails; return; }
+    const fromUser = userMineDailyActivities(userMines, mine.id);
+    if (fromUser != null && fromUser !== '') mine.dailyActivitiesRemaining = fromUser;
+  }
   function cmpTitle(a, b) {
     const c = titleOf(a).localeCompare(titleOf(b), undefined, { sensitivity: 'base', numeric: true });
     if (c) return c;
@@ -950,8 +975,9 @@
     const mLabel = document.createElement('small');
     mLabel.textContent = 'Mine Maintenance';
     const dot = document.createElement('span');
-    dot.className = 'maint-dot ' + (st.recent ? 'is-red' : 'is-green');
-    dot.title = st.recent ? 'Maintained in the last 24 hours' : 'Ready for maintenance';
+    const activitiesOpen = Number(mine.dailyActivitiesRemaining) >= 1;
+    dot.className = 'maint-dot ' + (activitiesOpen ? 'is-green' : 'is-red');
+    dot.title = activitiesOpen ? 'Maintenance available' : 'No daily activities remaining';
     const num = document.createElement('b');
     if (st.missing) { num.textContent = '\u2014'; num.className = 'is-missing'; }
     else num.textContent = String(st.daysLeft);
@@ -1114,7 +1140,7 @@
       const ud = (userSnap && userSnap.exists) ? (userSnap.data() || {}) : {};
       if (ud && ud.mines != null) userMines = ud.mines;
     } catch (e) {}
-    mines.forEach(m => applyMineActivity(m, userMines));
+    mines.forEach(m => { applyMineActivity(m, userMines); applyDailyActivities(m, userMines); });
     allMines = mines;
     const gpsFields = {};
     let withGps = 0;
