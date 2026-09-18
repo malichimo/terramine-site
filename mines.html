@@ -2274,7 +2274,6 @@
   function appendCard(mine) {
     const d = mine._details || {};
     const gl = numOrNull(d.gameLevel);
-    const xp = numOrNull(d.gameXP);
     const type = typeKey(mine);
     const gplayedSrc = numOrNull(mine.gamesPlayed);
     const gwonSrc = numOrNull(mine.gamesWon);
@@ -2346,8 +2345,7 @@
     track.className = 'xp-track';
     const fill = document.createElement('div');
     fill.className = 'xp-fill';
-    if (xp == null) fill.style.width = '0%';
-    else fill.style.width = Math.max(0, Math.min(100, (xp / 1000) * 100)) + '%';
+    fill.style.width = Math.max(0, Math.min(100, Number(gl) || 0)) + '%';
     track.appendChild(fill);
     lv.append(sm, b, track);
     bindGameTip(lv, gplayed, gwon);
