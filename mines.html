@@ -68,7 +68,7 @@
     .login-toggle { text-align:center; font-size:12px; color:var(--text-mid); margin-top:16px; }
     .login-toggle a { color:var(--brown); text-decoration:none; cursor:pointer; font-weight:700; }
 
-    .mine-toolbar { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 16px; background:#fff; border-bottom:1px solid #e3e7ee; }
+    .mine-toolbar { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 56px 12px 16px; background:#fff; border-bottom:1px solid #e3e7ee; }
     .tool-field { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; }
     .tool-field select, .tool-search {
       font: 500 13px 'DM Sans', sans-serif; color:#0D1B2A; background:#fff;
@@ -83,6 +83,28 @@
     .sort-btn:disabled, .tool-field select:disabled, .tool-search:disabled { opacity:.55; cursor:not-allowed; }
     .tool-search { flex:1; min-width:160px; }
     .mine-count { margin-left:auto; font-size:12px; color:#64748b; font-weight:600; }
+    .page-settings { position:absolute; top:10px; right:12px; z-index:3; }
+    .page-settings-btn {
+      width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+      border:1px solid #d0d5dc; border-radius:999px; background:#fff; color:#64748b;
+      cursor:pointer; padding:0;
+    }
+    .page-settings-btn:hover { color:#334155; }
+    .page-settings-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .page-settings-btn svg { width:22px; height:22px; display:block; }
+    .page-settings-panel {
+      position:absolute; top:calc(100% + 6px); right:0; width:220px;
+      background:#fff; border:1px solid #e3e7ee; border-radius:12px;
+      box-shadow:0 12px 28px rgba(13,27,42,.14); padding:10px 12px 12px;
+    }
+    .page-settings-panel[hidden] { display:none; }
+    .page-settings-title { font-size:12px; font-weight:700; color:#334155; margin-bottom:2px; }
+    .page-settings-field { display:flex; flex-direction:column; gap:3px; margin-top:8px; font-size:11px; font-weight:700; color:#64748b; }
+    .page-settings-field select {
+      font:500 13px 'DM Sans',sans-serif; color:#0D1B2A; background:#fff;
+      border:1px solid #d0d5dc; border-radius:8px; padding:6px 8px; outline:none;
+    }
+    .page-settings-field select:focus { border-color:var(--cyan); }
     .mine-status { padding:8px 16px 0; font-size:13px; color:#64748b; min-height:0; }
     .mine-board-wrap { padding:6px 16px 40px; }
     .mine-group { margin-top:14px; container-type:inline-size; container-name:minegroup; }
@@ -119,24 +141,24 @@
     .gps-pin.is-missing { opacity:0.38; }
     .prod-box {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
-      text-align:right; background:rgba(0,0,0,.25); flex-shrink:0;
+      text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
     }
-    .prod-box small { display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8; padding:6px 8px 0; text-align:right; }
-    .prod-box .prod-boost { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:right; padding:2px 8px 4px; }
-    .mine-rate { width:100%; display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; padding:0 8px 8px; }
+    .prod-box small { display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8; padding-top:6px; text-align:center; }
+    .prod-box .prod-boost { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:center; padding:2px 0 4px; }
+    .mine-rate { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; padding:0 8px 8px; }
     .mine-rate img { width:36px; height:36px; flex-shrink:0; object-fit:contain; }
-    .mine-rate span { font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; line-height:1; }
+    .mine-rate span { font-size:17.6px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:center; line-height:1; }
     .mine-rate span.is-boosted { color:#f0c56e; }
     .prod-tip {
       position:fixed; z-index:200; pointer-events:none; display:none;
       background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
       border-radius:8px; padding:7px 7px 5px; box-shadow:0 12px 28px rgba(6,10,16,.55);
-      font-size:11px; line-height:1.2; max-width:calc(100vw - 16px);
+      font-size:15px; line-height:1.2; max-width:calc(100vw - 16px);
     }
     .prod-tip table { border-collapse:separate; border-spacing:0; }
     .prod-tip th, .prod-tip td { padding:3px 6px; font-variant-numeric:tabular-nums; }
     .prod-tip thead th {
-      font-size:10px; font-weight:700; letter-spacing:.15px; text-align:center;
+      font-size:14px; font-weight:700; letter-spacing:.15px; text-align:center;
       vertical-align:bottom; line-height:1.15; color:#c5ced8; background-color:#141c27;
       white-space:normal; max-width:5.2em;
     }
@@ -182,15 +204,11 @@
     .mine-sentinel { text-align:center; color:#889; font-size:12px; padding:14px; }
     @container minegroup (max-width: 640px) {
       .mine-card { min-width:0; width:100%; max-width:100%; flex-basis:100%; }
-      .mine-rate img { width:28px; height:28px; }
-      .mine-rate span { font-size:20px; }
     }
     @media (max-width:700px) {
       .sidebar { display:none; }
       .mine-card { min-width:0; width:100%; max-width:100%; flex-basis:100%; }
       .mine-card-left { width:92%; }
-      .mine-rate img { width:28px; height:28px; }
-      .mine-rate span { font-size:20px; }
     }
   </style>
 </head>
@@ -269,6 +287,34 @@
         <button type="button" class="sort-btn" id="sort-name" data-sort="name" disabled>Mine Name</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search mine name" autocomplete="off" disabled />
         <span class="mine-count" id="mine-count"></span>
+        <div class="page-settings" id="page-settings">
+          <button type="button" class="page-settings-btn" id="page-settings-btn" aria-label="Page settings" aria-expanded="false" aria-controls="page-settings-panel">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+          <div class="page-settings-panel" id="page-settings-panel" role="dialog" aria-label="Page settings" hidden>
+            <div class="page-settings-title">Page settings</div>
+            <label class="page-settings-field">Period
+              <select id="display-period">
+                <option value="min">Per Min</option>
+                <option value="day">Per Day</option>
+                <option value="month">Per Month</option>
+                <option value="year">Per Year</option>
+              </select>
+            </label>
+            <label class="page-settings-field">Rate
+              <select id="display-rate">
+                <option value="base">Base Rate</option>
+                <option value="bonus">Base + Bonus</option>
+                <option value="12">20× 12h</option>
+                <option value="18">20× 18h</option>
+                <option value="24">20× 24h</option>
+              </select>
+            </label>
+          </div>
+        </div>
       </div>
       <div class="mine-status" id="mine-status"></div>
       <div class="mine-board-wrap">
@@ -390,14 +436,71 @@
   function productionRate(type, level) {
     return productionBase(type) * (1 + productionBonus(level) / 100);
   }
+  // Shared with the hover table. 60 * 24 is 1440 minutes in a day.
+  function perMinColumns(type, level) {
+    const base = productionBase(type);
+    const boosted = level == null ? base : productionRate(type, level);
+    const blend = (h) => boosted * (h * 20 + (24 - h)) / 24;
+    return [base, boosted, blend(12), blend(18), blend(24)];
+  }
+  function periodAmount(perMin, period) {
+    const day = perMin * 60 * 24;
+    if (period === 'min') return perMin;
+    if (period === 'day') return day;
+    if (period === 'year') return day * 365;
+    return day * 30;
+  }
+  const DISPLAY_KEY = 'terramine.mines.display';
+  const DISPLAY_PERIODS = ['min', 'day', 'month', 'year'];
+  const DISPLAY_RATES = ['base', 'bonus', '12', '18', '24'];
+  const PERIOD_SUFFIX = { min: '/min', day: '/day', month: '/mo', year: '/yr' };
+  const RATE_INDEX = { base: 0, bonus: 1, '12': 2, '18': 3, '24': 4 };
+  function defaultDisplay() { return { period: 'month', rate: 'bonus' }; }
+  function loadDisplay() {
+    try {
+      const raw = sessionStorage.getItem(DISPLAY_KEY);
+      if (!raw) return defaultDisplay();
+      const o = JSON.parse(raw);
+      if (!o || DISPLAY_PERIODS.indexOf(o.period) === -1 || DISPLAY_RATES.indexOf(String(o.rate)) === -1) return defaultDisplay();
+      return { period: o.period, rate: String(o.rate) };
+    } catch (e) {
+      return defaultDisplay();
+    }
+  }
+  let displayPref = loadDisplay();
+  function displayAmount(type, level, pref) {
+    return periodAmount(perMinColumns(type, level)[RATE_INDEX[pref.rate]], pref.period);
+  }
+  function applyProdValue(el, type, level) {
+    if (level == null || !Number.isFinite(level)) {
+      el.textContent = 'No monthly rate';
+      el.className = 'prod-value is-missing';
+      el.title = '';
+      return;
+    }
+    const amount = displayAmount(type, level, displayPref);
+    if (displayPref.period === 'month' && displayPref.rate === 'bonus') {
+      el.textContent = fmtMonthly(amount);
+      el.title = 'USD per month, same figure Old Mines shows.';
+    } else {
+      el.textContent = fmtRate(amount) + PERIOD_SUFFIX[displayPref.period];
+      el.title = '';
+    }
+    el.className = 'prod-value';
+    if (displayPref.rate !== 'base' && level > 1) el.classList.add('is-boosted');
+  }
+  function refreshProdValues() {
+    document.querySelectorAll('.prod-value').forEach(el => {
+      const raw = el.dataset.prodLevel;
+      const level = raw === '' || raw == null ? null : Number(raw);
+      applyProdValue(el, el.dataset.mineType, level);
+    });
+  }
   function monthlyUsd(p) {
     const d = p._details || {};
     const level = numOrNull(d.productionLevel);
     if (level == null) return null;
-    // Month from the per-minute base, then the additive bonus (not compounded).
-    // Same dollars as boostedPerMin * 60 * 24 * 30.
-    const baseMonth = productionBase(typeKey(p)) * 60 * 24 * 30;
-    return baseMonth * (1 + productionBonus(level) / 100);
+    return displayAmount(typeKey(p), level, { period: 'month', rate: 'bonus' });
   }
   function fmtRate(n) {
     let s = n.toFixed(14);
@@ -467,26 +570,21 @@
   }
   function fillProdTip(type, level) {
     const tip = ensureProdTip();
-    const base = productionBase(type);
-    const boosted = level == null ? base : productionRate(type, level);
-    const blend = (h) => boosted * (h * 20 + (24 - h) * 1) / 24;
-    const perMins = [base, boosted, blend(12), blend(18), blend(24)];
+    const perMins = perMinColumns(type, level);
     const colClass = ['c-base', 'c-bonus', 'c-12', 'c-18', 'c-24'];
-    const labels = ['Per Min', 'Per Day', 'Per Month', 'Per Year'];
+    const rows = [['Per Min', 'min'], ['Per Day', 'day'], ['Per Month', 'month'], ['Per Year', 'year']];
     const tbody = tip.querySelector('tbody');
     tbody.textContent = '';
-    labels.forEach((label, ri) => {
+    rows.forEach(row => {
       const tr = document.createElement('tr');
       const stub = document.createElement('td');
       stub.className = 'stub';
-      stub.textContent = label;
+      stub.textContent = row[0];
       tr.appendChild(stub);
       perMins.forEach((perMin, ci) => {
-        const day = perMin * 60 * 24;
-        const amount = ri === 0 ? perMin : ri === 1 ? day : ri === 2 ? day * 30 : day * 365;
         const td = document.createElement('td');
         td.className = colClass[ci];
-        td.textContent = fmtRate(amount);
+        td.textContent = fmtRate(periodAmount(perMin, row[1]));
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -717,18 +815,11 @@
     else boost.textContent = fmtPlain(productionBonus(pl)) + '%';
     const rate = document.createElement('div');
     rate.className = 'mine-rate';
-    const tb = document.createElement('img');
-    tb.src = ICONS.tb;
-    tb.alt = '';
     const rt = document.createElement('span');
-    const monthly = monthlyUsd(mine);
-    if (monthly == null) { rt.textContent = 'No monthly rate'; rt.className = 'is-missing'; }
-    else {
-      rt.textContent = fmtMonthly(monthly);
-      rt.title = 'USD per month, same figure Old Mines shows.';
-      if (pl != null && pl > 1) rt.classList.add('is-boosted');
-    }
-    rate.append(rt, tb);
+    rt.dataset.mineType = type;
+    rt.dataset.prodLevel = pl == null ? '' : String(pl);
+    applyProdValue(rt, type, pl);
+    rate.append(rt);
     prod.append(prodLabel, boost, rate);
     bindProdTip(prod, type, pl);
 
@@ -932,6 +1023,34 @@
       if (loadedUid) renderFromFilters();
     });
   });
+
+  function setPageSettingsOpen(open) {
+    const panel = $('page-settings-panel');
+    const btn = $('page-settings-btn');
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  $('display-period').value = displayPref.period;
+  $('display-rate').value = displayPref.rate;
+  $('page-settings-btn').addEventListener('click', () => {
+    setPageSettingsOpen($('page-settings-panel').hidden);
+  });
+  document.addEventListener('click', (e) => {
+    if ($('page-settings').contains(e.target)) return;
+    setPageSettingsOpen(false);
+  });
+  function onDisplayChange() {
+    const period = $('display-period').value;
+    const rate = $('display-rate').value;
+    displayPref = {
+      period: DISPLAY_PERIODS.indexOf(period) === -1 ? 'month' : period,
+      rate: DISPLAY_RATES.indexOf(rate) === -1 ? 'bonus' : rate
+    };
+    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    refreshProdValues();
+  }
+  $('display-period').addEventListener('change', onDisplayChange);
+  $('display-rate').addEventListener('change', onDisplayChange);
 </script>
 </body>
 </html>
