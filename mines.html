@@ -667,6 +667,7 @@
     } catch (e) {}
   }
   let selectedTypes = loadSelectedTypes();
+  let focusMineId = null; // exact property id focus from ?mineId= deep-link
   let allMines = [];
   let loadedUid = null;
   let sortKey = null;
@@ -1182,10 +1183,63 @@
     });
     return arr;
   }
+  function readMineFocusFromUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const id = (params.get('mineId') || '').trim();
+      if (!id) return null;
+      const name = (params.get('mineName') || '').trim();
+      return { id: id, name: name };
+    } catch (e) { return null; }
+  }
+  function stripMineFocusFromUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      if (!params.has('mineId') && !params.has('mineName')) return;
+      params.delete('mineId');
+      params.delete('mineName');
+      const qs = params.toString();
+      const url = window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || '');
+      history.replaceState(null, '', url);
+    } catch (e) {}
+  }
+  function clearMineFocus() {
+    const had = !!focusMineId;
+    focusMineId = null;
+    stripMineFocusFromUrl();
+    return had;
+  }
+  function applyMineFocusFromUrl() {
+    const focus = readMineFocusFromUrl();
+    if (!focus) return;
+    focusMineId = focus.id;
+    // Leave types=all so the focused mine is not hidden by a saved type chip set.
+    selectedTypes = new Set();
+    saveSelectedTypes();
+    const search = $('filter-search');
+    if (search) search.value = focus.name || focus.id;
+  }
+  function syncFocusMineSearchLabel() {
+    if (!focusMineId) return;
+    const search = $('filter-search');
+    if (!search) return;
+    const m = findMineById(focusMineId);
+    if (!m) return;
+    const title = titleOf(m);
+    // Prefer real title when box still shows id or is empty.
+    if (!search.value || search.value === focusMineId) search.value = title;
+  }
   function minesMatchingFilters() {
     const q = ($('filter-search').value || '').trim().toLowerCase();
     const typeFilterOn = selectedTypes.size > 0;
+    const focusId = focusMineId ? String(focusMineId) : '';
     return allMines.filter(p => {
+      if (focusId) {
+        if (String(p.id) !== focusId) return false;
+        // Exact id wins; name in the search box is display-only while focused.
+        if (typeFilterOn && !selectedTypes.has(typeKey(p))) return false;
+        return true;
+      }
       if (typeFilterOn && !selectedTypes.has(typeKey(p))) return false;
       if (q && titleOf(p).toLowerCase().indexOf(q) === -1) return false;
       return true;
@@ -3085,6 +3139,7 @@
     console.info('[mines] loaded', mines.length, 'gps', withGps, gpsFields);
     setStatus('');
     setToolbar(true);
+    syncFocusMineSearchLabel();
     renderFromFilters();
   }
 
@@ -3178,6 +3233,7 @@
     });
   }
 
+  applyMineFocusFromUrl();
   updateTypeFilterButtons();
   document.querySelectorAll('.type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3189,7 +3245,11 @@
       if (loadedUid) renderFromFilters();
     });
   });
-  $('filter-search').addEventListener('input', () => { if (loadedUid) renderFromFilters(); });
+  $('filter-search').addEventListener('input', () => {
+    // Editing/clearing search exits exact mineId focus so the user is not stuck.
+    if (focusMineId) clearMineFocus();
+    if (loadedUid) renderFromFilters();
+  });
   document.querySelectorAll('.sort-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.sort;

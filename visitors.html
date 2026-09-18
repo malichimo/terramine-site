@@ -122,8 +122,10 @@
     .vo-name { font-size:22px; font-weight:700; color:#fff; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .vo-time { font-size:17px; color:rgba(255,255,255,.9); margin-top:2px; line-height:1.15; }
     .vo-mine-meta { display:flex; align-items:center; gap:6px; flex-shrink:0; max-width:48%; }
-    .vo-mine-badge { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:30px; font-size:16.5px; font-weight:700; background:rgba(0,0,0,.22); color:#fff; border:1px solid rgba(255,255,255,.28); min-width:0; }
-    .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vo-mine-badge { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:30px; font-size:16.5px; font-weight:700; background:rgba(0,0,0,.22); color:#fff; border:1px solid rgba(255,255,255,.28); min-width:0; cursor:pointer; }
+    .vo-mine-badge:hover { background:rgba(0,0,0,.35); border-color:rgba(255,255,255,.45); }
+    .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+    .vo-mine-badge .vo-type-icon { pointer-events:none; }
     .vo-type-icon { width:24px; height:24px; flex-shrink:0; object-fit:contain; }
     .vo-pin { width:33px; height:33px; color:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; }
     .vo-pin svg { width:33px; height:33px; display:block; }
@@ -1032,6 +1034,44 @@
     });
   }
 
+  let mineBadgeClickBound = false;
+  function navigateToMineFromBadge(badge) {
+    if (!badge) return;
+    const mineId = badge.getAttribute('data-mine-id') || '';
+    if (!mineId) return;
+    const mineName = badge.getAttribute('data-mine-name')
+      || ((badge.querySelector('span') || {}).textContent || '').trim();
+    let url = 'mines.html?mineId=' + encodeURIComponent(mineId);
+    if (mineName) url += '&mineName=' + encodeURIComponent(mineName);
+    window.location.href = url;
+  }
+  function bindMineBadgeClicksOnce() {
+    if (mineBadgeClickBound) return;
+    mineBadgeClickBound = true;
+    const board = $('visitors-board');
+    if (!board) return;
+    board.addEventListener('click', e => {
+      const badge = e.target.closest('.vo-mine-badge');
+      if (!badge || !board.contains(badge)) return;
+      if (e.target.closest('.vo-pin, .vo-showcase-pin, img.vo-photo')) return;
+      const mineId = badge.getAttribute('data-mine-id') || '';
+      if (!mineId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      navigateToMineFromBadge(badge);
+    });
+    board.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const badge = e.target.closest('.vo-mine-badge');
+      if (!badge || !board.contains(badge)) return;
+      const mineId = badge.getAttribute('data-mine-id') || '';
+      if (!mineId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      navigateToMineFromBadge(badge);
+    });
+  }
+
   function renderVisitCard(v, mine) {
     const name = visitorName(v);
     const safeName = escapeHtml(name);
@@ -1061,13 +1101,21 @@
     const msgHtml = msg
       ? '<div class="vo-message">' + escapeHtml(msg) + '</div>'
       : '<div class="vo-no-message">No message left</div>';
+    const mineId = (mine && mine.id != null) ? String(mine.id)
+      : (v && v.propertyId != null ? String(v.propertyId) : '');
+    let mineBadgeAttrs = '';
+    if (mineId) {
+      mineBadgeAttrs = ' data-mine-id="' + escapeHtml(mineId) + '"'
+        + ' data-mine-name="' + escapeHtml(mineName) + '"'
+        + ' role="link" tabindex="0"';
+    }
     return '<article class="vo-card">'
       + '<div class="vo-card-header">'
       + '<div class="vo-avatar"' + avatarAttrs + '>' + avatarInner + '</div>'
       + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
-      + '<div class="vo-mine-badge" title="' + escapeHtml(mineName) + '">'
+      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' title="' + escapeHtml(mineName) + ' — Open in My Mines">'
       + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
       + '<span>' + escapeHtml(mineName) + '</span></div>'
       + pinHtml
@@ -1126,6 +1174,7 @@
     bindShowcasePinTips(board);
     bindShowcasePinClicksOnce();
     bindPhotoClicksOnce();
+    bindMineBadgeClicksOnce();
   }
 
   async function loadOwnedMines(uid) {
@@ -1260,6 +1309,7 @@
   $('btn-signout').addEventListener('click', () => auth.signOut());
 
   bindShowcasePinDelegationOnce();
+  bindMineBadgeClicksOnce();
   updateTypeFilterButtons();
   document.querySelectorAll('.type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
