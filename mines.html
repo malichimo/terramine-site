@@ -90,7 +90,7 @@
     .mine-group-head img { width:36px; height:36px; object-fit:contain; }
     .mine-group-head h2 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); }
     .mine-group-count { font-size:12px; color:#64748b; font-weight:700; }
-    .mine-grid { display:flex; flex-wrap:wrap; justify-content:space-around; gap:14px; width:100%; }
+    .mine-grid { display:flex; flex-wrap:wrap; justify-content:flex-start; gap:14px; width:100%; }
     .mine-card {
       position:relative; border-radius:16px; overflow:hidden; min-height:220px; aspect-ratio:3 / 2;
       flex:0 0 auto; width:600px; min-width:600px; max-width:100%;
@@ -113,21 +113,21 @@
     }
     .mine-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .mine-photo.has-img { border-style:solid; }
-    .mine-title { font-size:15px; font-weight:700; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .gps-pin-wrap { display:flex; align-items:center; }
+    .mine-title { width:100%; text-align:right; font-size:15px; font-weight:700; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .gps-pin-wrap { display:flex; align-items:center; justify-content:flex-end; width:100%; }
     .gps-pin { width:26px; height:26px; flex-shrink:0; }
     .gps-pin.is-missing { opacity:0.38; }
-    .mine-title, .mine-rate, .xp-row { width:100%; }
-    .mine-rate, .xp-row { display:flex; align-items:center; gap:6px; min-width:0; }
-    .mine-rate img, .xp-row .pick { width:18px; height:18px; flex-shrink:0; object-fit:contain; }
-    .mine-rate span { font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .xp-mid { flex:1; min-width:0; }
-    .xp-track { height:7px; border-radius:99px; background:rgba(255,255,255,.22); overflow:hidden; }
-    .xp-fill { height:100%; width:0; background:linear-gradient(90deg,#f6c453,#fff1c2); }
-    .xp-label { font-size:10px; margin-top:2px; color:rgba(255,255,255,.86); }
-    .game-lv { text-align:right; flex-shrink:0; line-height:1; }
-    .game-lv small { display:block; font-size:8px; letter-spacing:1px; font-weight:700; opacity:.75; }
-    .game-lv b { font-family:'Bebas Neue',sans-serif; font-size:22px; font-weight:400; letter-spacing:.5px; }
+    .mine-rate { width:100%; display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+    .mine-rate img { width:36px; height:36px; flex-shrink:0; object-fit:contain; }
+    .mine-rate span { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+    .game-lv {
+      width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
+      text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
+    }
+    .game-lv small { display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8; padding-top:6px; text-align:center; }
+    .game-lv b { display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400; letter-spacing:.5px; line-height:1; text-align:center; padding-bottom:6px; }
+    .game-lv .xp-track { height:7px; border-radius:0; background:rgba(255,255,255,.22); overflow:hidden; }
+    .game-lv .xp-fill { height:100%; width:0; background:linear-gradient(90deg,#f6c453,#fff1c2); }
     .is-missing { font-style:italic; font-weight:500; opacity:.8; }
     .mine-empty { padding:48px 16px; text-align:center; color:#64748b; font-size:14px; }
     .mine-sentinel { text-align:center; color:#889; font-size:12px; padding:14px; }
@@ -542,30 +542,9 @@
       rt.textContent = fmtMonthly(monthly);
       rt.title = 'USD per month, same figure Old Mines shows.';
     }
-    rate.append(tb, rt);
+    tb.width = 36; tb.height = 36;
+    rate.append(rt, tb);
 
-    const xpRow = document.createElement('div');
-    xpRow.className = 'xp-row';
-    const pick = document.createElement('img');
-    pick.className = 'pick';
-    pick.src = ICONS.pick;
-    pick.alt = '';
-    pick.width = 18; pick.height = 18;
-    const mid = document.createElement('div');
-    mid.className = 'xp-mid';
-    const track = document.createElement('div');
-    track.className = 'xp-track';
-    const fill = document.createElement('div');
-    fill.className = 'xp-fill';
-    const lab = document.createElement('div');
-    lab.className = 'xp-label';
-    if (xp == null) { lab.textContent = 'No XP'; lab.className = 'xp-label is-missing'; fill.style.width = '0%'; }
-    else {
-      fill.style.width = Math.max(0, Math.min(100, (xp / 1000) * 100)) + '%';
-      lab.textContent = fmtPlain(xp) + ' / 1000';
-    }
-    track.appendChild(fill);
-    mid.append(track, lab);
     const lv = document.createElement('div');
     lv.className = 'game-lv';
     const sm = document.createElement('small');
@@ -573,10 +552,16 @@
     const b = document.createElement('b');
     if (gl == null) { b.textContent = '—'; b.className = 'is-missing'; b.title = 'Game level not set'; }
     else b.textContent = fmtPlain(gl);
-    lv.append(sm, b);
-    xpRow.append(pick, mid, lv);
+    const track = document.createElement('div');
+    track.className = 'xp-track';
+    const fill = document.createElement('div');
+    fill.className = 'xp-fill';
+    if (xp == null) fill.style.width = '0%';
+    else fill.style.width = Math.max(0, Math.min(100, (xp / 1000) * 100)) + '%';
+    track.appendChild(fill);
+    lv.append(sm, b, track);
 
-    left.append(ph, title, gps, rate, xpRow);
+    left.append(ph, title, gps, rate, lv);
     art.append(bg, scrim, left);
     currentGrid.appendChild(art);
     if (cardObs) cardObs.observe(art);
