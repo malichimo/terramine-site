@@ -194,6 +194,26 @@
       margin-top:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,.08);
       font-size:9px; line-height:1.3; color:#8e9aab; font-weight:500; text-align:left;
     }
+    .game-tip {
+      position:fixed; z-index:200; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:7px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:15px; line-height:1.2; max-width:calc(100vw - 16px);
+    }
+    .game-tip-row { display:flex; gap:7px; align-items:stretch; justify-content:center; }
+    .game-tip-box {
+      min-width:5.6em; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
+      text-align:center; background:rgba(0,0,0,.25); flex:1 1 0;
+    }
+    .game-tip-box small {
+      display:block; font-size:10px; letter-spacing:1.2px; font-weight:700; opacity:.8;
+      padding:6px 6px 0; text-align:center; color:#c5ced8; white-space:nowrap;
+    }
+    .game-tip-box b {
+      display:block; font-family:'Bebas Neue',sans-serif; font-size:28px; font-weight:400;
+      letter-spacing:.5px; line-height:1; text-align:center; padding:2px 6px 8px; color:#fff;
+      font-variant-numeric:tabular-nums;
+    }
     .game-lv {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
       text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
@@ -632,7 +652,103 @@
       if (prodTip && prodTip.style.display === 'block' && !prodTipTimer) placeProdTip(prodTipX, prodTipY);
     });
     box.addEventListener('mouseleave', () => {
-      if (prodTipTarget === box) dismissProdTip();
+      if (prodTipTarget === box) dismissProdTip(); dismissGameTip();
+    });
+  }
+  let gameTip = null;
+  let gameTipTimer = null;
+  let gameTipTarget = null;
+  let gameTipX = 0;
+  let gameTipY = 0;
+  function dismissGameTip() {
+    if (gameTipTimer) { clearTimeout(gameTipTimer); gameTipTimer = null; }
+    gameTipTarget = null;
+    if (gameTip) gameTip.style.display = 'none';
+  }
+  function placeGameTip(x, y) {
+    const tip = gameTip;
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function ensureGameTip() {
+    if (gameTip) return gameTip;
+    const tip = document.createElement('div');
+    tip.className = 'game-tip';
+    tip.setAttribute('role', 'tooltip');
+    const row = document.createElement('div');
+    row.className = 'game-tip-row';
+    ['Games Played', 'Games Won', 'Win Rate'].forEach((label, i) => {
+      const box = document.createElement('div');
+      box.className = 'game-tip-box';
+      const lab = document.createElement('small');
+      lab.textContent = label;
+      const val = document.createElement('b');
+      val.dataset.gameStat = String(i);
+      val.textContent = i === 2 ? '0%' : '0';
+      box.append(lab, val);
+      row.appendChild(box);
+    });
+    tip.appendChild(row);
+    document.body.appendChild(tip);
+    gameTip = tip;
+    return tip;
+  }
+  function fillGameTip(played, won) {
+    const tip = ensureGameTip();
+    const p = Math.max(0, Math.round(Number(played) || 0));
+    const w = Math.max(0, Math.round(Number(won) || 0));
+    const rate = p > 0 ? Math.round(w / p * 100) : 0;
+    const vals = tip.querySelectorAll('.game-tip-box b');
+    if (vals[0]) vals[0].textContent = String(p);
+    if (vals[1]) vals[1].textContent = String(w);
+    if (vals[2]) vals[2].textContent = String(rate) + '%';
+  }
+  function showGameTip(box, played, won) {
+    if (gameTipTarget !== box || !box.isConnected) return;
+    fillGameTip(played, won);
+    placeGameTip(gameTipX, gameTipY);
+  }
+  function bindGameTip(box, played, won) {
+    box.addEventListener('mouseenter', (e) => {
+      if (gameTipTimer) { clearTimeout(gameTipTimer); gameTipTimer = null; }
+      gameTipTarget = box;
+      gameTipX = e.clientX;
+      gameTipY = e.clientY;
+      if (gameTip) gameTip.style.display = 'none';
+      gameTipTimer = setTimeout(() => {
+        gameTipTimer = null;
+        showGameTip(box, played, won);
+      }, 1000);
+    });
+    box.addEventListener('mousemove', (e) => {
+      if (gameTipTarget !== box) return;
+      gameTipX = e.clientX;
+      gameTipY = e.clientY;
+      if (gameTip && gameTip.style.display === 'block' && !gameTipTimer) placeGameTip(gameTipX, gameTipY);
+    });
+    box.addEventListener('mouseleave', () => {
+      if (gameTipTarget === box) dismissGameTip();
     });
   }
   function bgTier(level) {
@@ -908,8 +1024,16 @@
     const gl = numOrNull(d.gameLevel);
     const xp = numOrNull(d.gameXP);
     const type = typeKey(mine);
+    const gplayedSrc = numOrNull(mine.gamesPlayed);
+    const gwonSrc = numOrNull(mine.gamesWon);
+    const gplayed = Math.max(0, Math.round(gplayedSrc != null ? gplayedSrc : (numOrNull(d.gamesPlayed) || 0)));
+    const gwon = Math.max(0, Math.round(gwonSrc != null ? gwonSrc : (numOrNull(d.gamesWon) || 0)));
+    mine.gamesPlayed = gplayed;
+    mine.gamesWon = gwon;
     const art = document.createElement('article');
     art.className = 'mine-card';
+    art.classList.add(String(type).toLowerCase().replace(/\s+/g, ''));
+    if (mine.id != null) art.dataset.mineId = String(mine.id);
     art.dataset.bg = 'images/mine-backgrounds/' + type + '/level-' + bgTier(gl) + '.jpg';
     const photo = photoUrl(mine);
     if (photo) art.dataset.photo = photo;
@@ -974,6 +1098,7 @@
     else fill.style.width = Math.max(0, Math.min(100, (xp / 1000) * 100)) + '%';
     track.appendChild(fill);
     lv.append(sm, b, track);
+    bindGameTip(lv, gplayed, gwon);
 
     const st = maintenanceView(mine, Date.now());
     const maint = document.createElement('div');
@@ -1043,7 +1168,7 @@
     currentGrid = null;
     const board = $('mine-board');
     board.innerHTML = '';
-    dismissProdTip();
+    dismissProdTip(); dismissGameTip();
     const owned = allMines.length;
     $('mine-count').textContent = owned ? (built.matchCount + ' match · ' + owned + ' owned') : '';
     if (!owned) {
@@ -1087,7 +1212,7 @@
     } else {
       loadedUid = null;
       allMines = [];
-      dismissProdTip();
+      dismissProdTip(); dismissGameTip();
       $('login-screen').style.display = 'flex';
       $('portal').style.display = 'none';
     }
@@ -1132,7 +1257,7 @@
     setToolbar(false);
     setStatus('Loading your mines…');
     $('mine-board').innerHTML = '';
-    dismissProdTip();
+    dismissProdTip(); dismissGameTip();
     $('mine-count').textContent = '';
     const snap = await db.collection('properties').where('ownerId', '==', uid).get();
     const mines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
