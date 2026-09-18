@@ -1119,6 +1119,7 @@
   function appendHeader(item) {
     const sec = document.createElement('section');
     sec.className = 'mine-group';
+    sec.classList.add(String(item.type).toLowerCase().replace(/\s+/g, ''));
     const head = document.createElement('div');
     head.className = 'mine-group-head';
     const img = document.createElement('img');
