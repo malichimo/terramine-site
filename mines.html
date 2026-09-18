@@ -346,7 +346,8 @@
       max-width:calc(100vw - 16px);
     }
     .vo-img-tip img {
-      display:block; max-width:min(420px, 60vmin); max-height:60vmin;
+      display:block; max-width:min(630px, 90vmin, calc(100vw - 24px));
+      max-height:min(90vmin, calc(100vh - 24px));
       width:auto; height:auto; object-fit:contain; border-radius:4px;
       background:#0d1b2a;
     }
@@ -1600,6 +1601,217 @@
       else if (!photo) dismissVoImgTip();
     });
   }
+  function extractStorageObjectPath(src) {
+    const raw = (src || '').trim();
+    if (!raw) return '';
+    try {
+      const u = new URL(raw);
+      const m = u.pathname.match(/\/o\/([^/?]+)/);
+      if (m) return decodeURIComponent(m[1]);
+      return decodeURIComponent(u.pathname.replace(/^\/+/, ''));
+    } catch (e) {
+      try { return decodeURIComponent(raw); } catch (e2) { return raw; }
+    }
+  }
+  function parseCheckInPhotoUrl(src, propertyIdHint) {
+    const objectPath = extractStorageObjectPath(src);
+    if (!objectPath) return null;
+    const ci = objectPath.indexOf('checkIns/');
+    if (ci < 0) return null;
+    const rel = objectPath.slice(ci); // checkIns/...
+    const filename = rel.slice('checkIns/'.length);
+    if (!filename || filename.includes('/')) {
+      return { isCheckIn: true, propertyId: null, userId: null, timestampMs: null, filename: filename || '', objectPath: rel };
+    }
+    const base = filename.replace(/\.[^.]+$/, '');
+    const hint = propertyIdHint != null ? String(propertyIdHint) : '';
+    if (hint && base.startsWith(hint + '_')) {
+      const rest = base.slice(hint.length + 1);
+      const tm = rest.match(/^(.+)_(\d{11,14})$/);
+      if (tm) {
+        return {
+          isCheckIn: true,
+          propertyId: hint,
+          userId: tm[1],
+          timestampMs: Number(tm[2]),
+          filename: filename,
+          objectPath: rel
+        };
+      }
+    }
+    const m = base.match(/^(.+)_([A-Za-z0-9]{20,36})_(\d{11,14})$/);
+    if (m) {
+      return {
+        isCheckIn: true,
+        propertyId: m[1],
+        userId: m[2],
+        timestampMs: Number(m[3]),
+        filename: filename,
+        objectPath: rel
+      };
+    }
+    return { isCheckIn: true, propertyId: hint || null, userId: null, timestampMs: null, filename: filename, objectPath: rel };
+  }
+  function normalizePhotoUrlKey(u) {
+    if (typeof u !== 'string') return '';
+    const t = u.trim();
+    if (!t) return '';
+    try {
+      const url = new URL(t);
+      url.search = '';
+      url.hash = '';
+      return url.toString();
+    } catch (e) {
+      return t.split('?')[0].split('#')[0];
+    }
+  }
+  function matchCheckInInList(list, photoSrc, parsed) {
+    if (!list || !list.length) return null;
+    const srcKey = normalizePhotoUrlKey(photoSrc);
+    const filename = parsed && parsed.filename ? parsed.filename : '';
+    for (const v of list) {
+      const u = v.photoURL || v.photoUrl || '';
+      if (!u || typeof u !== 'string') continue;
+      if (u === photoSrc || normalizePhotoUrlKey(u) === srcKey) return v;
+      if (filename && u.indexOf(filename) !== -1) return v;
+      try {
+        const path = extractStorageObjectPath(u);
+        if (filename && path && path.indexOf(filename) !== -1) return v;
+      } catch (e) { /* ignore */ }
+    }
+    if (parsed && parsed.userId && parsed.timestampMs) {
+      let best = null;
+      let bestDiff = Infinity;
+      for (const v of list) {
+        if (visitorUid(v) !== parsed.userId) continue;
+        const t = visitorTsMillis(v.timestamp);
+        if (!t) continue;
+        const diff = Math.abs(t - parsed.timestampMs);
+        if (diff < bestDiff) { bestDiff = diff; best = v; }
+      }
+      if (best && bestDiff <= 120000) return best;
+    }
+    return null;
+  }
+  async function findCheckInForLandPhoto(mine, photoSrc, parsed) {
+    const propertyId = (mine && mine.id != null) ? String(mine.id)
+      : (parsed && parsed.propertyId != null ? String(parsed.propertyId) : null);
+    if (!propertyId || !photoSrc) return null;
+
+    const cached = visitorListCache.get(propertyId);
+    if (cached && cached.list) {
+      const hit = matchCheckInInList(cached.list, photoSrc, parsed);
+      if (hit) return hit;
+    }
+
+    // Strategy 1: propertyId + userId (+ timestamp proximity client-side)
+    if (parsed && parsed.userId) {
+      try {
+        const snap = await db.collection('checkIns')
+          .where('propertyId', '==', propertyId)
+          .where('userId', '==', parsed.userId)
+          .orderBy('timestamp', 'desc')
+          .limit(25)
+          .get();
+        const list = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+        const hit = matchCheckInInList(list, photoSrc, parsed);
+        if (hit) return hit;
+        if (parsed.timestampMs) {
+          let best = null;
+          let bestDiff = Infinity;
+          for (const v of list) {
+            const t = visitorTsMillis(v.timestamp);
+            if (!t) continue;
+            const diff = Math.abs(t - parsed.timestampMs);
+            if (diff < bestDiff) { bestDiff = diff; best = v; }
+          }
+          if (best && bestDiff <= 120000) return best;
+        } else if (list.length === 1) {
+          return list[0];
+        }
+      } catch (err) {
+        // Missing index or field shape — fall through quietly
+      }
+    }
+
+    // Strategy 2: photoURL / photoUrl equality
+    const srcKey = normalizePhotoUrlKey(photoSrc);
+    for (const field of ['photoURL', 'photoUrl']) {
+      try {
+        let snap = await db.collection('checkIns').where(field, '==', photoSrc).limit(1).get();
+        if (snap.empty && srcKey && srcKey !== photoSrc) {
+          snap = await db.collection('checkIns').where(field, '==', srcKey).limit(1).get();
+        }
+        if (!snap.empty) {
+          const d = snap.docs[0];
+          return { id: d.id, ...(d.data() || {}) };
+        }
+      } catch (err) {
+        // Field/index unavailable — soft fail
+      }
+    }
+
+    // Strategy 3: recent checkIns for property (limit 200), match URL/filename
+    try {
+      let list;
+      if (cached && cached.list) {
+        list = cached.list;
+      } else {
+        const fetched = await fetchMineVisitors(propertyId);
+        visitorListCache.set(propertyId, { list: fetched.list, truncated: fetched.truncated, mine: mine || null });
+        list = fetched.list;
+      }
+      return matchCheckInInList(list, photoSrc, parsed);
+    } catch (err) {
+      console.warn('[mines] land photo check-in lookup failed', propertyId, err);
+      return null;
+    }
+  }
+  function openMineLandDetailLoading(mine) {
+    const detail = $('vo-detail-overlay');
+    const main = $('portal-main');
+    const body = $('vo-detail-body');
+    if (!detail || !main || !body || !mine) return;
+    dismissVoImgTip();
+    bindVoDetailOnce();
+    const panel = detail.querySelector('.vo-detail-panel');
+    if (panel) panel.setAttribute('aria-label', 'Mine land photo');
+    body.innerHTML = '<div class="vo-loading"><div class="skeleton"></div></div>';
+    detail.hidden = false;
+    detail.setAttribute('aria-hidden', 'false');
+    syncVoDetailBounds();
+  }
+  async function openMineLandPhotoDetail(mine, photoSrc) {
+    const src = (photoSrc || '').trim();
+    if (!mine || !src) {
+      if (mine) openMineLandDetail(mine, photoSrc);
+      return;
+    }
+    const propertyId = mine.id != null ? String(mine.id) : null;
+    const parsed = parseCheckInPhotoUrl(src, propertyId);
+    if (!parsed || !parsed.isCheckIn) {
+      openMineLandDetail(mine, src);
+      return;
+    }
+    openMineLandDetailLoading(mine);
+    let visit = null;
+    try {
+      visit = await findCheckInForLandPhoto(mine, src, parsed);
+    } catch (err) {
+      console.warn('[mines] land photo check-in enrich failed', err);
+      visit = null;
+    }
+    if (visit) {
+      // Ensure large photo shows even if stored URL differs slightly (e.g. token)
+      if (!visitorCheckInPhoto(visit)) {
+        visit = Object.assign({}, visit, { photoURL: src, hasPhoto: true });
+      }
+      openVoDetail(visit, mine);
+      return;
+    }
+    openMineLandDetail(mine, src);
+  }
+
   function renderMineLandDetailCard(mine, photoSrc) {
     const type = typeKey(mine || {});
     const mineName = mine ? titleOf(mine) : 'Mine';
@@ -1658,7 +1870,7 @@
       const mineId = art && art.dataset.mineId;
       const mine = mineId ? findMineById(mineId) : null;
       if (!mine) return;
-      openMineLandDetail(mine, img.getAttribute('src'));
+      openMineLandPhotoDetail(mine, img.getAttribute('src'));
     });
   }
   function syncVoDetailBounds() {
