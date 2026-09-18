@@ -320,6 +320,7 @@
       width:72px; height:72px; border-radius:8px; background:rgba(255,255,255,.1);
       border:1px solid rgba(255,255,255,.4); display:flex; align-items:center; justify-content:center;
       font-size:18px; font-weight:700; color:#c5ced8; flex-shrink:0; overflow:hidden;
+      cursor:pointer;
     }
     .vo-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
     .vo-info { flex:1; min-width:0; }
@@ -1175,9 +1176,6 @@
     scheduleVisitorCountFlush();
   }
   const visitorListCache = new Map(); // mineId -> { list, truncated, mine }
-  const visitorUserCache = new Map(); // uid -> avatarUrl string|null (session)
-  const visitorUserInflight = new Map(); // uid -> Promise
-  const VISITOR_AVATAR_CONCURRENCY = 8;
   let visitorsOverlayMineId = null;
   let visitorsOverlaySort = 'newest';
   let visitorsOverlayBound = false;
@@ -1208,89 +1206,103 @@
     return new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
   function visitorUid(v) {
-    const id = v.userId || v.uid || v.visitorId || null;
+    let id = v.userId || v.uid || v.visitorId || null;
+    if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
     return (typeof id === 'string' && id) ? id : null;
   }
-  function checkInAvatarFallback(v) {
-    const candidates = [v.visitorPhotoURL, v.visitorAvatarUrl, v.avatarUrl, v.userPhotoURL, v.profilePhotoURL];
+  // Profile avatar from check-in only — users/{uid} reads for other users are denied by rules.
+  // Do not use v.photoURL / v.photoUrl here; those are check-in mine photos (card body).
+  function checkInAvatarUrl(v) {
+    const candidates = [
+      v.visitorPhotoURL, v.visitorPhotoUrl,
+      v.visitorAvatarUrl, v.visitorAvatarURL,
+      v.avatarUrl, v.avatarURL,
+      v.userPhotoURL, v.userPhotoUrl,
+      v.profilePhotoURL, v.profilePhotoUrl
+    ];
     for (const u of candidates) {
-      if (typeof u === 'string' && u.startsWith('https://')) return u;
+      if (typeof u === 'string') {
+        const t = u.trim();
+        if (t.startsWith('https://')) return t;
+      }
     }
     return null;
   }
   function visitorAvatarUrl(v) {
-    const uid = visitorUid(v);
-    if (uid && visitorUserCache.has(uid)) {
-      const cached = visitorUserCache.get(uid);
-      if (typeof cached === 'string' && cached.startsWith('https://')) return cached;
-    }
-    return checkInAvatarFallback(v);
+    return checkInAvatarUrl(v);
   }
-  function applyVisitorAvatarToDom(uid) {
-    const url = visitorUserCache.get(uid);
-    if (typeof url !== 'string' || !url.startsWith('https://')) return;
-    const overlay = $('visitors-overlay');
-    if (!overlay || overlay.hidden) return;
-    overlay.querySelectorAll('.vo-avatar[data-uid]').forEach(el => {
-      if (el.getAttribute('data-uid') !== uid) return;
-      const existing = el.querySelector('img');
-      if (existing && existing.getAttribute('src') === url) return;
-      const img = document.createElement('img');
-      img.alt = '';
-      img.loading = 'lazy';
-      img.src = url;
-      img.addEventListener('error', () => {
-        el.textContent = el.getAttribute('data-initials') || '?';
+  function checkInAvatarDebugFields(v) {
+    return {
+      checkInId: v.id || null,
+      userId: v.userId ?? null,
+      uid: v.uid ?? null,
+      visitorId: v.visitorId ?? null,
+      visitorNickname: v.visitorNickname ?? null,
+      nickname: v.nickname ?? null,
+      visitorPhotoURL: v.visitorPhotoURL ?? null,
+      visitorPhotoUrl: v.visitorPhotoUrl ?? null,
+      visitorAvatarUrl: v.visitorAvatarUrl ?? null,
+      visitorAvatarURL: v.visitorAvatarURL ?? null,
+      avatarUrl: v.avatarUrl ?? null,
+      avatarURL: v.avatarURL ?? null,
+      userPhotoURL: v.userPhotoURL ?? null,
+      profilePhotoURL: v.profilePhotoURL ?? null,
+      // check-in mine photo (not used as profile avatar)
+      photoURL: v.photoURL ?? null,
+      photoUrl: v.photoUrl ?? null,
+      hasPhoto: v.hasPhoto ?? null
+    };
+  }
+  function findCheckInForAvatarEl(el) {
+    const checkInId = el.getAttribute('data-checkin-id');
+    const uid = el.getAttribute('data-uid');
+    const mineId = visitorsOverlayMineId;
+    const cached = mineId ? visitorListCache.get(mineId) : null;
+    const list = (cached && cached.list) || [];
+    if (checkInId) {
+      const byId = list.find(v => String(v.id) === String(checkInId));
+      if (byId) return byId;
+    }
+    if (uid) return list.find(v => visitorUid(v) === uid) || null;
+    return null;
+  }
+  async function debugVisitorAvatarClick(el) {
+    const uidAttr = el.getAttribute('data-uid');
+    const v = findCheckInForAvatarEl(el);
+    const uid = visitorUid(v || {}) || uidAttr || null;
+    const attemptedAvatarUrl = v ? checkInAvatarUrl(v) : null;
+    const img = el.querySelector('img');
+    const displayedSrc = img ? img.getAttribute('src') : null;
+    console.log('visitor avatar click', {
+      resolvedUid: uid,
+      attemptedAvatarUrl: attemptedAvatarUrl,
+      displayedImgSrc: displayedSrc,
+      checkInVisitorFields: v ? checkInAvatarDebugFields(v) : null,
+      note: 'Avatars load from check-in profile fields only; users/{uid} is not readable for other users.'
+    });
+    if (!uid) {
+      console.log('visitor user data', { uid: null, exists: false, reason: 'no uid on check-in/avatar' });
+      return;
+    }
+    try {
+      const snap = await db.collection('users').doc(uid).get();
+      const data = snap.exists ? (snap.data() || {}) : null;
+      console.log('visitor user data', {
+        uid: uid,
+        exists: snap.exists,
+        data: data,
+        avatarUrl: data ? (data.avatarUrl || data.avatarURL || null) : null
       });
-      el.replaceChildren(img);
-    });
-  }
-  function fetchUserAvatarUrl(uid) {
-    if (visitorUserCache.has(uid)) return Promise.resolve(visitorUserCache.get(uid));
-    if (visitorUserInflight.has(uid)) return visitorUserInflight.get(uid);
-    const p = db.collection('users').doc(uid).get().then(snap => {
-      const ud = snap.exists ? (snap.data() || {}) : {};
-      const raw = ud.avatarUrl;
-      const url = (typeof raw === 'string' && raw.startsWith('https://')) ? raw : null;
-      visitorUserCache.set(uid, url);
-      visitorUserInflight.delete(uid);
-      return url;
-    }).catch(err => {
-      console.warn('[mines] user avatar failed', uid, err);
-      visitorUserCache.set(uid, null);
-      visitorUserInflight.delete(uid);
-      return null;
-    });
-    visitorUserInflight.set(uid, p);
-    return p;
-  }
-  function ensureVisitorAvatars(list) {
-    if (!list || !list.length) return Promise.resolve();
-    const uids = [];
-    const seen = new Set();
-    for (const v of list) {
-      const uid = visitorUid(v);
-      if (!uid || seen.has(uid) || visitorUserCache.has(uid)) continue;
-      seen.add(uid);
-      uids.push(uid);
+    } catch (err) {
+      console.log('visitor user data', {
+        uid: uid,
+        exists: false,
+        permissionDenied: true,
+        error: String(err && err.message ? err.message : err),
+        checkInVisitorFields: v ? checkInAvatarDebugFields(v) : null,
+        note: 'Firestore rules block client reads of other users\' docs; use check-in avatar fields instead.'
+      });
     }
-    if (!uids.length) {
-      for (const v of list) {
-        const uid = visitorUid(v);
-        if (uid && visitorUserCache.has(uid)) applyVisitorAvatarToDom(uid);
-      }
-      return Promise.resolve();
-    }
-    let idx = 0;
-    async function worker() {
-      while (idx < uids.length) {
-        const uid = uids[idx++];
-        await fetchUserAvatarUrl(uid);
-        applyVisitorAvatarToDom(uid);
-      }
-    }
-    const n = Math.min(VISITOR_AVATAR_CONCURRENCY, uids.length);
-    return Promise.all(Array.from({ length: n }, () => worker()));
   }
   function visitorCheckInPhoto(v) {
     if (v.hasPhoto === false) return null;
@@ -1363,6 +1375,16 @@
       updateVisitorsDateSortBtn();
       renderVisitorsOverlayList();
     });
+    const body = $('visitors-overlay-body');
+    if (body) {
+      body.addEventListener('click', e => {
+        const av = e.target.closest('.vo-avatar');
+        if (!av || !body.contains(av)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        debugVisitorAvatarClick(av);
+      });
+    }
   }
   function updateVisitorsDateSortBtn() {
     const btn = $('visitors-overlay-sort');
@@ -1382,7 +1404,9 @@
       ? '<img src="' + escapeHtml(avatar) + '" alt="" loading="lazy" onerror="var p=this.parentNode;if(p)p.textContent=p.getAttribute(\'data-initials\')||\'?\';">'
       : escapeHtml(init);
     const avatarAttrs = (uid ? ' data-uid="' + escapeHtml(uid) + '"' : '')
-      + ' data-initials="' + escapeHtml(init) + '"';
+      + (v.id ? ' data-checkin-id="' + escapeHtml(v.id) + '"' : '')
+      + ' data-initials="' + escapeHtml(init) + '"'
+      + ' title="Click to dump visitor data"';
     const typeRaw = (mine && mine.mineType != null) ? mine.mineType : (v.mineType || 'rock');
     const typeKey = String(typeRaw).trim().toLowerCase();
     const type = TYPE_ORDER.includes(typeKey) ? typeKey : 'rock';
@@ -1444,7 +1468,6 @@
       return;
     }
     body.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitOverlayCard(v, cached.mine)).join('') + '</div>';
-    ensureVisitorAvatars(list);
   }
   async function fetchMineVisitors(mineId) {
     const snap = await db.collection('checkIns')
