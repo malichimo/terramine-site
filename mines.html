@@ -241,13 +241,13 @@
     .mine-visitors {
       display:none; align-items:center; justify-content:flex-end; gap:6px;
       width:100%; margin-top:2px; padding:2px 2px 0; border:0; background:transparent;
-      color:rgba(255,255,255,.78); font:600 13px 'DM Sans',sans-serif;
+      color:#7eb6ff; font:400 17px 'DM Sans',sans-serif;
       cursor:pointer; appearance:none; -webkit-appearance:none;
     }
     .mine-visitors.is-shown { display:inline-flex; }
-    .mine-visitors:hover, .mine-visitors:focus-visible { color:#fff; outline:none; }
-    .mine-visitors svg { width:17px; height:17px; flex-shrink:0; }
-    .mine-visitors .mine-visitors-n { font-variant-numeric:tabular-nums; letter-spacing:.2px; }
+    .mine-visitors:hover, .mine-visitors:focus-visible { color:#a8ceff; outline:none; }
+    .mine-visitors svg { width:21px; height:21px; flex-shrink:0; }
+    .mine-visitors .mine-visitors-n { font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.2px; }
     .is-missing { font-style:italic; font-weight:500; opacity:.8; }
     .mine-empty { padding:48px 16px; text-align:center; color:#64748b; font-size:14px; }
     .mine-sentinel { text-align:center; color:#889; font-size:12px; padding:14px; }
@@ -334,6 +334,7 @@
         <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-prod" data-sort="prod" disabled>Mine Production Level</button>
         <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
+        <button type="button" class="sort-btn" id="sort-visitors" data-sort="visitors" disabled>Visitor Count</button>
         <button type="button" class="sort-btn" id="sort-name" data-sort="name" disabled>Mine Name</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search mine name" autocomplete="off" disabled />
         <span class="mine-count" id="mine-count"></span>
@@ -431,6 +432,7 @@
   const visitorCountPending = [];
   const VISITOR_COUNT_BATCH = 15;
   let visitorCountFlushScheduled = false;
+  let visitorSortRefreshScheduled = false;
   const VISITOR_LIST_LIMIT = 200;
 
   function fmtNum(n) { if (!n) return '0'; if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'; if (n >= 1000) return (n / 1000).toFixed(1) + 'K'; return Math.round(n).toLocaleString(); }
@@ -903,6 +905,12 @@
     if (bn) return -1;
     return (a - b) * dir;
   }
+  function visitorCountForSort(mine) {
+    if (!mine || mine.id == null) return 0;
+    const id = String(mine.id);
+    if (!visitorCountCache.has(id)) return 0;
+    return Number(visitorCountCache.get(id)) || 0;
+  }
   function sortGroup(list) {
     const arr = list.slice();
     const dir = sortKey ? sortDir : 1;
@@ -913,6 +921,7 @@
       else if (sortKey === 'game') c = cmpNumMissingLast(numOrNull((a._details || {}).gameLevel), numOrNull((b._details || {}).gameLevel), dir);
       else if (sortKey === 'prod') c = cmpNumMissingLast(numOrNull((a._details || {}).productionLevel), numOrNull((b._details || {}).productionLevel), dir);
       else if (sortKey === 'activity') c = cmpNumMissingLast(daysLeftOf(a, now), daysLeftOf(b, now), -dir);
+      else if (sortKey === 'visitors') c = (visitorCountForSort(a) - visitorCountForSort(b)) * (-dir);
       else c = cmpNumMissingLast(numOrNull((a._details || {}).productionLevel), numOrNull((b._details || {}).productionLevel), dir);
       if (!c) c = cmpTitle(a, b);
       return c;
@@ -1024,6 +1033,15 @@
     visitorCountInflight.set(mineId, p);
     return p;
   }
+  function scheduleVisitorSortRefresh() {
+    if (sortKey !== 'visitors' || !loadedUid) return;
+    if (visitorSortRefreshScheduled) return;
+    visitorSortRefreshScheduled = true;
+    Promise.resolve().then(() => {
+      visitorSortRefreshScheduled = false;
+      if (sortKey === 'visitors' && loadedUid) renderFromFilters();
+    });
+  }
   function flushVisitorCountQueue() {
     visitorCountFlushScheduled = false;
     if (!visitorCountPending.length) return;
@@ -1031,6 +1049,7 @@
     batch.forEach(({ mineId, btn }) => {
       ensureVisitorCount(mineId).then(n => {
         applyVisitorCountUI(btn, n);
+        scheduleVisitorSortRefresh();
       }).catch(() => {});
     });
     if (visitorCountPending.length) scheduleVisitorCountFlush();
