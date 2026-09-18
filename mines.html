@@ -330,7 +330,6 @@
     }
     return null;
   }
-  function fmtCoord(lat, lng) { return lat.toFixed(5) + ', ' + lng.toFixed(5); }
   function productionBonus(level) { return Math.min((level - 1) * 5, 495); }
   function productionRate(type, level) {
     const base = { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
@@ -528,7 +527,6 @@
     const pin = pinSvg();
     pin.classList.add('gps-pin');
     if (!g) pin.classList.add('is-missing');
-    pin.setAttribute('aria-label', g ? 'Has GPS' : 'No GPS');
     gps.append(pin);
 
     const rate = document.createElement('div');
