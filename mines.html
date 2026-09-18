@@ -128,7 +128,9 @@
     .mine-card-art {
       position:absolute; inset:0; border-radius:16px;
       background-color:#243044;
-      background-size:cover; background-repeat:no-repeat; background-position:left bottom;
+      /* scaleX(-1) flips the layer: CSS "left" becomes visual right. Use right bottom so the
+         mine opening (left side of the source art) stays visible on the card's left. */
+      background-size:cover; background-repeat:no-repeat; background-position:right bottom;
       transform:scaleX(-1); transform-origin:center;
     }
     .mine-card-scrim {
@@ -404,6 +406,14 @@
       height:14px; width:160px; margin:0 auto; border-radius:4px;
       background:linear-gradient(90deg,#2b384a 25%,#3a4a5e 50%,#2b384a 75%); background-size:200% 100%;
       animation:vo-shimmer 1.4s infinite;
+    }
+
+    .visitors-sort-tip {
+      position:fixed; z-index:200; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+      max-width:min(300px, calc(100vw - 16px));
     }
     @keyframes vo-shimmer { to { background-position:-200% 0; } }
   </style>
@@ -2588,6 +2598,85 @@
     }
   }
 
+
+  const VISITORS_SORT_TIP_TEXT = 'Warning: Only mine cards that are currently drawn have a visitor count. so this can only sort whats drawn by visitor count. As you scroll down more will sort into place once they have thier visitor count.';
+  let visitorsSortTip = null;
+  let visitorsSortTipTimer = null;
+  let visitorsSortTipTarget = null;
+  let visitorsSortTipX = 0;
+  let visitorsSortTipY = 0;
+  function dismissVisitorsSortTip() {
+    if (visitorsSortTipTimer) { clearTimeout(visitorsSortTipTimer); visitorsSortTipTimer = null; }
+    visitorsSortTipTarget = null;
+    if (visitorsSortTip) visitorsSortTip.style.display = 'none';
+  }
+  function ensureVisitorsSortTip() {
+    if (visitorsSortTip) return visitorsSortTip;
+    const tip = document.createElement('div');
+    tip.className = 'visitors-sort-tip';
+    tip.setAttribute('role', 'tooltip');
+    tip.textContent = VISITORS_SORT_TIP_TEXT;
+    document.body.appendChild(tip);
+    visitorsSortTip = tip;
+    return tip;
+  }
+  function placeVisitorsSortTip(x, y) {
+    const tip = ensureVisitorsSortTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function showVisitorsSortTip(btn) {
+    if (visitorsSortTipTarget !== btn || !btn.isConnected) return;
+    placeVisitorsSortTip(visitorsSortTipX, visitorsSortTipY);
+  }
+  function bindVisitorsSortTip(btn) {
+    if (!btn || btn.dataset.visitorsSortTipBound === '1') return;
+    btn.dataset.visitorsSortTipBound = '1';
+    btn.addEventListener('mouseenter', (e) => {
+      if (visitorsSortTipTimer) { clearTimeout(visitorsSortTipTimer); visitorsSortTipTimer = null; }
+      visitorsSortTipTarget = btn;
+      visitorsSortTipX = e.clientX;
+      visitorsSortTipY = e.clientY;
+      if (visitorsSortTip) visitorsSortTip.style.display = 'none';
+      visitorsSortTipTimer = setTimeout(() => {
+        visitorsSortTipTimer = null;
+        showVisitorsSortTip(btn);
+      }, 200);
+    });
+    btn.addEventListener('mousemove', (e) => {
+      if (visitorsSortTipTarget !== btn) return;
+      visitorsSortTipX = e.clientX;
+      visitorsSortTipY = e.clientY;
+      if (visitorsSortTip && visitorsSortTip.style.display === 'block' && !visitorsSortTipTimer) {
+        placeVisitorsSortTip(visitorsSortTipX, visitorsSortTipY);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (visitorsSortTipTarget === btn) dismissVisitorsSortTip();
+    });
+  }
+
   $('filter-type').addEventListener('change', () => { if (loadedUid) renderFromFilters(); });
   $('filter-search').addEventListener('input', () => { if (loadedUid) renderFromFilters(); });
   document.querySelectorAll('.sort-btn').forEach(btn => {
@@ -2599,6 +2688,7 @@
       if (loadedUid) renderFromFilters();
     });
   });
+  bindVisitorsSortTip($('sort-visitors'));
 
   function setPageSettingsOpen(open) {
     const panel = $('page-settings-panel');
