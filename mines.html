@@ -337,7 +337,7 @@
     }
     return null;
   }
-  function productionBonus(level) { return Math.min((level - 1) * 5, 495); }
+  function productionBonus(level) { return Math.max(0, level - 1); }
   function productionRate(type, level) {
     const base = { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
     return base * (1 + productionBonus(level) / 100);
@@ -346,7 +346,7 @@
     const d = p._details || {};
     const level = numOrNull(d.productionLevel);
     if (level == null) return null;
-    // Same monthly USD figure old-mines shows: per-minute rate * 60 * 24 * 30.
+    // Additive percent, not compounded: base monthly * (1 + (level - 1) / 100).
     return productionRate(typeKey(p), level) * 60 * 24 * 30;
   }
   function fmtMonthly(n) {
