@@ -233,7 +233,12 @@ body.auth-pending #portal {
 }
 .sidebar-nav a:hover { color: var(--white); background: var(--surface); }
 .sidebar-nav a.active { color: var(--cyan); border-left-color: var(--cyan); background: rgba(79,195,247,0.05); }
-.sidebar-nav .icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-nav .icon { font-size: 16px; width: 20px; text-align: center; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sidebar-nav .icon-backpack {
+  width: 18px; height: 18px; background-color: currentColor;
+  -webkit-mask: url('images/mine-icons/backpack.svg') center / contain no-repeat;
+  mask: url('images/mine-icons/backpack.svg') center / contain no-repeat;
+}
 
 .sidebar-footer {
   margin-top: auto;

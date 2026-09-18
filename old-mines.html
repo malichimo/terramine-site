@@ -109,7 +109,12 @@
     .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: 13px; color: #8899AA; text-decoration: none; border-left: 2px solid transparent; transition: all 0.15s; }
     .sidebar-nav a:hover { color: white; background: rgba(255,255,255,0.04); }
     .sidebar-nav a.active { color: var(--cyan); border-left-color: var(--cyan); background: rgba(79,195,247,0.05); }
-    .sidebar-nav .icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-nav .icon { font-size: 16px; width: 20px; text-align: center; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sidebar-nav .icon-backpack {
+      width: 18px; height: 18px; background-color: currentColor;
+      -webkit-mask: url('images/mine-icons/backpack.svg') center / contain no-repeat;
+      mask: url('images/mine-icons/backpack.svg') center / contain no-repeat;
+    }
     .sidebar-footer { margin-top: auto; padding: 12px 20px; font-size: 11px; color: #556070; border-top: 1px solid var(--border); }
     .sidebar-footer a { color: #556070; text-decoration: none; }
     .sidebar-footer a:hover { color: #8899AA; }
@@ -502,6 +507,7 @@
         <li><a href="old-mines.html" class="active"><span class="icon">⛏</span> OLD Mines</a></li>
         <li><a href="visitors.html"><span class="icon">👥</span> Visitors</a></li>
         <li><a href="old-visitors.html"><span class="icon">👥</span> OLD Visitors</a></li>
+        <li><a href="inventory.html"><span class="icon icon-backpack" aria-hidden="true"></span> Inventory</a></li>
         <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
         <li><a href="account.html"><span class="icon">⚙️</span> Account</a></li>
       </ul>
