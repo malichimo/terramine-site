@@ -245,6 +245,11 @@
     .mine-map-title {
       font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:#fff;
       min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+      cursor:pointer;
+    }
+    .mine-map-title.is-editing {
+      cursor:text; outline:2px solid rgba(79,195,247,.65); outline-offset:2px; border-radius:6px;
+      background:rgba(15,23,42,.28); white-space:normal; text-overflow:clip; overflow:visible;
     }
     .mine-map-zoom {
       flex-shrink:0; display:flex; align-items:center; gap:6px;
@@ -1362,10 +1367,209 @@
     });
   }
 
+  const MINE_TITLE_RENAME_TIP = 'Click the title to rename this mine. Enter saves, Esc cancels.';
+  let mineTitleFollowTip = null;
+  let mineTitleFollowTipTimer = null;
+  let mineTitleFollowTipTarget = null;
+  let mineTitleFollowTipX = 0;
+  let mineTitleFollowTipY = 0;
+  let mineTitleEditingEl = null;
+  function dismissMineTitleFollowTip() {
+    if (mineTitleFollowTipTimer) { clearTimeout(mineTitleFollowTipTimer); mineTitleFollowTipTimer = null; }
+    mineTitleFollowTipTarget = null;
+    if (mineTitleFollowTip) mineTitleFollowTip.style.display = 'none';
+  }
+  function ensureMineTitleFollowTip() {
+    if (!mineTitleFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'vo-mine-tip';
+      tip.setAttribute('role', 'tooltip');
+      mineTitleFollowTip = tip;
+    }
+    if (mineTitleFollowTip.parentNode !== document.body) {
+      document.body.appendChild(mineTitleFollowTip);
+    }
+    return mineTitleFollowTip;
+  }
+  function placeMineTitleFollowTip(x, y) {
+    const tip = ensureMineTitleFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function syncLocalMineCustomName(mineId, customName) {
+    const id = String(mineId);
+    const clean = (typeof customName === 'string') ? customName.trim() : '';
+    const applyToMine = (mine) => {
+      if (!mine) return;
+      if (clean) mine.customName = clean;
+      else delete mine.customName;
+      if (!mine._details) mine._details = {};
+      if (clean) mine._details.customName = clean;
+      else delete mine._details.customName;
+    };
+    applyToMine(mineMap[id]);
+    if (mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+      applyToMine(mineMapCurrentMine);
+    }
+    const display = mineTitle(mineMap[id] || { id: id, customName: clean || null }, null);
+    const mapTitle = $('mine-map-title');
+    if (mapTitle && !mapTitle.classList.contains('is-editing') && mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+      mapTitle.textContent = display || 'Mine map';
+    }
+    document.querySelectorAll('.vo-mine-badge').forEach(badge => {
+      if (String(badge.getAttribute('data-mine-id') || '') !== id) return;
+      badge.setAttribute('data-mine-name', display);
+      const tip = display + ' — Open in My Mines';
+      badge.setAttribute('data-tip', tip);
+      badge.setAttribute('aria-label', tip);
+      const span = badge.querySelector('span');
+      if (span) span.textContent = display;
+    });
+  }
+  async function persistMineCustomName(mineId, nextName, titleEl, previousText) {
+    const trimmed = (nextName || '').replace(/\s+/g, ' ').trim();
+    if (!trimmed) {
+      titleEl.textContent = previousText;
+      return;
+    }
+    if (trimmed === String(previousText || '').trim()) {
+      titleEl.textContent = previousText;
+      return;
+    }
+    try {
+      await safeUpdatePropertyDetails(mineId, { customName: trimmed }, null);
+      syncLocalMineCustomName(mineId, trimmed);
+      titleEl.textContent = trimmed;
+    } catch (err) {
+      console.warn('[visitors] customName update failed', mineId, err);
+      titleEl.textContent = previousText;
+      const msg = (err && err.code === 'permission-denied')
+        ? 'Could not rename mine (permission denied).'
+        : ('Could not rename mine' + (err && err.message ? ': ' + err.message : '.'));
+      flashShowcaseNote(msg);
+    }
+  }
+  function beginMineTitleEdit(titleEl) {
+    if (!titleEl || titleEl.classList.contains('is-editing')) return;
+    let mineId = '';
+    if (titleEl.id === 'mine-map-title' || titleEl.classList.contains('mine-map-title')) {
+      mineId = mineMapCurrentMine && mineMapCurrentMine.id != null ? String(mineMapCurrentMine.id) : '';
+    }
+    if (!mineId) return;
+    dismissMineTitleFollowTip();
+    const previousText = titleEl.textContent;
+    let finishing = false;
+    mineTitleEditingEl = titleEl;
+    titleEl.classList.add('is-editing');
+    titleEl.setAttribute('contenteditable', 'true');
+    titleEl.setAttribute('spellcheck', 'false');
+    titleEl.focus();
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(titleEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {}
+    function cleanupListeners() {
+      titleEl.removeEventListener('keydown', onKeyDown);
+      titleEl.removeEventListener('blur', onBlur);
+    }
+    function finish(mode) {
+      if (finishing) return;
+      finishing = true;
+      cleanupListeners();
+      titleEl.classList.remove('is-editing');
+      titleEl.removeAttribute('contenteditable');
+      titleEl.removeAttribute('spellcheck');
+      if (mineTitleEditingEl === titleEl) mineTitleEditingEl = null;
+      const raw = titleEl.textContent;
+      if (mode === 'cancel') {
+        titleEl.textContent = previousText;
+        return;
+      }
+      persistMineCustomName(mineId, raw, titleEl, previousText);
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish('save');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish('cancel');
+      }
+    }
+    function onBlur() {
+      finish('save');
+    }
+    titleEl.addEventListener('keydown', onKeyDown);
+    titleEl.addEventListener('blur', onBlur);
+  }
+  function bindMineMapTitleInteractionsOnce() {
+    const title = $('mine-map-title');
+    if (!title || title.dataset.mineTitleBound === '1') return;
+    title.dataset.mineTitleBound = '1';
+    title.removeAttribute('title');
+    title.removeAttribute('alt');
+    title.addEventListener('click', e => {
+      if (title.classList.contains('is-editing')) return;
+      if (e.target !== title && !title.contains(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginMineTitleEdit(title);
+    });
+    title.addEventListener('mouseover', e => {
+      if (title.classList.contains('is-editing')) return;
+      if (mineTitleFollowTipTarget === title) return;
+      if (mineTitleFollowTipTimer) { clearTimeout(mineTitleFollowTipTimer); mineTitleFollowTipTimer = null; }
+      mineTitleFollowTipTarget = title;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      const tip = ensureMineTitleFollowTip();
+      tip.textContent = MINE_TITLE_RENAME_TIP;
+      tip.style.display = 'none';
+      mineTitleFollowTipTimer = setTimeout(() => {
+        mineTitleFollowTipTimer = null;
+        if (mineTitleFollowTipTarget !== title || !title.isConnected || title.classList.contains('is-editing')) return;
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }, 1000);
+    });
+    title.addEventListener('mousemove', e => {
+      if (mineTitleFollowTipTarget !== title) return;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      if (mineTitleFollowTip && mineTitleFollowTip.style.display === 'block' && !mineTitleFollowTipTimer) {
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }
+    });
+    title.addEventListener('mouseout', e => {
+      if (mineTitleFollowTipTarget !== title) return;
+      const related = e.relatedTarget;
+      if (related && (related === title || title.contains(related))) return;
+      dismissMineTitleFollowTip();
+    });
+  }
+
   function bindMineMapOnce() {
     if (mineMapBound) return;
     mineMapBound = true;
     bindVoMapPinOnce();
+    bindMineMapTitleInteractionsOnce();
     const closeBtn = $('mine-map-close');
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeMineMap(); });
     const zoomSlider = $('mine-map-zoom');

@@ -504,6 +504,11 @@
     .mine-map-title {
       font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:#fff;
       min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+      cursor:pointer;
+    }
+    .mine-map-title.is-editing {
+      cursor:text; outline:2px solid rgba(79,195,247,.65); outline-offset:2px; border-radius:6px;
+      background:rgba(15,23,42,.28); white-space:normal; text-overflow:clip; overflow:visible;
     }
     .mine-map-zoom {
       flex-shrink:0; display:flex; align-items:center; gap:6px;
@@ -1736,6 +1741,7 @@
     if (mineMapBound) return;
     mineMapBound = true;
     bindVoMapPinOnce();
+    bindMineMapTitleInteractionsOnce();
     const closeBtn = $('mine-map-close');
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeMineMap(); });
     const zoomSlider = $('mine-map-zoom');
@@ -3177,7 +3183,7 @@
       if (img) img.alt = display;
     });
     const mapTitle = $('mine-map-title');
-    if (mapTitle && mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+    if (mapTitle && !mapTitle.classList.contains('is-editing') && mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
       mapTitle.textContent = display || 'Mine map';
     }
   }
@@ -3207,7 +3213,10 @@
   function beginMineTitleEdit(titleEl) {
     if (!titleEl || titleEl.classList.contains('is-editing')) return;
     const art = titleEl.closest('article.mine-card');
-    const mineId = art && art.dataset.mineId;
+    let mineId = art && art.dataset.mineId;
+    if (!mineId && (titleEl.id === 'mine-map-title' || titleEl.classList.contains('mine-map-title'))) {
+      mineId = mineMapCurrentMine && mineMapCurrentMine.id != null ? String(mineMapCurrentMine.id) : '';
+    }
     if (!mineId) return;
     dismissMineTitleFollowTip();
     const previousText = titleEl.textContent;
@@ -3305,6 +3314,51 @@
       if (related && (related === title || title.contains(related))) return;
       const fromTitle = e.target.closest && e.target.closest('.mine-title');
       if (fromTitle !== title && !(title.contains(e.target))) return;
+      dismissMineTitleFollowTip();
+    });
+  }
+  function bindMineMapTitleInteractionsOnce() {
+    const title = $('mine-map-title');
+    if (!title || title.dataset.mineTitleBound === '1') return;
+    title.dataset.mineTitleBound = '1';
+    title.removeAttribute('title');
+    title.removeAttribute('alt');
+    title.addEventListener('click', e => {
+      if (title.classList.contains('is-editing')) return;
+      // Don't steal clicks from sibling chrome (type icon / Load Area / Zoom / Buildings / Labels / X)
+      if (e.target !== title && !title.contains(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginMineTitleEdit(title);
+    });
+    title.addEventListener('mouseover', e => {
+      if (title.classList.contains('is-editing')) return;
+      if (mineTitleFollowTipTarget === title) return;
+      if (mineTitleFollowTipTimer) { clearTimeout(mineTitleFollowTipTimer); mineTitleFollowTipTimer = null; }
+      mineTitleFollowTipTarget = title;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      const tip = ensureMineTitleFollowTip();
+      tip.textContent = MINE_TITLE_RENAME_TIP;
+      tip.style.display = 'none';
+      mineTitleFollowTipTimer = setTimeout(() => {
+        mineTitleFollowTipTimer = null;
+        if (mineTitleFollowTipTarget !== title || !title.isConnected || title.classList.contains('is-editing')) return;
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }, 1000);
+    });
+    title.addEventListener('mousemove', e => {
+      if (mineTitleFollowTipTarget !== title) return;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      if (mineTitleFollowTip && mineTitleFollowTip.style.display === 'block' && !mineTitleFollowTipTimer) {
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }
+    });
+    title.addEventListener('mouseout', e => {
+      if (mineTitleFollowTipTarget !== title) return;
+      const related = e.relatedTarget;
+      if (related && (related === title || title.contains(related))) return;
       dismissMineTitleFollowTip();
     });
   }
@@ -4641,6 +4695,7 @@
   }
   document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(bindShowcaseFollowTip);
   bindMineTitleInteractionsOnce();
+  bindMineMapTitleInteractionsOnce();
 
   function setPageSettingsOpen(open) {
     const panel = $('page-settings-panel');
