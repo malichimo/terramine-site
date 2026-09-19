@@ -228,17 +228,13 @@
       background-image:linear-gradient(rgba(240,197,110,.15), rgba(240,197,110,.15));
       color:#f0c56e;
     }
-    .prod-tip th.c-12, .prod-tip td.c-12 {
-      background-image:linear-gradient(rgba(196,164,120,.16), rgba(196,164,120,.16));
-      color:#f4efe6;
-    }
-    .prod-tip th.c-18, .prod-tip td.c-18 {
-      background-image:linear-gradient(rgba(206,150,70,.30), rgba(206,150,70,.30));
-      color:#fff6e8;
-    }
     .prod-tip th.c-24, .prod-tip td.c-24 {
       background-image:linear-gradient(rgba(184,112,42,.48), rgba(184,112,42,.48));
       color:#fffaf3;
+    }
+    .prod-tip th.c-boost, .prod-tip td.c-boost {
+      background-image:linear-gradient(rgba(206,150,70,.30), rgba(206,150,70,.30));
+      color:#fff6e8;
     }
     .prod-tip-note {
       margin-top:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,.08);
@@ -1839,11 +1835,26 @@
     return productionBase(type) * (1 + productionBonus(level) / 100);
   }
   // Shared with the hover table. Columns are boosted-or-base rates per second.
-  function perSecColumns(type, level) {
+  // Always: base, base+bonus, 20x@24h. Optional 4th: 20x boost at Hours setting.
+  function perSecColumns(type, level, pref) {
     const base = productionBase(type);
     const boosted = level == null ? base : productionRate(type, level);
-    const blend = (h) => boosted * (h * 20 + (24 - h)) / 24;
-    return [base, boosted, blend(12), blend(18), blend(24)];
+    const blend = (h) => boosted * (h * 20 + (24 - h) * 1) / 24;
+    const cols = [base, boosted, blend(24)];
+    if (pref && pref.rate === 'boost') cols.push(blend(clampBoostHours(pref.hours)));
+    return cols;
+  }
+  function tipColumnMeta(pref) {
+    const cols = [
+      ['c-base', 'Base Rate'],
+      ['c-bonus', 'Base + Bonus'],
+      ['c-24', '20\u00d7 24h']
+    ];
+    if (pref && pref.rate === 'boost') {
+      const h = clampBoostHours(pref.hours);
+      cols.push(['c-boost', '20\u00d7 boost ' + h + 'h']);
+    }
+    return cols;
   }
   function periodAmount(perSec, period) {
     // Scale from per-second: min=*60, day=*86400, month=*86400*30, year=*86400*365
@@ -1966,35 +1977,46 @@
     tip.style.top = top + 'px';
     tip.style.visibility = 'visible';
   }
+  let prodTipType = null;
+  let prodTipLevel = null;
   function ensureProdTip() {
     if (prodTip) return prodTip;
     const tip = document.createElement('div');
     tip.className = 'prod-tip';
     tip.setAttribute('role', 'tooltip');
     const table = document.createElement('table');
-    const thead = document.createElement('thead');
+    table.appendChild(document.createElement('thead'));
+    table.appendChild(document.createElement('tbody'));
+    const note = document.createElement('div');
+    note.className = 'prod-tip-note';
+    tip.append(table, note);
+    document.body.appendChild(tip);
+    prodTip = tip;
+    return tip;
+  }
+  function rebuildProdTipChrome(tip, pref) {
+    const meta = tipColumnMeta(pref);
+    const thead = tip.querySelector('thead');
+    thead.textContent = '';
     const hr = document.createElement('tr');
-    [['stub', ''], ['c-base', 'Base Rate'], ['c-bonus', 'Base + Bonus'], ['c-12', '20\u00d7 12h'], ['c-18', '20\u00d7 18h'], ['c-24', '20\u00d7 24h']].forEach(pair => {
+    [['stub', '']].concat(meta).forEach(pair => {
       const th = document.createElement('th');
       th.className = pair[0];
       th.textContent = pair[1];
       hr.appendChild(th);
     });
     thead.appendChild(hr);
-    table.appendChild(thead);
-    table.appendChild(document.createElement('tbody'));
-    const note = document.createElement('div');
-    note.className = 'prod-tip-note';
-    note.textContent = '12h and 18h include the other hours at the bonus rate, not at 20\u00d7.';
-    tip.append(table, note);
-    document.body.appendChild(tip);
-    prodTip = tip;
-    return tip;
+    const note = tip.querySelector('.prod-tip-note');
+    note.textContent = '20\u00d7 24h is full-day boost. The boost column (when shown) uses your Hours setting.';
   }
   function fillProdTip(type, level) {
     const tip = ensureProdTip();
-    const perSecs = perSecColumns(type, level);
-    const colClass = ['c-base', 'c-bonus', 'c-12', 'c-18', 'c-24'];
+    prodTipType = type;
+    prodTipLevel = level;
+    const pref = displayPref;
+    rebuildProdTipChrome(tip, pref);
+    const perSecs = perSecColumns(type, level, pref);
+    const meta = tipColumnMeta(pref);
     const rows = [['Per Sec', 'sec'], ['Per Min', 'min'], ['Per Day', 'day'], ['Per Month', 'month'], ['Per Year', 'year']];
     const tbody = tip.querySelector('tbody');
     tbody.textContent = '';
@@ -2006,13 +2028,20 @@
       tr.appendChild(stub);
       perSecs.forEach((perSec, ci) => {
         const td = document.createElement('td');
-        td.className = colClass[ci];
+        td.className = meta[ci][0];
         td.textContent = fmtRate(periodAmount(perSec, row[1]), row[1]);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
     });
   }
+  function refreshOpenProdTip() {
+    if (!prodTip || prodTip.style.display !== 'block') return;
+    if (prodTipType == null) return;
+    fillProdTip(prodTipType, prodTipLevel);
+    placeProdTip(prodTipX, prodTipY);
+  }
+
   function showProdTip(box, type, level) {
     if (prodTipTarget !== box || !box.isConnected) return;
     fillProdTip(type, level);
@@ -4773,6 +4802,7 @@
     syncHoursControl();
     try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     refreshProdValues();
+    refreshOpenProdTip();
   }
   $('display-period').addEventListener('change', onDisplayChange);
   $('display-rate').addEventListener('change', onDisplayChange);
