@@ -153,7 +153,7 @@
     }
     .vo-showcase-pin.is-active:hover { background:#2ea043; }
     .vo-showcase-pin svg { width:18px; height:18px; display:block; pointer-events:none; }
-    .vo-showcase-tip {
+    .vo-showcase-tip, .vo-mine-tip {
       position:fixed; z-index:340; pointer-events:none; display:none;
       background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
       border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.55);
@@ -622,6 +622,7 @@
     if (!btn) return;
     if (showcaseTipTimer) { clearTimeout(showcaseTipTimer); showcaseTipTimer = null; }
     dismissVoImgTip();
+    dismissMineTip();
     showcaseTipTarget = btn;
     showcaseTipX = e.clientX;
     showcaseTipY = e.clientY;
@@ -945,6 +946,7 @@
     img.dataset.voTipBound = '1';
     img.addEventListener('mouseenter', (e) => {
       if (voImgTipTimer) { clearTimeout(voImgTipTimer); voImgTipTimer = null; }
+      dismissMineTip();
       voImgTipTarget = img;
       voImgTipX = e.clientX; voImgTipY = e.clientY;
       if (voImgTip) voImgTip.style.display = 'none';
@@ -1035,6 +1037,81 @@
   }
 
   let mineBadgeClickBound = false;
+  let mineTip = null;
+  let mineTipTimer = null;
+  let mineTipTarget = null;
+  let mineTipX = 0;
+  let mineTipY = 0;
+  function dismissMineTip() {
+    if (mineTipTimer) { clearTimeout(mineTipTimer); mineTipTimer = null; }
+    mineTipTarget = null;
+    if (mineTip) mineTip.style.display = 'none';
+  }
+  function ensureMineTip() {
+    if (mineTip) return mineTip;
+    const tip = document.createElement('div');
+    tip.className = 'vo-mine-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    mineTip = tip;
+    return tip;
+  }
+  function placeMineTip(x, y) {
+    const tip = ensureMineTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function mineBadgeTipText(badge) {
+    if (!badge) return '';
+    const tip = (badge.getAttribute('data-tip') || '').trim();
+    if (tip) return tip;
+    const name = (badge.getAttribute('data-mine-name')
+      || ((badge.querySelector('span') || {}).textContent || '')).trim();
+    return name ? (name + ' — Open in My Mines') : 'Open in My Mines';
+  }
+  function showMineTip(badge) {
+    if (mineTipTarget !== badge || !badge.isConnected) return;
+    const text = mineBadgeTipText(badge);
+    if (!text) return;
+    const tip = ensureMineTip();
+    tip.textContent = text;
+    placeMineTip(mineTipX, mineTipY);
+  }
+  function beginMineTipFor(badge, e) {
+    if (!badge) return;
+    if (mineTipTimer) { clearTimeout(mineTipTimer); mineTipTimer = null; }
+    dismissShowcaseTip();
+    dismissVoImgTip();
+    mineTipTarget = badge;
+    mineTipX = e.clientX;
+    mineTipY = e.clientY;
+    if (mineTip) mineTip.style.display = 'none';
+    mineTipTimer = setTimeout(() => {
+      mineTipTimer = null;
+      showMineTip(badge);
+    }, 1000);
+  }
   function navigateToMineFromBadge(badge) {
     if (!badge) return;
     const mineId = badge.getAttribute('data-mine-id') || '';
@@ -1058,6 +1135,7 @@
       if (!mineId) return;
       e.preventDefault();
       e.stopPropagation();
+      dismissMineTip();
       navigateToMineFromBadge(badge);
     });
     board.addEventListener('keydown', e => {
@@ -1068,7 +1146,33 @@
       if (!mineId) return;
       e.preventDefault();
       e.stopPropagation();
+      dismissMineTip();
       navigateToMineFromBadge(badge);
+    });
+    // mouseover/mouseout bubble — works for badges appended later (scroll/filter)
+    board.addEventListener('mouseover', e => {
+      const badge = e.target.closest('.vo-mine-badge');
+      if (!badge || !board.contains(badge)) return;
+      if (mineTipTarget === badge) return;
+      beginMineTipFor(badge, e);
+    });
+    board.addEventListener('mousemove', e => {
+      const badge = e.target.closest('.vo-mine-badge');
+      if (!badge || mineTipTarget !== badge) return;
+      mineTipX = e.clientX;
+      mineTipY = e.clientY;
+      if (mineTip && mineTip.style.display === 'block' && !mineTipTimer) {
+        placeMineTip(mineTipX, mineTipY);
+      }
+    });
+    board.addEventListener('mouseout', e => {
+      const badge = mineTipTarget;
+      if (!badge || !board.contains(badge)) return;
+      const related = e.relatedTarget;
+      if (related && (related === badge || (related.nodeType === 1 && badge.contains(related)))) return;
+      const fromBadge = e.target && e.target.nodeType === 1 ? e.target.closest('.vo-mine-badge') : null;
+      if (fromBadge !== badge) return;
+      dismissMineTip();
     });
   }
 
@@ -1115,7 +1219,7 @@
       + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
-      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' title="' + escapeHtml(mineName) + ' — Open in My Mines">'
+      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-tip="' + escapeHtml(mineName) + ' — Open in My Mines" aria-label="' + escapeHtml(mineName) + ' — Open in My Mines">'
       + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
       + '<span>' + escapeHtml(mineName) + '</span></div>'
       + pinHtml
