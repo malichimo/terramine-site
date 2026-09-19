@@ -93,9 +93,18 @@
       border:2px solid #d0d5dc; border-radius:10px; background:#fff;
       cursor:pointer; transition:border-color .15s, background .15s;
     }
-    .type-filter-btn img { width:24px; height:24px; object-fit:contain; display:block; pointer-events:none; }
+    .type-filter-btn img,
+    .type-filter-btn svg { width:24px; height:24px; object-fit:contain; display:block; pointer-events:none; }
+    .type-filter-btn svg { stroke:currentColor; fill:none; color:#475569; }
     .type-filter-btn.active { border-color:#4FC3F7; background:#e8f7fe; }
     .type-filter-btn:focus-visible { outline:2px solid #4FC3F7; outline-offset:2px; }
+    .toolbar-follow-tip {
+      position:fixed; z-index:200; pointer-events:none; display:none;
+      background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,.14);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.45);
+      font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+      max-width:min(280px, calc(100vw - 16px));
+    }
     .tool-search { flex:1; min-width:160px; }
     .mine-count { margin-left:auto; font-size:12px; color:#64748b; font-weight:600; }
     .page-settings { position:absolute; top:10px; right:12px; z-index:3; }
@@ -544,6 +553,21 @@
         <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
         <button type="button" class="sort-btn" id="sort-visitors" data-sort="visitors" disabled>Visitor Count</button>
+        <div class="type-filter" id="filter-showcase" role="group" aria-label="Showcase image filter">
+          <button type="button" class="type-filter-btn" data-showcase="has" aria-label="Has showcase image" aria-pressed="false" disabled>
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"></rect>
+              <circle cx="8.5" cy="10" r="1.6" fill="currentColor" stroke="none"></circle>
+              <path d="M3 16l5-5 4 4 3-3 6 6" stroke-width="1.8" stroke-linejoin="round"></path>
+            </svg>
+          </button>
+          <button type="button" class="type-filter-btn" data-showcase="none" aria-label="No showcase image" aria-pressed="false" disabled>
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"></rect>
+              <path d="M4 4l16 16" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+          </button>
+        </div>
         <button type="button" class="sort-btn" id="sort-name" data-sort="name" disabled>Mine Name</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search mine name" autocomplete="off" disabled />
         <span class="mine-count" id="mine-count"></span>
@@ -652,6 +676,8 @@
   const GPS_NESTS = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng'];
 
   const FILTER_TYPES_KEY = 'terramine.mines.filterTypes';
+  const FILTER_SHOWCASE_KEY = 'terramine.mines.filterShowcase';
+  const SHOWCASE_FILTER_VALUES = ['has', 'none'];
   function loadSelectedTypes() {
     try {
       const raw = sessionStorage.getItem(FILTER_TYPES_KEY);
@@ -666,7 +692,23 @@
       sessionStorage.setItem(FILTER_TYPES_KEY, JSON.stringify(Array.from(selectedTypes)));
     } catch (e) {}
   }
+  function loadSelectedShowcase() {
+    try {
+      const raw = sessionStorage.getItem(FILTER_SHOWCASE_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Set();
+      return new Set(arr.filter(v => SHOWCASE_FILTER_VALUES.indexOf(v) !== -1));
+    } catch (e) { return new Set(); }
+  }
+  function saveSelectedShowcase() {
+    try {
+      sessionStorage.setItem(FILTER_SHOWCASE_KEY, JSON.stringify(Array.from(selectedShowcase)));
+    } catch (e) {}
+  }
   let selectedTypes = loadSelectedTypes();
+  // Multi-select like type chips. None or both selected => no showcase filter (all).
+  let selectedShowcase = loadSelectedShowcase();
   let focusMineId = null; // exact property id focus from ?mineId= deep-link
   let allMines = [];
   let loadedUid = null;
@@ -717,6 +759,18 @@
     if (typeof u !== 'string') return '';
     const t = u.trim();
     return /^https?:\/\//i.test(t) ? t : '';
+  }
+  function hasShowcaseImage(p) {
+    // Same signal as .mine-photo.has-img / photoUrl(); missing details => no image.
+    return !!photoUrl(p);
+  }
+  function passesShowcaseFilter(p) {
+    // 0 or 2 selected => all (same mental model as type chips: none = all; both = all).
+    if (selectedShowcase.size !== 1) return true;
+    const want = hasShowcaseImage(p);
+    if (selectedShowcase.has('has')) return want;
+    if (selectedShowcase.has('none')) return !want;
+    return true;
   }
   function validLatLng(lat, lng) {
     return lat != null && lng != null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
@@ -1213,9 +1267,11 @@
     const focus = readMineFocusFromUrl();
     if (!focus) return;
     focusMineId = focus.id;
-    // Leave types=all so the focused mine is not hidden by a saved type chip set.
+    // Leave types/showcase=all so the focused mine is not hidden by saved chip sets.
     selectedTypes = new Set();
     saveSelectedTypes();
+    selectedShowcase = new Set();
+    saveSelectedShowcase();
     const search = $('filter-search');
     if (search) search.value = focus.name || focus.id;
   }
@@ -1238,9 +1294,11 @@
         if (String(p.id) !== focusId) return false;
         // Exact id wins; name in the search box is display-only while focused.
         if (typeFilterOn && !selectedTypes.has(typeKey(p))) return false;
+        if (!passesShowcaseFilter(p)) return false;
         return true;
       }
       if (typeFilterOn && !selectedTypes.has(typeKey(p))) return false;
+      if (!passesShowcaseFilter(p)) return false;
       if (q && titleOf(p).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
@@ -1333,8 +1391,15 @@
   }
   function setStatus(text) { $('mine-status').textContent = text || ''; }
   function updateTypeFilterButtons() {
-    document.querySelectorAll('.type-filter-btn').forEach(btn => {
+    document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
       const on = selectedTypes.has(btn.dataset.type);
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function updateShowcaseFilterButtons() {
+    document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(btn => {
+      const on = selectedShowcase.has(btn.dataset.showcase);
       btn.classList.toggle('active', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
@@ -3217,13 +3282,24 @@
 
   applyMineFocusFromUrl();
   updateTypeFilterButtons();
-  document.querySelectorAll('.type-filter-btn').forEach(btn => {
+  updateShowcaseFilterButtons();
+  document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const t = btn.dataset.type;
       if (selectedTypes.has(t)) selectedTypes.delete(t);
       else selectedTypes.add(t);
       saveSelectedTypes();
       updateTypeFilterButtons();
+      if (loadedUid) renderFromFilters();
+    });
+  });
+  document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.showcase;
+      if (selectedShowcase.has(v)) selectedShowcase.delete(v);
+      else selectedShowcase.add(v);
+      saveSelectedShowcase();
+      updateShowcaseFilterButtons();
       if (loadedUid) renderFromFilters();
     });
   });
@@ -3242,6 +3318,78 @@
     });
   });
   bindVisitorsSortTip($('sort-visitors'));
+
+  const SHOWCASE_TIPS = {
+    has: 'Show only mines that have a visitor showcase photo set.',
+    none: 'Show only mines with no showcase photo (helps find mines with visitors but no image yet).'
+  };
+  let showcaseFollowTip = null;
+  let showcaseFollowTipTimer = null;
+  let showcaseFollowTipTarget = null;
+  let showcaseFollowTipX = 0;
+  let showcaseFollowTipY = 0;
+  function dismissShowcaseFollowTip() {
+    if (showcaseFollowTipTimer) { clearTimeout(showcaseFollowTipTimer); showcaseFollowTipTimer = null; }
+    showcaseFollowTipTarget = null;
+    if (showcaseFollowTip) showcaseFollowTip.style.display = 'none';
+  }
+  function ensureShowcaseFollowTip() {
+    if (showcaseFollowTip) return showcaseFollowTip;
+    const tip = document.createElement('div');
+    tip.className = 'toolbar-follow-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    showcaseFollowTip = tip;
+    return tip;
+  }
+  function placeShowcaseFollowTip(x, y) {
+    const tip = ensureShowcaseFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function bindShowcaseFollowTip(btn) {
+    if (!btn || btn.dataset.showcaseTipBound === '1') return;
+    btn.dataset.showcaseTipBound = '1';
+    btn.addEventListener('mouseenter', (e) => {
+      if (showcaseFollowTipTimer) { clearTimeout(showcaseFollowTipTimer); showcaseFollowTipTimer = null; }
+      showcaseFollowTipTarget = btn;
+      showcaseFollowTipX = e.clientX;
+      showcaseFollowTipY = e.clientY;
+      const tip = ensureShowcaseFollowTip();
+      tip.textContent = SHOWCASE_TIPS[btn.dataset.showcase] || '';
+      tip.style.display = 'none';
+      showcaseFollowTipTimer = setTimeout(() => {
+        showcaseFollowTipTimer = null;
+        if (showcaseFollowTipTarget !== btn || !btn.isConnected) return;
+        placeShowcaseFollowTip(showcaseFollowTipX, showcaseFollowTipY);
+      }, 200);
+    });
+    btn.addEventListener('mousemove', (e) => {
+      if (showcaseFollowTipTarget !== btn) return;
+      showcaseFollowTipX = e.clientX;
+      showcaseFollowTipY = e.clientY;
+      if (showcaseFollowTip && showcaseFollowTip.style.display === 'block' && !showcaseFollowTipTimer) {
+        placeShowcaseFollowTip(showcaseFollowTipX, showcaseFollowTipY);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (showcaseFollowTipTarget === btn) dismissShowcaseFollowTip();
+    });
+  }
+  document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(bindShowcaseFollowTip);
 
   function setPageSettingsOpen(open) {
     const panel = $('page-settings-panel');
