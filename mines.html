@@ -2064,6 +2064,103 @@
       applyGroupTotalValue(val, type);
     });
   }
+  const TOTALS_PERIOD_LABEL = {
+    sec: 'Per Second', min: 'Per Min', day: 'Per Day', month: 'Per Month', year: 'Per Year'
+  };
+  function totalsDisplayTipText(pref) {
+    pref = pref || displayPref;
+    let basis;
+    if (pref.rate === 'base') basis = 'Base Rate';
+    else if (pref.rate === 'bonus') basis = 'Base Rate plus Bonus';
+    else basis = '20x Boost at ' + clampBoostHours(pref.hours) + ' hours a day';
+    const periodLabel = TOTALS_PERIOD_LABEL[pref.period] || '';
+    if (periodLabel) {
+      return 'Calculations are based on ' + basis + ' and shown ' + periodLabel + '.';
+    }
+    return 'Calculations are based on ' + basis + '.';
+  }
+  let totalsFollowTip = null;
+  let totalsFollowTipTimer = null;
+  let totalsFollowTipTarget = null;
+  let totalsFollowTipX = 0;
+  let totalsFollowTipY = 0;
+  function dismissTotalsFollowTip() {
+    if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+    totalsFollowTipTarget = null;
+    if (totalsFollowTip) totalsFollowTip.style.display = 'none';
+  }
+  function ensureTotalsFollowTip() {
+    if (!totalsFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'toolbar-follow-tip';
+      tip.setAttribute('role', 'tooltip');
+      totalsFollowTip = tip;
+    }
+    if (totalsFollowTip.parentNode !== document.body) {
+      document.body.appendChild(totalsFollowTip);
+    }
+    return totalsFollowTip;
+  }
+  function placeTotalsFollowTip(x, y) {
+    const tip = ensureTotalsFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function refreshOpenTotalsFollowTip() {
+    if (!totalsFollowTip || totalsFollowTip.style.display !== 'block') return;
+    if (!totalsFollowTipTarget) return;
+    totalsFollowTip.textContent = totalsDisplayTipText(displayPref);
+    placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+  }
+  function bindTotalsFollowTip(box) {
+    if (!box || box.dataset.totalsTipBound === '1') return;
+    box.dataset.totalsTipBound = '1';
+    box.removeAttribute('title');
+    box.addEventListener('mouseenter', (e) => {
+      if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+      totalsFollowTipTarget = box;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      const tip = ensureTotalsFollowTip();
+      tip.textContent = totalsDisplayTipText(displayPref);
+      tip.style.display = 'none';
+      totalsFollowTipTimer = setTimeout(() => {
+        totalsFollowTipTimer = null;
+        if (totalsFollowTipTarget !== box || !box.isConnected) return;
+        tip.textContent = totalsDisplayTipText(displayPref);
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }, 1000);
+    });
+    box.addEventListener('mousemove', (e) => {
+      if (totalsFollowTipTarget !== box) return;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      if (totalsFollowTip && totalsFollowTip.style.display === 'block' && !totalsFollowTipTimer) {
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }
+    });
+    box.addEventListener('mouseleave', () => {
+      if (totalsFollowTipTarget === box) dismissTotalsFollowTip();
+    });
+  }
+  function bindMineTotalsFollowTips() {
+    const bar = $('mine-totals-bar');
+    if (!bar) return;
+    bar.querySelectorAll('.mine-group-total').forEach(bindTotalsFollowTip);
+  }
   function monthlyUsd(p) {
     const d = p._details || {};
     const level = numOrNull(d.productionLevel);
@@ -4918,6 +5015,7 @@
   $('display-period').value = displayPref.period;
   $('display-rate').value = displayPref.rate;
   syncHoursControl();
+  bindMineTotalsFollowTips();
   // Persist migrated legacy 12/18/24 rates as boost+hours.
   try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
   $('page-settings-btn').addEventListener('click', () => {
@@ -4942,6 +5040,7 @@
     refreshProdValues();
     refreshGroupTotals();
     refreshOpenProdTip();
+    refreshOpenTotalsFollowTip();
   }
   $('display-period').addEventListener('change', onDisplayChange);
   $('display-rate').addEventListener('change', onDisplayChange);
