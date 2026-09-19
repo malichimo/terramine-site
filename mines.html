@@ -3111,7 +3111,7 @@
   function findMineById(mineId) {
     return allMines.find(m => String(m.id) === String(mineId)) || null;
   }
-  const MINE_TITLE_RENAME_TIP = 'Click on the title to change the name of the mine.';
+  const MINE_TITLE_RENAME_TIP = 'Click the title to rename this mine. Enter saves, Esc cancels.';
   let mineTitleFollowTip = null;
   let mineTitleFollowTipTimer = null;
   let mineTitleFollowTipTarget = null;
