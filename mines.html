@@ -2047,7 +2047,7 @@
     return sum;
   }
   function applyGroupTotalValue(el, type) {
-    const mines = visibleMines();
+    const mines = allMines;
     const sum = type === 'all' ? groupProductionSum(null, mines) : groupProductionSum(type, mines);
     const n = (sum == null || !Number.isFinite(sum)) ? 0 : sum;
     el.textContent = fmtRate(n, displayPref.period) + PERIOD_SUFFIX[displayPref.period];
