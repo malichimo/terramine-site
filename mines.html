@@ -129,6 +129,12 @@
       border:1px solid #d0d5dc; border-radius:8px; padding:6px 8px; outline:none;
     }
     .page-settings-field select:focus { border-color:var(--cyan); }
+    .page-settings-hours-row { display:flex; align-items:center; gap:8px; }
+    .page-settings-hours-row input[type=range] { flex:1; min-width:0; accent-color:var(--cyan); }
+    .page-settings-hours-value {
+      min-width:1.5em; text-align:right; font:700 13px 'DM Sans',sans-serif;
+      color:#0D1B2A; font-variant-numeric:tabular-nums;
+    }
     .mine-status { padding:8px 16px 0; font-size:13px; color:#64748b; min-height:0; }
     .mine-board-wrap { padding:6px 16px 40px; }
     .mine-group { margin-top:14px; container-type:inline-size; container-name:minegroup; }
@@ -666,7 +672,7 @@
             </svg>
           </button>
           <div class="page-settings-panel" id="page-settings-panel" role="dialog" aria-label="Page settings" hidden>
-            <div class="page-settings-title">Page settings</div>
+            <div class="page-settings-title">Production Calculations Display</div>
             <label class="page-settings-field">Period
               <select id="display-period">
                 <option value="sec">Per Second</option>
@@ -680,10 +686,14 @@
               <select id="display-rate">
                 <option value="base">Base Rate</option>
                 <option value="bonus">Base + Bonus</option>
-                <option value="12">20× 12h</option>
-                <option value="18">20× 18h</option>
-                <option value="24">20× 24h</option>
+                <option value="boost">20x Boost</option>
               </select>
+            </label>
+            <label class="page-settings-field" id="display-hours-field" hidden>Hours
+              <div class="page-settings-hours-row">
+                <input type="range" id="display-hours" min="1" max="24" step="1" value="8" aria-valuemin="1" aria-valuemax="24" aria-valuenow="8" />
+                <span class="page-settings-hours-value" id="display-hours-value">8</span>
+              </div>
             </label>
           </div>
         </div>
@@ -1845,24 +1855,48 @@
   }
   const DISPLAY_KEY = 'terramine.mines.display';
   const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
-  const DISPLAY_RATES = ['base', 'bonus', '12', '18', '24'];
+  const DISPLAY_RATES = ['base', 'bonus', 'boost'];
+  const LEGACY_RATE_HOURS = { '12': 12, '18': 18, '24': 24 };
   const PERIOD_SUFFIX = { sec: '/sec', min: '/min', day: '/day', month: '/mo', year: '/yr' };
-  const RATE_INDEX = { base: 0, bonus: 1, '12': 2, '18': 3, '24': 4 };
-  function defaultDisplay() { return { period: 'month', rate: 'bonus' }; }
+  const DEFAULT_BOOST_HOURS = 8;
+  function clampBoostHours(h) {
+    const n = Number(h);
+    if (!Number.isFinite(n)) return DEFAULT_BOOST_HOURS;
+    return Math.min(24, Math.max(1, Math.round(n)));
+  }
+  function defaultDisplay() { return { period: 'month', rate: 'bonus', hours: DEFAULT_BOOST_HOURS }; }
+  function normalizeDisplay(o) {
+    if (!o || DISPLAY_PERIODS.indexOf(o.period) === -1) return defaultDisplay();
+    let rate = String(o.rate);
+    let hours = clampBoostHours(o.hours != null ? o.hours : DEFAULT_BOOST_HOURS);
+    if (LEGACY_RATE_HOURS[rate] != null) {
+      hours = LEGACY_RATE_HOURS[rate];
+      rate = 'boost';
+    }
+    if (DISPLAY_RATES.indexOf(rate) === -1) return defaultDisplay();
+    return { period: o.period, rate: rate, hours: hours };
+  }
   function loadDisplay() {
     try {
       const raw = sessionStorage.getItem(DISPLAY_KEY);
       if (!raw) return defaultDisplay();
-      const o = JSON.parse(raw);
-      if (!o || DISPLAY_PERIODS.indexOf(o.period) === -1 || DISPLAY_RATES.indexOf(String(o.rate)) === -1) return defaultDisplay();
-      return { period: o.period, rate: String(o.rate) };
+      return normalizeDisplay(JSON.parse(raw));
     } catch (e) {
       return defaultDisplay();
     }
   }
   let displayPref = loadDisplay();
+  function boostPerSec(boostedPerSec, hours) {
+    const h = clampBoostHours(hours);
+    return boostedPerSec * (h * 20 + (24 - h) * 1) / 24;
+  }
   function displayAmount(type, level, pref) {
-    return periodAmount(perSecColumns(type, level)[RATE_INDEX[pref.rate]], pref.period);
+    const base = productionBase(type);
+    const boosted = level == null ? base : productionRate(type, level);
+    let perSec = boosted;
+    if (pref.rate === 'base') perSec = base;
+    else if (pref.rate === 'boost') perSec = boostPerSec(boosted, pref.hours);
+    return periodAmount(perSec, pref.period);
   }
   function applyProdValue(el, type, level) {
     if (level == null || !Number.isFinite(level)) {
@@ -4703,8 +4737,22 @@
     panel.hidden = !open;
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
+  function syncHoursControl() {
+    const show = displayPref.rate === 'boost';
+    const field = $('display-hours-field');
+    const slider = $('display-hours');
+    const label = $('display-hours-value');
+    field.hidden = !show;
+    const h = clampBoostHours(displayPref.hours);
+    slider.value = String(h);
+    slider.setAttribute('aria-valuenow', String(h));
+    label.textContent = String(h);
+  }
   $('display-period').value = displayPref.period;
   $('display-rate').value = displayPref.rate;
+  syncHoursControl();
+  // Persist migrated legacy 12/18/24 rates as boost+hours.
+  try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
   $('page-settings-btn').addEventListener('click', () => {
     setPageSettingsOpen($('page-settings-panel').hidden);
   });
@@ -4715,15 +4763,20 @@
   function onDisplayChange() {
     const period = $('display-period').value;
     const rate = $('display-rate').value;
-    displayPref = {
-      period: DISPLAY_PERIODS.indexOf(period) === -1 ? 'month' : period,
-      rate: DISPLAY_RATES.indexOf(rate) === -1 ? 'bonus' : rate
-    };
+    const hours = clampBoostHours($('display-hours').value);
+    displayPref = normalizeDisplay({
+      period: period,
+      rate: rate,
+      hours: hours
+    });
+    $('display-rate').value = displayPref.rate;
+    syncHoursControl();
     try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     refreshProdValues();
   }
   $('display-period').addEventListener('change', onDisplayChange);
   $('display-rate').addEventListener('change', onDisplayChange);
+  $('display-hours').addEventListener('input', onDisplayChange);
 </script>
 </body>
 </html>
