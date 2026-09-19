@@ -175,10 +175,15 @@
     .mine-photo.has-img img { cursor:pointer; }
     .vo-detail-panel .land-detail-header .vo-mine-meta { max-width:none; flex:1; min-width:0; }
     .vo-detail-panel .land-detail-photo { cursor:default; }
-    .mine-head { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-width:0; align-self:stretch; margin-top:5px; margin-bottom:5px; }
-    .mine-title { flex:1; min-width:0; text-align:right; font-size:22px; font-weight:700; line-height:1.15; overflow-wrap:anywhere; word-break:break-word; }
-    .gps-pin { width:26px; height:26px; flex-shrink:0; }
-    .gps-pin.is-missing { opacity:0.38; }
+    .mine-head { width:100%; min-width:0; margin-top:5px; margin-bottom:5px; }
+    .mine-title { width:100%; text-align:right; font-size:22px; font-weight:700; line-height:1.15; overflow-wrap:anywhere; word-break:break-word; }
+    .gps-pin {
+      position:absolute; top:10px; right:10px; z-index:3;
+      width:26px; height:26px; color:#fff; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; text-decoration:none;
+    }
+    .gps-pin svg { width:26px; height:26px; display:block; pointer-events:none; }
+    .gps-pin.is-missing { opacity:0.38; pointer-events:none; }
     .prod-box {
       width:100%; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
       text-align:center; background:rgba(0,0,0,.25); flex-shrink:0;
@@ -2925,11 +2930,26 @@
     title.className = 'mine-title';
     title.textContent = titleOf(mine);
     title.title = titleOf(mine);
+    head.appendChild(title);
+    const headInner = document.createElement('div');
+    headInner.className = 'inner';
+    headInner.appendChild(head);
     const g = findGps(mine);
-    const pin = pinSvg();
-    pin.classList.add('gps-pin');
-    if (!g) pin.classList.add('is-missing');
-    head.append(title, pin);
+    let pinEl;
+    if (g) {
+      pinEl = document.createElement('a');
+      pinEl.className = 'gps-pin';
+      pinEl.href = 'https://www.google.com/maps?q=' + encodeURIComponent(g.lat + ',' + g.lng);
+      pinEl.target = '_blank';
+      pinEl.rel = 'noopener noreferrer';
+      pinEl.title = 'Open in Maps';
+      pinEl.setAttribute('aria-label', 'Open mine in Maps');
+      pinEl.appendChild(pinSvg());
+    } else {
+      pinEl = pinSvg();
+      pinEl.classList.add('gps-pin', 'is-missing');
+      pinEl.setAttribute('title', 'No location');
+    }
 
     const pl = numOrNull((mine._details || {}).productionLevel);
     const prod = document.createElement('div');
@@ -3017,8 +3037,8 @@
     const boxesInner = document.createElement('div');
     boxesInner.className = 'inner';
     boxesInner.append(prod, lv, maint, visitBtn);
-    left.append(photoInner, head, boxesInner);
-    art.append(bg, scrim, left);
+    left.append(photoInner, headInner, boxesInner);
+    art.append(bg, scrim, left, pinEl);
     currentGrid.appendChild(art);
     if (cardObs) cardObs.observe(art);
   }
