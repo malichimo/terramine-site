@@ -172,6 +172,32 @@
     .vo-message::before { content:'"'; }
     .vo-message::after { content:'"'; }
     .vo-no-message { font-size:12px; color:var(--text-light); font-style:italic; }
+
+    .vo-owner-reply {
+      margin-top: 10px;
+      padding: 10px 12px 12px;
+      background: #e3f2fd;
+      border-left: 3px solid #42a5f5;
+      border-radius: 0 8px 8px 0;
+      text-align: left;
+    }
+    .vo-owner-reply-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e88e5;
+      margin-bottom: 6px;
+    }
+    .vo-owner-reply-icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .vo-owner-reply-text {
+      font-size: 14px;
+      color: var(--text-dark);
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     .vo-empty, .vo-loading { text-align:center; padding:48px 16px; color:#64748b; font-size:14px; }
     .vo-loading .skeleton {
       height:14px; width:160px; margin:0 auto; border-radius:4px;
@@ -2787,6 +2813,47 @@
     });
   }
 
+
+  /** Owner reply text on a checkIn (game Your reply), if present. */
+  function ownerReplyText(v) {
+    if (!v || typeof v !== 'object') return '';
+    const prefer = [
+      'ownerReply', 'ownerReplyText', 'ownerReplyMessage', 'replyText', 'replyMessage',
+      'reply', 'propertyOwnerReply', 'ownerResponse', 'responseText', 'answer'
+    ];
+    function fromVal(val) {
+      if (typeof val === 'string' && val.trim()) return val.trim();
+      if (val && typeof val === 'object') {
+        for (const k of ['text', 'message', 'body', 'content', 'reply']) {
+          if (typeof val[k] === 'string' && val[k].trim()) return val[k].trim();
+        }
+      }
+      return '';
+    }
+    for (const k of prefer) {
+      if (!(k in v)) continue;
+      const t = fromVal(v[k]);
+      if (t) return t;
+    }
+    for (const k of Object.keys(v)) {
+      if (!/reply|response|answer/i.test(k)) continue;
+      if (/moderation|admin|report|count|At$|By$|Id$/i.test(k)) continue;
+      const t = fromVal(v[k]);
+      if (t) return t;
+    }
+    return '';
+  }
+  function ownerReplyHtml(v) {
+    const t = ownerReplyText(v);
+    if (!t) return '';
+    return '<div class="vo-owner-reply">'
+      + '<div class="vo-owner-reply-label">'
+      + '<svg class="vo-owner-reply-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>'
+      + '<span>Your reply</span></div>'
+      + '<div class="vo-owner-reply-text">' + escapeHtml(t) + '</div>'
+      + '</div>';
+  }
+
   function renderVisitCard(v, mine) {
     const name = visitorName(v);
     const safeName = escapeHtml(name);
@@ -2828,7 +2895,7 @@
       + '<span>' + escapeHtml(mineName) + '</span></div>'
       + pinHtml
       + '</div></div>'
-      + '<div class="vo-card-body">' + photoHtml + msgHtml + '</div>'
+      + '<div class="vo-card-body">' + photoHtml + msgHtml + ownerReplyHtml(v) + '</div>'
       + '</article>';
   }
 
@@ -2843,7 +2910,8 @@
         const name = visitorName(v).toLowerCase();
         const mine = mineTitle(mineMap[v.propertyId], v).toLowerCase();
         const msg = (v.message || '').toLowerCase();
-        return name.includes(q) || mine.includes(q) || msg.includes(q);
+        const reply = ownerReplyText(v).toLowerCase();
+        return name.includes(q) || mine.includes(q) || msg.includes(q) || reply.includes(q);
       });
     }
     const dir = sortDir;
@@ -2926,21 +2994,6 @@
     allVisits = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
     visitsTruncated = snap.size >= VISIT_LIMIT;
     // Debug: dump Firestore checkIn fields (look for owner reply)
-    (function logVisitorCheckInData(list) {
-      const keySet = new Set();
-      const replyHits = [];
-      list.forEach(v => {
-        Object.keys(v || {}).forEach(k => keySet.add(k));
-        const replyKeys = Object.keys(v || {}).filter(k => /reply|response|answer/i.test(k));
-        if (replyKeys.length) replyHits.push({ id: v.id, replyKeys, sample: replyKeys.reduce((o, k) => { o[k] = v[k]; return o; }, {}) });
-      });
-      const keys = Array.from(keySet).sort();
-      console.log('[visitors] checkIns loaded', list.length, '(truncated=' + visitsTruncated + ')');
-      console.log('[visitors] unique Firestore keys on checkIns:', keys);
-      if (replyHits.length) console.log('[visitors] docs with reply-like keys:', replyHits);
-      else console.log('[visitors] no reply-like key names in this batch');
-      console.log('[visitors] full checkIn list (allVisits):', list);
-    })(allVisits);
     return allVisits.length;
   }
 
