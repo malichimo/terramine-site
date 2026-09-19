@@ -714,7 +714,7 @@
           <div class="mine-map-head">
             <img class="mine-map-type-icon" id="mine-map-type-icon" src="images/mine-icons/rock.svg" alt="" width="26" height="26" hidden>
             <div class="mine-map-title" id="mine-map-title">Mine map</div>
-            <button type="button" class="mine-map-labels" id="mine-map-load-area" title="Load nearby owned mines within 0.5 miles">Load Area</button>
+            <button type="button" class="mine-map-labels" id="mine-map-load-area" data-tip="Load your other mines within ½ mile of this one." aria-label="Load your other mines within ½ mile of this one.">Load Area</button>
             <label class="mine-map-zoom" title="Map zoom">
               <span>Zoom</span>
               <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
@@ -1152,6 +1152,7 @@
   let mineMapResizeBound = false;
   let mineMapZoomSyncing = false;
   let mineMapAreaOverlays = [];
+  let mineMapAreaCircle = null;
   let mineMapCurrentMine = null;
   const MINE_MAP_ZOOM_KEY = 'terramine.mineMap.zoom';
   const MINE_MAP_BUILDINGS_KEY = 'terramine.mineMap.buildings';
@@ -1336,6 +1337,10 @@
       try { mineMapAreaOverlays[i].setMap(null); } catch (e) {}
     }
     mineMapAreaOverlays = [];
+    if (mineMapAreaCircle) {
+      try { mineMapAreaCircle.setMap(null); } catch (e) {}
+      mineMapAreaCircle = null;
+    }
     hideMineMapHoverTip();
   }
   function haversineMeters(a, b) {
@@ -1395,6 +1400,18 @@
       showMineMapMsg('No center GPS for this mine — cannot Load Area.', true);
       return;
     }
+    mineMapAreaCircle = new google.maps.Circle({
+      center: { lat: center.lat, lng: center.lng },
+      radius: MINE_MAP_LOAD_AREA_M,
+      strokeColor: '#9C27B0',
+      strokeOpacity: 0.95,
+      strokeWeight: 2,
+      fillColor: '#7B1FA2',
+      fillOpacity: 0,
+      map: map,
+      clickable: false,
+      zIndex: 0
+    });
     const curId = mine.id != null ? String(mine.id) : '';
     const list = allMines;
     let added = 0;
@@ -1584,6 +1601,76 @@
     });
   }
 
+
+  let loadAreaFollowTip = null;
+  let loadAreaFollowTipTimer = null;
+  let loadAreaFollowTipTarget = null;
+  let loadAreaFollowTipX = 0;
+  let loadAreaFollowTipY = 0;
+  function dismissLoadAreaFollowTip() {
+    if (loadAreaFollowTipTimer) { clearTimeout(loadAreaFollowTipTimer); loadAreaFollowTipTimer = null; }
+    loadAreaFollowTipTarget = null;
+    if (loadAreaFollowTip) loadAreaFollowTip.style.display = 'none';
+  }
+  function ensureLoadAreaFollowTip() {
+    if (loadAreaFollowTip) return loadAreaFollowTip;
+    const tip = document.createElement('div');
+    tip.className = 'toolbar-follow-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    loadAreaFollowTip = tip;
+    return tip;
+  }
+  function placeLoadAreaFollowTip(x, y) {
+    const tip = ensureLoadAreaFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function bindLoadAreaFollowTip(btn) {
+    if (!btn || btn.dataset.loadAreaTipBound === '1') return;
+    btn.dataset.loadAreaTipBound = '1';
+    const tipText = (btn.getAttribute('data-tip') || '').trim()
+      || 'Load your other mines within \u00bd mile of this one.';
+    btn.addEventListener('mouseenter', (e) => {
+      if (loadAreaFollowTipTimer) { clearTimeout(loadAreaFollowTipTimer); loadAreaFollowTipTimer = null; }
+      loadAreaFollowTipTarget = btn;
+      loadAreaFollowTipX = e.clientX;
+      loadAreaFollowTipY = e.clientY;
+      const tip = ensureLoadAreaFollowTip();
+      tip.textContent = tipText;
+      tip.style.display = 'none';
+      loadAreaFollowTipTimer = setTimeout(() => {
+        loadAreaFollowTipTimer = null;
+        if (loadAreaFollowTipTarget !== btn || !btn.isConnected) return;
+        placeLoadAreaFollowTip(loadAreaFollowTipX, loadAreaFollowTipY);
+      }, 1000);
+    });
+    btn.addEventListener('mousemove', (e) => {
+      if (loadAreaFollowTipTarget !== btn) return;
+      loadAreaFollowTipX = e.clientX;
+      loadAreaFollowTipY = e.clientY;
+      if (loadAreaFollowTip && loadAreaFollowTip.style.display === 'block' && !loadAreaFollowTipTimer) {
+        placeLoadAreaFollowTip(loadAreaFollowTipX, loadAreaFollowTipY);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (loadAreaFollowTipTarget === btn) dismissLoadAreaFollowTip();
+    });
+  }
+
   function bindMineMapOnce() {
     if (mineMapBound) return;
     mineMapBound = true;
@@ -1602,10 +1689,15 @@
       zoomSlider.addEventListener('change', onZoomInput);
     }
     const loadAreaBtn = $('mine-map-load-area');
-    if (loadAreaBtn) loadAreaBtn.addEventListener('click', e => {
-      e.preventDefault();
-      loadMineMapArea();
-    });
+    if (loadAreaBtn) {
+      loadAreaBtn.removeAttribute('title');
+      loadAreaBtn.removeAttribute('alt');
+      loadAreaBtn.addEventListener('click', e => {
+        e.preventDefault();
+        loadMineMapArea();
+      });
+      bindLoadAreaFollowTip(loadAreaBtn);
+    }
     const buildingsBtn = $('mine-map-buildings');
     if (buildingsBtn) buildingsBtn.addEventListener('click', e => {
       e.preventDefault();
