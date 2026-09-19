@@ -144,8 +144,7 @@
     .mine-group-count { font-size:12px; color:#64748b; font-weight:700; }
     .mine-totals-bar {
       display:flex; flex-wrap:wrap; align-items:center; gap:8px;
-      margin:10px 16px 0; padding:10px 12px;
-      background:#f4f7fb; border:1px solid #e3e7ee; border-radius:10px;
+      margin:10px 16px 10px;
     }
     .mine-totals-bar-left { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; }
     .mine-group-total {
@@ -158,7 +157,12 @@
     .mine-group-total[data-group-type="coal"] { border-color:#000000; }
     .mine-group-total[data-group-type="gold"] { border-color:#FFD700; }
     .mine-group-total[data-group-type="diamond"] { border-color:#B9F2FF; }
-    .mine-group-total[data-group-type="all"] { border-color:#133665; }
+    .mine-group-total[data-group-type="all"] {
+      border-color:#badbcc;
+      background:#d1e7dd;
+    }
+    .mine-group-total[data-group-type="all"] .mine-group-total-title { color:#0f5132; }
+    .mine-group-total[data-group-type="all"] .mine-group-total-value { color:#000; }
     .mine-totals-bar .mine-group-total.mine-totals-all { margin-left:auto; }
     .mine-group-total-icon {
       flex-shrink:0; width:32px; height:32px;
