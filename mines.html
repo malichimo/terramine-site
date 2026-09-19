@@ -620,6 +620,86 @@
     .mine-map-hover-tip[hidden] { display:none !important; }
     .mine-map-hover-tip img { width:18px; height:18px; object-fit:contain; flex-shrink:0; display:block; }
     .mine-map-hover-tip span { overflow:hidden; text-overflow:ellipsis; }
+    
+    .mine-map-labels.is-bulk-rename-active {
+      background:rgba(79,195,247,.35); border-color:#4FC3F7;
+    }
+    .mine-map-select-layer {
+      position:absolute; inset:0; z-index:8; cursor:crosshair;
+      background:transparent;
+    }
+    .mine-map-select-layer[hidden] { display:none !important; }
+    .mine-map-select-rect {
+      position:absolute; pointer-events:none;
+      border:2px solid #29B6F6;
+      background:rgba(79,195,247,.28);
+      box-sizing:border-box;
+    }
+    .mine-map-select-rect[hidden] { display:none !important; }
+    .mine-map-bulk-rename {
+      position:absolute; z-index:30; left:16px; right:16px; top:58px;
+      max-height:calc(100% - 80px); display:flex; flex-direction:column;
+      background:rgba(19,54,101,.97); color:#fff;
+      border:1px solid rgba(255,255,255,.28); border-radius:12px;
+      box-shadow:0 16px 40px rgba(6,10,16,.55); overflow:hidden;
+    }
+    .mine-map-bulk-rename[hidden] { display:none !important; }
+    .mine-map-bulk-rename-x {
+      position:absolute; top:8px; right:10px; z-index:2;
+      width:32px; height:32px; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 20px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .mine-map-bulk-rename-x:hover { background:rgba(255,255,255,0.22); }
+    .mine-map-bulk-rename-inner {
+      display:flex; gap:0; min-height:0; flex:1; max-height:min(420px, 70vh);
+      padding:14px 44px 14px 14px; box-sizing:border-box;
+    }
+    .mine-map-bulk-rename-list {
+      flex:0 0 42%; min-width:0; overflow:auto; padding-right:10px;
+      border-right:1px solid rgba(255,255,255,.18);
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .mine-map-bulk-rename-item {
+      display:flex; align-items:center; gap:8px;
+      font:600 13px/1.3 'DM Sans',sans-serif;
+      padding:4px 2px;
+    }
+    .mine-map-bulk-rename-item img {
+      width:20px; height:20px; object-fit:contain; flex-shrink:0; display:block;
+    }
+    .mine-map-bulk-rename-item span {
+      min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .mine-map-bulk-rename-form {
+      flex:1; min-width:0; padding-left:14px;
+      display:flex; flex-direction:column; gap:12px; justify-content:flex-start;
+    }
+    .mine-map-bulk-rename-form label.bulk-name-label {
+      display:flex; flex-direction:column; gap:6px;
+      font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+    }
+    .mine-map-bulk-rename-form input[type="text"] {
+      width:100%; box-sizing:border-box;
+      border:1px solid rgba(255,255,255,.35); border-radius:8px;
+      background:rgba(15,23,42,.45); color:#fff;
+      padding:10px 12px; font:600 14px 'DM Sans',sans-serif;
+    }
+    .mine-map-bulk-rename-form label.bulk-seq-label {
+      display:flex; align-items:flex-start; gap:8px;
+      font:500 13px/1.35 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .mine-map-bulk-rename-form label.bulk-seq-label input {
+      margin-top:2px; flex-shrink:0; accent-color:#4FC3F7;
+    }
+    .mine-map-bulk-rename-apply {
+      align-self:flex-start; margin-top:4px;
+      border:1px solid rgba(255,255,255,.35); background:rgba(79,195,247,.35);
+      color:#fff; border-radius:999px; padding:8px 18px; cursor:pointer;
+      font:700 13px 'DM Sans',sans-serif; letter-spacing:.3px;
+    }
+    .mine-map-bulk-rename-apply:hover { background:rgba(79,195,247,.5); }
+    .mine-map-bulk-rename-apply:disabled { opacity:.55; cursor:not-allowed; }
     .gps-pin { cursor:pointer; }
     .gps-pin:not(.is-missing):hover { color:#4FC3F7; }
   </style>
@@ -834,6 +914,7 @@
             <img class="mine-map-type-icon" id="mine-map-type-icon" src="images/mine-icons/rock.svg" alt="" width="26" height="26" hidden>
             <div class="mine-map-title" id="mine-map-title">Mine map</div>
             <button type="button" class="mine-map-labels" id="mine-map-load-area" data-tip="Load Area draws your other mines within ½ mile of this one, and shows a purple circle for that search radius." aria-label="Load Area draws your other mines within ½ mile of this one, and shows a purple circle for that search radius.">Load Area</button>
+            <button type="button" class="mine-map-labels" id="mine-map-bulk-rename-btn" data-tip="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-label="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-pressed="false">Bulk Rename</button>
             <label class="mine-map-zoom">
               <span>Zoom</span>
               <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
@@ -843,9 +924,28 @@
           </div>
           <div class="mine-map-body" id="mine-map-body">
             <div class="mine-map-canvas" id="mine-map-canvas"></div>
+            <div class="mine-map-select-layer" id="mine-map-select-layer" hidden>
+              <div class="mine-map-select-rect" id="mine-map-select-rect" hidden></div>
+            </div>
             <div class="mine-map-tip" id="mine-map-tip" hidden></div>
             <div class="mine-map-hover-tip" id="mine-map-hover-tip" hidden></div>
             <div class="mine-map-msg" id="mine-map-msg" hidden></div>
+            <div class="mine-map-bulk-rename" id="mine-map-bulk-rename" hidden aria-hidden="true" role="dialog" aria-label="Bulk rename mines">
+              <button type="button" class="mine-map-bulk-rename-x" id="mine-map-bulk-rename-x" aria-label="Cancel bulk rename">×</button>
+              <div class="mine-map-bulk-rename-inner">
+                <div class="mine-map-bulk-rename-list" id="mine-map-bulk-rename-list"></div>
+                <div class="mine-map-bulk-rename-form">
+                  <label class="bulk-name-label" for="mine-map-bulk-rename-input">New name
+                    <input type="text" id="mine-map-bulk-rename-input" autocomplete="off" spellcheck="false">
+                  </label>
+                  <label class="bulk-seq-label">
+                    <input type="checkbox" id="mine-map-bulk-rename-seq">
+                    <span>Apply sequential numbers to the end of all renamed mines</span>
+                  </label>
+                  <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-rename-apply">Apply</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1273,6 +1373,12 @@
   let mineMapAreaOverlays = [];
   let mineMapAreaCircle = null;
   let mineMapCurrentMine = null;
+  let bulkRenameMode = false; // drawing or dialog active (not session-persisted)
+  let bulkRenameDragging = false;
+  let bulkRenameStartX = 0;
+  let bulkRenameStartY = 0;
+  let bulkRenameSelected = [];
+  let bulkRenameLayerBound = false;
   const MINE_MAP_ZOOM_KEY = 'terramine.mineMap.zoom';
   const MINE_MAP_BUILDINGS_KEY = 'terramine.mineMap.buildings';
   const MINE_MAP_ZOOM_MIN = 10;
@@ -1460,10 +1566,13 @@
   }
   function attachMineMapHover(overlay, mine) {
     if (!overlay || !mine) return;
+    overlay.__tmMine = mine;
     const type = typeKey(mine || {});
-    const title = titleOf(mine) || String(mine.id || '');
     const icon = ICONS[type] || ICONS.rock;
-    overlay.addListener('mouseover', function (e) { showMineMapHoverTip(icon, title, e); });
+    overlay.addListener('mouseover', function (e) {
+      const title = titleOf(mine) || String(mine.id || '');
+      showMineMapHoverTip(icon, title, e);
+    });
     overlay.addListener('mousemove', function (e) { moveMineMapHoverTip(e); });
     overlay.addListener('mouseout', function () { hideMineMapHoverTip(); });
   }
@@ -1698,9 +1807,294 @@
     showMineMapMsg('No location data for this mine.', false);
   }
 
+  function getMineMapDrawnMines() {
+    const out = [];
+    const seen = new Set();
+    function add(m) {
+      if (!m || m.id == null) return;
+      const id = String(m.id);
+      if (seen.has(id)) return;
+      seen.add(id);
+      out.push(m);
+    }
+    add(mineMapCurrentMine);
+    for (let i = 0; i < mineMapAreaOverlays.length; i++) {
+      const ov = mineMapAreaOverlays[i];
+      if (ov && ov.__tmMine) add(ov.__tmMine);
+    }
+    if (mineMapPolygon && mineMapPolygon.__tmMine) add(mineMapPolygon.__tmMine);
+    if (mineMapMarker && mineMapMarker.__tmMine) add(mineMapMarker.__tmMine);
+    return out;
+  }
+  function mineMapSelectionCenter(mine) {
+    const g = mineMapCenterGps(mine);
+    if (g) return g;
+    const corners = findCorners(mine);
+    if (corners && corners.path && corners.path.length) {
+      let sumLat = 0, sumLng = 0;
+      for (let i = 0; i < corners.path.length; i++) {
+        sumLat += corners.path[i].lat;
+        sumLng += corners.path[i].lng;
+      }
+      const n = corners.path.length;
+      return { lat: sumLat / n, lng: sumLng / n };
+    }
+    return null;
+  }
+  function updateBulkRenameBtn() {
+    const btn = $('mine-map-bulk-rename-btn');
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', bulkRenameMode ? 'true' : 'false');
+    btn.classList.toggle('is-bulk-rename-active', !!bulkRenameMode);
+  }
+  function clearBulkRenameSelectRect() {
+    const rect = $('mine-map-select-rect');
+    if (rect) {
+      rect.hidden = true;
+      rect.style.left = '';
+      rect.style.top = '';
+      rect.style.width = '';
+      rect.style.height = '';
+    }
+  }
+  function hideBulkRenameDialog() {
+    const dlg = $('mine-map-bulk-rename');
+    if (dlg) {
+      dlg.hidden = true;
+      dlg.setAttribute('aria-hidden', 'true');
+    }
+    const list = $('mine-map-bulk-rename-list');
+    if (list) list.innerHTML = '';
+    const input = $('mine-map-bulk-rename-input');
+    if (input) input.value = '';
+    const seq = $('mine-map-bulk-rename-seq');
+    if (seq) seq.checked = false;
+    const apply = $('mine-map-bulk-rename-apply');
+    if (apply) apply.disabled = false;
+    bulkRenameSelected = [];
+  }
+  function stopBulkRenameDrawLayer() {
+    const layer = $('mine-map-select-layer');
+    if (layer) layer.hidden = true;
+    bulkRenameDragging = false;
+    clearBulkRenameSelectRect();
+  }
+  function exitBulkRenameMode() {
+    bulkRenameMode = false;
+    bulkRenameDragging = false;
+    stopBulkRenameDrawLayer();
+    hideBulkRenameDialog();
+    updateBulkRenameBtn();
+  }
+  function latLngBoundsFromSelectPixels(layer, x1, y1, x2, y2) {
+    if (!mineMapInstance || !window.google || !google.maps) return null;
+    const left = Math.min(x1, x2);
+    const right = Math.max(x1, x2);
+    const top = Math.min(y1, y2);
+    const bottom = Math.max(y1, y2);
+    if (right - left < 4 || bottom - top < 4) return null;
+    const mapBounds = mineMapInstance.getBounds();
+    if (!mapBounds) return null;
+    const mapDiv = mineMapInstance.getDiv();
+    const layerRect = layer.getBoundingClientRect();
+    const mapRect = mapDiv.getBoundingClientRect();
+    const w = mapRect.width || 1;
+    const h = mapRect.height || 1;
+    const ox = layerRect.left - mapRect.left;
+    const oy = layerRect.top - mapRect.top;
+    const ne = mapBounds.getNorthEast();
+    const sw = mapBounds.getSouthWest();
+    function pxToLatLng(px, py) {
+      const fx = (ox + px) / w;
+      const fy = (oy + py) / h;
+      const lat = ne.lat() - fy * (ne.lat() - sw.lat());
+      const lng = sw.lng() + fx * (ne.lng() - sw.lng());
+      return new google.maps.LatLng(lat, lng);
+    }
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(pxToLatLng(left, top));
+    bounds.extend(pxToLatLng(right, bottom));
+    return bounds;
+  }
+  function openBulkRenameDialog(mines) {
+    bulkRenameSelected = mines.slice();
+    const dlg = $('mine-map-bulk-rename');
+    const list = $('mine-map-bulk-rename-list');
+    if (!dlg || !list) return;
+    list.innerHTML = '';
+    for (let i = 0; i < mines.length; i++) {
+      const m = mines[i];
+      const type = typeKey(m || {});
+      const row = document.createElement('div');
+      row.className = 'mine-map-bulk-rename-item';
+      const img = document.createElement('img');
+      img.src = ICONS[type] || ICONS.rock;
+      img.alt = '';
+      const span = document.createElement('span');
+      span.textContent = titleOf(m) || String(m.id || '');
+      row.appendChild(img);
+      row.appendChild(span);
+      list.appendChild(row);
+    }
+    dlg.hidden = false;
+    dlg.setAttribute('aria-hidden', 'false');
+    const input = $('mine-map-bulk-rename-input');
+    if (input) {
+      input.value = '';
+      setTimeout(() => { try { input.focus(); } catch (e) {} }, 0);
+    }
+  }
+  function finishBulkRenameSelection(bounds) {
+    stopBulkRenameDrawLayer();
+    if (!bounds) {
+      exitBulkRenameMode();
+      showMineMapMsg('No mines in selection.', true);
+      return;
+    }
+    const drawn = getMineMapDrawnMines();
+    const selected = [];
+    for (let i = 0; i < drawn.length; i++) {
+      const m = drawn[i];
+      const c = mineMapSelectionCenter(m);
+      if (!c) continue;
+      try {
+        if (bounds.contains(new google.maps.LatLng(c.lat, c.lng))) selected.push(m);
+      } catch (e) {}
+    }
+    if (!selected.length) {
+      exitBulkRenameMode();
+      showMineMapMsg('No mines in selection.', true);
+      return;
+    }
+    // Keep mode active while dialog is open
+    bulkRenameMode = true;
+    updateBulkRenameBtn();
+    openBulkRenameDialog(selected);
+  }
+  function startBulkRenameDrawMode() {
+    if (!mineMapInstance) {
+      showMineMapMsg('Map is not ready yet.', true);
+      return;
+    }
+    hideBulkRenameDialog();
+    bulkRenameMode = true;
+    bulkRenameDragging = false;
+    updateBulkRenameBtn();
+    const layer = $('mine-map-select-layer');
+    if (!layer) return;
+    layer.hidden = false;
+    clearBulkRenameSelectRect();
+    showMineMapMsg('Draw a rectangle to select mines. Esc cancels.', true);
+  }
+  function toggleBulkRenameFromButton() {
+    if (bulkRenameMode) {
+      exitBulkRenameMode();
+      showMineMapMsg('', true);
+      return;
+    }
+    startBulkRenameDrawMode();
+  }
+  function handleMineMapEscape() {
+    const dlg = $('mine-map-bulk-rename');
+    if (dlg && !dlg.hidden) {
+      exitBulkRenameMode();
+      return true;
+    }
+    if (bulkRenameMode) {
+      exitBulkRenameMode();
+      showMineMapMsg('', true);
+      return true;
+    }
+    return false;
+  }
+  async function applyBulkRename() {
+    const input = $('mine-map-bulk-rename-input');
+    const seq = $('mine-map-bulk-rename-seq');
+    const applyBtn = $('mine-map-bulk-rename-apply');
+    const base = input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
+    if (!base) {
+      flashShowcaseNote('Enter a new name.');
+      if (input) input.focus();
+      return;
+    }
+    const mines = bulkRenameSelected.slice().sort((a, b) => {
+      const na = String(titleOf(a) || '').localeCompare(String(titleOf(b) || ''), undefined, { sensitivity: 'base', numeric: true });
+      if (na) return na;
+      return String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true });
+    });
+    const useSeq = !!(seq && seq.checked);
+    if (applyBtn) applyBtn.disabled = true;
+    let ok = 0, fail = 0;
+    for (let i = 0; i < mines.length; i++) {
+      const name = useSeq ? (base + ' ' + (i + 1)) : base;
+      const id = mines[i].id;
+      try {
+        await safeUpdatePropertyDetails(id, { customName: name }, null);
+        syncLocalMineCustomName(id, name);
+        ok++;
+      } catch (err) {
+        fail++;
+        console.warn('[mines] bulk rename failed', id, err);
+      }
+    }
+    exitBulkRenameMode();
+    if (fail && ok) flashShowcaseNote('Renamed ' + ok + ', ' + fail + ' failed.');
+    else if (fail && !ok) flashShowcaseNote('Could not rename selected mines.');
+    else if (ok) showMineMapMsg('Renamed ' + ok + ' mine' + (ok === 1 ? '' : 's') + '.', true);
+  }
+  function bindBulkRenameLayerOnce() {
+    if (bulkRenameLayerBound) return;
+    bulkRenameLayerBound = true;
+    const layer = $('mine-map-select-layer');
+    const rect = $('mine-map-select-rect');
+    if (!layer || !rect) return;
+    layer.addEventListener('mousedown', e => {
+      if (!bulkRenameMode || e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const r = layer.getBoundingClientRect();
+      bulkRenameDragging = true;
+      bulkRenameStartX = e.clientX - r.left;
+      bulkRenameStartY = e.clientY - r.top;
+      rect.hidden = false;
+      rect.style.left = bulkRenameStartX + 'px';
+      rect.style.top = bulkRenameStartY + 'px';
+      rect.style.width = '0px';
+      rect.style.height = '0px';
+    });
+    layer.addEventListener('mousemove', e => {
+      if (!bulkRenameDragging) return;
+      e.preventDefault();
+      const r = layer.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      const left = Math.min(bulkRenameStartX, x);
+      const top = Math.min(bulkRenameStartY, y);
+      rect.style.left = left + 'px';
+      rect.style.top = top + 'px';
+      rect.style.width = Math.abs(x - bulkRenameStartX) + 'px';
+      rect.style.height = Math.abs(y - bulkRenameStartY) + 'px';
+    });
+    function endDrag(e) {
+      if (!bulkRenameDragging) return;
+      bulkRenameDragging = false;
+      const r = layer.getBoundingClientRect();
+      const x = (e && e.clientX != null) ? (e.clientX - r.left) : bulkRenameStartX;
+      const y = (e && e.clientY != null) ? (e.clientY - r.top) : bulkRenameStartY;
+      const bounds = latLngBoundsFromSelectPixels(layer, bulkRenameStartX, bulkRenameStartY, x, y);
+      clearBulkRenameSelectRect();
+      finishBulkRenameSelection(bounds);
+    }
+    layer.addEventListener('mouseup', endDrag);
+    layer.addEventListener('mouseleave', e => {
+      if (bulkRenameDragging) endDrag(e);
+    });
+  }
+
   function closeMineMap() {
     const overlay = $('mine-map-overlay');
     if (!overlay || overlay.hidden) return;
+    exitBulkRenameMode();
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
     clearMineMapBounds();
@@ -1886,6 +2280,32 @@
         loadMineMapArea();
       });
       bindLoadAreaFollowTip(loadAreaBtn);
+    }
+
+    const bulkRenameBtn = $('mine-map-bulk-rename-btn');
+    if (bulkRenameBtn) {
+      bulkRenameBtn.removeAttribute('title');
+      bulkRenameBtn.removeAttribute('alt');
+      bulkRenameBtn.addEventListener('click', e => {
+        e.preventDefault();
+        toggleBulkRenameFromButton();
+      });
+      bindLoadAreaFollowTip(bulkRenameBtn);
+    }
+    bindBulkRenameLayerOnce();
+    const bulkRenameX = $('mine-map-bulk-rename-x');
+    if (bulkRenameX) bulkRenameX.addEventListener('click', e => { e.preventDefault(); exitBulkRenameMode(); });
+    const bulkRenameApply = $('mine-map-bulk-rename-apply');
+    if (bulkRenameApply) bulkRenameApply.addEventListener('click', e => { e.preventDefault(); applyBulkRename(); });
+    const bulkRenameInput = $('mine-map-bulk-rename-input');
+    if (bulkRenameInput) {
+      bulkRenameInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          applyBulkRename();
+        }
+      });
     }
     const buildingsBtn = $('mine-map-buildings');
     if (buildingsBtn) {
@@ -4199,6 +4619,7 @@
       const mapOverlay = $('mine-map-overlay');
       if (mapOverlay && !mapOverlay.hidden) {
         e.preventDefault();
+        if (handleMineMapEscape()) return;
         closeMineMap();
         return;
       }
