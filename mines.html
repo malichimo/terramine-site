@@ -500,6 +500,15 @@
       font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:#fff;
       min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
     }
+    .mine-map-zoom {
+      flex-shrink:0; display:flex; align-items:center; gap:6px;
+      color:#fff; font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+      white-space:nowrap;
+    }
+    .mine-map-zoom input[type="range"] {
+      width:88px; height:18px; margin:0; vertical-align:middle; cursor:pointer;
+      accent-color:#4FC3F7;
+    }
     .mine-map-labels {
       flex-shrink:0; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12);
       color:#fff; border-radius:999px; padding:6px 12px; cursor:pointer;
@@ -689,6 +698,10 @@
           <button type="button" class="mine-map-close" id="mine-map-close" aria-label="Close map">×</button>
           <div class="mine-map-head">
             <div class="mine-map-title" id="mine-map-title">Mine map</div>
+            <label class="mine-map-zoom" title="Map zoom">
+              <span>Zoom</span>
+              <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
+            </label>
             <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" title="Toggle map labels">Labels off</button>
           </div>
           <div class="mine-map-body" id="mine-map-body">
@@ -1103,6 +1116,11 @@
   let mineMapBound = false;
   let mineMapLoading = null;
   let mineMapResizeBound = false;
+  let mineMapZoomSyncing = false;
+  const MINE_MAP_ZOOM_KEY = 'terramine.mineMap.zoom';
+  const MINE_MAP_ZOOM_MIN = 10;
+  const MINE_MAP_ZOOM_MAX = 21;
+  const MINE_MAP_ZOOM_DEFAULT = 19;
 
   function mineMapStyles() {
     return mineMapLabelsOn ? MINE_MAP_BASE_STYLE.slice() : MINE_MAP_BASE_STYLE.concat(MINE_MAP_HIDE_LABELS);
@@ -1180,6 +1198,14 @@
       zoom: 4
     });
     mineMapInstance.setOptions({ rotateControl: false, streetViewControl: false, mapTypeControl: false, fullscreenControl: false });
+    mineMapInstance.addListener('zoom_changed', () => {
+      if (mineMapZoomSyncing) return;
+      const z = mineMapInstance.getZoom();
+      if (z == null || !Number.isFinite(z)) return;
+      const clamped = clampMineMapZoom(z);
+      saveMineMapZoom(clamped);
+      syncMineMapZoomSlider(clamped);
+    });
     google.maps.event.addListenerOnce(mineMapInstance, 'idle', () => {
       try { mineMapInstance.setTilt(0); } catch (e) {}
     });
@@ -1211,92 +1237,45 @@
     el.hidden = false;
   }
 
-
-  const MINE_MAP_PARCEL_TARGET_PX = 30;
-
-  /** Mercator world-pixel size of a lat/lng path at a given zoom (div-pixel scale). */
-  function parcelScreenSizeAtZoom(path, zoom) {
-    const scale = Math.pow(2, zoom);
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (let i = 0; i < path.length; i++) {
-      const lat = path[i].lat;
-      const lng = path[i].lng;
-      const siny = Math.min(Math.max(Math.sin(lat * Math.PI / 180), -0.9999), 0.9999);
-      const x = (lng + 180) / 360 * 256 * scale;
-      const y = (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI)) * 256 * scale;
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
-    return { width: maxX - minX, height: maxY - minY };
+  function clampMineMapZoom(z) {
+    const n = Math.round(Number(z));
+    if (!Number.isFinite(n)) return MINE_MAP_ZOOM_DEFAULT;
+    return Math.max(MINE_MAP_ZOOM_MIN, Math.min(MINE_MAP_ZOOM_MAX, n));
   }
-
-  /**
-   * Center on parcel bounds, then binary-search zoom so on-screen width ≈ targetPx.
-   * Uses the same Mercator projection as Maps (equivalent to fromLatLngToDivPixel scale).
-   */
-  function zoomMapToParcelPx(map, path, targetPx) {
+  function getSavedMineMapZoom() {
+    try {
+      const raw = sessionStorage.getItem(MINE_MAP_ZOOM_KEY);
+      if (raw == null || raw === '') return MINE_MAP_ZOOM_DEFAULT;
+      return clampMineMapZoom(raw);
+    } catch (e) {
+      return MINE_MAP_ZOOM_DEFAULT;
+    }
+  }
+  function saveMineMapZoom(z) {
+    const clamped = clampMineMapZoom(z);
+    try { sessionStorage.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
+    return clamped;
+  }
+  function syncMineMapZoomSlider(z) {
+    const el = $('mine-map-zoom');
+    if (!el) return;
+    const clamped = clampMineMapZoom(z != null ? z : getSavedMineMapZoom());
+    if (String(el.value) !== String(clamped)) el.value = String(clamped);
+  }
+  function applyMineMapZoom(map, z) {
+    const clamped = saveMineMapZoom(z != null ? z : getSavedMineMapZoom());
+    syncMineMapZoomSlider(clamped);
+    if (!map) return clamped;
+    mineMapZoomSyncing = true;
+    try { map.setZoom(clamped); } catch (e) {}
+    mineMapZoomSyncing = false;
+    return clamped;
+  }
+  function centerMineMapOnPath(map, path) {
     const bounds = new google.maps.LatLngBounds();
     path.forEach(p => bounds.extend(p));
     map.setCenter(bounds.getCenter());
-    const target = targetPx > 0 ? targetPx : MINE_MAP_PARCEL_TARGET_PX;
-    let lo = 0;
-    let hi = 22;
-    for (let i = 0; i < 28; i++) {
-      const mid = (lo + hi) / 2;
-      const size = parcelScreenSizeAtZoom(path, mid);
-      // Prefer width; if degenerate, fall back to max(width, height).
-      const dim = size.width > 0.5 ? size.width : Math.max(size.width, size.height);
-      if (dim > target) hi = mid;
-      else lo = mid;
-    }
-    const z = Math.max(0, Math.min(22, lo));
-    map.setZoom(z);
-    // Refine with live projection once available (accounts for map padding / DPI).
-    tryRefineParcelZoomWithProjection(map, path, target);
-  }
-
-  function tryRefineParcelZoomWithProjection(map, path, targetPx) {
-    try {
-      const ov = new google.maps.OverlayView();
-      ov.onAdd = function () {};
-      ov.draw = function () {};
-      ov.onRemove = function () {};
-      ov.setMap(map);
-      const finish = () => { try { ov.setMap(null); } catch (e) {} };
-      google.maps.event.addListenerOnce(map, 'idle', () => {
-        try {
-          const proj = ov.getProjection();
-          if (!proj || typeof proj.fromLatLngToDivPixel !== 'function') { finish(); return; }
-          const measure = () => {
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            for (let i = 0; i < path.length; i++) {
-              const px = proj.fromLatLngToDivPixel(new google.maps.LatLng(path[i].lat, path[i].lng));
-              if (!px) continue;
-              if (px.x < minX) minX = px.x;
-              if (px.x > maxX) maxX = px.x;
-              if (px.y < minY) minY = px.y;
-              if (px.y > maxY) maxY = px.y;
-            }
-            const w = maxX - minX;
-            const h = maxY - minY;
-            return w > 0.5 ? w : Math.max(w, h);
-          };
-          let lo = 0, hi = 22;
-          for (let i = 0; i < 20; i++) {
-            const mid = (lo + hi) / 2;
-            map.setZoom(mid);
-            const dim = measure();
-            if (!(dim > 0) || !Number.isFinite(dim)) break;
-            if (dim > targetPx) hi = mid;
-            else lo = mid;
-          }
-          map.setZoom(Math.max(0, Math.min(22, lo)));
-        } catch (e) {}
-        finish();
-      });
-    } catch (e) {}
+    applyMineMapZoom(map, getSavedMineMapZoom());
   }
 
   function renderMineMapContent(mine) {
@@ -1318,7 +1297,7 @@
         map: map,
         clickable: false
       });
-      zoomMapToParcelPx(map, corners.path, MINE_MAP_PARCEL_TARGET_PX);
+      centerMineMapOnPath(map, corners.path);
       try { map.setTilt(0); } catch (e) {}
       return;
     }
@@ -1329,7 +1308,7 @@
         title: titleOf(mine)
       });
       map.setCenter({ lat: gps.lat, lng: gps.lng });
-      map.setZoom(18);
+      applyMineMapZoom(map, getSavedMineMapZoom());
       try { map.setTilt(0); } catch (e) {}
       showMineMapMsg('Parcel corners not found on this mine — showing center only.', true);
       return;
@@ -1355,6 +1334,7 @@
     const main = $('portal-main');
     if (!overlay || !mine) return;
     bindMineMapOnce();
+    syncMineMapZoomSlider(getSavedMineMapZoom());
     $('mine-map-title').textContent = titleOf(mine) || 'Mine map';
     updateMineMapLabelsBtn();
     showMineMapMsg('Loading map…', false);
@@ -1409,6 +1389,17 @@
     bindVoMapPinOnce();
     const closeBtn = $('mine-map-close');
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeMineMap(); });
+    const zoomSlider = $('mine-map-zoom');
+    if (zoomSlider) {
+      syncMineMapZoomSlider(getSavedMineMapZoom());
+      const onZoomInput = () => {
+        const z = clampMineMapZoom(zoomSlider.value);
+        saveMineMapZoom(z);
+        if (mineMapInstance) applyMineMapZoom(mineMapInstance, z);
+      };
+      zoomSlider.addEventListener('input', onZoomInput);
+      zoomSlider.addEventListener('change', onZoomInput);
+    }
     const labelsBtn = $('mine-map-labels');
     if (labelsBtn) labelsBtn.addEventListener('click', e => {
       e.preventDefault();
