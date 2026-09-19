@@ -1359,6 +1359,26 @@
     const g = findGps(mine);
     return g ? { lat: g.lat, lng: g.lng } : null;
   }
+  function insetPolygonPath(path, fraction) {
+    fraction = fraction != null ? fraction : 0.03;
+    if (!path || path.length < 3) return path;
+    let sumLat = 0, sumLng = 0;
+    for (let i = 0; i < path.length; i++) {
+      sumLat += path[i].lat;
+      sumLng += path[i].lng;
+    }
+    const n = path.length;
+    const cLat = sumLat / n;
+    const cLng = sumLng / n;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push({
+        lat: path[i].lat + (cLat - path[i].lat) * fraction,
+        lng: path[i].lng + (cLng - path[i].lng) * fraction
+      });
+    }
+    return out;
+  }
   function drawMineMapParcel(map, mine, opts) {
     opts = opts || {};
     const type = typeKey(mine || {});
@@ -1367,17 +1387,38 @@
     const gps = mineMapCenterGps(mine);
     let overlay = null;
     if (corners && corners.path && corners.path.length >= 3) {
+      const fillOpacity = opts.fillOpacity != null ? opts.fillOpacity : 0.9;
+      const strokeWeight = opts.strokeWeight != null ? opts.strokeWeight : 2;
+      const zIndex = opts.zIndex != null ? opts.zIndex : 1;
+      const insetPath = insetPolygonPath(corners.path, 0.03);
+      // Fill on original path (no stroke); stroke-only on inset so shared edges don't double-draw.
       overlay = new google.maps.Polygon({
         paths: corners.path,
         strokeColor: colors.stroke,
-        strokeOpacity: 0.95,
-        strokeWeight: opts.strokeWeight != null ? opts.strokeWeight : 2,
+        strokeOpacity: 0,
+        strokeWeight: 0,
         fillColor: colors.fill,
-        fillOpacity: opts.fillOpacity != null ? opts.fillOpacity : 0.45,
+        fillOpacity: fillOpacity,
         map: map,
         clickable: true,
-        zIndex: opts.zIndex != null ? opts.zIndex : 1
+        zIndex: zIndex
       });
+      const strokePoly = new google.maps.Polygon({
+        paths: insetPath,
+        strokeColor: colors.stroke,
+        strokeOpacity: 0.95,
+        strokeWeight: strokeWeight,
+        fillColor: colors.fill,
+        fillOpacity: 0,
+        map: map,
+        clickable: false,
+        zIndex: zIndex + 1
+      });
+      const origSetMap = overlay.setMap.bind(overlay);
+      overlay.setMap = function (m) {
+        origSetMap(m);
+        try { strokePoly.setMap(m); } catch (e) {}
+      };
     } else if (gps && opts.allowMarker) {
       overlay = new google.maps.Marker({
         position: { lat: gps.lat, lng: gps.lng },
@@ -1422,7 +1463,7 @@
       const ogps = mineMapCenterGps(other);
       if (!ogps) continue;
       if (haversineMeters(center, ogps) > MINE_MAP_LOAD_AREA_M) continue;
-      const overlay = drawMineMapParcel(map, other, { allowMarker: true, fillOpacity: 0.35, zIndex: 2 });
+      const overlay = drawMineMapParcel(map, other, { allowMarker: true, fillOpacity: 0.9, zIndex: 2 });
       if (overlay) {
         mineMapAreaOverlays.push(overlay);
         added++;
