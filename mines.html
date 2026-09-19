@@ -904,41 +904,93 @@
     diamond: { fill: '#80DEEA', stroke: '#00838F' }
   };
 
+  function readLatLngFromKeys(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    // Prefer explicit latitude/longitude, then lat/lng (and lon/long aliases).
+    const latKeys = ['latitude', 'lat', 'Latitude', 'LAT', '_latitude', 'centerLat', 'centerLatitude'];
+    const lngKeys = ['longitude', 'lng', 'lon', 'long', 'Longitude', 'LNG', 'LON', '_longitude', 'centerLng', 'centerLongitude'];
+    let lat = null;
+    let lng = null;
+    for (let i = 0; i < latKeys.length; i++) {
+      lat = numOrNull(obj[latKeys[i]]);
+      if (lat != null) break;
+    }
+    for (let i = 0; i < lngKeys.length; i++) {
+      lng = numOrNull(obj[lngKeys[i]]);
+      if (lng != null) break;
+    }
+    if (validLatLng(lat, lng)) return { lat: lat, lng: lng };
+    // pairOn covers gpsLatitude/gpsLongitude and other GPS_PAIRS.
+    const paired = pairOn(obj, '');
+    if (paired) return { lat: paired.lat, lng: paired.lng };
+    return null;
+  }
+
   function asLatLngPoint(v) {
     if (v == null) return null;
     if (typeof v.lat === 'function' && typeof v.lng === 'function') {
       const lat = numOrNull(v.lat());
       const lng = numOrNull(v.lng());
-      return validLatLng(lat, lng) ? { lat, lng } : null;
+      return validLatLng(lat, lng) ? { lat: lat, lng: lng } : null;
     }
     if (typeof v === 'object' && !Array.isArray(v)) {
-      const direct = pairOn(v, '');
-      if (direct) return { lat: direct.lat, lng: direct.lng };
+      // Firestore GeoPoint / objects with toJSON -> {latitude, longitude}
+      if (typeof v.toJSON === 'function') {
+        try {
+          const j = v.toJSON();
+          if (j && j !== v) {
+            const fromJson = asLatLngPoint(j);
+            if (fromJson) return fromJson;
+          }
+        } catch (e) {}
+      }
+      const keyed = readLatLngFromKeys(v);
+      if (keyed) return keyed;
       if (v._latitude != null || v.latitude != null) {
         const lat = numOrNull(v._latitude != null ? v._latitude : v.latitude);
         const lng = numOrNull(v._longitude != null ? v._longitude : v.longitude);
-        if (validLatLng(lat, lng)) return { lat, lng };
+        if (validLatLng(lat, lng)) return { lat: lat, lng: lng };
       }
     }
     if (Array.isArray(v) && v.length >= 2) {
       const a = numOrNull(v[0]);
       const b = numOrNull(v[1]);
-      // Prefer [lat,lng]; accept [lng,lat] when first looks like longitude
+      // GeoJSON is often [lng, lat]. If |a| > 90 it cannot be latitude.
+      if (a != null && b != null && Math.abs(a) > 90 && validLatLng(b, a)) return { lat: b, lng: a };
       if (validLatLng(a, b)) return { lat: a, lng: b };
       if (validLatLng(b, a)) return { lat: b, lng: a };
     }
     return null;
   }
 
-  function pointsFromArray(arr) {
-    if (!Array.isArray(arr) || arr.length < 3) return null;
+  function coercePointList(raw) {
+    if (raw == null) return null;
+    let arr = raw;
+    if (typeof arr === 'string') {
+      const t = arr.trim();
+      if (!t) return null;
+      try { arr = JSON.parse(t); } catch (e) { return null; }
+    }
+    if (Array.isArray(arr)) {
+      // ok
+    } else if (arr && typeof arr === 'object' && typeof arr.length === 'number' && arr.length >= 3) {
+      const tmp = [];
+      for (let i = 0; i < arr.length; i++) tmp.push(arr[i]);
+      arr = tmp;
+    } else {
+      return null;
+    }
+    if (arr.length < 3) return null;
     const pts = [];
-    for (const item of arr) {
-      const p = asLatLngPoint(item);
-      if (!p) return null;
-      pts.push(p);
+    for (let i = 0; i < arr.length; i++) {
+      const p = asLatLngPoint(arr[i]);
+      if (p) pts.push(p);
     }
     return pts.length >= 3 ? pts : null;
+  }
+
+  function pointsFromArray(arr) {
+    return coercePointList(arr);
   }
 
   function cornersFromNamed(obj) {
@@ -962,7 +1014,7 @@
       const pts = pairs.map(([la, ln]) => {
         const lat = numOrNull(obj[la]);
         const lng = numOrNull(obj[ln]);
-        return validLatLng(lat, lng) ? { lat, lng } : null;
+        return validLatLng(lat, lng) ? { lat: lat, lng: lng } : null;
       });
       if (pts.every(Boolean)) return pts;
     }
@@ -971,13 +1023,14 @@
 
   function cornersFromBounds(obj) {
     if (!obj || typeof obj !== 'object') return null;
-    const boxes = [obj, obj.bounds, obj.geoBox, obj.bbox, obj.box, obj.extent].filter(Boolean);
+    // Do not treat the whole mine doc as a bbox (short keys like n/s/e/w collide).
+    const boxes = [obj.bounds, obj.geoBox, obj.bbox, obj.box, obj.extent].filter(Boolean);
     for (const b of boxes) {
-      if (typeof b !== 'object') continue;
-      let minLat = numOrNull(b.minLat != null ? b.minLat : (b.south != null ? b.south : b.s));
-      let maxLat = numOrNull(b.maxLat != null ? b.maxLat : (b.north != null ? b.north : b.n));
-      let minLng = numOrNull(b.minLng != null ? b.minLng : (b.west != null ? b.west : (b.minLon != null ? b.minLon : b.w)));
-      let maxLng = numOrNull(b.maxLng != null ? b.maxLng : (b.east != null ? b.east : (b.maxLon != null ? b.maxLon : b.e)));
+      if (typeof b !== 'object' || Array.isArray(b)) continue;
+      let minLat = numOrNull(b.minLat != null ? b.minLat : (b.south != null ? b.south : null));
+      let maxLat = numOrNull(b.maxLat != null ? b.maxLat : (b.north != null ? b.north : null));
+      let minLng = numOrNull(b.minLng != null ? b.minLng : (b.west != null ? b.west : (b.minLon != null ? b.minLon : null)));
+      let maxLng = numOrNull(b.maxLng != null ? b.maxLng : (b.east != null ? b.east : (b.maxLon != null ? b.maxLon : null)));
       if (minLat == null && b.southwest) {
         const sw = asLatLngPoint(b.southwest);
         const ne = asLatLngPoint(b.northeast);
@@ -997,32 +1050,45 @@
   }
 
   function findCorners(p) {
-    const sources = [p, p && p._details].filter(Boolean);
-    const arrayKeys = ['corners', 'cornerCoords', 'polygon', 'coordinates', 'path', 'ring', 'vertices', 'points', 'parcel', 'parcelCoords', 'boundary', 'geoPolygon'];
+    if (!p || typeof p !== 'object') return null;
+    const sources = [p, p._details].filter(Boolean);
+    // Prefer the documented corners array on the property root, then _details.
+    for (let i = 0; i < sources.length; i++) {
+      const obj = sources[i];
+      const pts = coercePointList(obj.corners);
+      if (pts) return { path: pts, source: i === 0 ? 'corners' : '_details.corners' };
+    }
+    const arrayKeys = ['cornerCoords', 'polygon', 'coordinates', 'path', 'ring', 'vertices', 'points', 'parcel', 'parcelCoords', 'boundary', 'geoPolygon'];
     const nestKeys = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng', 'geometry', 'geoBox', 'bounds', 'parcel'];
-    for (const obj of sources) {
+    for (let i = 0; i < sources.length; i++) {
+      const obj = sources[i];
       const named = cornersFromNamed(obj);
       if (named) return { path: named, source: 'named-corners' };
       const boxed = cornersFromBounds(obj);
       if (boxed) return { path: boxed, source: 'bounds' };
-      for (const k of arrayKeys) {
-        const pts = pointsFromArray(obj[k]);
-        if (pts) return { path: pts, source: k };
+      for (let k = 0; k < arrayKeys.length; k++) {
+        const key = arrayKeys[k];
+        const pts = coercePointList(obj[key]);
+        if (pts) return { path: pts, source: key };
       }
-      for (const nest of nestKeys) {
+      for (let n = 0; n < nestKeys.length; n++) {
+        const nest = nestKeys[n];
         const child = obj[nest];
         if (!child || typeof child !== 'object') continue;
+        const cCorners = coercePointList(child.corners);
+        if (cCorners) return { path: cCorners, source: nest + '.corners' };
         const n2 = cornersFromNamed(child);
         if (n2) return { path: n2, source: nest + '.named' };
         const b2 = cornersFromBounds(child);
         if (b2) return { path: b2, source: nest + '.bounds' };
-        if (Array.isArray(child)) {
-          const pts = pointsFromArray(child);
+        if (Array.isArray(child) || (child && typeof child.length === 'number')) {
+          const pts = coercePointList(child);
           if (pts) return { path: pts, source: nest };
         }
-        for (const k of arrayKeys) {
-          const pts = pointsFromArray(child[k]);
-          if (pts) return { path: pts, source: nest + '.' + k };
+        for (let k = 0; k < arrayKeys.length; k++) {
+          const key = arrayKeys[k];
+          const pts = coercePointList(child[key]);
+          if (pts) return { path: pts, source: nest + '.' + key };
         }
       }
     }
@@ -3417,7 +3483,9 @@
       pinEl.addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
-        openMineMap(mine);
+        // Prefer the live allMines entry so corners / center fields are not lost.
+        const full = (mine && mine.id != null ? findMineById(mine.id) : null) || mine;
+        openMineMap(full);
       });
     } else {
       pinEl = pinSvg();
