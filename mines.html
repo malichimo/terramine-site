@@ -149,11 +149,36 @@
     }
     .mine-totals-bar-left { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; }
     .mine-group-total {
-      text-align:right; flex-shrink:0;
-      border:1px solid #d0d7e2; border-radius:8px; padding:4px 10px 5px;
+      display:flex; flex-direction:row; align-items:center; gap:10px;
+      text-align:left; flex-shrink:0;
+      border:2px solid #d0d7e2; border-radius:8px; padding:6px 12px 6px 8px;
       background:#fff; line-height:1.15;
     }
+    .mine-group-total[data-group-type="rock"] { border-color:#7F7F7F; }
+    .mine-group-total[data-group-type="coal"] { border-color:#000000; }
+    .mine-group-total[data-group-type="gold"] { border-color:#FFD700; }
+    .mine-group-total[data-group-type="diamond"] { border-color:#B9F2FF; }
+    .mine-group-total[data-group-type="all"] { border-color:#133665; }
     .mine-totals-bar .mine-group-total.mine-totals-all { margin-left:auto; }
+    .mine-group-total-icon {
+      flex-shrink:0; width:32px; height:32px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .mine-group-total-icon > img {
+      width:32px; height:32px; display:block; object-fit:contain;
+    }
+    .mine-group-total-icons-all {
+      flex-shrink:0;
+      display:grid; grid-template-columns:repeat(2, 18px); grid-template-rows:repeat(2, 18px);
+      gap:2px; width:38px; height:38px;
+      align-content:center; justify-content:center;
+    }
+    .mine-group-total-icons-all img {
+      width:16px; height:16px; display:block; object-fit:contain;
+    }
+    .mine-group-total-body {
+      display:flex; flex-direction:column; align-items:flex-start; min-width:0;
+    }
     .mine-group-total-title {
       display:block; font-size:10px; letter-spacing:.6px; font-weight:700;
       color:#64748b; white-space:nowrap;
@@ -660,25 +685,45 @@
       <div class="mine-totals-bar" id="mine-totals-bar" aria-label="Mine production totals">
         <div class="mine-totals-bar-left">
           <div class="mine-group-total" data-group-type="rock">
-            <span class="mine-group-total-title">Rock Mine Production Total</span>
-            <span class="mine-group-total-value">$0</span>
+            <div class="mine-group-total-icon"><img src="images/mine-icons/rock.svg" alt=""></div>
+            <div class="mine-group-total-body">
+              <span class="mine-group-total-title">Rock Mine Production</span>
+              <span class="mine-group-total-value">$0</span>
+            </div>
           </div>
           <div class="mine-group-total" data-group-type="coal">
-            <span class="mine-group-total-title">Coal Mine Production Total</span>
-            <span class="mine-group-total-value">$0</span>
+            <div class="mine-group-total-icon"><img src="images/mine-icons/coal.svg" alt=""></div>
+            <div class="mine-group-total-body">
+              <span class="mine-group-total-title">Coal Mine Production</span>
+              <span class="mine-group-total-value">$0</span>
+            </div>
           </div>
           <div class="mine-group-total" data-group-type="gold">
-            <span class="mine-group-total-title">Gold Mine Production Total</span>
-            <span class="mine-group-total-value">$0</span>
+            <div class="mine-group-total-icon"><img src="images/mine-icons/gold.svg" alt=""></div>
+            <div class="mine-group-total-body">
+              <span class="mine-group-total-title">Gold Mine Production</span>
+              <span class="mine-group-total-value">$0</span>
+            </div>
           </div>
           <div class="mine-group-total" data-group-type="diamond">
-            <span class="mine-group-total-title">Diamond Mine Production Total</span>
-            <span class="mine-group-total-value">$0</span>
+            <div class="mine-group-total-icon"><img src="images/mine-icons/diamond.svg" alt=""></div>
+            <div class="mine-group-total-body">
+              <span class="mine-group-total-title">Diamond Mine Production</span>
+              <span class="mine-group-total-value">$0</span>
+            </div>
           </div>
         </div>
         <div class="mine-group-total mine-totals-all" data-group-type="all">
-          <span class="mine-group-total-title">All Mines Production Total</span>
-          <span class="mine-group-total-value">$0</span>
+          <div class="mine-group-total-icons-all" aria-hidden="true">
+            <img src="images/mine-icons/rock.svg" alt="">
+            <img src="images/mine-icons/coal.svg" alt="">
+            <img src="images/mine-icons/gold.svg" alt="">
+            <img src="images/mine-icons/diamond.svg" alt="">
+          </div>
+          <div class="mine-group-total-body">
+            <span class="mine-group-total-title">All Mines Production</span>
+            <span class="mine-group-total-value">$0</span>
+          </div>
         </div>
       </div>
       <div class="mine-toolbar" id="mine-toolbar">
