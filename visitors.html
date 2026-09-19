@@ -131,7 +131,7 @@
     .vo-pin svg { width:33px; height:33px; display:block; }
     .vo-pin.is-missing { opacity:0.38; pointer-events:none; }
     .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
-    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:pointer; }
+    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:default; }
     .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
     .vo-photo-wrap { position:relative; width:100%; }
     .vo-photo-wrap > .vo-photo { display:block; width:100%; }
@@ -386,7 +386,6 @@
   let voImgTipX = 0;
   let voImgTipY = 0;
   let voDetailBound = false;
-  let photoClickBound = false;
 
   function fmtNum(n) { if (!n) return '0'; if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'; if (n >= 1000) return (n / 1000).toFixed(1) + 'K'; return Math.round(n).toLocaleString(); }
   function fmtUSD(n) { return '$' + (parseFloat(n) || 0).toFixed(2); }
@@ -966,13 +965,6 @@
     if (!board) return;
     board.querySelectorAll('img.vo-photo').forEach(bindVoPhotoTip);
   }
-  function findVisitByCard(card) {
-    if (!card) return null;
-    const av = card.querySelector('.vo-avatar');
-    const id = av && av.getAttribute('data-checkin-id');
-    if (id) return allVisits.find(v => String(v.id) === String(id)) || null;
-    return null;
-  }
   function syncVoDetailBounds() {
     const detail = $('vo-detail-overlay');
     const main = $('portal-main');
@@ -1024,18 +1016,6 @@
     window.addEventListener('resize', () => { if (!$('vo-detail-overlay').hidden) syncVoDetailBounds(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVoDetail(); });
   }
-  function bindPhotoClicksOnce() {
-    if (photoClickBound) return;
-    photoClickBound = true;
-    $('visitors-board').addEventListener('click', e => {
-      const img = e.target.closest('img.vo-photo');
-      if (!img) return;
-      const card = img.closest('.vo-card');
-      const v = findVisitByCard(card);
-      if (v) openVoDetail(v);
-    });
-  }
-
   let mineBadgeClickBound = false;
   let mineTip = null;
   let mineTipTimer = null;
@@ -1277,7 +1257,6 @@
     bindVisitorPhotoTips();
     bindShowcasePinTips(board);
     bindShowcasePinClicksOnce();
-    bindPhotoClicksOnce();
     bindMineBadgeClicksOnce();
   }
 

@@ -366,7 +366,7 @@
     .vo-pin svg { width:33px; height:33px; display:block; }
     .vo-pin.is-missing { opacity:0.38; pointer-events:none; }
     .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
-    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:pointer; }
+    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:default; }
     .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
     .vo-photo-wrap { position:relative; width:100%; }
     .vo-photo-wrap > .vo-photo { display:block; width:100%; }
@@ -2490,13 +2490,6 @@
       el.replaceChildren(img);
     });
   }
-  function findVisitForPhotoEl(img) {
-    const card = img.closest('.vo-card');
-    if (!card) return null;
-    const av = card.querySelector('.vo-avatar');
-    if (av) return findCheckInForAvatarEl(av);
-    return null;
-  }
   function bindVoDetailOnce() {
     if (voDetailBound) return;
     voDetailBound = true;
@@ -2601,17 +2594,6 @@
           dismissVoImgTip();
           dismissShowcaseTip();
           toggleShowcaseVisitorImage(pinBtn);
-          return;
-        }
-        const photo = e.target.closest('img.vo-photo');
-        if (photo && body.contains(photo) && hasRealVoPhotoSrc(photo)) {
-          e.preventDefault();
-          e.stopPropagation();
-          dismissVoImgTip();
-          dismissShowcaseTip();
-          const visit = findVisitForPhotoEl(photo);
-          const cached = visitorsOverlayMineId ? visitorListCache.get(visitorsOverlayMineId) : null;
-          if (visit) openVoDetail(visit, cached ? cached.mine : null);
           return;
         }
         const av = e.target.closest('.vo-avatar');
