@@ -154,7 +154,7 @@
     .vo-showcase-pin.is-active:hover { background:#2ea043; }
     .vo-showcase-pin svg { width:18px; height:18px; display:block; pointer-events:none; }
     .vo-showcase-tip, .vo-mine-tip {
-      position:fixed; z-index:340; pointer-events:none; display:none;
+      position:fixed; z-index:600; pointer-events:none; display:none;
       background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
       border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.55);
       font-size:13px; line-height:1.35; font-weight:500; text-align:left;
@@ -1285,13 +1285,16 @@
     if (loadAreaFollowTip) loadAreaFollowTip.style.display = 'none';
   }
   function ensureLoadAreaFollowTip() {
-    if (loadAreaFollowTip) return loadAreaFollowTip;
-    const tip = document.createElement('div');
-    tip.className = 'vo-mine-tip';
-    tip.setAttribute('role', 'tooltip');
-    document.body.appendChild(tip);
-    loadAreaFollowTip = tip;
-    return tip;
+    if (!loadAreaFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'vo-mine-tip';
+      tip.setAttribute('role', 'tooltip');
+      loadAreaFollowTip = tip;
+    }
+    if (loadAreaFollowTip.parentNode !== document.body) {
+      document.body.appendChild(loadAreaFollowTip);
+    }
+    return loadAreaFollowTip;
   }
   function placeLoadAreaFollowTip(x, y) {
     const tip = ensureLoadAreaFollowTip();

@@ -99,7 +99,7 @@
     .type-filter-btn.active { border-color:#4FC3F7; background:#e8f7fe; }
     .type-filter-btn:focus-visible { outline:2px solid #4FC3F7; outline-offset:2px; }
     .toolbar-follow-tip {
-      position:fixed; z-index:200; pointer-events:none; display:none;
+      position:fixed; z-index:600; pointer-events:none; display:none;
       background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,.14);
       border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.45);
       font-size:13px; line-height:1.35; font-weight:500; text-align:left;
@@ -1654,13 +1654,16 @@
     if (loadAreaFollowTip) loadAreaFollowTip.style.display = 'none';
   }
   function ensureLoadAreaFollowTip() {
-    if (loadAreaFollowTip) return loadAreaFollowTip;
-    const tip = document.createElement('div');
-    tip.className = 'toolbar-follow-tip';
-    tip.setAttribute('role', 'tooltip');
-    document.body.appendChild(tip);
-    loadAreaFollowTip = tip;
-    return tip;
+    if (!loadAreaFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'toolbar-follow-tip';
+      tip.setAttribute('role', 'tooltip');
+      loadAreaFollowTip = tip;
+    }
+    if (loadAreaFollowTip.parentNode !== document.body) {
+      document.body.appendChild(loadAreaFollowTip);
+    }
+    return loadAreaFollowTip;
   }
   function placeLoadAreaFollowTip(x, y) {
     const tip = ensureLoadAreaFollowTip();
