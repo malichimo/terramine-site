@@ -496,6 +496,10 @@
       padding:12px 52px 12px 16px; background:#133665;
       border-bottom:1px solid rgba(255,255,255,.22);
     }
+    .mine-map-type-icon {
+      flex-shrink:0; width:26px; height:26px; object-fit:contain; display:block;
+    }
+    .mine-map-type-icon[hidden] { display:none !important; }
     .mine-map-title {
       font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:#fff;
       min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
@@ -697,11 +701,13 @@
         <div class="mine-map-panel" role="dialog" aria-modal="true" aria-labelledby="mine-map-title">
           <button type="button" class="mine-map-close" id="mine-map-close" aria-label="Close map">×</button>
           <div class="mine-map-head">
+            <img class="mine-map-type-icon" id="mine-map-type-icon" src="images/mine-icons/rock.svg" alt="" width="26" height="26" hidden>
             <div class="mine-map-title" id="mine-map-title">Mine map</div>
             <label class="mine-map-zoom" title="Map zoom">
               <span>Zoom</span>
               <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
             </label>
+            <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" title="Toggle building outlines">Buildings off</button>
             <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" title="Toggle map labels">Labels off</button>
           </div>
           <div class="mine-map-body" id="mine-map-body">
@@ -910,10 +916,17 @@
     { featureType: 'water', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'landscape', elementType: 'labels', stylers: [{ visibility: 'off' }] }
   ];
+  const MINE_MAP_HIDE_BUILDINGS = [
+    { featureType: 'landscape.man_made', stylers: [{ visibility: 'off' }] }
+  ];
+  const MINE_MAP_SHOW_BUILDINGS = [
+    { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ visibility: 'on' }, { color: '#c5d9c2' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ visibility: 'on' }, { color: '#6b7f69' }, { weight: 1.25 }] }
+  ];
   const MINE_MAP_PARCEL_COLORS = {
     rock: { fill: '#90CAF9', stroke: '#1565C0' },
     coal: { fill: '#B0BEC5', stroke: '#455A64' },
-    gold: { fill: '#FFD54F', stroke: '#F9A825' },
+    gold: { fill: '#F5D76E', stroke: '#C9A227' },
     diamond: { fill: '#80DEEA', stroke: '#00838F' }
   };
 
@@ -1113,17 +1126,22 @@
   let mineMapPolygon = null;
   let mineMapMarker = null;
   let mineMapLabelsOn = false;
+  let mineMapBuildingsOn = false;
   let mineMapBound = false;
   let mineMapLoading = null;
   let mineMapResizeBound = false;
   let mineMapZoomSyncing = false;
   const MINE_MAP_ZOOM_KEY = 'terramine.mineMap.zoom';
+  const MINE_MAP_BUILDINGS_KEY = 'terramine.mineMap.buildings';
   const MINE_MAP_ZOOM_MIN = 10;
   const MINE_MAP_ZOOM_MAX = 21;
   const MINE_MAP_ZOOM_DEFAULT = 19;
 
   function mineMapStyles() {
-    return mineMapLabelsOn ? MINE_MAP_BASE_STYLE.slice() : MINE_MAP_BASE_STYLE.concat(MINE_MAP_HIDE_LABELS);
+    let styles = MINE_MAP_BASE_STYLE.slice();
+    styles = styles.concat(mineMapBuildingsOn ? MINE_MAP_SHOW_BUILDINGS : MINE_MAP_HIDE_BUILDINGS);
+    if (!mineMapLabelsOn) styles = styles.concat(MINE_MAP_HIDE_LABELS);
+    return styles;
   }
 
   function syncMineMapBounds() {
@@ -1224,6 +1242,29 @@
     updateMineMapLabelsBtn();
     if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
   }
+  function getSavedMineMapBuildings() {
+    try {
+      return sessionStorage.getItem(MINE_MAP_BUILDINGS_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+  function saveMineMapBuildings(on) {
+    try { sessionStorage.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
+  }
+  function updateMineMapBuildingsBtn() {
+    const btn = $('mine-map-buildings');
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', mineMapBuildingsOn ? 'true' : 'false');
+    btn.textContent = mineMapBuildingsOn ? 'Buildings on' : 'Buildings off';
+  }
+  function setMineMapBuildings(on) {
+    mineMapBuildingsOn = !!on;
+    saveMineMapBuildings(mineMapBuildingsOn);
+    updateMineMapBuildingsBtn();
+    if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
+  }
+
 
   function showMineMapMsg(text, isTip) {
     const tip = $('mine-map-tip');
@@ -1335,6 +1376,15 @@
     if (!overlay || !mine) return;
     bindMineMapOnce();
     syncMineMapZoomSlider(getSavedMineMapZoom());
+    mineMapBuildingsOn = getSavedMineMapBuildings();
+    updateMineMapBuildingsBtn();
+    const type = typeKey(mine || {});
+    const iconEl = $('mine-map-type-icon');
+    if (iconEl) {
+      iconEl.src = ICONS[type] || ICONS.rock;
+      iconEl.alt = TYPE_LABEL[type] || type || '';
+      iconEl.hidden = false;
+    }
     $('mine-map-title').textContent = titleOf(mine) || 'Mine map';
     updateMineMapLabelsBtn();
     showMineMapMsg('Loading map…', false);
@@ -1400,6 +1450,11 @@
       zoomSlider.addEventListener('input', onZoomInput);
       zoomSlider.addEventListener('change', onZoomInput);
     }
+    const buildingsBtn = $('mine-map-buildings');
+    if (buildingsBtn) buildingsBtn.addEventListener('click', e => {
+      e.preventDefault();
+      setMineMapBuildings(!mineMapBuildingsOn);
+    });
     const labelsBtn = $('mine-map-labels');
     if (labelsBtn) labelsBtn.addEventListener('click', e => {
       e.preventDefault();
