@@ -142,11 +142,18 @@
     .mine-group-head img { width:36px; height:36px; object-fit:contain; }
     .mine-group-head h2 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); }
     .mine-group-count { font-size:12px; color:#64748b; font-weight:700; }
-    .mine-group-total {
-      margin-left:auto; text-align:right; flex-shrink:0;
-      border:1px solid #d0d7e2; border-radius:8px; padding:4px 10px 5px;
-      background:#f4f7fb; line-height:1.15;
+    .mine-totals-bar {
+      display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+      margin:10px 16px 0; padding:10px 12px;
+      background:#f4f7fb; border:1px solid #e3e7ee; border-radius:10px;
     }
+    .mine-totals-bar-left { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; }
+    .mine-group-total {
+      text-align:right; flex-shrink:0;
+      border:1px solid #d0d7e2; border-radius:8px; padding:4px 10px 5px;
+      background:#fff; line-height:1.15;
+    }
+    .mine-totals-bar .mine-group-total.mine-totals-all { margin-left:auto; }
     .mine-group-total-title {
       display:block; font-size:10px; letter-spacing:.6px; font-weight:700;
       color:#64748b; white-space:nowrap;
@@ -156,6 +163,7 @@
       color:var(--navy); white-space:nowrap; margin-top:2px;
     }
     .mine-group-total-value.is-boosted { color:#b8860b; }
+    .mine-group-total-value.is-missing { color:#94a3b8; }
     .mine-grid {
       display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; width:100%;
     }
@@ -649,6 +657,30 @@
       <div class="sidebar-footer"><a href="index.html">← Back to site</a></div>
     </aside>
     <main class="main" id="portal-main">
+      <div class="mine-totals-bar" id="mine-totals-bar" aria-label="Mine production totals">
+        <div class="mine-totals-bar-left">
+          <div class="mine-group-total" data-group-type="rock">
+            <span class="mine-group-total-title">Rock Mine Production Total</span>
+            <span class="mine-group-total-value">$0</span>
+          </div>
+          <div class="mine-group-total" data-group-type="coal">
+            <span class="mine-group-total-title">Coal Mine Production Total</span>
+            <span class="mine-group-total-value">$0</span>
+          </div>
+          <div class="mine-group-total" data-group-type="gold">
+            <span class="mine-group-total-title">Gold Mine Production Total</span>
+            <span class="mine-group-total-value">$0</span>
+          </div>
+          <div class="mine-group-total" data-group-type="diamond">
+            <span class="mine-group-total-title">Diamond Mine Production Total</span>
+            <span class="mine-group-total-value">$0</span>
+          </div>
+        </div>
+        <div class="mine-group-total mine-totals-all" data-group-type="all">
+          <span class="mine-group-total-title">All Mines Production Total</span>
+          <span class="mine-group-total-value">$0</span>
+        </div>
+      </div>
       <div class="mine-toolbar" id="mine-toolbar">
         <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
           <button type="button" class="type-filter-btn" data-type="diamond" aria-label="Filter Diamond" aria-pressed="false" disabled>
@@ -1957,29 +1989,26 @@
   }
   function groupProductionSum(type, mines) {
     let sum = 0;
-    let any = false;
     (mines || []).forEach(m => {
-      if (typeKey(m) !== type) return;
+      if (type && typeKey(m) !== type) return;
       const level = numOrNull((m._details || {}).productionLevel);
       if (level == null || !Number.isFinite(level)) return;
-      sum += displayAmount(type, level, displayPref);
-      any = true;
+      sum += displayAmount(typeKey(m), level, displayPref);
     });
-    return any ? sum : null;
+    return sum;
   }
   function applyGroupTotalValue(el, type) {
-    const sum = groupProductionSum(type, visibleMines());
-    if (sum == null || !Number.isFinite(sum)) {
-      el.textContent = '\u2014';
-      el.className = 'mine-group-total-value is-missing';
-      return;
-    }
-    el.textContent = fmtRate(sum, displayPref.period) + PERIOD_SUFFIX[displayPref.period];
+    const mines = visibleMines();
+    const sum = type === 'all' ? groupProductionSum(null, mines) : groupProductionSum(type, mines);
+    const n = (sum == null || !Number.isFinite(sum)) ? 0 : sum;
+    el.textContent = fmtRate(n, displayPref.period) + PERIOD_SUFFIX[displayPref.period];
     el.className = 'mine-group-total-value';
-    if (displayPref.rate !== 'base') el.classList.add('is-boosted');
+    if (n > 0 && displayPref.rate !== 'base') el.classList.add('is-boosted');
   }
   function refreshGroupTotals() {
-    document.querySelectorAll('.mine-group-total').forEach(box => {
+    const bar = $('mine-totals-bar');
+    if (!bar) return;
+    bar.querySelectorAll('.mine-group-total').forEach(box => {
       const type = box.dataset.groupType;
       const val = box.querySelector('.mine-group-total-value');
       if (!type || !val) return;
@@ -4281,17 +4310,7 @@
     const c = document.createElement('span');
     c.className = 'mine-group-count';
     c.textContent = String(item.count);
-    const totalBox = document.createElement('div');
-    totalBox.className = 'mine-group-total';
-    totalBox.dataset.groupType = item.type;
-    const totalTitle = document.createElement('span');
-    totalTitle.className = 'mine-group-total-title';
-    totalTitle.textContent = (TYPE_LABEL[item.type] || item.type) + ' Mine Production Total';
-    const totalVal = document.createElement('span');
-    totalVal.className = 'mine-group-total-value';
-    applyGroupTotalValue(totalVal, item.type);
-    totalBox.append(totalTitle, totalVal);
-    head.append(img, h, c, totalBox);
+    head.append(img, h, c);
     currentGrid = document.createElement('div');
     currentGrid.className = 'mine-grid';
     sec.append(head, currentGrid);
@@ -4502,6 +4521,7 @@
       empty.textContent = 'No mines yet. Buy your first TerraAcre in the app.';
       board.appendChild(empty);
       $('mine-sentinel').hidden = true;
+      refreshGroupTotals();
       return;
     }
     if (!cardTotal) {
@@ -4512,6 +4532,7 @@
       board.appendChild(empty);
       $('mine-sentinel').hidden = true;
       if (sortKey === 'visitors' && !visitorSortSettling) queueMissingVisitorCountsForSort();
+      refreshGroupTotals();
       return;
     }
     $('mine-sentinel').hidden = false;
@@ -4519,6 +4540,7 @@
     paintBatch();
     fillViewport();
     if (sortKey === 'visitors' && !visitorSortSettling) queueMissingVisitorCountsForSort();
+    refreshGroupTotals();
   }
 
   function sidebarGameComingSoon(e, link) {
