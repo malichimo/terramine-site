@@ -176,7 +176,8 @@
     .vo-detail-panel .land-detail-header .vo-mine-meta { max-width:none; flex:1; min-width:0; }
     .vo-detail-panel .land-detail-photo { cursor:default; }
     .mine-head { width:100%; min-width:0; margin-top:5px; margin-bottom:5px; }
-    .mine-title { width:100%; text-align:center; font-size:22px; font-weight:700; line-height:1.15; overflow-wrap:anywhere; word-break:break-word; }
+    .mine-title { width:100%; text-align:center; font-size:22px; font-weight:700; line-height:1.15; overflow-wrap:anywhere; word-break:break-word; cursor:pointer; }
+    .mine-title.is-editing { cursor:text; outline:2px solid rgba(79,195,247,.65); outline-offset:2px; border-radius:6px; background:rgba(15,23,42,.28); }
     .gps-pin {
       position:absolute; top:10px; right:10px; z-index:3;
       width:26px; height:26px; color:#fff; flex-shrink:0;
@@ -3110,6 +3111,203 @@
   function findMineById(mineId) {
     return allMines.find(m => String(m.id) === String(mineId)) || null;
   }
+  const MINE_TITLE_RENAME_TIP = 'Click on the title to change the name of the mine.';
+  let mineTitleFollowTip = null;
+  let mineTitleFollowTipTimer = null;
+  let mineTitleFollowTipTarget = null;
+  let mineTitleFollowTipX = 0;
+  let mineTitleFollowTipY = 0;
+  let mineTitleEditingEl = null;
+  function dismissMineTitleFollowTip() {
+    if (mineTitleFollowTipTimer) { clearTimeout(mineTitleFollowTipTimer); mineTitleFollowTipTimer = null; }
+    mineTitleFollowTipTarget = null;
+    if (mineTitleFollowTip) mineTitleFollowTip.style.display = 'none';
+  }
+  function ensureMineTitleFollowTip() {
+    if (!mineTitleFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'toolbar-follow-tip';
+      tip.setAttribute('role', 'tooltip');
+      mineTitleFollowTip = tip;
+    }
+    if (mineTitleFollowTip.parentNode !== document.body) {
+      document.body.appendChild(mineTitleFollowTip);
+    }
+    return mineTitleFollowTip;
+  }
+  function placeMineTitleFollowTip(x, y) {
+    const tip = ensureMineTitleFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function syncLocalMineCustomName(mineId, customName) {
+    const id = String(mineId);
+    const clean = (typeof customName === 'string') ? customName.trim() : '';
+    const mine = findMineById(id);
+    if (mine) {
+      if (!mine._details) mine._details = {};
+      if (clean) mine._details.customName = clean;
+      else delete mine._details.customName;
+    }
+    if (mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+      if (!mineMapCurrentMine._details) mineMapCurrentMine._details = {};
+      if (clean) mineMapCurrentMine._details.customName = clean;
+      else delete mineMapCurrentMine._details.customName;
+    }
+    const display = titleOf(mine || { id: id, _details: clean ? { customName: clean } : {} });
+    document.querySelectorAll('article.mine-card').forEach(art => {
+      if (art.dataset.mineId !== id) return;
+      art.dataset.title = display;
+      const t = art.querySelector('.mine-title');
+      if (t && !t.classList.contains('is-editing')) t.textContent = display;
+      const img = art.querySelector('.mine-photo img');
+      if (img) img.alt = display;
+    });
+    const mapTitle = $('mine-map-title');
+    if (mapTitle && mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+      mapTitle.textContent = display || 'Mine map';
+    }
+  }
+  async function persistMineCustomName(mineId, nextName, titleEl, previousText) {
+    const trimmed = (nextName || '').replace(/\s+/g, ' ').trim();
+    if (!trimmed) {
+      titleEl.textContent = previousText;
+      return;
+    }
+    if (trimmed === String(previousText || '').trim()) {
+      titleEl.textContent = previousText;
+      return;
+    }
+    try {
+      await safeUpdatePropertyDetails(mineId, { customName: trimmed }, null);
+      syncLocalMineCustomName(mineId, trimmed);
+      titleEl.textContent = trimmed;
+    } catch (err) {
+      console.warn('[mines] customName update failed', mineId, err);
+      titleEl.textContent = previousText;
+      const msg = (err && err.code === 'permission-denied')
+        ? 'Could not rename mine (permission denied).'
+        : ('Could not rename mine' + (err && err.message ? ': ' + err.message : '.'));
+      flashShowcaseNote(msg);
+    }
+  }
+  function beginMineTitleEdit(titleEl) {
+    if (!titleEl || titleEl.classList.contains('is-editing')) return;
+    const art = titleEl.closest('article.mine-card');
+    const mineId = art && art.dataset.mineId;
+    if (!mineId) return;
+    dismissMineTitleFollowTip();
+    const previousText = titleEl.textContent;
+    let finishing = false;
+    mineTitleEditingEl = titleEl;
+    titleEl.classList.add('is-editing');
+    titleEl.setAttribute('contenteditable', 'true');
+    titleEl.setAttribute('spellcheck', 'false');
+    titleEl.focus();
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(titleEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {}
+    function cleanupListeners() {
+      titleEl.removeEventListener('keydown', onKeyDown);
+      titleEl.removeEventListener('blur', onBlur);
+    }
+    function finish(mode) {
+      if (finishing) return;
+      finishing = true;
+      cleanupListeners();
+      titleEl.classList.remove('is-editing');
+      titleEl.removeAttribute('contenteditable');
+      titleEl.removeAttribute('spellcheck');
+      if (mineTitleEditingEl === titleEl) mineTitleEditingEl = null;
+      const raw = titleEl.textContent;
+      if (mode === 'cancel') {
+        titleEl.textContent = previousText;
+        return;
+      }
+      persistMineCustomName(mineId, raw, titleEl, previousText);
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish('save');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish('cancel');
+      }
+    }
+    function onBlur() {
+      finish('save');
+    }
+    titleEl.addEventListener('keydown', onKeyDown);
+    titleEl.addEventListener('blur', onBlur);
+  }
+  function bindMineTitleInteractionsOnce() {
+    const board = $('mine-board');
+    if (!board || board.dataset.mineTitleBound === '1') return;
+    board.dataset.mineTitleBound = '1';
+    board.addEventListener('click', e => {
+      if (e.target.closest('.gps-pin, .mine-photo, .mine-visitors')) return;
+      const title = e.target.closest('.mine-title');
+      if (!title || !board.contains(title) || title.classList.contains('is-editing')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginMineTitleEdit(title);
+    });
+    board.addEventListener('mouseover', e => {
+      const title = e.target.closest('.mine-title');
+      if (!title || !board.contains(title) || title.classList.contains('is-editing')) return;
+      if (mineTitleFollowTipTarget === title) return;
+      if (mineTitleFollowTipTimer) { clearTimeout(mineTitleFollowTipTimer); mineTitleFollowTipTimer = null; }
+      mineTitleFollowTipTarget = title;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      const tip = ensureMineTitleFollowTip();
+      tip.textContent = MINE_TITLE_RENAME_TIP;
+      tip.style.display = 'none';
+      mineTitleFollowTipTimer = setTimeout(() => {
+        mineTitleFollowTipTimer = null;
+        if (mineTitleFollowTipTarget !== title || !title.isConnected || title.classList.contains('is-editing')) return;
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }, 1000);
+    });
+    board.addEventListener('mousemove', e => {
+      const title = e.target.closest('.mine-title');
+      if (!title || mineTitleFollowTipTarget !== title) return;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      if (mineTitleFollowTip && mineTitleFollowTip.style.display === 'block' && !mineTitleFollowTipTimer) {
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }
+    });
+    board.addEventListener('mouseout', e => {
+      const title = mineTitleFollowTipTarget;
+      if (!title) return;
+      const related = e.relatedTarget;
+      if (related && (related === title || title.contains(related))) return;
+      const fromTitle = e.target.closest && e.target.closest('.mine-title');
+      if (fromTitle !== title && !(title.contains(e.target))) return;
+      dismissMineTitleFollowTip();
+    });
+  }
   function hasRealHttpImgSrc(img) {
     if (!img || img.tagName !== 'IMG') return false;
     const src = (img.getAttribute('src') || '').trim();
@@ -3952,7 +4150,6 @@
     const title = document.createElement('div');
     title.className = 'mine-title';
     title.textContent = titleOf(mine);
-    title.title = titleOf(mine);
     head.appendChild(title);
     const headInner = document.createElement('div');
     headInner.className = 'inner';
@@ -4109,7 +4306,7 @@
     currentGrid = null;
     const board = $('mine-board');
     board.innerHTML = '';
-    dismissProdTip(); dismissGameTip(); dismissVoImgTip(); closeVoDetail();
+    dismissProdTip(); dismissGameTip(); dismissVoImgTip(); dismissMineTitleFollowTip(); closeVoDetail();
     const owned = allMines.length;
     // During settle, matchCount reflects the eventual visitor-sorted set (zeros
     // hidden); show filtered total until counts are ready so the toolbar is stable.
@@ -4443,6 +4640,7 @@
     });
   }
   document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(bindShowcaseFollowTip);
+  bindMineTitleInteractionsOnce();
 
   function setPageSettingsOpen(open) {
     const panel = $('page-settings-panel');
