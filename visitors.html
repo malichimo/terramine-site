@@ -1007,7 +1007,7 @@
     const gps = mineMapCenterGps(mine);
     let overlay = null;
     if (corners && corners.path && corners.path.length >= 3) {
-      const fillOpacity = opts.fillOpacity != null ? opts.fillOpacity : 0.9;
+      const fillOpacity = opts.fillOpacity != null ? opts.fillOpacity : 1.0;
       const strokeWeight = opts.strokeWeight != null ? opts.strokeWeight : 2;
       const zIndex = opts.zIndex != null ? opts.zIndex : 1;
       const insetPath = insetPolygonPath(corners.path, 0.03);
@@ -1083,7 +1083,7 @@
       const ogps = mineMapCenterGps(other);
       if (!ogps) continue;
       if (haversineMeters(center, ogps) > MINE_MAP_LOAD_AREA_M) continue;
-      const overlay = drawMineMapParcel(map, other, { allowMarker: true, fillOpacity: 0.9, zIndex: 2 });
+      const overlay = drawMineMapParcel(map, other, { allowMarker: true, fillOpacity: 1.0, zIndex: 2 });
       if (overlay) {
         mineMapAreaOverlays.push(overlay);
         added++;
