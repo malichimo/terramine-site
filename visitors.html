@@ -370,7 +370,27 @@
       width:20px; height:20px; object-fit:contain; flex-shrink:0; display:block;
     }
     .mine-map-bulk-rename-item span {
-      min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+
+    .mine-map-bulk-rename-item-remove {
+      margin-left: auto;
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      font: 700 16px/1 "DM Sans", sans-serif;
+      cursor: pointer;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mine-map-bulk-rename-item-remove:hover {
+      background: rgba(244, 67, 54, 0.55);
     }
     .mine-map-bulk-rename-form {
       flex:1; min-width:0; padding-left:14px;
@@ -1448,34 +1468,61 @@
     bounds.extend(pxToLatLng(right, bottom));
     return bounds;
   }
-  function openBulkRenameDialog(mines) {
-    bulkRenameSelected = mines.slice();
-    const dlg = $('mine-map-bulk-rename');
+  function renderBulkRenameList() {
     const list = $('mine-map-bulk-rename-list');
-    if (!dlg || !list) return;
+    if (!list) return;
     list.innerHTML = '';
-    for (let i = 0; i < mines.length; i++) {
-      const m = mines[i];
-      const type = typeKeyOf(m, null);
+    for (let i = 0; i < bulkRenameSelected.length; i++) {
+      const m = bulkRenameSelected[i];
+      const type = typeKeyOf(m || {});
       const row = document.createElement('div');
       row.className = 'mine-map-bulk-rename-item';
+      row.dataset.mineId = String(m && m.id != null ? m.id : '');
       const img = document.createElement('img');
       img.src = ICONS[type] || ICONS.rock;
       img.alt = '';
       const span = document.createElement('span');
-      span.textContent = mineTitle(m, null) || String(m.id || '');
+      span.textContent = mineTitle(m) || String(m.id || '');
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'mine-map-bulk-rename-item-remove';
+      remove.setAttribute('aria-label', 'Remove from rename list');
+      remove.textContent = '\u00d7';
+      remove.addEventListener('click', function (ev) {
+        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        const id = String(m && m.id != null ? m.id : '');
+        bulkRenameSelected = bulkRenameSelected.filter(function (x) {
+          return String(x && x.id != null ? x.id : '') !== id;
+        });
+        if (!bulkRenameSelected.length) {
+          exitBulkRenameMode();
+          showMineMapMsg('No mines left to rename.', true);
+          return;
+        }
+        renderBulkRenameList();
+      });
       row.appendChild(img);
       row.appendChild(span);
+      row.appendChild(remove);
       list.appendChild(row);
     }
+    const apply = $('mine-map-bulk-rename-apply');
+    if (apply) apply.disabled = bulkRenameSelected.length === 0;
+  }
+  function openBulkRenameDialog(mines) {
+    bulkRenameSelected = mines.slice();
+    const dlg = $('mine-map-bulk-rename');
+    if (!dlg) return;
+    renderBulkRenameList();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
     const input = $('mine-map-bulk-rename-input');
     if (input) {
       input.value = '';
-      setTimeout(() => { try { input.focus(); } catch (e) {} }, 0);
+      setTimeout(function () { try { input.focus(); } catch (e) {} }, 0);
     }
   }
+
   function finishBulkRenameSelection(bounds) {
     stopBulkRenameDrawLayer();
     if (!bounds) {
