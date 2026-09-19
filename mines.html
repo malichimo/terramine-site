@@ -2013,7 +2013,7 @@
     art.dataset.photo = clean;
     let img = slot.querySelector('img');
     if (!img) {
-      slot.textContent = '';
+      // Match activateCard: create img, set full https src, then swap into .mine-photo
       img = document.createElement('img');
       img.alt = art.dataset.title || 'Mine photo';
       img.decoding = 'async';
@@ -2022,12 +2022,15 @@
         slot.replaceChildren();
         slot.textContent = 'No photo';
       });
-      slot.appendChild(img);
+      img.src = clean;
       slot.classList.add('has-img');
+      slot.replaceChildren();
+      slot.appendChild(img);
       delete slot.dataset.landTipBound;
       bindLandPhotoInteractions(slot);
     } else {
       img.src = clean;
+      img.alt = art.dataset.title || 'Mine photo';
       slot.classList.add('has-img');
     }
   }
@@ -2077,6 +2080,8 @@
         await safeUpdatePropertyDetails(mineId, { profilePhotoURL: photo }, null);
         syncLocalShowcaseState(mineId, photo);
       }
+      // Apply showcase filters immediately (e.g. leave "No showcase" list after pin)
+      renderFromFilters();
     } catch (err) {
       console.warn('[mines] showcase photo update failed', mineId, err);
       const msg = (err && err.code === 'permission-denied')
