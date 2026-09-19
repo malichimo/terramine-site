@@ -127,9 +127,9 @@
     .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
     .vo-mine-badge .vo-type-icon { pointer-events:none; }
     .vo-type-icon { width:24px; height:24px; flex-shrink:0; object-fit:contain; }
-    .vo-pin { width:33px; height:33px; color:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; }
-    .vo-pin svg { width:33px; height:33px; display:block; }
-    .vo-pin.is-missing { opacity:0.38; pointer-events:none; }
+    .vo-pin { width:33px; height:33px; color:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; border:0; background:transparent; padding:0; margin:0; cursor:pointer; font:inherit; }
+    .vo-pin svg { width:33px; height:33px; display:block; pointer-events:none; }
+    .vo-pin.is-missing { opacity:0.38; pointer-events:none; cursor:default; }
     .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
     .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:default; }
     .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
@@ -218,6 +218,54 @@
       background:#0d1b2a; cursor:default;
     }
     .vo-detail-panel .vo-avatar { cursor:default; }
+
+    /* ── Mine GPS minimap overlay ── */
+    .mine-map-overlay {
+      position:fixed; z-index:260;
+      display:flex; flex-direction:column;
+      background:rgba(13,27,42,0.78);
+      box-sizing:border-box;
+    }
+    .mine-map-overlay[hidden] { display:none !important; }
+    .mine-map-panel {
+      position:relative; flex:1; min-height:0; display:flex; flex-direction:column;
+      margin:12px; background:#eef1f4; color:#fff;
+      border:1px solid rgba(255,255,255,.22); border-radius:14px;
+      box-shadow:0 12px 28px rgba(6,10,16,.55); overflow:hidden;
+    }
+    .mine-map-head {
+      flex-shrink:0; display:flex; align-items:center; gap:10px;
+      padding:12px 52px 12px 16px; background:#133665;
+      border-bottom:1px solid rgba(255,255,255,.22);
+    }
+    .mine-map-title {
+      font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:#fff;
+      min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+    }
+    .mine-map-labels {
+      flex-shrink:0; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12);
+      color:#fff; border-radius:999px; padding:6px 12px; cursor:pointer;
+      font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+    }
+    .mine-map-labels:hover { background:rgba(255,255,255,.22); }
+    .mine-map-labels[aria-pressed="true"] { background:rgba(79,195,247,.35); border-color:#4FC3F7; }
+    .mine-map-close {
+      position:absolute; top:10px; right:12px; z-index:2;
+      width:36px; height:36px; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 22px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .mine-map-close:hover { background:rgba(255,255,255,0.22); }
+    .mine-map-body {
+      position:relative; flex:1; min-height:70vh; height:70vh; background:#c8e6c9;
+    }
+    .mine-map-canvas { position:absolute; inset:0; }
+    .mine-map-tip, .mine-map-msg {
+      position:absolute; left:12px; right:12px; bottom:12px; z-index:2;
+      background:rgba(19,54,101,.92); color:#fff; border-radius:8px;
+      padding:8px 12px; font-size:12px; font-weight:600; pointer-events:none;
+    }
+    .mine-map-msg { top:12px; bottom:auto; text-align:center; }
     @media (max-width:700px) { .sidebar { display:none; } }
   </style>
 </head>
@@ -313,6 +361,21 @@
         <div class="vo-detail-panel" role="dialog" aria-modal="true" aria-label="Visitor check-in detail">
           <button type="button" class="vo-detail-close" id="vo-detail-close" aria-label="Close visitor detail">×</button>
           <div id="vo-detail-body"></div>
+        </div>
+      </div>
+
+      <div id="mine-map-overlay" class="mine-map-overlay" hidden aria-hidden="true">
+        <div class="mine-map-panel" role="dialog" aria-modal="true" aria-labelledby="mine-map-title">
+          <button type="button" class="mine-map-close" id="mine-map-close" aria-label="Close map">×</button>
+          <div class="mine-map-head">
+            <div class="mine-map-title" id="mine-map-title">Mine map</div>
+            <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" title="Toggle map labels">Labels off</button>
+          </div>
+          <div class="mine-map-body" id="mine-map-body">
+            <div class="mine-map-canvas" id="mine-map-canvas"></div>
+            <div class="mine-map-tip" id="mine-map-tip" hidden></div>
+            <div class="mine-map-msg" id="mine-map-msg" hidden></div>
+          </div>
         </div>
       </div>
     </main>
@@ -447,6 +510,553 @@
     }
     return null;
   }
+
+  // Public browser Maps JS key (same as heatmap.html / mines.html on this site).
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y';
+
+  const MINE_MAP_BASE_STYLE = [
+    { elementType: 'geometry', stylers: [{ color: '#d7ecd4' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#5a6b5e' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#eef6ee' }] },
+    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#d7ecd4' }] },
+    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#cfe8cb' }] },
+    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#c8e0c4' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#b9dcb3' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#f2f5ef' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#c5d4c2' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ebe4c8' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a8d4e8' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.business', stylers: [{ visibility: 'off' }] }
+  ];
+  const MINE_MAP_HIDE_LABELS = [
+    { featureType: 'administrative', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'water', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'landscape', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+  ];
+  const MINE_MAP_PARCEL_COLORS = {
+    rock: { fill: '#90CAF9', stroke: '#1565C0' },
+    coal: { fill: '#B0BEC5', stroke: '#455A64' },
+    gold: { fill: '#FFD54F', stroke: '#F9A825' },
+    diamond: { fill: '#80DEEA', stroke: '#00838F' }
+  };
+  const MINE_MAP_PARCEL_TARGET_PX = 30;
+
+  function readLatLngFromKeys(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const latKeys = ['latitude', 'lat', 'Latitude', 'LAT', '_latitude', 'centerLat', 'centerLatitude'];
+    const lngKeys = ['longitude', 'lng', 'lon', 'long', 'Longitude', 'LNG', 'LON', '_longitude', 'centerLng', 'centerLongitude'];
+    let lat = null;
+    let lng = null;
+    for (let i = 0; i < latKeys.length; i++) {
+      lat = numOrNull(obj[latKeys[i]]);
+      if (lat != null) break;
+    }
+    for (let i = 0; i < lngKeys.length; i++) {
+      lng = numOrNull(obj[lngKeys[i]]);
+      if (lng != null) break;
+    }
+    if (validLatLng(lat, lng)) return { lat: lat, lng: lng };
+    const paired = pairOn(obj, '');
+    if (paired) return { lat: paired.lat, lng: paired.lng };
+    return null;
+  }
+  function asLatLngPoint(v) {
+    if (v == null) return null;
+    if (typeof v.lat === 'function' && typeof v.lng === 'function') {
+      const lat = numOrNull(v.lat());
+      const lng = numOrNull(v.lng());
+      return validLatLng(lat, lng) ? { lat: lat, lng: lng } : null;
+    }
+    if (typeof v === 'object' && !Array.isArray(v)) {
+      if (typeof v.toJSON === 'function') {
+        try {
+          const j = v.toJSON();
+          if (j && j !== v) {
+            const fromJson = asLatLngPoint(j);
+            if (fromJson) return fromJson;
+          }
+        } catch (e) {}
+      }
+      const keyed = readLatLngFromKeys(v);
+      if (keyed) return keyed;
+      if (v._latitude != null || v.latitude != null) {
+        const lat = numOrNull(v._latitude != null ? v._latitude : v.latitude);
+        const lng = numOrNull(v._longitude != null ? v._longitude : v.longitude);
+        if (validLatLng(lat, lng)) return { lat: lat, lng: lng };
+      }
+    }
+    if (Array.isArray(v) && v.length >= 2) {
+      const a = numOrNull(v[0]);
+      const b = numOrNull(v[1]);
+      if (a != null && b != null && Math.abs(a) > 90 && validLatLng(b, a)) return { lat: b, lng: a };
+      if (validLatLng(a, b)) return { lat: a, lng: b };
+      if (validLatLng(b, a)) return { lat: b, lng: a };
+    }
+    return null;
+  }
+  function coercePointList(raw) {
+    if (raw == null) return null;
+    let arr = raw;
+    if (typeof arr === 'string') {
+      const t = arr.trim();
+      if (!t) return null;
+      try { arr = JSON.parse(t); } catch (e) { return null; }
+    }
+    if (Array.isArray(arr)) {
+      // ok
+    } else if (arr && typeof arr === 'object' && typeof arr.length === 'number' && arr.length >= 3) {
+      const tmp = [];
+      for (let i = 0; i < arr.length; i++) tmp.push(arr[i]);
+      arr = tmp;
+    } else {
+      return null;
+    }
+    if (arr.length < 3) return null;
+    const pts = [];
+    for (let i = 0; i < arr.length; i++) {
+      const p = asLatLngPoint(arr[i]);
+      if (p) pts.push(p);
+    }
+    return pts.length >= 3 ? pts : null;
+  }
+  function cornersFromNamed(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const namedSets = [
+      ['nw', 'ne', 'se', 'sw'],
+      ['NW', 'NE', 'SE', 'SW'],
+      ['northWest', 'northEast', 'southEast', 'southWest'],
+      ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']
+    ];
+    for (const keys of namedSets) {
+      const pts = keys.map(k => asLatLngPoint(obj[k]));
+      if (pts.every(Boolean)) return pts;
+    }
+    const pairSets = [
+      [['nwLat', 'nwLng'], ['neLat', 'neLng'], ['seLat', 'seLng'], ['swLat', 'swLng']],
+      [['nwLatitude', 'nwLongitude'], ['neLatitude', 'neLongitude'], ['seLatitude', 'seLongitude'], ['swLatitude', 'swLongitude']],
+      [['northWestLat', 'northWestLng'], ['northEastLat', 'northEastLng'], ['southEastLat', 'southEastLng'], ['southWestLat', 'southWestLng']]
+    ];
+    for (const pairs of pairSets) {
+      const pts = pairs.map(([la, ln]) => {
+        const lat = numOrNull(obj[la]);
+        const lng = numOrNull(obj[ln]);
+        return validLatLng(lat, lng) ? { lat: lat, lng: lng } : null;
+      });
+      if (pts.every(Boolean)) return pts;
+    }
+    return null;
+  }
+  function cornersFromBounds(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const boxes = [obj.bounds, obj.geoBox, obj.bbox, obj.box, obj.extent].filter(Boolean);
+    for (const b of boxes) {
+      if (typeof b !== 'object' || Array.isArray(b)) continue;
+      let minLat = numOrNull(b.minLat != null ? b.minLat : (b.south != null ? b.south : null));
+      let maxLat = numOrNull(b.maxLat != null ? b.maxLat : (b.north != null ? b.north : null));
+      let minLng = numOrNull(b.minLng != null ? b.minLng : (b.west != null ? b.west : (b.minLon != null ? b.minLon : null)));
+      let maxLng = numOrNull(b.maxLng != null ? b.maxLng : (b.east != null ? b.east : (b.maxLon != null ? b.maxLon : null)));
+      if (minLat == null && b.southwest) {
+        const sw = asLatLngPoint(b.southwest);
+        const ne = asLatLngPoint(b.northeast);
+        if (sw && ne) { minLat = sw.lat; minLng = sw.lng; maxLat = ne.lat; maxLng = ne.lng; }
+      }
+      if (minLat != null && maxLat != null && minLng != null && maxLng != null
+          && maxLat > minLat && maxLng !== minLng) {
+        return [
+          { lat: maxLat, lng: minLng },
+          { lat: maxLat, lng: maxLng },
+          { lat: minLat, lng: maxLng },
+          { lat: minLat, lng: minLng }
+        ];
+      }
+    }
+    return null;
+  }
+  function findCorners(p) {
+    if (!p || typeof p !== 'object') return null;
+    // mineMap entries store the full property on _raw (corners live there).
+    const sources = [p._raw, p, p._details].filter(Boolean);
+    for (let i = 0; i < sources.length; i++) {
+      const obj = sources[i];
+      const pts = coercePointList(obj.corners);
+      if (pts) return { path: pts, source: i === 0 ? '_raw.corners' : 'corners' };
+    }
+    const arrayKeys = ['cornerCoords', 'polygon', 'coordinates', 'path', 'ring', 'vertices', 'points', 'parcel', 'parcelCoords', 'boundary', 'geoPolygon'];
+    const nestKeys = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng', 'geometry', 'geoBox', 'bounds', 'parcel'];
+    for (let i = 0; i < sources.length; i++) {
+      const obj = sources[i];
+      const named = cornersFromNamed(obj);
+      if (named) return { path: named, source: 'named-corners' };
+      const boxed = cornersFromBounds(obj);
+      if (boxed) return { path: boxed, source: 'bounds' };
+      for (let k = 0; k < arrayKeys.length; k++) {
+        const key = arrayKeys[k];
+        const pts = coercePointList(obj[key]);
+        if (pts) return { path: pts, source: key };
+      }
+      for (let n = 0; n < nestKeys.length; n++) {
+        const nest = nestKeys[n];
+        const child = obj[nest];
+        if (!child || typeof child !== 'object') continue;
+        const cCorners = coercePointList(child.corners);
+        if (cCorners) return { path: cCorners, source: nest + '.corners' };
+        const n2 = cornersFromNamed(child);
+        if (n2) return { path: n2, source: nest + '.named' };
+        const b2 = cornersFromBounds(child);
+        if (b2) return { path: b2, source: nest + '.bounds' };
+        if (Array.isArray(child) || (child && typeof child.length === 'number')) {
+          const pts = coercePointList(child);
+          if (pts) return { path: pts, source: nest };
+        }
+        for (let k = 0; k < arrayKeys.length; k++) {
+          const key = arrayKeys[k];
+          const pts = coercePointList(child[key]);
+          if (pts) return { path: pts, source: nest + '.' + key };
+        }
+      }
+    }
+    return null;
+  }
+
+  let mineMapInstance = null;
+  let mineMapPolygon = null;
+  let mineMapMarker = null;
+  let mineMapLabelsOn = false;
+  let mineMapBound = false;
+  let mineMapLoading = null;
+  let mineMapResizeBound = false;
+
+  function mineMapStyles() {
+    return mineMapLabelsOn ? MINE_MAP_BASE_STYLE.slice() : MINE_MAP_BASE_STYLE.concat(MINE_MAP_HIDE_LABELS);
+  }
+  function syncMineMapBounds() {
+    const overlay = $('mine-map-overlay');
+    const main = $('portal-main');
+    if (!overlay || !main || overlay.hidden) return;
+    const r = main.getBoundingClientRect();
+    overlay.style.left = r.left + 'px';
+    overlay.style.top = r.top + 'px';
+    overlay.style.width = r.width + 'px';
+    overlay.style.height = r.height + 'px';
+  }
+  function clearMineMapBounds() {
+    const overlay = $('mine-map-overlay');
+    if (!overlay) return;
+    overlay.style.left = '';
+    overlay.style.top = '';
+    overlay.style.width = '';
+    overlay.style.height = '';
+  }
+  function loadGoogleMapsApi() {
+    if (window.google && window.google.maps) return Promise.resolve();
+    if (mineMapLoading) return mineMapLoading;
+    if (!GOOGLE_MAPS_API_KEY) {
+      return Promise.reject(new Error('Maps API key missing'));
+    }
+    mineMapLoading = new Promise((resolve, reject) => {
+      const prev = window.__tmMineMapInit;
+      window.__tmMineMapInit = function () {
+        if (typeof prev === 'function') try { prev(); } catch (e) {}
+        resolve();
+      };
+      const s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(GOOGLE_MAPS_API_KEY)
+        + '&callback=__tmMineMapInit&loading=async';
+      s.async = true;
+      s.defer = true;
+      s.onerror = () => reject(new Error('Failed to load Google Maps'));
+      document.head.appendChild(s);
+    });
+    return mineMapLoading;
+  }
+  function clearMineMapOverlays() {
+    if (mineMapPolygon) {
+      mineMapPolygon.setMap(null);
+      mineMapPolygon = null;
+    }
+    if (mineMapMarker) {
+      mineMapMarker.setMap(null);
+      mineMapMarker = null;
+    }
+  }
+  function ensureMineMap() {
+    const canvas = $('mine-map-canvas');
+    if (!canvas) throw new Error('Map canvas missing');
+    if (mineMapInstance) return mineMapInstance;
+    mineMapInstance = new google.maps.Map(canvas, {
+      mapTypeId: 'roadmap',
+      tilt: 0,
+      heading: 0,
+      disableDefaultUI: true,
+      zoomControl: true,
+      zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
+      gestureHandling: 'greedy',
+      keyboardShortcuts: false,
+      clickableIcons: false,
+      styles: mineMapStyles(),
+      center: { lat: 39.5, lng: -98.35 },
+      zoom: 4
+    });
+    mineMapInstance.setOptions({ rotateControl: false, streetViewControl: false, mapTypeControl: false, fullscreenControl: false });
+    google.maps.event.addListenerOnce(mineMapInstance, 'idle', () => {
+      try { mineMapInstance.setTilt(0); } catch (e) {}
+    });
+    return mineMapInstance;
+  }
+  function updateMineMapLabelsBtn() {
+    const btn = $('mine-map-labels');
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', mineMapLabelsOn ? 'true' : 'false');
+    btn.textContent = mineMapLabelsOn ? 'Labels on' : 'Labels off';
+  }
+  function setMineMapLabels(on) {
+    mineMapLabelsOn = !!on;
+    updateMineMapLabelsBtn();
+    if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
+  }
+  function showMineMapMsg(text, isTip) {
+    const tip = $('mine-map-tip');
+    const msg = $('mine-map-msg');
+    if (tip) { tip.hidden = true; tip.textContent = ''; }
+    if (msg) { msg.hidden = true; msg.textContent = ''; }
+    if (!text) return;
+    const el = isTip ? tip : msg;
+    if (!el) return;
+    el.textContent = text;
+    el.hidden = false;
+  }
+  function parcelScreenSizeAtZoom(path, zoom) {
+    const scale = Math.pow(2, zoom);
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < path.length; i++) {
+      const lat = path[i].lat;
+      const lng = path[i].lng;
+      const siny = Math.min(Math.max(Math.sin(lat * Math.PI / 180), -0.9999), 0.9999);
+      const x = (lng + 180) / 360 * 256 * scale;
+      const y = (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI)) * 256 * scale;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    return { width: maxX - minX, height: maxY - minY };
+  }
+  function tryRefineParcelZoomWithProjection(map, path, targetPx) {
+    try {
+      const ov = new google.maps.OverlayView();
+      ov.onAdd = function () {};
+      ov.draw = function () {};
+      ov.onRemove = function () {};
+      ov.setMap(map);
+      const finish = () => { try { ov.setMap(null); } catch (e) {} };
+      google.maps.event.addListenerOnce(map, 'idle', () => {
+        try {
+          const proj = ov.getProjection();
+          if (!proj || typeof proj.fromLatLngToDivPixel !== 'function') { finish(); return; }
+          const measure = () => {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (let i = 0; i < path.length; i++) {
+              const px = proj.fromLatLngToDivPixel(new google.maps.LatLng(path[i].lat, path[i].lng));
+              if (!px) continue;
+              if (px.x < minX) minX = px.x;
+              if (px.x > maxX) maxX = px.x;
+              if (px.y < minY) minY = px.y;
+              if (px.y > maxY) maxY = px.y;
+            }
+            const w = maxX - minX;
+            const h = maxY - minY;
+            return w > 0.5 ? w : Math.max(w, h);
+          };
+          let lo = 0, hi = 22;
+          for (let i = 0; i < 20; i++) {
+            const mid = (lo + hi) / 2;
+            map.setZoom(mid);
+            const dim = measure();
+            if (!(dim > 0) || !Number.isFinite(dim)) break;
+            if (dim > targetPx) hi = mid;
+            else lo = mid;
+          }
+          map.setZoom(Math.max(0, Math.min(22, lo)));
+        } catch (e) {}
+        finish();
+      });
+    } catch (e) {}
+  }
+  function zoomMapToParcelPx(map, path, targetPx) {
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach(p => bounds.extend(p));
+    map.setCenter(bounds.getCenter());
+    const target = targetPx > 0 ? targetPx : MINE_MAP_PARCEL_TARGET_PX;
+    let lo = 0;
+    let hi = 22;
+    for (let i = 0; i < 28; i++) {
+      const mid = (lo + hi) / 2;
+      const size = parcelScreenSizeAtZoom(path, mid);
+      const dim = size.width > 0.5 ? size.width : Math.max(size.width, size.height);
+      if (dim > target) hi = mid;
+      else lo = mid;
+    }
+    map.setZoom(Math.max(0, Math.min(22, lo)));
+    tryRefineParcelZoomWithProjection(map, path, target);
+  }
+  function renderMineMapContent(mine) {
+    const map = ensureMineMap();
+    clearMineMapOverlays();
+    showMineMapMsg('', false);
+    const type = typeKeyOf(mine, null);
+    const colors = MINE_MAP_PARCEL_COLORS[type] || { fill: '#FF9800', stroke: '#E65100' };
+    const corners = findCorners(mine);
+    const gps = findGps(mine);
+    if (corners && corners.path && corners.path.length >= 3) {
+      mineMapPolygon = new google.maps.Polygon({
+        paths: corners.path,
+        strokeColor: colors.stroke,
+        strokeOpacity: 0.95,
+        strokeWeight: 2,
+        fillColor: colors.fill,
+        fillOpacity: 0.45,
+        map: map,
+        clickable: false
+      });
+      zoomMapToParcelPx(map, corners.path, MINE_MAP_PARCEL_TARGET_PX);
+      try { map.setTilt(0); } catch (e) {}
+      return;
+    }
+    if (gps) {
+      mineMapMarker = new google.maps.Marker({
+        position: { lat: gps.lat, lng: gps.lng },
+        map: map,
+        title: mineTitle(mine, null)
+      });
+      map.setCenter({ lat: gps.lat, lng: gps.lng });
+      map.setZoom(18);
+      try { map.setTilt(0); } catch (e) {}
+      showMineMapMsg('Parcel corners not found on this mine — showing center only.', true);
+      return;
+    }
+    showMineMapMsg('No location data for this mine.', false);
+  }
+  function closeMineMap() {
+    const overlay = $('mine-map-overlay');
+    if (!overlay || overlay.hidden) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    clearMineMapBounds();
+    const main = $('portal-main');
+    if (main) {
+      main.style.overflow = '';
+      delete main.dataset.mineMapOpen;
+    }
+  }
+  async function openMineMap(mine) {
+    const overlay = $('mine-map-overlay');
+    const main = $('portal-main');
+    if (!overlay || !mine) return;
+    bindMineMapOnce();
+    $('mine-map-title').textContent = mineTitle(mine, null) || 'Mine map';
+    updateMineMapLabelsBtn();
+    showMineMapMsg('Loading map…', false);
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    if (main) {
+      main.style.overflow = 'hidden';
+      main.dataset.mineMapOpen = '1';
+    }
+    syncMineMapBounds();
+    if (!GOOGLE_MAPS_API_KEY) {
+      showMineMapMsg('Google Maps JS API key required. Set GOOGLE_MAPS_API_KEY.', false);
+      return;
+    }
+    try {
+      await loadGoogleMapsApi();
+      renderMineMapContent(mine);
+      setTimeout(() => {
+        if (mineMapInstance) google.maps.event.trigger(mineMapInstance, 'resize');
+        renderMineMapContent(mine);
+      }, 50);
+    } catch (err) {
+      console.warn('[visitors] minimap failed', err);
+      showMineMapMsg('Could not load Google Maps. Check the API key and network.', false);
+    }
+  }
+  function findMineById(mineId) {
+    if (mineId == null || mineId === '') return null;
+    return mineMap[String(mineId)] || mineMap[mineId] || null;
+  }
+  function mineHasMapLocation(mine) {
+    if (!mine) return false;
+    if (findGps(mine)) return true;
+    const c = findCorners(mine);
+    return !!(c && c.path && c.path.length >= 3);
+  }
+  function voMapPinHtml(mine, fallbackId) {
+    const id = (mine && mine.id != null) ? String(mine.id)
+      : (fallbackId != null ? String(fallbackId) : '');
+    if (mineHasMapLocation(mine) && id) {
+      return '<button type="button" class="vo-pin" data-mine-id="' + escapeHtml(id)
+        + '" title="Show mine map" aria-label="Show mine map">' + pinSvgHtml() + '</button>';
+    }
+    return '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
+  }
+  let voMapPinBound = false;
+  function bindVoMapPinOnce() {
+    if (voMapPinBound) return;
+    voMapPinBound = true;
+    const root = $('portal-main');
+    if (!root) return;
+    root.addEventListener('click', e => {
+      const pin = e.target.closest('button.vo-pin');
+      if (!pin || pin.classList.contains('is-missing') || !root.contains(pin)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const mineId = pin.getAttribute('data-mine-id') || '';
+      if (!mineId) return;
+      const full = findMineById(mineId);
+      if (!full) return;
+      openMineMap(full);
+    });
+  }
+  function bindMineMapOnce() {
+    if (mineMapBound) return;
+    mineMapBound = true;
+    bindVoMapPinOnce();
+    const closeBtn = $('mine-map-close');
+    if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeMineMap(); });
+    const labelsBtn = $('mine-map-labels');
+    if (labelsBtn) labelsBtn.addEventListener('click', e => {
+      e.preventDefault();
+      setMineMapLabels(!mineMapLabelsOn);
+    });
+    const overlay = $('mine-map-overlay');
+    if (overlay) overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeMineMap();
+    });
+    if (!mineMapResizeBound) {
+      mineMapResizeBound = true;
+      window.addEventListener('resize', () => {
+        syncMineMapBounds();
+        if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
+          google.maps.event.trigger(mineMapInstance, 'resize');
+        }
+      });
+      if (typeof ResizeObserver !== 'undefined') {
+        const main = $('portal-main');
+        if (main) {
+          new ResizeObserver(() => {
+            syncMineMapBounds();
+            if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
+              google.maps.event.trigger(mineMapInstance, 'resize');
+            }
+          }).observe(main);
+        }
+      }
+    }
+  }
+
   function pinSvgHtml() {
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.8"></path><circle cx="12" cy="10" r="2.2" fill="currentColor"></circle></svg>';
   }
@@ -1014,7 +1624,16 @@
       if (e.target === detail) closeVoDetail();
     });
     window.addEventListener('resize', () => { if (!$('vo-detail-overlay').hidden) syncVoDetailBounds(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVoDetail(); });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const mapOverlay = $('mine-map-overlay');
+      if (mapOverlay && !mapOverlay.hidden) {
+        e.preventDefault();
+        closeMineMap();
+        return;
+      }
+      closeVoDetail();
+    });
   }
   let mineBadgeClickBound = false;
   let mineTip = null;
@@ -1171,14 +1790,7 @@
     const type = typeKeyOf(mine, v);
     const mineName = mineTitle(mine, v);
     const iconSrc = ICONS[type] || ICONS.rock;
-    const gps = findGps(mine);
-    let pinHtml;
-    if (gps) {
-      const href = 'https://www.google.com/maps?q=' + encodeURIComponent(gps.lat + ',' + gps.lng);
-      pinHtml = '<a class="vo-pin" href="' + href + '" target="_blank" rel="noopener noreferrer" title="Open in Maps" aria-label="Open mine in Maps">' + pinSvgHtml() + '</a>';
-    } else {
-      pinHtml = '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
-    }
+    const pinHtml = voMapPinHtml(mine, v && v.propertyId);
     const photo = visitorCheckInPhoto(v);
     const photoHtml = wrapVisitorPhotoHtml(mine, photo, v.id);
     const msg = (typeof v.message === 'string' && v.message.trim()) ? v.message.trim() : '';
@@ -1273,11 +1885,14 @@
     mines.forEach(m => {
       const d = m._details || {};
       const custom = (typeof d.customName === 'string' && d.customName.trim()) ? d.customName.trim() : '';
+      // Keep full property doc on _raw (includes corners) for minimap lookup.
+      const raw = Object.assign({}, m);
+      delete raw._details;
       map[m.id] = {
         id: m.id,
         mineType: m.mineType || 'rock',
         customName: custom || null,
-        _raw: m,
+        _raw: raw,
         _details: d
       };
     });
@@ -1393,6 +2008,8 @@
 
   bindShowcasePinDelegationOnce();
   bindMineBadgeClicksOnce();
+  bindVoMapPinOnce();
+  bindMineMapOnce();
   updateTypeFilterButtons();
   document.querySelectorAll('.type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {

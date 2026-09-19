@@ -377,9 +377,9 @@
     .vo-mine-badge { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:30px; font-size:16.5px; font-weight:700; background:rgba(0,0,0,.22); color:#fff; border:1px solid rgba(255,255,255,.28); min-width:0; }
     .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .vo-type-icon { width:24px; height:24px; flex-shrink:0; object-fit:contain; }
-    .vo-pin { width:33px; height:33px; color:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; }
-    .vo-pin svg { width:33px; height:33px; display:block; }
-    .vo-pin.is-missing { opacity:0.38; pointer-events:none; }
+    .vo-pin { width:33px; height:33px; color:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; border:0; background:transparent; padding:0; margin:0; cursor:pointer; font:inherit; }
+    .vo-pin svg { width:33px; height:33px; display:block; pointer-events:none; }
+    .vo-pin.is-missing { opacity:0.38; pointer-events:none; cursor:default; }
     .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
     .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:default; }
     .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
@@ -1051,7 +1051,8 @@
 
   function findCorners(p) {
     if (!p || typeof p !== 'object') return null;
-    const sources = [p, p._details].filter(Boolean);
+    // Prefer full property docs (_raw), then the object itself, then _details.
+    const sources = [p._raw, p, p._details].filter(Boolean);
     // Prefer the documented corners array on the property root, then _details.
     for (let i = 0; i < sources.length; i++) {
       const obj = sources[i];
@@ -1210,6 +1211,94 @@
     el.hidden = false;
   }
 
+
+  const MINE_MAP_PARCEL_TARGET_PX = 30;
+
+  /** Mercator world-pixel size of a lat/lng path at a given zoom (div-pixel scale). */
+  function parcelScreenSizeAtZoom(path, zoom) {
+    const scale = Math.pow(2, zoom);
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < path.length; i++) {
+      const lat = path[i].lat;
+      const lng = path[i].lng;
+      const siny = Math.min(Math.max(Math.sin(lat * Math.PI / 180), -0.9999), 0.9999);
+      const x = (lng + 180) / 360 * 256 * scale;
+      const y = (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI)) * 256 * scale;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    return { width: maxX - minX, height: maxY - minY };
+  }
+
+  /**
+   * Center on parcel bounds, then binary-search zoom so on-screen width ≈ targetPx.
+   * Uses the same Mercator projection as Maps (equivalent to fromLatLngToDivPixel scale).
+   */
+  function zoomMapToParcelPx(map, path, targetPx) {
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach(p => bounds.extend(p));
+    map.setCenter(bounds.getCenter());
+    const target = targetPx > 0 ? targetPx : MINE_MAP_PARCEL_TARGET_PX;
+    let lo = 0;
+    let hi = 22;
+    for (let i = 0; i < 28; i++) {
+      const mid = (lo + hi) / 2;
+      const size = parcelScreenSizeAtZoom(path, mid);
+      // Prefer width; if degenerate, fall back to max(width, height).
+      const dim = size.width > 0.5 ? size.width : Math.max(size.width, size.height);
+      if (dim > target) hi = mid;
+      else lo = mid;
+    }
+    const z = Math.max(0, Math.min(22, lo));
+    map.setZoom(z);
+    // Refine with live projection once available (accounts for map padding / DPI).
+    tryRefineParcelZoomWithProjection(map, path, target);
+  }
+
+  function tryRefineParcelZoomWithProjection(map, path, targetPx) {
+    try {
+      const ov = new google.maps.OverlayView();
+      ov.onAdd = function () {};
+      ov.draw = function () {};
+      ov.onRemove = function () {};
+      ov.setMap(map);
+      const finish = () => { try { ov.setMap(null); } catch (e) {} };
+      google.maps.event.addListenerOnce(map, 'idle', () => {
+        try {
+          const proj = ov.getProjection();
+          if (!proj || typeof proj.fromLatLngToDivPixel !== 'function') { finish(); return; }
+          const measure = () => {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (let i = 0; i < path.length; i++) {
+              const px = proj.fromLatLngToDivPixel(new google.maps.LatLng(path[i].lat, path[i].lng));
+              if (!px) continue;
+              if (px.x < minX) minX = px.x;
+              if (px.x > maxX) maxX = px.x;
+              if (px.y < minY) minY = px.y;
+              if (px.y > maxY) maxY = px.y;
+            }
+            const w = maxX - minX;
+            const h = maxY - minY;
+            return w > 0.5 ? w : Math.max(w, h);
+          };
+          let lo = 0, hi = 22;
+          for (let i = 0; i < 20; i++) {
+            const mid = (lo + hi) / 2;
+            map.setZoom(mid);
+            const dim = measure();
+            if (!(dim > 0) || !Number.isFinite(dim)) break;
+            if (dim > targetPx) hi = mid;
+            else lo = mid;
+          }
+          map.setZoom(Math.max(0, Math.min(22, lo)));
+        } catch (e) {}
+        finish();
+      });
+    } catch (e) {}
+  }
+
   function renderMineMapContent(mine) {
     const map = ensureMineMap();
     clearMineMapOverlays();
@@ -1229,9 +1318,7 @@
         map: map,
         clickable: false
       });
-      const bounds = new google.maps.LatLngBounds();
-      corners.path.forEach(p => bounds.extend(p));
-      map.fitBounds(bounds, { top: 48, right: 48, bottom: 48, left: 48 });
+      zoomMapToParcelPx(map, corners.path, MINE_MAP_PARCEL_TARGET_PX);
       try { map.setTilt(0); } catch (e) {}
       return;
     }
@@ -1296,9 +1383,30 @@
     }
   }
 
+
+  let voMapPinBound = false;
+  function bindVoMapPinOnce() {
+    if (voMapPinBound) return;
+    voMapPinBound = true;
+    const root = $('portal-main');
+    if (!root) return;
+    root.addEventListener('click', e => {
+      const pin = e.target.closest('button.vo-pin');
+      if (!pin || pin.classList.contains('is-missing') || !root.contains(pin)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const mineId = pin.getAttribute('data-mine-id') || '';
+      if (!mineId) return;
+      const full = findMineById(mineId);
+      if (!full) return;
+      openMineMap(full);
+    });
+  }
+
   function bindMineMapOnce() {
     if (mineMapBound) return;
     mineMapBound = true;
+    bindVoMapPinOnce();
     const closeBtn = $('mine-map-close');
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeMineMap(); });
     const labelsBtn = $('mine-map-labels');
@@ -2965,18 +3073,28 @@
     openMineLandDetail(mine, src);
   }
 
+
+  function mineHasMapLocation(mine) {
+    if (!mine) return false;
+    if (findGps(mine)) return true;
+    const c = findCorners(mine);
+    return !!(c && c.path && c.path.length >= 3);
+  }
+  function voMapPinHtml(mine, fallbackId) {
+    const id = (mine && mine.id != null) ? String(mine.id)
+      : (fallbackId != null ? String(fallbackId) : '');
+    if (mineHasMapLocation(mine) && id) {
+      return '<button type="button" class="vo-pin" data-mine-id="' + escapeHtml(id)
+        + '" title="Show mine map" aria-label="Show mine map">' + pinSvgHtml() + '</button>';
+    }
+    return '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
+  }
+
   function renderMineLandDetailCard(mine, photoSrc) {
     const type = typeKey(mine || {});
     const mineName = mine ? titleOf(mine) : 'Mine';
     const iconSrc = ICONS[type] || ICONS.rock;
-    const gps = mine ? findGps(mine) : null;
-    let pinHtml;
-    if (gps) {
-      const href = 'https://www.google.com/maps?q=' + encodeURIComponent(gps.lat + ',' + gps.lng);
-      pinHtml = '<a class="vo-pin" href="' + href + '" target="_blank" rel="noopener noreferrer" title="Open in Maps" aria-label="Open mine in Maps">' + pinSvgHtml() + '</a>';
-    } else {
-      pinHtml = '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
-    }
+    const pinHtml = voMapPinHtml(mine);
     const src = (photoSrc || (mine && photoUrl(mine)) || '').trim();
     const photoHtml = src
       ? '<img class="vo-photo land-detail-photo" src="' + escapeHtml(src) + '" alt="' + escapeHtml(mineName) + '">'
@@ -3009,6 +3127,7 @@
   function bindMineLandPhotoOnce() {
     if (mineLandPhotoBound) return;
     mineLandPhotoBound = true;
+    bindVoMapPinOnce();
     const root = $('portal-main');
     if (!root) return;
     root.addEventListener('click', e => {
@@ -3152,6 +3271,7 @@
   function bindVisitorsOverlayOnce() {
     if (visitorsOverlayBound) return;
     visitorsOverlayBound = true;
+    bindVoMapPinOnce();
     const closeBtn = $('visitors-overlay-close');
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeVisitorsOverlay(); });
     document.addEventListener('keydown', e => {
@@ -3242,14 +3362,7 @@
     const type = TYPE_ORDER.includes(typeKey) ? typeKey : 'rock';
     const mineName = mine ? titleOf(mine) : (v.propertyName || 'Mine');
     const iconSrc = ICONS[type] || ICONS.rock;
-    const gps = mine ? findGps(mine) : null;
-    let pinHtml;
-    if (gps) {
-      const href = 'https://www.google.com/maps?q=' + encodeURIComponent(gps.lat + ',' + gps.lng);
-      pinHtml = '<a class="vo-pin" href="' + href + '" target="_blank" rel="noopener noreferrer" title="Open in Maps" aria-label="Open mine in Maps">' + pinSvgHtml() + '</a>';
-    } else {
-      pinHtml = '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
-    }
+    const pinHtml = voMapPinHtml(mine, v && v.propertyId);
     const photo = visitorCheckInPhoto(v);
     const photoHtml = wrapVisitorPhotoHtml(mine, photo, v.id);
     const msg = (typeof v.message === 'string' && v.message.trim()) ? v.message.trim() : '';
