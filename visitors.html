@@ -2925,6 +2925,22 @@
       .get();
     allVisits = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
     visitsTruncated = snap.size >= VISIT_LIMIT;
+    // Debug: dump Firestore checkIn fields (look for owner reply)
+    (function logVisitorCheckInData(list) {
+      const keySet = new Set();
+      const replyHits = [];
+      list.forEach(v => {
+        Object.keys(v || {}).forEach(k => keySet.add(k));
+        const replyKeys = Object.keys(v || {}).filter(k => /reply|response|answer/i.test(k));
+        if (replyKeys.length) replyHits.push({ id: v.id, replyKeys, sample: replyKeys.reduce((o, k) => { o[k] = v[k]; return o; }, {}) });
+      });
+      const keys = Array.from(keySet).sort();
+      console.log('[visitors] checkIns loaded', list.length, '(truncated=' + visitsTruncated + ')');
+      console.log('[visitors] unique Firestore keys on checkIns:', keys);
+      if (replyHits.length) console.log('[visitors] docs with reply-like keys:', replyHits);
+      else console.log('[visitors] no reply-like key names in this batch');
+      console.log('[visitors] full checkIn list (allVisits):', list);
+    })(allVisits);
     return allVisits.length;
   }
 
