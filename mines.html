@@ -100,16 +100,16 @@
     .type-filter-btn:focus-visible { outline:2px solid #4FC3F7; outline-offset:2px; }
 
     .flip-type-order-btn {
-      display:inline-flex; align-items:center; justify-content:center; gap:4px;
-      height:40px; padding:0 10px; flex-shrink:0;
+      display:inline-flex; align-items:center; justify-content:center;
+      width:40px; height:40px; padding:0; flex-shrink:0;
       border:1px solid #cbd5e1; border-radius:10px; background:#fff;
-      color:#334155; font:700 12px/1 DM Sans,sans-serif;
-      cursor:pointer; letter-spacing:.2px;
+      color:#334155; cursor:pointer;
     }
     .flip-type-order-btn:hover { border-color:#4FC3F7; background:#e8f7fe; color:#0c4a6e; }
     .flip-type-order-btn:disabled { opacity:.55; cursor:not-allowed; }
     .flip-type-order-btn[aria-pressed="true"] { border-color:#4FC3F7; background:#e8f7fe; }
-    .flip-type-order-btn .flip-type-order-arrows { font-size:16px; line-height:1; }
+    .flip-type-order-btn .flip-type-order-arrows { font-size:18px; line-height:1; }
+
 
     .toolbar-follow-tip {
       position:fixed; z-index:600; pointer-events:none; display:none;
@@ -873,6 +873,9 @@
         </div>
       </div>
       <div class="mine-toolbar" id="mine-toolbar">
+        <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Reverses the order of the mine type groups." aria-pressed="false" data-tip="Reverses the order of the mine type groups." disabled>
+          <span class="flip-type-order-arrows" aria-hidden="true">⇅</span>
+        </button>
         <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
           <button type="button" class="type-filter-btn" data-type="diamond" aria-label="Filter Diamond" aria-pressed="false" disabled>
             <img src="images/mine-icons/diamond.svg" alt="">
@@ -886,12 +889,7 @@
           <button type="button" class="type-filter-btn" data-type="rock" aria-label="Filter Rock" aria-pressed="false" disabled>
             <img src="images/mine-icons/rock.svg" alt="">
           </button>
-        </div>
-        <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Flip mine type order" aria-pressed="false" data-tip="Flip the order of mine type filters, type groups, and production total boxes." disabled>
-          <span class="flip-type-order-arrows" aria-hidden="true">⇅</span>
-          Types
-        </button>
-        <button type="button" class="sort-btn" id="sort-prod" data-sort="prod" disabled>Mine Production Level</button>
+        </div>        <button type="button" class="sort-btn" id="sort-prod" data-sort="prod" disabled>Mine Production Level</button>
         <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
         <button type="button" class="sort-btn" id="sort-visitors" data-sort="visitors" disabled>Visitor Count</button>
