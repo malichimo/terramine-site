@@ -983,8 +983,8 @@
               <span>Zoom</span>
               <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
             </label>
-            <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building outlines and business labels." aria-label="Show building outlines and business labels.">Buildings off</button>
-            <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (street and place names)." aria-label="Show map labels (street and place names).">Labels off</button>
+            <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
+            <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
           </div>
           <div class="mine-map-body" id="mine-map-body">
             <div class="mine-map-canvas" id="mine-map-canvas"></div>
@@ -1237,43 +1237,41 @@
   // Public browser Maps JS key (same as heatmap.html on this site).
   const GOOGLE_MAPS_API_KEY = 'AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y';
 
-  // Pastel game-minimap basemap (top-down roadmap, soft greens).
+  // Greyscale minimap basemap (top-down roadmap).
   const MINE_MAP_BASE_STYLE = [
-    { elementType: 'geometry', stylers: [{ color: '#d7ecd4' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#5a6b5e' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#eef6ee' }] },
-    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#d7ecd4' }] },
-    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#cfe8cb' }] },
-    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#c8e0c4' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#b9dcb3' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#f2f5ef' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#c5d4c2' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ebe4c8' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a8d4e8' }] },
+    { elementType: 'geometry', stylers: [{ color: '#e6e6e6' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#555555' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#f2f2f2' }] },
+    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#b0b0b0' }] },
+    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#e6e6e6' }] },
+    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#d9d9d9' }] },
+    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#d4d4d4' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#c8c8c8' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#c0c0c0' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ebebeb' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#b8b8b8' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#b0b8c0' }] },
     { featureType: 'transit', stylers: [{ visibility: 'off' }] },
   ];
   const MINE_MAP_HIDE_LABELS = [
     { featureType: 'administrative', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.business', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'landscape.man_made', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'water', elementType: 'labels', stylers: [{ visibility: 'off' }] },
     { featureType: 'landscape', elementType: 'labels', stylers: [{ visibility: 'off' }] }
   ];
   const MINE_MAP_HIDE_BUILDINGS = [
-    { featureType: 'landscape.man_made', stylers: [{ visibility: 'off' }] },
-    { featureType: 'poi.business', stylers: [{ visibility: 'off' }] }
+    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.business', elementType: 'geometry', stylers: [{ visibility: 'off' }] }
   ];
   const MINE_MAP_SHOW_BUILDINGS = [
-    { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ visibility: 'on' }, { color: '#c5d9c2' }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ visibility: 'on' }, { color: '#6b7f69' }, { weight: 1.25 }] },
-    { featureType: 'landscape.man_made', elementType: 'labels', stylers: [{ visibility: 'on' }] },
-    { featureType: 'landscape.man_made', elementType: 'labels.text.fill', stylers: [{ visibility: 'on' }] },
-    { featureType: 'landscape.man_made', elementType: 'labels.text.stroke', stylers: [{ visibility: 'on' }] },
-    { featureType: 'poi.business', stylers: [{ visibility: 'on' }] },
-    { featureType: 'poi.business', elementType: 'labels', stylers: [{ visibility: 'on' }] },
-    { featureType: 'poi.business', elementType: 'labels.text.fill', stylers: [{ visibility: 'on' }] },
-    { featureType: 'poi.business', elementType: 'labels.text.stroke', stylers: [{ visibility: 'on' }] }
+    { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ visibility: 'on' }, { color: '#c8c8c8' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ visibility: 'on' }, { color: '#6a6a6a' }, { weight: 1.25 }] },
+    { featureType: 'poi.business', elementType: 'geometry', stylers: [{ visibility: 'on' }, { color: '#d0d0d0' }] }
   ];
   const MINE_MAP_PARCEL_COLORS = {
     rock: { fill: '#7F7F7F', stroke: '#7F7F7F' },
@@ -1501,12 +1499,12 @@
 
   function mineMapStyles() {
     let styles = MINE_MAP_BASE_STYLE.slice();
-    // General labels first; Buildings last so business/man_made labels follow Buildings.
+    // Labels control: street/place/building/business names.
     if (!mineMapLabelsOn) styles = styles.concat(MINE_MAP_HIDE_LABELS);
+    // Buildings control: footprints/outlines only (not labels).
     styles = styles.concat(mineMapBuildingsOn ? MINE_MAP_SHOW_BUILDINGS : MINE_MAP_HIDE_BUILDINGS);
     return styles;
   }
-
   function syncMineMapBounds() {
     const overlay = $('mine-map-overlay');
     const main = $('portal-main');
@@ -1598,8 +1596,8 @@
     const btn = $('mine-map-labels');
     if (!btn) return;
     const tipText = mineMapLabelsOn
-      ? 'Hide map labels (street and place names).'
-      : 'Show map labels (street and place names).';
+      ? 'Hide map labels (streets, places, and building names).'
+      : 'Show map labels (streets, places, and building names).';
     btn.setAttribute('aria-pressed', mineMapLabelsOn ? 'true' : 'false');
     btn.textContent = mineMapLabelsOn ? 'Labels on' : 'Labels off';
     btn.setAttribute('data-tip', tipText);
@@ -1628,8 +1626,8 @@
     const btn = $('mine-map-buildings');
     if (!btn) return;
     const tipText = mineMapBuildingsOn
-      ? 'Hide building outlines and business labels.'
-      : 'Show building outlines and business labels.';
+      ? 'Hide building footprints and outlines.'
+      : 'Show building footprints and outlines.';
     btn.setAttribute('aria-pressed', mineMapBuildingsOn ? 'true' : 'false');
     btn.textContent = mineMapBuildingsOn ? 'Buildings on' : 'Buildings off';
     btn.setAttribute('data-tip', tipText);
