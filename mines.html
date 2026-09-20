@@ -2596,13 +2596,17 @@
       applyProdValue(el, el.dataset.mineType, level);
     });
   }
+  /** Missing / invalid production or game level => 1 (matches app + totals). */
+  function effectiveLevel(raw) {
+    const n = numOrNull(raw);
+    if (n == null || !Number.isFinite(n) || n < 1) return 1;
+    return n;
+  }
   function groupProductionSum(type, mines) {
     let sum = 0;
     (mines || []).forEach(m => {
       if (type && typeKey(m) !== type) return;
-      // Missing productionLevel => treat as level 1 (base rate), matching app Est. Monthly Rent.
-      let level = numOrNull((m._details || {}).productionLevel);
-      if (level == null || !Number.isFinite(level) || level < 1) level = 1;
+      const level = effectiveLevel((m._details || {}).productionLevel);
       sum += displayAmount(typeKey(m), level, displayPref);
     });
     return sum;
@@ -5067,7 +5071,7 @@
   }
   function appendCard(mine) {
     const d = mine._details || {};
-    const gl = numOrNull(d.gameLevel);
+    const gl = effectiveLevel(d.gameLevel);
     const type = typeKey(mine);
     const gplayedSrc = numOrNull(mine.gamesPlayed);
     const gwonSrc = numOrNull(mine.gamesWon);
@@ -5128,20 +5132,20 @@
       pinEl.setAttribute('title', 'No location');
     }
 
-    const pl = numOrNull((mine._details || {}).productionLevel);
+    // Missing productionLevel / gameLevel => 1 on cards (same as totals / app).
+    const pl = effectiveLevel((mine._details || {}).productionLevel);
     const prod = document.createElement('div');
     prod.className = 'prod-box';
     const prodLabel = document.createElement('small');
-    prodLabel.textContent = 'PRODUCTION (' + (pl == null ? '—' : fmtPlain(pl)) + ')';
+    prodLabel.textContent = 'PRODUCTION (' + fmtPlain(pl) + ')';
     const boost = document.createElement('b');
     boost.className = 'prod-boost';
-    if (pl == null) { boost.textContent = '—'; boost.classList.add('is-missing'); }
-    else boost.textContent = fmtPlain(productionBonus(pl)) + '%';
+    boost.textContent = fmtPlain(productionBonus(pl)) + '%';
     const rate = document.createElement('div');
     rate.className = 'mine-rate';
     const rt = document.createElement('span');
     rt.dataset.mineType = type;
-    rt.dataset.prodLevel = pl == null ? '' : String(pl);
+    rt.dataset.prodLevel = String(pl);
     applyProdValue(rt, type, pl);
     rate.append(rt);
     prod.append(prodLabel, boost, rate);
@@ -5152,17 +5156,14 @@
     const sm = document.createElement('small');
     sm.textContent = 'Game Level';
     const b = document.createElement('b');
-    if (gl == null) { b.textContent = '—'; b.className = 'is-missing'; b.title = 'Game level not set'; }
-    else b.textContent = fmtPlain(gl);
+    b.textContent = fmtPlain(gl);
     const track = document.createElement('div');
     track.className = 'xp-track';
     const fill = document.createElement('div');
     let xpTone = '';
-    if (gl != null) {
-      if (gl <= 30) xpTone = ' is-red';
-      else if (gl <= 70) xpTone = ' is-yellow';
-      else xpTone = ' is-green';
-    }
+    if (gl <= 30) xpTone = ' is-red';
+    else if (gl <= 70) xpTone = ' is-yellow';
+    else xpTone = ' is-green';
     fill.className = 'xp-fill' + xpTone;
     fill.style.width = Math.max(0, Math.min(100, Number(gl) || 0)) + '%';
     track.appendChild(fill);
