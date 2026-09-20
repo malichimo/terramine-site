@@ -3367,16 +3367,22 @@
     const hasImg = slot.classList.contains('has-img');
     const pickable = !hasImg && n > 0;
     slot.classList.toggle('is-pickable', pickable);
+    if (hasImg) {
+      slot.removeAttribute('title');
+      slot.removeAttribute('role');
+      slot.removeAttribute('tabindex');
+      slot.removeAttribute('aria-label');
+      return;
+    }
+    slot.title = 'Pinned Visitor Photo will be showcased here';
     if (pickable) {
       slot.setAttribute('role', 'button');
       slot.setAttribute('tabindex', '0');
-      slot.setAttribute('aria-label', 'No photo — open visitors to choose a showcase image');
-      slot.title = 'Open visitors to set a showcase photo';
+      slot.setAttribute('aria-label', 'Pinned Visitor Photo will be showcased here. Open visitors to choose one.');
     } else {
       slot.removeAttribute('role');
       slot.removeAttribute('tabindex');
       slot.removeAttribute('aria-label');
-      slot.removeAttribute('title');
     }
   }
 
@@ -3918,6 +3924,7 @@
       slot.classList.remove('has-img');
       slot.replaceChildren();
       slot.textContent = 'No photo';
+      slot.title = 'Pinned Visitor Photo will be showcased here';
       delete slot.dataset.landTipBound;
       {
         const midClear = art.dataset.mineId;
@@ -5165,6 +5172,7 @@
     const ph = document.createElement('div');
     ph.className = 'mine-photo';
     ph.textContent = 'No photo';
+    ph.title = 'Pinned Visitor Photo will be showcased here';
     const photoInner = document.createElement('div');
     photoInner.className = 'inner';
     photoInner.appendChild(ph);
