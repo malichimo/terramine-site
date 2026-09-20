@@ -3389,6 +3389,16 @@
   }
 
 
+  async function fetchVisitorCount(mineId) {
+    const q = db.collection('checkIns').where('propertyId', '==', mineId);
+    if (typeof q.count === 'function') {
+      const snap = await q.count().get();
+      return (snap && snap.data && snap.data().count) || 0;
+    }
+    // Fallback: bounded get if aggregate unavailable (still only for one mine)
+    const snap = await q.limit(VISITOR_LIST_LIMIT).get();
+    return snap.size;
+  }
   function ensureVisitorCount(mineId) {
     if (visitorCountCache.has(mineId)) return Promise.resolve(visitorCountCache.get(mineId));
     if (visitorCountInflight.has(mineId)) return visitorCountInflight.get(mineId);
