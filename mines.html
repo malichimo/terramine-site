@@ -1166,16 +1166,22 @@
       if (!raw) return new Set();
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return new Set();
-      return new Set(arr.filter(v => SHOWCASE_FILTER_VALUES.indexOf(v) !== -1));
-    } catch (e) { return new Set(); }
+      const vals = arr.filter(v => SHOWCASE_FILTER_VALUES.indexOf(v) !== -1);
+      // Exclusive pair — keep at most one saved value.
+      if (vals.length !== 1) return new Set();
+      return new Set(vals);
+    } catch (e) {
+      return new Set();
+    }
   }
+
   function saveSelectedShowcase() {
     try {
       sessionStorage.setItem(FILTER_SHOWCASE_KEY, JSON.stringify(Array.from(selectedShowcase)));
     } catch (e) {}
   }
   let selectedTypes = loadSelectedTypes();
-  // Multi-select like type chips. None or both selected => no showcase filter (all).
+  // Exclusive pair (has | none). Empty = all mines (with visitor sort).
   let selectedShowcase = loadSelectedShowcase();
   let focusMineId = null; // exact property id focus from ?mineId= deep-link
   let allMines = [];
@@ -1233,7 +1239,7 @@
     return !!photoUrl(p);
   }
   function passesShowcaseFilter(p) {
-    // 0 or 2 selected => all (same mental model as type chips: none = all; both = all).
+    // Empty => all. Exactly one of has|none => filter to that.
     if (selectedShowcase.size !== 1) return true;
     const want = hasShowcaseImage(p);
     if (selectedShowcase.has('has')) return want;
@@ -5877,8 +5883,13 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.showcase;
-      if (selectedShowcase.has(v)) selectedShowcase.delete(v);
-      else selectedShowcase.add(v);
+      // Exclusive pair: pick one, or click the active one again to clear both.
+      if (selectedShowcase.has(v) && selectedShowcase.size === 1) {
+        selectedShowcase.clear();
+      } else {
+        selectedShowcase.clear();
+        selectedShowcase.add(v);
+      }
       saveSelectedShowcase();
       updateShowcaseFilterButtons();
       if (loadedUid) renderFromFilters();
