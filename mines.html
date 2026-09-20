@@ -2602,8 +2602,9 @@
     let sum = 0;
     (mines || []).forEach(m => {
       if (type && typeKey(m) !== type) return;
-      const level = numOrNull((m._details || {}).productionLevel);
-      if (level == null || !Number.isFinite(level)) return;
+      // Missing productionLevel => treat as level 1 (base rate), matching app Est. Monthly Rent.
+      let level = numOrNull((m._details || {}).productionLevel);
+      if (level == null || !Number.isFinite(level) || level < 1) level = 1;
       sum += displayAmount(typeKey(m), level, displayPref);
     });
     return sum;
@@ -2725,8 +2726,8 @@
   }
   function monthlyUsd(p) {
     const d = p._details || {};
-    const level = numOrNull(d.productionLevel);
-    if (level == null) return null;
+    let level = numOrNull(d.productionLevel);
+    if (level == null || !Number.isFinite(level) || level < 1) level = 1;
     return displayAmount(typeKey(p), level, { period: 'month', rate: 'bonus' });
   }
   function fmtRate(n, period) {
