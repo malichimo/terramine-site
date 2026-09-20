@@ -244,6 +244,17 @@
     .mine-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .mine-photo.has-img { border-style:solid; cursor:pointer; }
     .mine-photo.has-img img { cursor:pointer; }
+    .mine-photo.is-pickable {
+      cursor:pointer;
+      transition:background .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .mine-photo.is-pickable:hover,
+    .mine-photo.is-pickable:focus-visible {
+      background:rgba(62,139,253,.42);
+      border-color:rgba(168,206,255,.9);
+      color:#fff;
+      outline:none;
+    }
     .vo-detail-panel .land-detail-header .vo-mine-meta { max-width:none; flex:1; min-width:0; }
     .vo-detail-panel .land-detail-photo { cursor:default; }
     .mine-head { width:100%; min-width:0; margin-top:5px; margin-bottom:5px; }
@@ -3331,10 +3342,12 @@
   function applyVisitorCountUI(btn, count) {
     if (!btn) return;
     const n = Number(count) || 0;
+    const art = btn.closest('article.mine-card');
     if (n <= 0) {
       btn.hidden = true;
       btn.classList.remove('is-shown');
       btn.setAttribute('aria-hidden', 'true');
+      syncNoPhotoVisitorPick(art, 0);
       return;
     }
     const label = btn.querySelector('.mine-visitors-n');
@@ -3343,17 +3356,31 @@
     btn.hidden = false;
     btn.classList.add('is-shown');
     btn.removeAttribute('aria-hidden');
+    syncNoPhotoVisitorPick(art, n);
   }
-  async function fetchVisitorCount(mineId) {
-    const q = db.collection('checkIns').where('propertyId', '==', mineId);
-    if (typeof q.count === 'function') {
-      const snap = await q.count().get();
-      return (snap && snap.data && snap.data().count) || 0;
+
+  function syncNoPhotoVisitorPick(art, count) {
+    if (!art) return;
+    const slot = art.querySelector('.mine-photo');
+    if (!slot) return;
+    const n = Number(count) || 0;
+    const hasImg = slot.classList.contains('has-img');
+    const pickable = !hasImg && n > 0;
+    slot.classList.toggle('is-pickable', pickable);
+    if (pickable) {
+      slot.setAttribute('role', 'button');
+      slot.setAttribute('tabindex', '0');
+      slot.setAttribute('aria-label', 'No photo — open visitors to choose a showcase image');
+      slot.title = 'Open visitors to set a showcase photo';
+    } else {
+      slot.removeAttribute('role');
+      slot.removeAttribute('tabindex');
+      slot.removeAttribute('aria-label');
+      slot.removeAttribute('title');
     }
-    // Fallback: bounded get if aggregate unavailable (still only for one mine)
-    const snap = await q.limit(VISITOR_LIST_LIMIT).get();
-    return snap.size;
   }
+
+
   function ensureVisitorCount(mineId) {
     if (visitorCountCache.has(mineId)) return Promise.resolve(visitorCountCache.get(mineId));
     if (visitorCountInflight.has(mineId)) return visitorCountInflight.get(mineId);
@@ -3892,6 +3919,11 @@
       slot.replaceChildren();
       slot.textContent = 'No photo';
       delete slot.dataset.landTipBound;
+      {
+        const midClear = art.dataset.mineId;
+        const nClear = midClear && visitorCountCache.has(midClear) ? visitorCountCache.get(midClear) : 0;
+        syncNoPhotoVisitorPick(art, nClear);
+      }
       return;
     }
     art.dataset.photo = clean;
@@ -3912,6 +3944,11 @@
       slot.appendChild(img);
       delete slot.dataset.landTipBound;
       bindLandPhotoInteractions(slot);
+    {
+      const midPhoto = art.dataset.mineId;
+      const nPhoto = midPhoto && visitorCountCache.has(midPhoto) ? visitorCountCache.get(midPhoto) : 0;
+      syncNoPhotoVisitorPick(art, nPhoto);
+    }
     } else {
       img.src = clean;
       img.alt = art.dataset.title || 'Mine photo';
@@ -4950,7 +4987,37 @@
     const truncated = snap.size >= VISITOR_LIST_LIMIT;
     return { list, truncated };
   }
+  let noPhotoPickBound = false;
+  function bindNoPhotoVisitorPickOnce() {
+    if (noPhotoPickBound) return;
+    const root = $('mine-board');
+    if (!root) return;
+    noPhotoPickBound = true;
+    const openFromSlot = (slot) => {
+      if (!slot || !slot.classList.contains('is-pickable')) return;
+      const art = slot.closest('article.mine-card');
+      const mid = art && art.dataset.mineId;
+      if (!mid) return;
+      openVisitorsOverlay(mid);
+    };
+    root.addEventListener('click', e => {
+      const slot = e.target.closest('.mine-photo.is-pickable');
+      if (!slot || !root.contains(slot)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openFromSlot(slot);
+    });
+    root.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const slot = e.target.closest('.mine-photo.is-pickable');
+      if (!slot || !root.contains(slot)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openFromSlot(slot);
+    });
+  }
   async function openVisitorsOverlay(mineId) {
+    bindNoPhotoVisitorPickOnce();
     bindVisitorsOverlayOnce();
     const overlay = $('visitors-overlay');
     const main = $('portal-main');
@@ -5217,6 +5284,8 @@
         openVisitorsOverlay(mid);
       });
       if (visitorCountCache.has(mid)) applyVisitorCountUI(visitBtn, visitorCountCache.get(mid));
+      else syncNoPhotoVisitorPick(art, 0);
+      bindNoPhotoVisitorPickOnce();
     }
 
     const boxesInner = document.createElement('div');
