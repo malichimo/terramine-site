@@ -920,15 +920,15 @@
         <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
         <button type="button" class="sort-btn" id="sort-visitors" data-sort="visitors" disabled>Visitor Count</button>
-        <div class="type-filter" id="filter-showcase" role="group" aria-label="Showcase image filter" hidden>
-          <button type="button" class="type-filter-btn" data-showcase="has" aria-label="Has showcase image" aria-pressed="false" disabled>
+        <div class="type-filter" id="filter-showcase" role="group" aria-label="Visitor pinned image filter" hidden>
+          <button type="button" class="type-filter-btn" data-showcase="has" aria-label="Has visitor pinned image" aria-pressed="false" disabled>
             <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
               <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"></rect>
               <circle cx="8.5" cy="10" r="1.6" fill="currentColor" stroke="none"></circle>
               <path d="M3 16l5-5 4 4 3-3 6 6" stroke-width="1.8" stroke-linejoin="round"></path>
             </svg>
           </button>
-          <button type="button" class="type-filter-btn" data-showcase="none" aria-label="No showcase image" aria-pressed="false" disabled>
+          <button type="button" class="type-filter-btn" data-showcase="none" aria-label="No visitor pinned image" aria-pressed="false" disabled>
             <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
               <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"></rect>
               <path d="M4 4l16 16" stroke-width="1.8" stroke-linecap="round"></path>
@@ -5901,8 +5901,8 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   bindVisitorsSortTip($('sort-visitors'));
 
   const SHOWCASE_TIPS = {
-    has: 'Show only mines that have a visitor showcase photo set.',
-    none: 'Show only mines with no showcase photo (helps find mines with visitors but no image yet).'
+    has: 'Show only mines that have a visitor pinned image.',
+    none: 'Show only mines with no visitor pinned image (helps find mines with visitors but no image yet).'
   };
   let showcaseFollowTip = null;
   let showcaseFollowTipTimer = null;
