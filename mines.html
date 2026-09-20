@@ -135,6 +135,7 @@
       box-shadow:0 12px 28px rgba(13,27,42,.14); padding:10px 12px 12px;
     }
     .page-settings-panel[hidden] { display:none; }
+    .page-settings-field[hidden] { display:none !important; }
     .page-settings-title { font-size:12px; font-weight:700; color:#334155; margin-bottom:2px; }
     .page-settings-field { display:flex; flex-direction:column; gap:3px; margin-top:8px; font-size:11px; font-weight:700; color:#64748b; }
     .page-settings-field select {
@@ -5698,6 +5699,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     const slider = $('display-hours');
     const label = $('display-hours-value');
     field.hidden = !show;
+    field.style.display = show ? '' : 'none';
     const h = clampBoostHours(displayPref.hours);
     slider.value = String(h);
     slider.setAttribute('aria-valuenow', String(h));
