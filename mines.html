@@ -5352,29 +5352,69 @@
     else $('nav-avatar').textContent = initials(nick);
   }
 
+  let minesDetailsLoadId = 0;
+  const DETAILS_FETCH = 40;
+  const DETAILS_FIRST_PAINT = 200;
+
+  async function fetchPropertyDetailsForMines(mines, onProgress) {
+    for (let i = 0; i < mines.length; i += DETAILS_FETCH) {
+      const slice = mines.slice(i, i + DETAILS_FETCH);
+      const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
+      snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
+      if (onProgress) onProgress(Math.min(i + DETAILS_FETCH, mines.length), mines.length);
+    }
+  }
+
+  function prioritizeMinesForFirstPaint(mines, n) {
+    const out = [];
+    const seen = Object.create(null);
+    TYPE_ORDER.forEach(function (typ) {
+      for (let i = 0; i < mines.length && out.length < n; i++) {
+        const m = mines[i];
+        if (seen[m.id]) continue;
+        if (typeKey(m) !== typ) continue;
+        seen[m.id] = 1;
+        out.push(m);
+      }
+    });
+    for (let i = 0; i < mines.length && out.length < n; i++) {
+      const m = mines[i];
+      if (seen[m.id]) continue;
+      seen[m.id] = 1;
+      out.push(m);
+    }
+    return out;
+  }
+
   async function loadMines(uid) {
+    const loadId = ++minesDetailsLoadId;
     setToolbar(false);
     setStatus('Loading your mines…');
     $('mine-board').innerHTML = '';
     dismissProdTip(); dismissGameTip();
     $('mine-count').textContent = '';
     const snap = await db.collection('properties').where('ownerId', '==', uid).get();
-    const mines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const FETCH = 10;
-    for (let i = 0; i < mines.length; i += FETCH) {
-      const slice = mines.slice(i, i + FETCH);
-      const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
-      snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
-      setStatus('Loading mine details ' + Math.min(i + FETCH, mines.length) + ' / ' + mines.length + '…');
-    }
+    if (loadId !== minesDetailsLoadId) return;
+    const mines = snap.docs.map(d => ({ id: d.id, ...d.data(), _details: {} }));
+
     let userMines = null;
     try {
       const userSnap = await db.collection('users').doc(uid).get();
       const ud = (userSnap && userSnap.exists) ? (userSnap.data() || {}) : {};
       if (ud && ud.mines != null) userMines = ud.mines;
     } catch (e) {}
+    if (loadId !== minesDetailsLoadId) return;
+
+    const first = prioritizeMinesForFirstPaint(mines, Math.min(DETAILS_FIRST_PAINT, mines.length));
+    await fetchPropertyDetailsForMines(first, function (done, total) {
+      if (loadId !== minesDetailsLoadId) return;
+      setStatus('Loading mine details ' + done + ' / ' + first.length + ' (first view)…');
+    });
+    if (loadId !== minesDetailsLoadId) return;
+
     mines.forEach(m => { applyMineActivity(m, userMines); applyDailyActivities(m, userMines); });
     allMines = mines;
+
     const gpsFields = {};
     let withGps = 0;
     mines.forEach(m => {
@@ -5388,12 +5428,51 @@
       const hit = mines.filter(m => titleOf(m) === name || String(m.id) === name);
       console.log('mine ' + name, hit.length ? hit : 'not found');
     });
-    console.info('[mines] loaded', mines.length, 'gps', withGps, gpsFields);
-    setStatus('');
+    console.info('[mines] first paint', first.length, 'of', mines.length, 'gps', withGps, gpsFields);
+
     setToolbar(true);
     syncFocusMineSearchLabel();
     renderFromFilters();
+    refreshGroupTotals();
+
+    const firstIds = Object.create(null);
+    first.forEach(function (m) { firstIds[m.id] = 1; });
+    const remaining = mines.filter(function (m) { return !firstIds[m.id]; });
+    if (!remaining.length) {
+      setStatus('');
+      return;
+    }
+    setStatus('Showing ' + first.length + ' mines — loading remaining details 0 / ' + remaining.length + '…');
+
+    // Continue in background; do not block UI.
+    (async function loadRemainingDetails() {
+      let loaded = 0;
+      for (let i = 0; i < remaining.length; i += DETAILS_FETCH) {
+        if (loadId !== minesDetailsLoadId) return;
+        const slice = remaining.slice(i, i + DETAILS_FETCH);
+        const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
+        if (loadId !== minesDetailsLoadId) return;
+        snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
+        slice.forEach(m => { applyMineActivity(m, userMines); applyDailyActivities(m, userMines); });
+        loaded = Math.min(i + DETAILS_FETCH, remaining.length);
+        setStatus('Showing ' + first.length + ' mines — loading remaining details ' + loaded + ' / ' + remaining.length + '…');
+        // Refresh totals as details arrive so production boxes climb toward final values.
+        if (loaded === remaining.length || loaded % (DETAILS_FETCH * 5) === 0) {
+          refreshProdValues();
+          refreshGroupTotals();
+        }
+      }
+      if (loadId !== minesDetailsLoadId) return;
+      console.info('[mines] details complete', mines.length);
+      refreshProdValues();
+      refreshGroupTotals();
+      setStatus('');
+    })().catch(function (e) {
+      console.error('[mines] background details failed', e);
+      if (loadId === minesDetailsLoadId) setStatus('Some mine details failed to load.');
+    });
   }
+
 
   async function loadPortal(user) {
     try {
