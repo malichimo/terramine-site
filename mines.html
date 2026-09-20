@@ -628,12 +628,26 @@
     }
     .mine-map-zoom {
       flex-shrink:0; display:flex; align-items:center; gap:6px;
+      margin-left:auto; margin-right:2px;
       color:#fff; font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
       white-space:nowrap;
     }
     .mine-map-zoom input[type="range"] {
       width:88px; height:18px; margin:0; vertical-align:middle; cursor:pointer;
       accent-color:#4FC3F7;
+    }
+    .mine-map-radius {
+      flex-shrink:0; display:flex; align-items:center; gap:6px;
+      color:#fff; font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+      white-space:nowrap;
+    }
+    .mine-map-radius[hidden] { display:none !important; }
+    .mine-map-radius input[type="range"] {
+      width:100px; height:18px; margin:0; vertical-align:middle; cursor:pointer;
+      accent-color:#ce93d8;
+    }
+    .mine-map-radius-value {
+      min-width:3.2em; font:700 11px/1 'DM Sans',sans-serif; color:#e1bee7;
     }
     .mine-map-labels {
       flex-shrink:0; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12);
@@ -989,13 +1003,18 @@
             <img class="mine-map-type-icon" id="mine-map-type-icon" src="images/mine-icons/rock.svg" alt="" width="26" height="26" hidden>
             <div class="mine-map-title" id="mine-map-title">Mine map</div>
             <button type="button" class="mine-map-labels" id="mine-map-bulk-rename-btn" data-tip="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-label="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-pressed="false">Bulk Rename</button>
-            <button type="button" class="mine-map-labels" id="mine-map-load-area" data-tip="Load Area draws your other mines within ½ mile of this one, and shows a purple circle for that search radius." aria-label="Load Area draws your other mines within ½ mile of this one, and shows a purple circle for that search radius.">Load Area</button>
+            <button type="button" class="mine-map-labels" id="mine-map-load-area" data-tip="Load Area shows nearby owned mines and a purple radius ring. Use Radius to set 0.25–2 miles." aria-label="Load Area shows nearby owned mines and a purple radius ring. Use Radius to set 0.25–2 miles." aria-pressed="false">Load Area</button>
+            <label class="mine-map-radius" id="mine-map-radius-field" hidden>
+              <span>Radius</span>
+              <input type="range" id="mine-map-radius" min="0.25" max="2" step="0.25" value="0.5" aria-label="Load area radius in miles">
+              <span class="mine-map-radius-value" id="mine-map-radius-value">0.5 mi</span>
+            </label>
+            <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
+            <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
             <label class="mine-map-zoom">
               <span>Zoom</span>
               <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
             </label>
-            <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
-            <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
           </div>
           <div class="mine-map-body" id="mine-map-body">
             <div class="mine-map-canvas" id="mine-map-canvas"></div>
@@ -1506,7 +1525,29 @@
   const MINE_MAP_ZOOM_MIN = 10;
   const MINE_MAP_ZOOM_MAX = 21;
   const MINE_MAP_ZOOM_DEFAULT = 19;
-  const MINE_MAP_LOAD_AREA_M = 804.672; // 0.5 miles
+  const MINE_MAP_LOAD_AREA_DEFAULT_MI = 0.5;
+  const mineMapLoadAreaRadiusM()IN_MI = 0.25;
+  const mineMapLoadAreaRadiusM()AX_MI = 2;
+  const MINE_MAP_LOAD_AREA_STEP_MI = 0.25;
+  const MINE_MAP_MILES_TO_M = 1609.344;
+  let mineMapLoadAreaOn = false;
+  let mineMapLoadAreaRadiusMi = MINE_MAP_LOAD_AREA_DEFAULT_MI;
+  function mineMapLoadAreaRadiusM() {
+    return mineMapLoadAreaRadiusMi * MINE_MAP_MILES_TO_M;
+  }
+  function formatLoadAreaMiles(mi) {
+    const n = Math.round(Number(mi) * 100) / 100;
+    const s = (Math.round(n * 100) % 100 === 0) ? String(Math.round(n)) : String(n);
+    return s + ' mi';
+  }
+  function clampLoadAreaMiles(mi) {
+    let n = Number(mi);
+    if (!Number.isFinite(n)) n = MINE_MAP_LOAD_AREA_DEFAULT_MI;
+    n = Math.round(n / MINE_MAP_LOAD_AREA_STEP_MI) * MINE_MAP_LOAD_AREA_STEP_MI;
+    if (n < mineMapLoadAreaRadiusM()IN_MI) n = mineMapLoadAreaRadiusM()IN_MI;
+    if (n > mineMapLoadAreaRadiusM()AX_MI) n = mineMapLoadAreaRadiusM()AX_MI;
+    return Math.round(n * 100) / 100;
+  }
 
   function mineMapStyles() {
     let styles = MINE_MAP_BASE_STYLE.slice();
@@ -1797,19 +1838,44 @@
     if (overlay) attachMineMapHover(overlay, mine);
     return overlay;
   }
-  function loadMineMapArea() {
+  function syncMineMapLoadAreaUi() {
+    const btn = $('mine-map-load-area');
+    if (btn) {
+      btn.setAttribute('aria-pressed', mineMapLoadAreaOn ? 'true' : 'false');
+      btn.classList.toggle('is-active', !!mineMapLoadAreaOn);
+    }
+    const field = $('mine-map-radius-field');
+    if (field) field.hidden = !mineMapLoadAreaOn;
+    const slider = $('mine-map-radius');
+    const valEl = $('mine-map-radius-value');
+    const mi = clampLoadAreaMiles(mineMapLoadAreaRadiusMi);
+    mineMapLoadAreaRadiusMi = mi;
+    if (slider) slider.value = String(mi);
+    if (valEl) valEl.textContent = formatLoadAreaMiles(mi);
+  }
+  function redrawMineMapLoadArea() {
     clearMineMapAreaOverlays();
-    const mine = mineMapCurrentMine;
-    const map = mineMapInstance;
-    if (!mine || !map) return;
-    const center = mineMapCenterGps(mine);
-    if (!center) {
-      showMineMapMsg('No center GPS for this mine — cannot Load Area.', true);
+    if (!mineMapLoadAreaOn) {
+      syncMineMapLoadAreaUi();
       return;
     }
+    const mine = mineMapCurrentMine;
+    const map = mineMapInstance;
+    if (!mine || !map) {
+      syncMineMapLoadAreaUi();
+      return;
+    }
+    const center = mineMapCenterGps(mine);
+    if (!center) {
+      showMineMapMsg('No center GPS for this mine \u2014 cannot Load Area.', true);
+      mineMapLoadAreaOn = false;
+      syncMineMapLoadAreaUi();
+      return;
+    }
+    const radiusM = mineMapLoadAreaRadiusM();
     mineMapAreaCircle = new google.maps.Circle({
       center: { lat: center.lat, lng: center.lng },
-      radius: MINE_MAP_LOAD_AREA_M,
+      radius: radiusM,
       strokeColor: '#9C27B0',
       strokeOpacity: 0.95,
       strokeWeight: 2,
@@ -1828,19 +1894,34 @@
       if (curId && other.id != null && String(other.id) === curId) continue;
       const ogps = mineMapCenterGps(other);
       if (!ogps) continue;
-      if (haversineMeters(center, ogps) > MINE_MAP_LOAD_AREA_M) continue;
+      if (haversineMeters(center, ogps) > radiusM) continue;
       const overlay = drawMineMapParcel(map, other, { allowMarker: true, fillOpacity: 1.0, zIndex: 2 });
       if (overlay) {
         mineMapAreaOverlays.push(overlay);
         added++;
       }
     }
+    const miLabel = formatLoadAreaMiles(mineMapLoadAreaRadiusMi);
     if (added === 0) {
-      showMineMapMsg('No other owned mines within 0.5 miles.', true);
+      showMineMapMsg('No other owned mines within ' + miLabel + '.', false);
     } else {
-      showMineMapMsg('Loaded ' + added + ' nearby mine' + (added === 1 ? '' : 's') + '.', true);
+      showMineMapMsg('Loaded ' + added + ' nearby mine' + (added === 1 ? '' : 's') + ' within ' + miLabel + '.', false);
     }
+    syncMineMapLoadAreaUi();
   }
+  function setMineMapLoadAreaOn(on) {
+    mineMapLoadAreaOn = !!on;
+    if (!mineMapLoadAreaOn) {
+      clearMineMapAreaOverlays();
+      syncMineMapLoadAreaUi();
+      return;
+    }
+    redrawMineMapLoadArea();
+  }
+  function loadMineMapArea() {
+    setMineMapLoadAreaOn(!mineMapLoadAreaOn);
+  }
+
 
   function showMineMapMsg(text, isTip) {
     const tip = $('mine-map-tip');
@@ -2247,7 +2328,9 @@
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
     clearMineMapBounds();
+    mineMapLoadAreaOn = false;
     clearMineMapAreaOverlays();
+    syncMineMapLoadAreaUi();
     hideMineMapHoverTip();
     mineMapCurrentMine = null;
     const main = $('portal-main');
@@ -2430,6 +2513,25 @@
       });
       bindLoadAreaFollowTip(loadAreaBtn);
     }
+    const radiusSlider = $('mine-map-radius');
+    const radiusField = $('mine-map-radius-field');
+    if (radiusField) {
+      radiusField.removeAttribute('title');
+      radiusField.removeAttribute('alt');
+    }
+    if (radiusSlider) {
+      radiusSlider.removeAttribute('title');
+      radiusSlider.removeAttribute('alt');
+      const onRadiusInput = () => {
+        mineMapLoadAreaRadiusMi = clampLoadAreaMiles(radiusSlider.value);
+        const valEl = $('mine-map-radius-value');
+        if (valEl) valEl.textContent = formatLoadAreaMiles(mineMapLoadAreaRadiusMi);
+        if (mineMapLoadAreaOn) redrawMineMapLoadArea();
+      };
+      radiusSlider.addEventListener('input', onRadiusInput);
+      radiusSlider.addEventListener('change', onRadiusInput);
+    }
+    syncMineMapLoadAreaUi();
 
     const bulkRenameBtn = $('mine-map-bulk-rename-btn');
     if (bulkRenameBtn) {
