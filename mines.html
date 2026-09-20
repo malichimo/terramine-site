@@ -5176,9 +5176,16 @@
     const mLabel = document.createElement('small');
     mLabel.textContent = 'Mine Maintenance';
     const dot = document.createElement('span');
-    const activitiesOpen = Number(mine.dailyActivitiesRemaining) >= 1;
-    dot.className = 'maint-dot ' + (activitiesOpen ? 'is-green' : 'is-red');
-    dot.title = activitiesOpen ? 'Maintenance available' : 'No daily activities remaining';
+    // Red = lastActivityAt within 24h (just maintained). Green = older / not recent.
+    // (Was wrongly tied to dailyActivitiesRemaining, which is unrelated to the 180-day clock.)
+    const recentMaint = !st.missing && !!st.recent;
+    if (st.missing) {
+      dot.className = 'maint-dot';
+      dot.title = 'No maintenance date';
+    } else {
+      dot.className = 'maint-dot ' + (recentMaint ? 'is-red' : 'is-green');
+      dot.title = recentMaint ? 'Maintained in the last 24 hours' : 'Last maintenance more than 24 hours ago';
+    }
     const num = document.createElement('b');
     if (st.missing) { num.textContent = '\u2014'; num.className = 'is-missing'; }
     else num.textContent = String(st.daysLeft);
