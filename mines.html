@@ -98,6 +98,19 @@
     .type-filter-btn svg { stroke:currentColor; fill:none; color:#475569; }
     .type-filter-btn.active { border-color:#4FC3F7; background:#e8f7fe; }
     .type-filter-btn:focus-visible { outline:2px solid #4FC3F7; outline-offset:2px; }
+
+    .flip-type-order-btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:4px;
+      height:40px; padding:0 10px; flex-shrink:0;
+      border:1px solid #cbd5e1; border-radius:10px; background:#fff;
+      color:#334155; font:700 12px/1 DM Sans,sans-serif;
+      cursor:pointer; letter-spacing:.2px;
+    }
+    .flip-type-order-btn:hover { border-color:#4FC3F7; background:#e8f7fe; color:#0c4a6e; }
+    .flip-type-order-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .flip-type-order-btn[aria-pressed="true"] { border-color:#4FC3F7; background:#e8f7fe; }
+    .flip-type-order-btn .flip-type-order-arrows { font-size:16px; line-height:1; }
+
     .toolbar-follow-tip {
       position:fixed; z-index:600; pointer-events:none; display:none;
       background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,.14);
@@ -874,6 +887,10 @@
             <img src="images/mine-icons/rock.svg" alt="">
           </button>
         </div>
+        <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Flip mine type order" aria-pressed="false" data-tip="Flip the order of mine type filters, type groups, and production total boxes." disabled>
+          <span class="flip-type-order-arrows" aria-hidden="true">⇅</span>
+          Types
+        </button>
         <button type="button" class="sort-btn" id="sort-prod" data-sort="prod" disabled>Mine Production Level</button>
         <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
@@ -1028,7 +1045,56 @@
 
   const $ = id => document.getElementById(id);
   const BATCH = 8;
-  const TYPE_ORDER = ['diamond', 'gold', 'coal', 'rock'];
+  const TYPE_ORDER_DEFAULT = ['diamond', 'gold', 'coal', 'rock'];
+  const TYPE_ORDER_FLIP_KEY = 'terramine.mines.typeOrderFlipped';
+  function loadTypeOrderFlipped() {
+    try { return sessionStorage.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
+  }
+  function saveTypeOrderFlipped(on) {
+    try { sessionStorage.setItem(TYPE_ORDER_FLIP_KEY, on ? '1' : '0'); } catch (e) {}
+  }
+  let typeOrderFlipped = loadTypeOrderFlipped();
+  let TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
+  function syncTypeOrderFromFlag() {
+    TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
+  }
+  function applyTypeOrderLayout() {
+    const filter = $('filter-type');
+    if (filter) {
+      TYPE_ORDER.forEach(function (typ) {
+        const btn = filter.querySelector('.type-filter-btn[data-type="' + typ + '"]');
+        if (btn) filter.appendChild(btn);
+      });
+    }
+    const left = document.querySelector('#mine-totals-bar .mine-totals-bar-left')
+      || document.querySelector('#mine-totals-bar .mine-totals-left');
+    if (left) {
+      TYPE_ORDER.forEach(function (typ) {
+        const box = left.querySelector('.mine-group-total[data-group-type="' + typ + '"]');
+        if (box) left.appendChild(box);
+      });
+    }
+    const allIcons = document.querySelector('#mine-totals-bar .mine-group-total-icons-all');
+    if (allIcons) {
+      TYPE_ORDER.forEach(function (typ) {
+        const img = allIcons.querySelector('img[src*="' + typ + '.svg"]');
+        if (img) allIcons.appendChild(img);
+      });
+    }
+    const flipBtn = $('flip-type-order');
+    if (flipBtn) {
+      flipBtn.setAttribute('aria-pressed', typeOrderFlipped ? 'true' : 'false');
+      flipBtn.classList.toggle('is-flipped', !!typeOrderFlipped);
+    }
+  }
+  function flipTypeOrder() {
+    typeOrderFlipped = !typeOrderFlipped;
+    saveTypeOrderFlipped(typeOrderFlipped);
+    syncTypeOrderFromFlag();
+    applyTypeOrderLayout();
+    renderFromFilters();
+  }
+
   const TYPE_LABEL = { diamond: 'Diamond', gold: 'Gold', coal: 'Coal', rock: 'Rock' };
   const ICONS = {
     rock: 'images/mine-icons/rock.svg',
@@ -5423,7 +5489,16 @@
   applyMineFocusFromUrl();
   updateTypeFilterButtons();
   updateShowcaseFilterButtons();
-  document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
+    const flipTypeOrderBtn = $('flip-type-order');
+  if (flipTypeOrderBtn) {
+    flipTypeOrderBtn.addEventListener('click', function () {
+      if (flipTypeOrderBtn.disabled) return;
+      flipTypeOrder();
+    });
+  }
+  applyTypeOrderLayout();
+
+document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const t = btn.dataset.type;
       if (selectedTypes.has(t)) selectedTypes.delete(t);
