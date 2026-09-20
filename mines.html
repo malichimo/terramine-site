@@ -3367,14 +3367,16 @@
     const hasImg = slot.classList.contains('has-img');
     const pickable = !hasImg && n > 0;
     slot.classList.toggle('is-pickable', pickable);
+    // Never use native title/alt tooltips for No photo — mouse-follow tip instead.
+    slot.removeAttribute('title');
     if (hasImg) {
-      slot.removeAttribute('title');
       slot.removeAttribute('role');
       slot.removeAttribute('tabindex');
       slot.removeAttribute('aria-label');
+      if (noPhotoFollowTipTarget === slot) dismissNoPhotoFollowTip();
       return;
     }
-    slot.title = 'Pinned Visitor Photo will be showcased here';
+    bindNoPhotoFollowTip(slot);
     if (pickable) {
       slot.setAttribute('role', 'button');
       slot.setAttribute('tabindex', '0');
@@ -3382,7 +3384,7 @@
     } else {
       slot.removeAttribute('role');
       slot.removeAttribute('tabindex');
-      slot.removeAttribute('aria-label');
+      slot.setAttribute('aria-label', 'Pinned Visitor Photo will be showcased here');
     }
   }
 
@@ -3924,8 +3926,9 @@
       slot.classList.remove('has-img');
       slot.replaceChildren();
       slot.textContent = 'No photo';
-      slot.title = 'Pinned Visitor Photo will be showcased here';
+      slot.removeAttribute('title');
       delete slot.dataset.landTipBound;
+      bindNoPhotoFollowTip(slot);
       {
         const midClear = art.dataset.mineId;
         const nClear = midClear && visitorCountCache.has(midClear) ? visitorCountCache.get(midClear) : 0;
@@ -4994,6 +4997,79 @@
     const truncated = snap.size >= VISITOR_LIST_LIMIT;
     return { list, truncated };
   }
+  const NO_PHOTO_FOLLOW_TIP = 'Pinned Visitor Photo will be showcased here';
+  let noPhotoFollowTip = null;
+  let noPhotoFollowTipTimer = null;
+  let noPhotoFollowTipTarget = null;
+  let noPhotoFollowTipX = 0;
+  let noPhotoFollowTipY = 0;
+  function ensureNoPhotoFollowTip() {
+    if (!noPhotoFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'toolbar-follow-tip';
+      tip.setAttribute('role', 'tooltip');
+      noPhotoFollowTip = tip;
+    }
+    if (noPhotoFollowTip.parentNode !== document.body) {
+      document.body.appendChild(noPhotoFollowTip);
+    }
+    return noPhotoFollowTip;
+  }
+  function placeNoPhotoFollowTip(x, y) {
+    const tip = ensureNoPhotoFollowTip();
+    tip.textContent = NO_PHOTO_FOLLOW_TIP;
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function dismissNoPhotoFollowTip() {
+    if (noPhotoFollowTipTimer) {
+      clearTimeout(noPhotoFollowTipTimer);
+      noPhotoFollowTipTimer = null;
+    }
+    noPhotoFollowTipTarget = null;
+    if (noPhotoFollowTip) noPhotoFollowTip.style.display = 'none';
+  }
+  function bindNoPhotoFollowTip(slot) {
+    if (!slot || slot.dataset.noPhotoTipBound === '1') return;
+    slot.dataset.noPhotoTipBound = '1';
+    slot.addEventListener('mouseenter', (e) => {
+      if (slot.classList.contains('has-img')) return;
+      if (noPhotoFollowTipTimer) { clearTimeout(noPhotoFollowTipTimer); noPhotoFollowTipTimer = null; }
+      noPhotoFollowTipTarget = slot;
+      noPhotoFollowTipX = e.clientX;
+      noPhotoFollowTipY = e.clientY;
+      if (noPhotoFollowTip) noPhotoFollowTip.style.display = 'none';
+      noPhotoFollowTipTimer = setTimeout(() => {
+        noPhotoFollowTipTimer = null;
+        if (noPhotoFollowTipTarget !== slot || !slot.isConnected || slot.classList.contains('has-img')) return;
+        placeNoPhotoFollowTip(noPhotoFollowTipX, noPhotoFollowTipY);
+      }, 1000);
+    });
+    slot.addEventListener('mousemove', (e) => {
+      if (noPhotoFollowTipTarget !== slot) return;
+      noPhotoFollowTipX = e.clientX;
+      noPhotoFollowTipY = e.clientY;
+      if (noPhotoFollowTip && noPhotoFollowTip.style.display === 'block') {
+        placeNoPhotoFollowTip(noPhotoFollowTipX, noPhotoFollowTipY);
+      }
+    });
+    slot.addEventListener('mouseleave', () => {
+      if (noPhotoFollowTipTarget === slot) dismissNoPhotoFollowTip();
+    });
+  }
   let noPhotoPickBound = false;
   function bindNoPhotoVisitorPickOnce() {
     if (noPhotoPickBound) return;
@@ -5172,7 +5248,8 @@
     const ph = document.createElement('div');
     ph.className = 'mine-photo';
     ph.textContent = 'No photo';
-    ph.title = 'Pinned Visitor Photo will be showcased here';
+    ph.removeAttribute('title');
+    bindNoPhotoFollowTip(ph);
     const photoInner = document.createElement('div');
     photoInner.className = 'inner';
     photoInner.appendChild(ph);
