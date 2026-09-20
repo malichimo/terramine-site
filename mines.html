@@ -1526,8 +1526,8 @@
   const MINE_MAP_ZOOM_MAX = 21;
   const MINE_MAP_ZOOM_DEFAULT = 19;
   const MINE_MAP_LOAD_AREA_DEFAULT_MI = 0.5;
-  const mineMapLoadAreaRadiusM()IN_MI = 0.25;
-  const mineMapLoadAreaRadiusM()AX_MI = 2;
+  const MINE_MAP_LOAD_AREA_MIN_MI = 0.25;
+  const MINE_MAP_LOAD_AREA_MAX_MI = 2;
   const MINE_MAP_LOAD_AREA_STEP_MI = 0.25;
   const MINE_MAP_MILES_TO_M = 1609.344;
   let mineMapLoadAreaOn = false;
@@ -1544,8 +1544,8 @@
     let n = Number(mi);
     if (!Number.isFinite(n)) n = MINE_MAP_LOAD_AREA_DEFAULT_MI;
     n = Math.round(n / MINE_MAP_LOAD_AREA_STEP_MI) * MINE_MAP_LOAD_AREA_STEP_MI;
-    if (n < mineMapLoadAreaRadiusM()IN_MI) n = mineMapLoadAreaRadiusM()IN_MI;
-    if (n > mineMapLoadAreaRadiusM()AX_MI) n = mineMapLoadAreaRadiusM()AX_MI;
+    if (n < MINE_MAP_LOAD_AREA_MIN_MI) n = MINE_MAP_LOAD_AREA_MIN_MI;
+    if (n > MINE_MAP_LOAD_AREA_MAX_MI) n = MINE_MAP_LOAD_AREA_MAX_MI;
     return Math.round(n * 100) / 100;
   }
 
