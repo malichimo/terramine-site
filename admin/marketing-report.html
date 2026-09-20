@@ -393,7 +393,7 @@
           <span class="section-tag">§ Ad Revenue</span>
           <h2>Estimated ad revenue by platform</h2>
         </div>
-        <p class="section-desc">Estimated network earnings from AdMob, TerraMine's sole ad network. Reported ~1 day behind "today".</p>
+        <p class="section-desc">Estimated network earnings from AdMob's network report. Unity Ads bids within this mediation — see Unity Ads Detail below for its own slice. Reported ~1 day behind "today".</p>
       </div>
       <div class="panel panel-row">
         <div>
@@ -412,6 +412,44 @@
           <div class="side-stat"><div class="k">Android revenue (period)</div><div class="v" id="adRevAndroid">—</div><div class="delta" id="adRevAndroidDelta"></div></div>
           <div class="side-stat"><div class="k">iOS revenue (period)</div><div class="v" id="adRevIos">—</div><div class="delta" id="adRevIosDelta"></div></div>
           <div class="side-stat"><div class="k">Total revenue (period)</div><div class="v" id="adRevTotal">—</div><div class="delta" id="adRevTotalDelta"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sept 20, 2026 (Scott) -- Unity Ads is a bidding participant inside
+         the AdMob mediation above, not a separate ad network -- its revenue
+         is already counted in the AdMob total in the section above this
+         one. This section exists purely for visibility into Unity's own
+         slice and bidding health (fill rate, completion rate), which
+         AdMob's own network report doesn't break out. Sourced from
+         unity_ad_revenue_snapshots, written daily by refreshUnityAdStats
+         (functions/src/index.ts), which calls Unity's own Monetization
+         Stats API directly. -->
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Ad Revenue</span>
+          <h2>Unity Ads detail</h2>
+        </div>
+        <p class="section-desc">Unity's own slice of the ad revenue above, plus bidding-health metrics AdMob's report doesn't show. <strong>Not additive</strong> — already included in "Estimated ad revenue by platform." Reported ~1 day behind "today".</p>
+      </div>
+      <div class="panel panel-row">
+        <div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-2)"></span>Android</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>iOS</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="unityAdRevenueChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="unityAdRevenueTooltip"></div>
+          </div>
+          <div id="unityAdRevenueEmpty" class="empty-state" style="display:none;"></div>
+          <p id="unityAdRevenueNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+        </div>
+        <div>
+          <div class="side-stat"><div class="k">Unity revenue (period)</div><div class="v" id="unityRevTotal">—</div><div class="delta" id="unityRevTotalDelta"></div></div>
+          <div class="side-stat"><div class="k">Fill rate</div><div class="v" id="unityFillRate">—</div></div>
+          <div class="side-stat"><div class="k">Completion rate</div><div class="v" id="unityCompletionRate">—</div></div>
         </div>
       </div>
     </section>
@@ -505,6 +543,7 @@
   let geoSnapshot = null; // {date, totalProperties, unresolvedProperties, countries: {CODE: count}} — latest only, not range-filtered
   let installsSnapshots = []; // [{date, androidInstalls, ...}], sorted ascending by date — iOS not tracked yet, see refreshInstalls
   let adRevenueSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue}], sorted ascending by date
+  let unityAdSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue, androidRequests, androidStarts, androidViews, iosRequests, iosStarts, iosViews}], sorted ascending by date
   let currentRange = 30;
   let customRange = null; // {start, end} (YYYY-MM-DD, inclusive) when the "Custom…" range is active, else null
 
@@ -521,18 +560,20 @@
     authErrEl.style.display = 'none';
 
     try {
-      const [snap, retentionSnap, geoSnap, installsSnap, adRevenueSnap] = await Promise.all([
+      const [snap, retentionSnap, geoSnap, installsSnap, adRevenueSnap, unityAdSnap] = await Promise.all([
         getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'retentionCohorts'), orderBy('cohortDate', 'desc'), limit(120))),
         getDocs(query(collection(db, 'geography_snapshots'), orderBy('date', 'desc'), limit(1))),
         getDocs(query(collection(db, 'installs_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
+        getDocs(query(collection(db, 'unity_ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
       ]);
       snapshots = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       retentionCohorts = retentionSnap.docs.map(d => d.data()).sort((a, b) => a.cohortDate.localeCompare(b.cohortDate));
       geoSnapshot = geoSnap.docs.length ? geoSnap.docs[0].data() : null;
       installsSnapshots = installsSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       adRevenueSnapshots = adRevenueSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
+      unityAdSnapshots = unityAdSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       document.getElementById('asOf').textContent = snapshots.length
         ? `Data through ${snapshots[snapshots.length - 1].date}`
         : 'No data yet';
@@ -1219,6 +1260,55 @@
     noteEl.textContent = `Estimated ad revenue from AdMob's network report (typically about 1 day behind "today" — most recent figure is for ${latest.date}). Estimates only — AdMob's own dashboard is authoritative for reconciliation/payment purposes.`;
   }
 
+  function unityAdRangeSlice(days) {
+    return dateRangeSlice(unityAdSnapshots, 'date', days);
+  }
+
+  function renderUnityAdStats() {
+    const slice = unityAdRangeSlice(currentRange);
+    const dates = slice.map(s => s.date);
+    const noteEl = document.getElementById('unityAdRevenueNote');
+
+    stackedBarChart('unityAdRevenueChart', 'unityAdRevenueTooltip', 'unityAdRevenueEmpty',
+      ['Android', 'iOS'],
+      [
+        slice.map(s => s.androidRevenue || 0),
+        slice.map(s => s.iosRevenue || 0),
+      ],
+      dates, 900, 180,
+      [styleOf('--cat-2'), styleOf('--cat-1')]);
+
+    const fmtUsd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const totalAndroid = slice.reduce((sum, s) => sum + (s.androidRevenue || 0), 0);
+    const totalIos = slice.reduce((sum, s) => sum + (s.iosRevenue || 0), 0);
+    document.getElementById('unityRevTotal').textContent = slice.length ? fmtUsd(totalAndroid + totalIos) : '—';
+
+    const prevSlice = priorWindowSlice(unityAdSnapshots, 'date', currentRange);
+    const prevTotal = prevSlice.reduce((sum, s) => sum + (s.androidRevenue || 0) + (s.iosRevenue || 0), 0);
+    const hasPrev = prevSlice.length > 0;
+    applyDelta(document.getElementById('unityRevTotalDelta'), hasPrev ? computeDeltaPct(totalAndroid + totalIos, prevTotal) : null);
+
+    // Fill rate: of the ad requests Unity received, how many actually
+    // resulted in an ad start (impression). Completion rate: of the ads
+    // that started, how many were watched all the way through (rewarded
+    // ads specifically -- this app only uses Unity for rewarded). Both
+    // computed from period TOTALS, not averaged per-day, so a handful of
+    // low-traffic days don't skew the rate.
+    const totalRequests = slice.reduce((sum, s) => sum + (s.androidRequests || 0) + (s.iosRequests || 0), 0);
+    const totalStarts = slice.reduce((sum, s) => sum + (s.androidStarts || 0) + (s.iosStarts || 0), 0);
+    const totalViews = slice.reduce((sum, s) => sum + (s.androidViews || 0) + (s.iosViews || 0), 0);
+    const fmtPct1 = v => `${v.toFixed(1)}%`;
+    document.getElementById('unityFillRate').textContent = (slice.length && totalRequests > 0) ? fmtPct1((totalStarts / totalRequests) * 100) : '—';
+    document.getElementById('unityCompletionRate').textContent = (slice.length && totalStarts > 0) ? fmtPct1((totalViews / totalStarts) * 100) : '—';
+
+    if (!slice.length) {
+      noteEl.textContent = 'No Unity Ads history yet — this fills in once refreshUnityAdStats (functions/src/index.ts) has run at least once. See that function\'s header comment before relying on it unattended.';
+      return;
+    }
+    const latest = slice[slice.length - 1];
+    noteEl.textContent = `From Unity's own Monetization Stats API directly (typically about 1 day behind "today" — most recent figure is for ${latest.date}). This revenue is already part of the AdMob total above, not in addition to it.`;
+  }
+
   function renderAll() {
     updateActiveRangeLabel();
     renderStats();
@@ -1229,6 +1319,7 @@
     renderRetention();
     renderInstalls();
     renderAdRevenue();
+    renderUnityAdStats();
     renderGeography();
     renderGeographyPlayers();
   }
@@ -1307,7 +1398,7 @@
       : `Showing: ${start} – ${end}`;
   }
 
-  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); });
+  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); renderUnityAdStats(); });
 </script>
 
 </body>
