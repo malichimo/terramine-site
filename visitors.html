@@ -508,7 +508,7 @@
         <button type="button" class="sort-btn" id="sort-mine" data-sort="mine" disabled>Mine Name</button>
         <button type="button" class="sort-btn" id="sort-visitor" data-sort="visitor" disabled>Visitor Name</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search visitor or mine name" autocomplete="off" disabled />
-        <span class="visitors-note" id="visitors-note" hidden>Showing newest 200</span>
+        <span class="visitors-note" id="visitors-note" hidden>Loading more check-ins…</span>
         <span class="mine-count" id="match-count"></span>
       </div>
       <div class="visitors-status" id="visitors-status"></div>
@@ -600,12 +600,15 @@
     ['centerLatitude', 'centerLongitude']
   ];
   const GPS_NESTS = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng'];
-  const VISIT_LIMIT = 200;
+  const VISIT_PAGE = 200; // page size only; keep paging until Firestore has no more
+  const DETAILS_FETCH = 40;
   const VISITOR_AVATAR_CONCURRENCY = 8;
 
   let loadedUid = null;
   let allVisits = [];
-  let visitsTruncated = false;
+  let visitsTruncated = false; // true while more check-ins still loading in background
+  let visitorsLoadId = 0;
+  let visitsLastDoc = null;
 
   const FILTER_TYPES_KEY = 'terramine.visitors.filterTypes';
   function loadSelectedTypes() {
@@ -3002,58 +3005,102 @@
     bindMineBadgeClicksOnce();
   }
 
-  async function loadOwnedMines(uid) {
+  function buildMineMapEntry(m, details) {
+    const d = details || {};
+    const custom = (typeof d.customName === 'string' && d.customName.trim()) ? d.customName.trim() : '';
+    // Keep full property doc on _raw (includes corners) for minimap lookup.
+    const raw = Object.assign({}, m);
+    delete raw._details;
+    return {
+      id: m.id,
+      mineType: m.mineType || 'rock',
+      customName: custom || null,
+      _raw: raw,
+      _details: d,
+      _detailsLoaded: details != null
+    };
+  }
+
+  function applyDetailsToMineMap(mineId, details) {
+    const entry = mineMap[mineId];
+    if (!entry) return;
+    const d = details || {};
+    entry._details = d;
+    entry._detailsLoaded = true;
+    const custom = (typeof d.customName === 'string' && d.customName.trim()) ? d.customName.trim() : '';
+    entry.customName = custom || null;
+  }
+
+  async function fetchPropertyDetailsForIds(ids, onProgress) {
+    const list = (ids || []).map(String).filter(Boolean);
+    for (let i = 0; i < list.length; i += DETAILS_FETCH) {
+      const slice = list.slice(i, i + DETAILS_FETCH);
+      const snaps = await Promise.all(slice.map(id =>
+        db.collection('propertyDetails').doc(id).get().catch(() => null)
+      ));
+      snaps.forEach((s, j) => {
+        applyDetailsToMineMap(slice[j], (s && s.exists) ? (s.data() || {}) : {});
+      });
+      if (onProgress) onProgress(Math.min(i + DETAILS_FETCH, list.length), list.length);
+    }
+  }
+
+  async function loadOwnedMinesSkeleton(uid) {
     const snap = await db.collection('properties').where('ownerId', '==', uid).get();
     const mines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const FETCH = 10;
-    for (let i = 0; i < mines.length; i += FETCH) {
-      const slice = mines.slice(i, i + FETCH);
-      const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
-      snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
-    }
     const map = {};
-    mines.forEach(m => {
-      const d = m._details || {};
-      const custom = (typeof d.customName === 'string' && d.customName.trim()) ? d.customName.trim() : '';
-      // Keep full property doc on _raw (includes corners) for minimap lookup.
-      const raw = Object.assign({}, m);
-      delete raw._details;
-      map[m.id] = {
-        id: m.id,
-        mineType: m.mineType || 'rock',
-        customName: custom || null,
-        _raw: raw,
-        _details: d
-      };
-    });
+    mines.forEach(m => { map[m.id] = buildMineMapEntry(m, null); });
     mineMap = map;
-    return mines.length;
+    return mines;
+  }
+
+  function visitMineIdsNeedingDetails(visits) {
+    const out = [];
+    const seen = Object.create(null);
+    (visits || []).forEach(v => {
+      const id = v && v.propertyId != null ? String(v.propertyId) : '';
+      if (!id || seen[id] || !mineMap[id] || mineMap[id]._detailsLoaded) return;
+      seen[id] = 1;
+      out.push(id);
+    });
+    return out;
+  }
+
+  async function ensureDetailsForVisits(visits, onProgress) {
+    const ids = visitMineIdsNeedingDetails(visits);
+    if (!ids.length) return;
+    await fetchPropertyDetailsForIds(ids, onProgress);
   }
 
   /**
-   * Reused from previous visitors.html loadVisits() "all mines" branch:
-   *   checkIns where propertyOwnerId == uid, orderBy timestamp desc, limit 200
-   * Single owner-scoped query — no per-mine N+1.
+   * One page of checkIns (newest first). Pass startAfterDoc for the next page.
+   * No total cap - caller keeps paging until hasMore is false.
    */
-  async function loadVisits(uid) {
-    const snap = await db.collection('checkIns')
+  async function loadVisitsPage(uid, startAfterDoc) {
+    let q = db.collection('checkIns')
       .where('propertyOwnerId', '==', uid)
       .orderBy('timestamp', 'desc')
-      .limit(VISIT_LIMIT)
-      .get();
-    allVisits = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
-    visitsTruncated = snap.size >= VISIT_LIMIT;
-    // Debug: dump Firestore checkIn fields (look for owner reply)
-    return allVisits.length;
+      .limit(VISIT_PAGE);
+    if (startAfterDoc) q = q.startAfter(startAfterDoc);
+    const snap = await q.get();
+    const visits = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+    const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+    const hasMore = snap.size >= VISIT_PAGE;
+    return { visits, lastDoc, hasMore };
   }
 
   async function loadPortal(user) {
+    const loadId = ++visitorsLoadId;
     setToolbar(false);
-    setStatus('Loading your mines…');
+    setStatus('Loading\u2026');
     $('visitors-board').innerHTML = '<div class="vo-loading"><div class="skeleton"></div></div>';
     $('match-count').textContent = '';
+    visitsTruncated = false;
+    visitsLastDoc = null;
+    allVisits = [];
     try {
       const uSnap = await db.collection('users').doc(user.uid).get();
+      if (loadId !== visitorsLoadId) return;
       const ud = uSnap.data() || {};
       const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
       $('nav-nickname').textContent = nick;
@@ -3066,17 +3113,93 @@
         $('nav-avatar').textContent = initials(nick);
       }
 
-      const mineCount = await loadOwnedMines(user.uid);
-      setStatus('Loading visitors across ' + mineCount + ' mine' + (mineCount === 1 ? '' : 's') + '…');
-      const n = await loadVisits(user.uid);
+      setStatus('Loading mines and visitors\u2026');
+      const [mines, firstPage] = await Promise.all([
+        loadOwnedMinesSkeleton(user.uid),
+        loadVisitsPage(user.uid, null)
+      ]);
+      if (loadId !== visitorsLoadId) return;
+
+      allVisits = firstPage.visits;
+      visitsLastDoc = firstPage.lastDoc;
+      visitsTruncated = firstPage.hasMore;
+
+      if (allVisits.length) {
+        setStatus('Loading names for visited mines\u2026');
+        await ensureDetailsForVisits(allVisits, (done, total) => {
+          if (loadId !== visitorsLoadId) return;
+          setStatus('Loading visited mine details ' + done + ' / ' + total + '\u2026');
+        });
+        if (loadId !== visitorsLoadId) return;
+      }
+
       loadedUid = user.uid;
-      setStatus(visitsTruncated
-        ? ('Loaded newest ' + n + ' check-ins (truncated). Filters/sorts apply client-side to this set.')
-        : (n ? '' : 'No visitors yet — share your mine coordinates!'));
       setToolbar(true);
       sortKey = 'date';
       sortDir = 1;
       renderFromFilters();
+
+      const n0 = allVisits.length;
+      if (!n0 && !firstPage.hasMore) {
+        setStatus('No visitors yet \u2014 share your mine coordinates!');
+      } else {
+        setStatus(firstPage.hasMore
+          ? ('Showing ' + n0 + ' check-ins \u2014 loading more\u2026')
+          : '');
+      }
+
+      (async function continueProgressiveLoad() {
+        // 1) Page remaining check-ins (no hard total cap)
+        let cursor = firstPage.hasMore ? firstPage.lastDoc : null;
+        while (cursor && loadId === visitorsLoadId) {
+          const page = await loadVisitsPage(user.uid, cursor);
+          if (loadId !== visitorsLoadId) return;
+          if (page.visits.length) {
+            allVisits = allVisits.concat(page.visits);
+            await ensureDetailsForVisits(page.visits, null);
+            if (loadId !== visitorsLoadId) return;
+            renderFromFilters();
+          }
+          visitsLastDoc = page.lastDoc;
+          visitsTruncated = page.hasMore;
+          cursor = page.hasMore ? page.lastDoc : null;
+          setStatus(cursor
+            ? ('Showing ' + allVisits.length + ' check-ins \u2014 loading more\u2026')
+            : ('Loaded ' + allVisits.length + ' check-ins \u2014 finishing mine details\u2026'));
+        }
+        if (loadId !== visitorsLoadId) return;
+        visitsTruncated = false;
+        renderFromFilters();
+
+        // 2) Remaining owned-mine details (map / bulk rename)
+        const remaining = mines.map(m => m.id).filter(id => mineMap[id] && !mineMap[id]._detailsLoaded);
+        if (!remaining.length) {
+          setStatus(allVisits.length ? '' : 'No visitors yet \u2014 share your mine coordinates!');
+          return;
+        }
+        setStatus('Loaded ' + allVisits.length + ' check-ins \u2014 loading remaining mine details 0 / ' + remaining.length + '\u2026');
+        for (let i = 0; i < remaining.length; i += DETAILS_FETCH) {
+          if (loadId !== visitorsLoadId) return;
+          const slice = remaining.slice(i, i + DETAILS_FETCH);
+          await fetchPropertyDetailsForIds(slice, null);
+          const loaded = Math.min(i + DETAILS_FETCH, remaining.length);
+          setStatus('Loaded ' + allVisits.length + ' check-ins \u2014 loading remaining mine details ' + loaded + ' / ' + remaining.length + '\u2026');
+          if (loaded === remaining.length || loaded % (DETAILS_FETCH * 5) === 0) {
+            renderFromFilters();
+          }
+        }
+        if (loadId !== visitorsLoadId) return;
+        console.info('[visitors] complete checkIns', allVisits.length, 'mines', mines.length);
+        renderFromFilters();
+        setStatus(allVisits.length ? '' : 'No visitors yet \u2014 share your mine coordinates!');
+      })().catch(e => {
+        console.error('[visitors] progressive load failed', e);
+        if (loadId === visitorsLoadId) {
+          visitsTruncated = false;
+          setStatus('Some visitors or mine details failed to load.');
+          renderFromFilters();
+        }
+      });
     } catch (e) {
       console.error('Visitors load error:', e);
       setStatus('Could not load visitors. ' + (e && e.message ? e.message : ''));
