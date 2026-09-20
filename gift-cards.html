@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gift Card Options — TerraMine</title>
+  <meta name="description" content="Browse the full list of US gift card brands available for redeeming your TerraMine USD earnings, powered by Tango." />
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080C10;
+      --surface: #0F1620;
+      --border:  rgba(255,255,255,0.07);
+      --gold:    #F5C542;
+      --gold2:   #E89B1A;
+      --cyan:    #5BE5D0;
+      --white:   #EEF2F8;
+      --muted:   #6B7C93;
+      --oos:     #E85B5B;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91,229,208,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,229,208,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(8,12,16,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 3px; color: var(--gold); text-decoration: none; }
+    .nav-logo span { color: var(--white); }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--white); }
+    .nav-login { border: 1px solid var(--cyan); color: var(--cyan) !important; padding: 6px 14px; border-radius: 4px; font-size: 13px; }
+    .nav-cta { background: var(--gold); color: #080C10 !important; padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; }
+
+    /* ── HERO ── */
+    .hero { position: relative; z-index: 1; padding: 72px 40px 40px; max-width: 960px; margin: 0 auto; }
+    .hero-eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin-bottom: 14px; }
+    .hero h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(40px, 6.5vw, 72px); letter-spacing: 2px; line-height: 1.0; color: var(--white); margin-bottom: 18px; }
+    .hero h1 em { font-style: normal; color: var(--gold); }
+    .hero-desc { font-size: 17px; color: var(--muted); line-height: 1.7; max-width: 640px; margin-bottom: 8px; }
+
+    /* ── UPDATE NOTICE ── */
+    .update-notice {
+      position: relative; z-index: 1;
+      max-width: 960px; margin: 0 auto 48px; padding: 0 40px;
+    }
+    .update-notice-inner {
+      background: linear-gradient(135deg, rgba(245,197,66,0.10), rgba(91,229,208,0.05));
+      border: 1px solid rgba(245,197,66,0.25);
+      border-radius: 12px;
+      padding: 18px 22px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .update-notice-icon { font-size: 20px; flex-shrink: 0; line-height: 1.3; }
+    .update-notice p { font-size: 14px; color: rgba(238,242,248,0.85); line-height: 1.6; }
+    .update-notice strong { color: var(--white); }
+    .update-notice .stamp { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── SUMMARY CARDS ── */
+    .summary-grid {
+      position: relative; z-index: 1;
+      max-width: 1080px; margin: 0 auto 56px; padding: 0 40px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--summary-color, var(--cyan));
+      border-radius: 12px;
+      padding: 22px 20px;
+    }
+    .summary-card-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .summary-card-value { font-family: 'Bebas Neue', sans-serif; font-size: 42px; color: var(--summary-color, var(--cyan)); letter-spacing: 1px; line-height: 1; margin-bottom: 10px; }
+    .summary-card-desc { font-size: 13px; color: rgba(238,242,248,0.75); line-height: 1.6; }
+
+    /* ── LAYOUT / TABLE ── */
+    .page-layout { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 40px 80px; }
+    .table-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+    .table-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1px; color: var(--white); }
+    .search-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      width: 260px;
+      max-width: 100%;
+    }
+    .search-box::placeholder { color: var(--muted); }
+    .search-box:focus { outline: none; border-color: var(--cyan); }
+
+    .filter-chips { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .filter-chip:hover { color: var(--white); border-color: rgba(255,255,255,0.2); }
+    .filter-chip.active { color: #080C10; background: var(--cyan); border-color: var(--cyan); font-weight: 700; }
+
+    .card-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .card-table thead th {
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-table tbody td { padding: 11px 18px; font-size: 14px; border-bottom: 1px solid var(--border); }
+    .card-table tbody tr:last-child td { border-bottom: none; }
+    .card-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    .denom-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700;
+    }
+    .status-badge.in-stock { background: rgba(91,229,208,0.14); color: var(--cyan); }
+    .status-badge.out-of-stock { background: rgba(232,91,91,0.14); color: var(--oos); }
+    .no-results { padding: 32px 18px; text-align: center; color: var(--muted); font-size: 14px; display: none; }
+    .result-count { font-size: 13px; color: var(--muted); margin: 14px 2px 0; }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 36px 40px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--gold); text-decoration: none; }
+    .footer-links { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 13px; color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .summary-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    }
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 48px 20px 32px; }
+      .update-notice, .summary-grid, .page-layout { padding-left: 20px; padding-right: 20px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">⛏ Terra<span>Mine</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="faq.html">FAQ</a>
+    <a href="portal.html" class="nav-login">My Portal</a>
+    <a href="index.html#download" class="nav-cta">Download</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Cash Out</div>
+  <h1>Gift Card <em>Options</em></h1>
+  <p class="hero-desc">Alongside cashing out to PayPal, you'll be able to redeem your USD earnings for a gift card from hundreds of popular US brands, powered by Tango. Search the list below to see what's available.</p>
+</div>
+
+<!-- UPDATE NOTICE -->
+<div class="update-notice">
+  <div class="update-notice-inner">
+    <span class="update-notice-icon">🎁</span>
+    <div>
+      <p><strong>This list currently covers US gift cards only.</strong> Tango offers many more brands internationally, and additional regions may be added here as international cash-out support expands. Denomination ranges and stock availability are set by each brand and can change without notice — always confirm the current range in-app before redeeming.</p>
+      <p class="stamp">Last updated: September 20, 2026</p>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary-grid">
+  <div class="summary-card" style="--summary-color: var(--cyan);">
+    <div class="summary-card-label">Total Brands</div>
+    <div class="summary-card-value" id="count-total"></div>
+    <div class="summary-card-desc">US gift card options currently listed.</div>
+  </div>
+  <div class="summary-card" style="--summary-color: var(--gold);">
+    <div class="summary-card-label">In Stock</div>
+    <div class="summary-card-value" id="count-instock"></div>
+    <div class="summary-card-desc">Available to redeem right now.</div>
+  </div>
+  <div class="summary-card" style="--summary-color: var(--oos);">
+    <div class="summary-card-label">Out of Stock</div>
+    <div class="summary-card-value" id="count-oos"></div>
+    <div class="summary-card-desc">Temporarily unavailable — check back later.</div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="page-layout">
+  <div class="table-header">
+    <h2 class="table-title">Browse Gift Cards</h2>
+    <input type="text" class="search-box" id="searchBox" placeholder="Search brands..." />
+  </div>
+  <div class="filter-chips" id="filterChips">
+    <div class="filter-chip active" data-filter="all">All</div>
+    <div class="filter-chip" data-filter="in">In Stock</div>
+    <div class="filter-chip" data-filter="out">Out of Stock</div>
+  </div>
+
+  <table class="card-table">
+    <thead>
+      <tr>
+        <th>Brand</th>
+        <th>Denominations (USD)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="no-results" id="noResults">No brands match your search.</div>
+  <p class="result-count" id="resultCount"></p>
+</div>
+
+<footer>
+  <a class="footer-logo" href="index.html">⛏ TerraMine</a>
+  <div class="footer-links">
+    <a href="faq.html">FAQ</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="exchange-rates.html">Exchange Rates</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+    <a href="portal.html">My Portal</a>
+  </div>
+  <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+</footer>
+
+<script>
+  // -------------------------------------------------------------------------
+  // Brand → [denomination range/list string, inStock] for US Tango gift cards.
+  // Source: Tango's US gift card catalog (349 raw entries, deduped to 348 —
+  // one exact duplicate "Go Play Golf" row removed; a couple of brands that
+  // legitimately have two distinct denomination sets in Tango's own catalog,
+  // e.g. Pandora and The Children's Place, are kept as separate rows and
+  // labeled "(2)" rather than merged, since it's unclear if that's a real
+  // regional/loyalty variant or a data duplication on Tango's end).
+  // Regenerate this array whenever Tango's catalog changes.
+  // Last generated: September 20, 2026.
+  // -------------------------------------------------------------------------
+  const GIFT_CARDS = [
+  ["1-800Flowers.com", "10, 25, 50", true],
+  ["Abercrombie & Fitch", "5-500", true],
+  ["Academy Sports & Outdoors", "25-500", true],
+  ["Ace Hardware", "5-250", true],
+  ["adidas", "5-500", true],
+  ["Airbnb", "25-500", true],
+  ["AirlineGift", "50-2,000", true],
+  ["Aladdin's Eatery", "5-250", true],
+  ["Alamo Drafthouse", "25-500", true],
+  ["Albertsons", "5-250", true],
+  ["Albertsons Companies", "5-250", true],
+  ["Allbirds", "25-250", false],
+  ["AllModern.com", "10-500", true],
+  ["AMC Theatres®", "3-100", true],
+  ["American Eagle Outfitters®", "0-500", true],
+  ["AMTRAK", "25-500", true],
+  ["Ann Taylor", "1-500", true],
+  ["Applebee's®", "5-200", true],
+  ["ASOS", "15-500", true],
+  ["Athleta", "10-500", true],
+  ["Atlantis Bahamas Resort", "5-2,000", true],
+  ["Auntie Anne's – Mix It Up®", "5-200", true],
+  ["Babylist", "25-500", true],
+  ["Bahama Breeze®", "5-250", true],
+  ["Bahama Buck's", "10-250", true],
+  ["Baja Fresh", "5-200", true],
+  ["Bakers Square", "5-500", true],
+  ["Banana Republic", "10-500", true],
+  ["Barnes & Noble", "3-500", true],
+  ["Bass Pro Shops®", "5-200", true],
+  ["Beans and Brew Coffee House", "5-250", true],
+  ["Bed Bath & Beyond", "5-500", true],
+  ["Belk", "25, 50", true],
+  ["Benihana", "25-500", true],
+  ["Bertucci's", "25-500", true],
+  ["Best Western®", "25-500", true],
+  ["Birch Lane", "10-500", true],
+  ["BJ's Restaurants", "15-200", true],
+  ["Black Angus", "15-200", true],
+  ["Blaze Pizza", "10-100", true],
+  ["Blimpie", "5-250", true],
+  ["Bloomin' Brands", "5-500", true],
+  ["Bloomingdale's", "10-250", true],
+  ["Bob Evans Restaurant", "10-250", true],
+  ["Boscov's", "15-250", true],
+  ["Bravo Italian Kitchen", "15-500", true],
+  ["Brio Italian Grille", "15-500", true],
+  ["BritBox", "25-250", true],
+  ["Brooklyn Pizza Company", "5-250", true],
+  ["Bubba Gump Shrimp Co.®", "25-200", true],
+  ["Buca di Beppo", "20-200", true],
+  ["Buffalo Wild Wings®", "5-250", true],
+  ["BURGER KING®", "5-100", true],
+  ["Burlington", "25-250", true],
+  ["Cabela's", "5-500", true],
+  ["California Pizza Kitchen, Inc", "5-500", true],
+  ["Callaway", "25, 50, 100", true],
+  ["Camping World", "10-500", true],
+  ["Candy Crush", "15-250", true],
+  ["Candy Crush (King)", "15-250", true],
+  ["CanvasPop", "50", true],
+  ["Carnival Cruise Lines", "100-1,000", true],
+  ["Carter's / OshKosh B'gosh / Skip Hop / Little Planet", "10-500", true],
+  ["Carvel – Mix It Up®", "5-200", true],
+  ["Catherines", "20-250", true],
+  ["CB2", "10-1,000", true],
+  ["Champs Sports", "5-250", true],
+  ["Cheddar's Scratch Kitchen", "5-250", true],
+  ["Cheryl's Cookies", "15-500", true],
+  ["Chevron and Texaco", "10-500", true],
+  ["Chico's", "10-500", true],
+  ["Chili's Choice", "5-100", true],
+  ["Chipotle", "5-250", true],
+  ["Chubbies", "25-500", true],
+  ["Cinemark", "25, 50", true],
+  ["Cinnabon – Mix It Up®", "5-200", true],
+  ["Clean Origin", "25-2,000", true],
+  ["Collars & Co.", "25-500", true],
+  ["Columbia Sportswear", "10-250", true],
+  ["CorePower Yoga", "25-500", true],
+  ["Cost Plus World Market", "5-500", true],
+  ["Cotton On", "20-200", true],
+  ["Cotton On Body", "20-200", true],
+  ["Cotton On Kids", "20-200", true],
+  ["Cousins Subs®", "20-500", true],
+  ["Cracker Barrel", "5-300", true],
+  ["Crate and Barrel", "10-1,000", true],
+  ["Crumbl", "5-500", true],
+  ["Crutchfield", "25-250", true],
+  ["Darden® Restaurants", "5-250", true],
+  ["Dave & Buster's", "5-500", true],
+  ["Delta Air Lines", "50-500", true],
+  ["Dick's Sporting Goods", "25-500", true],
+  ["Dickey's Restaurant", "5-500", true],
+  ["Domino's®", "2-100", true],
+  ["DoorDash", "5-500", true],
+  ["Dots.eco - Buy Land For Nature", "1, 5, 10, 20, 50, 100", true],
+  ["Dots.eco - Clean Ocean Plastic", "5, 10, 20, 50", true],
+  ["Dots.eco - Plant Trees Where Needed Most", "5, 10, 20, 50", true],
+  ["Dots.eco - Protect Marine Habitats", "1, 5, 10, 20, 50, 100", true],
+  ["Dots.eco - Protect Wildlife Habitat", "5, 10, 20", true],
+  ["Dots.eco - Restore a Coral Reef Fragment", "1, 5, 10, 20, 50, 100", true],
+  ["Dots.eco - Save a Sea-Turtle Hatchling", "5, 10, 20", true],
+  ["Drybar", "25-500", true],
+  ["DSW", "5-100", true],
+  ["Dunkin'", "3-150", true],
+  ["Dutch Bros", "5-500", true],
+  ["El Pollo Loco Inc.", "15-200", true],
+  ["eLearnGift", "50-2,000", true],
+  ["Embers Restaurant", "5-250", true],
+  ["Etsy", "15-500", true],
+  ["Factor", "95, 115, 140, 155", true],
+  ["Fairmont Hotels & Resort", "25, 100", true],
+  ["Famous Footwear", "10-250", true],
+  ["Fanatics", "5-500", true],
+  ["Fanatics MLBShop.com", "5-500", true],
+  ["Fanatics NBAStore.com", "5-500", true],
+  ["Fanatics NFL® Shop", "5-500", true],
+  ["Fanatics NHLShop.com", "5-500", true],
+  ["Fandango", "25, 50", true],
+  ["Finish Line", "5-250", true],
+  ["Firebirds Wood Fired Grill", "25-500", true],
+  ["Five Guys", "10-200", true],
+  ["GameStop", "5-500", true],
+  ["GAP", "10-500", true],
+  ["Gatorade", "5-250", true],
+  ["Giant Eagle", "5-500", true],
+  ["Global Experiences", "20-250", true],
+  ["Global Hotel Card Powered by Expedia", "50-500", true],
+  ["GNC", "5-500", true],
+  ["Go Play Golf", "25-500", true],
+  ["Goodcents Deli", "5-500", true],
+  ["Great American Days", "25", true],
+  ["Groupon", "10-200", true],
+  ["Grown Brilliance", "25-2,000", true],
+  ["Grubhub", "5-500", true],
+  ["Guess", "15-500", true],
+  ["Guitar Center", "15-500", true],
+  ["H&M", "15, 25, 50, 100", true],
+  ["Hanna Andersson", "25-500", true],
+  ["Hardee's", "5-250", true],
+  ["Harris Teeter", "10-250", true],
+  ["Harry & David", "15-500", true],
+  ["Hibbett Sports", "25-250", true],
+  ["Holland America Line", "25-2,000", true],
+  ["Hollister", "5-500", true],
+  ["Home Chef", "50-250", true],
+  ["HopCat", "5-100", true],
+  ["Hot Topic", "15-500", true],
+  ["Hotels.com", "10-500", true],
+  ["HotelsGift", "50-2,000", true],
+  ["iFIT Pro", "39, 396", true],
+  ["IFIT Train", "15, 144", true],
+  ["iFly", "25-500", true],
+  ["IHOP®", "5-200", true],
+  ["IKEA™", "25-500", true],
+  ["IMVU", "10, 25, 50", true],
+  ["Instacart", "25-250", true],
+  ["Instacart+", "59, 99", true],
+  ["Jamba – Mix It Up®", "5-200", true],
+  ["JCPenney", "5-500", true],
+  ["Jersey Mike's", "10-200", true],
+  ["Jiffy Lube®", "15-500", true],
+  ["Joss & Main", "10-500", true],
+  ["Journeys", "5-250", true],
+  ["JTV", "15-500", true],
+  ["Kansas City Steak Company", "25, 50", true],
+  ["KAY Jewelers", "25-500", true],
+  ["Kendra Scott", "5-500", true],
+  ["KFC", "10-100", true],
+  ["Kigso Games", "15", true],
+  ["King Size®", "20-250", true],
+  ["KingsIsle", "20", false],
+  ["Knix", "25-250", true],
+  ["KOBO", "10-250", true],
+  ["Kohl's", "5-500", true],
+  ["Kona Grill", "20-250", true],
+  ["Krispy Kreme® Doughnut Corporation", "2-200", true],
+  ["Kroger", "5-500", true],
+  ["Kroger Boost Membership", "59", true],
+  ["L.L.Bean", "5-500", true],
+  ["Landry's", "25-500", true],
+  ["Lands' End", "5-500", true],
+  ["Lane Bryant", "15-200", true],
+  ["Lazy Dog Restaurant & Bar", "15-200", true],
+  ["League of Legends", "10, 25, 50, 100", true],
+  ["Lettuce Entertain You", "25-500", true],
+  ["LongHorn® Steakhouse", "10-250", true],
+  ["Lowe's", "5-1,000", true],
+  ["Lucky Brand", "5-500", true],
+  ["Lulu's", "15-200", true],
+  ["Lyft", "10-200", true],
+  ["Macaroni Grill", "25-250", true],
+  ["Made In Cookware", "25, 50, 100, 200", true],
+  ["Main Event Entertainment", "20-500", true],
+  ["Marcus Theaters", "15-500", true],
+  ["Margaritaville", "25-1,000", true],
+  ["Marriott Hotels", "25-2,000", true],
+  ["maurices", "1-500", true],
+  ["McAlister's Deli – Mix It Up®", "5-200", true],
+  ["McCormick & Schmick's", "25-500", true],
+  ["Merridee's Breadbasket", "5-250", true],
+  ["Meta Quest", "15, 25, 50", true],
+  ["Michael's", "5-500", true],
+  ["Miguel's Jr", "15-250", true],
+  ["Miller's Ale House", "25-500", true],
+  ["Mix It Up™", "5-200", true],
+  ["Moe's Southwest Grill – Mix It Up®", "5-200", true],
+  ["Morton's The Steakhouse", "25-500", true],
+  ["Mugsy", "50-500", true],
+  ["Nautica", "5-500", true],
+  ["Nexon Karma Koin US", "10-500", true],
+  ["Nintendo", "10, 20, 50", true],
+  ["Nordstrom", "5-2,000", true],
+  ["Nordstrom One", "10-500", true],
+  ["Nordstrom Rack", "5-2,000", true],
+  ["Old Navy", "10-500", true],
+  ["Olive Garden®", "5-250", true],
+  ["Ollie's Bargain Outlet", "25-500", true],
+  ["Omaha Steaks", "15-200", true],
+  ["OneStopPlus®", "20-250", true],
+  ["OURA Ring", "25-1,000", true],
+  ["Outback Steakhouse", "20-200", true],
+  ["Outdoorsy", "25-500", true],
+  ["Pacific Sunwear", "10-200", true],
+  ["Pandora", "15-500", true],
+  ["Pandora (2)", "10-200", true],
+  ["Panera Bread®", "5-200", true],
+  ["Papa John's", "3-500", true],
+  ["Papa Murphy's®", "15-250", true],
+  ["Pappas Restaurants", "20-250", true],
+  ["Paramount+", "25, 50, 100", true],
+  ["Paul Martin's American Grill", "25-250", true],
+  ["Peet's Coffee", "10-200", true],
+  ["Peohe's", "20-200", true],
+  ["Perigold", "10-500", true],
+  ["Petco", "10-200", true],
+  ["PetSmart", "5-500", true],
+  ["Phantom Gourmet", "10-500", true],
+  ["Phillips 66 - Conoco - 76", "5-500", true],
+  ["Pickleball Central", "10-500", true],
+  ["Pilot Flying J", "1-500", true],
+  ["Pizza Hut", "5-100", true],
+  ["PlayStation®Store", "10, 25, 50, 75, 100", true],
+  ["Poshmark", "25-500", true],
+  ["Princess Cruise Lines, Ltd.", "25-2,000", true],
+  ["Puckett's Grocery", "5-250", true],
+  ["Qdoba", "25-250", true],
+  ["Quince", "25-250", true],
+  ["Quiznos", "10-500", true],
+  ["Rainforest Cafe®", "25-500", true],
+  ["Ray-Ban", "25-500", true],
+  ["Razer", "10-200", true],
+  ["Rec Room", "10-150", true],
+  ["Red Robin", "5-250", true],
+  ["Regal", "5-200", true],
+  ["REI Co-op", "15-500", true],
+  ["Rent The Runway", "25-500", true],
+  ["RentacarGift eGift", "50-2,000", true],
+  ["Ritz-Carlton", "25-2,000", true],
+  ["Roblox", "10-200", true],
+  ["Royal Caribbean International", "50, 100, 250, 500", true],
+  ["Rubio's", "20-100", true],
+  ["Ruby Tuesday", "5-250", true],
+  ["Saks Fifth Avenue", "5-500", true],
+  ["Saltgrass Steak House®", "25-500", true],
+  ["Sams No 3 Diner and Bar", "5-250", true],
+  ["Scheels", "10-500", true],
+  ["Schlotzsky's – Mix It Up®", "5-200", true],
+  ["Seasons 52®", "5-250", true],
+  ["SeaWorld", "25-250", false],
+  ["Sephora", "5-250", true],
+  ["Shipt", "99", true],
+  ["Shoney's®", "20-200", true],
+  ["Shutterfly, Inc.", "25, 50", true],
+  ["SiriusXM®", "15, 30, 50", true],
+  ["Skechers", "15-500", true],
+  ["Sling TV", "25-100", true],
+  ["Slows BarBQ", "5-250", true],
+  ["Smashburger", "15-100", true],
+  ["Smoothie King®", "5-100", true],
+  ["Solo Stove", "25-500", true],
+  ["Soma", "10-500", true],
+  ["Sonic", "5-100", true],
+  ["Sony PlayStation", "10-250", true],
+  ["Southwest® Airlines", "15-500", true],
+  ["Spafinder", "5-500", true],
+  ["Staples", "5-500", true],
+  ["Steak and Shake", "5-500", true],
+  ["Stitch Fix®", "5-500", true],
+  ["STK", "20-250", true],
+  ["StubHub", "25-500", true],
+  ["Subway®", "5-250", true],
+  ["Sunglass Hut", "10-200", true],
+  ["Sur La Table", "15-500", true],
+  ["Swarovski", "50-500", true],
+  ["SweetFrog® Frozen Yogurt", "5, 10, 25", true],
+  ["Taco Bell®", "5-500", true],
+  ["TacoTime®", "5-100", true],
+  ["Texas Corral eGift", "5-500", true],
+  ["Texas Roadhouse", "10-100", true],
+  ["The Children's Place and Gymboree", "5-500", true],
+  ["The Children's Place", "20-500", true],
+  ["The Children's Place (2)", "5-500", true],
+  ["The Coffee Bean & Tea Leaf®", "5-100", true],
+  ["The Container Store", "5-100", true],
+  ["The Home Depot®", "1-2,000", true],
+  ["The Melting Pot", "10-100", true],
+  ["The Picklr", "25-250", true],
+  ["The Popcorn Factory", "15-500", true],
+  ["The Vitamin Shoppe®", "2-250", true],
+  ["ThirdLove", "25-500", true],
+  ["thredUP", "10-500", true],
+  ["Tommy Bahama", "15-500", true],
+  ["Tommy John", "25-500", true],
+  ["Topgolf", "25-250", true],
+  ["Tops Markets", "5-500", true],
+  ["Tractor Supply Co.", "15-250", true],
+  ["TripGift®", "50-2,000", true],
+  ["True Classic", "5-500", true],
+  ["Twitch", "15-200", true],
+  ["Uber", "5-500", true],
+  ["Uber Cobranded", "5-500", true],
+  ["Uber Eats", "5-500", true],
+  ["Ulta Beauty", "5-500", true],
+  ["Under Armour®'s", "15-500", true],
+  ["UNTUCKit", "25-500", true],
+  ["Urban Air", "25-500", true],
+  ["Valentino's Restaurants", "5-250", false],
+  ["Valorant", "10, 25, 50, 100", true],
+  ["Victoria's Secret", "5-500", true],
+  ["Victoria's Secret PINK", "5-500", true],
+  ["Virgin Experience Gifts", "10-500", true],
+  ["Von Diamonds", "25-2,000", true],
+  ["W.W. Cousins Restaurant", "5-250", true],
+  ["Walgreens", "5-500", true],
+  ["Wawa", "5-250", true],
+  ["Wayfair.com", "10-500", true],
+  ["White House Black Market", "10-500", true],
+  ["Woman Within", "20-250", true],
+  ["Wondery LLC", "45", true],
+  ["Xbox", "15, 25, 50, 100", true],
+  ["XBOX Game Pass Core", "10, 25, 40", true],
+  ["Xsolla", "10-200", true],
+  ["Yankee Candle", "5-250", true],
+  ["Yard House", "5-250", true],
+  ["Zappos.com", "15, 25, 50, 100", true],
+  ["Zaxby's", "5-250", true]
+  ];
+
+  const tbody = document.getElementById('tableBody');
+  const noResults = document.getElementById('noResults');
+  const resultCount = document.getElementById('resultCount');
+  let activeFilter = 'all';
+  let searchTerm = '';
+
+  document.getElementById('count-total').textContent = GIFT_CARDS.length;
+  document.getElementById('count-instock').textContent = GIFT_CARDS.filter(c => c[2]).length;
+  document.getElementById('count-oos').textContent = GIFT_CARDS.filter(c => !c[2]).length;
+
+  function render() {
+    const rows = GIFT_CARDS.filter(([name, , inStock]) => {
+      const matchesFilter = activeFilter === 'all' || (activeFilter === 'in' && inStock) || (activeFilter === 'out' && !inStock);
+      const matchesSearch = name.toLowerCase().includes(searchTerm);
+      return matchesFilter && matchesSearch;
+    });
+    tbody.innerHTML = rows.map(([name, denom, inStock]) => `
+      <tr>
+        <td>${name}</td>
+        <td class="denom-cell">${denom}</td>
+        <td><span class="status-badge ${inStock ? 'in-stock' : 'out-of-stock'}">${inStock ? 'In Stock' : 'Out of Stock'}</span></td>
+      </tr>
+    `).join('');
+    noResults.style.display = rows.length === 0 ? 'block' : 'none';
+    resultCount.textContent = rows.length === 0 ? '' : `Showing ${rows.length} of ${GIFT_CARDS.length} brands`;
+  }
+
+  document.getElementById('searchBox').addEventListener('input', e => {
+    searchTerm = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  document.getElementById('filterChips').addEventListener('click', e => {
+    const chip = e.target.closest('.filter-chip');
+    if (!chip) return;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.filter;
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
