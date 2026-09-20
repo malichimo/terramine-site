@@ -80,6 +80,7 @@
       border:1px solid #d0d5dc; border-radius:999px; padding:7px 12px; outline:none;
     }
     .tool-field select:focus, .tool-search:focus { border-color:var(--cyan); }
+    #filter-showcase[hidden] { display:none !important; }
     .sort-btn {
       font: 700 12px 'DM Sans', sans-serif; color:#243044; background:#fff;
       border:1px solid #d0d5dc; border-radius:999px; padding:7px 12px; cursor:pointer;
@@ -919,7 +920,7 @@
         <button type="button" class="sort-btn" id="sort-game" data-sort="game" disabled>Mine Game Level</button>
         <button type="button" class="sort-btn" id="sort-activity" data-sort="activity" disabled>Mine Activity</button>
         <button type="button" class="sort-btn" id="sort-visitors" data-sort="visitors" disabled>Visitor Count</button>
-        <div class="type-filter" id="filter-showcase" role="group" aria-label="Showcase image filter">
+        <div class="type-filter" id="filter-showcase" role="group" aria-label="Showcase image filter" hidden>
           <button type="button" class="type-filter-btn" data-showcase="has" aria-label="Has showcase image" aria-pressed="false" disabled>
             <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
               <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"></rect>
@@ -3401,7 +3402,19 @@
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
   }
-  function updateSortButtons() {
+  
+  function syncShowcaseFilterVisibility() {
+    const wrap = $('filter-showcase');
+    if (!wrap) return;
+    const show = sortKey === 'visitors';
+    wrap.hidden = !show;
+    if (!show && selectedShowcase.size) {
+      selectedShowcase.clear();
+      saveSelectedShowcase();
+      updateShowcaseFilterButtons();
+    }
+  }
+function updateSortButtons() {
     document.querySelectorAll('.sort-btn').forEach(btn => {
       const on = sortKey === btn.dataset.sort;
       btn.classList.toggle('active', on);
@@ -3410,6 +3423,7 @@
       btn.textContent = on ? base + (sortDir > 0 ? ' ▲' : ' ▼') : base;
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    syncShowcaseFilterVisibility();
   }
   function svgIcon(parts) {
     const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
