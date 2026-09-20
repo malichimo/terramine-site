@@ -931,8 +931,7 @@
             </label>
             <label class="page-settings-field">Rate
               <select id="display-rate">
-                <option value="base">Base Rate</option>
-                <option value="bonus">Base + Bonus</option>
+                <option value="bonus">Base Rate + Production %</option>
                 <option value="boost">20x Boost</option>
               </select>
             </label>
@@ -2512,7 +2511,7 @@
   function tipColumnMeta(pref) {
     const cols = [
       ['c-base', 'Base Rate'],
-      ['c-bonus', 'Base + Bonus'],
+      ['c-bonus', 'Base Rate + Production %'],
       ['c-24', '20\u00d7 24h']
     ];
     if (pref && pref.rate === 'boost') {
@@ -2531,7 +2530,7 @@
   }
   const DISPLAY_KEY = 'terramine.mines.display';
   const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
-  const DISPLAY_RATES = ['base', 'bonus', 'boost'];
+  const DISPLAY_RATES = ['bonus', 'boost'];
   const LEGACY_RATE_HOURS = { '12': 12, '18': 18, '24': 24 };
   const PERIOD_SUFFIX = { sec: '/sec', min: '/min', day: '/day', month: '/mo', year: '/yr' };
   const DEFAULT_BOOST_HOURS = 8;
@@ -2549,6 +2548,8 @@
       hours = LEGACY_RATE_HOURS[rate];
       rate = 'boost';
     }
+    // Legacy "base" setting maps to Base Rate + Production %.
+    if (rate === 'base') rate = 'bonus';
     if (DISPLAY_RATES.indexOf(rate) === -1) return defaultDisplay();
     return { period: o.period, rate: rate, hours: hours };
   }
@@ -2634,7 +2635,7 @@
     pref = pref || displayPref;
     let basis;
     if (pref.rate === 'base') basis = 'Base Rate';
-    else if (pref.rate === 'bonus') basis = 'Base Rate plus Bonus';
+    else if (pref.rate === 'bonus') basis = 'Base Rate + Production %';
     else basis = '20x Boost at ' + clampBoostHours(pref.hours) + ' hours a day';
     const periodLabel = TOTALS_PERIOD_LABEL[pref.period] || '';
     if (periodLabel) {
