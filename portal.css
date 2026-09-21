@@ -423,7 +423,7 @@ body.auth-pending #portal {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--navy);
+  background: rgba(238, 241, 244, 0.7); /* same frost as #main-content; body fixed bg shows through */
   padding: 24px;
 }
 .login-card {
