@@ -3024,10 +3024,10 @@
     const raw = (mine && (mine._raw || mine._raw)) || null;
     const details = (mine && mine._details) || null;
     const cands = [
-      v && (v.propertyOwnerId || v.ownerId || v.mineOwnerId || v.propertyOwnerUid || v.ownerUid || v.ownerUID),
-      mine && (mine.ownerId || mine.ownerUid || mine.ownerID || mine.userId),
-      raw && (raw.ownerId || raw.ownerUid || raw.ownerID || raw.userId || raw.uid || raw.createdBy),
-      details && (details.ownerId || details.ownerUid || details.userId),
+      v && (v.propertyOwnerId || v.ownerId || v.ownerID || v.mineOwnerId || v.propertyOwnerUid || v.ownerUid || v.ownerUID),
+      mine && (mine.ownerId || mine.ownerID || mine.ownerUid || mine.ownerUID || mine.userId || mine.uid),
+      raw && (raw.ownerId || raw.ownerID || raw.ownerUid || raw.ownerUID || raw.userId || raw.uid || raw.createdBy),
+      details && (details.ownerId || details.ownerID || details.ownerUid || details.userId),
     ];
     for (let i = 0; i < cands.length; i++) {
       let id = cands[i];
@@ -3085,18 +3085,45 @@
       if (tipEl) tipEl.textContent = mineBadgeTipText(mineTipTarget);
     }
   }
+  function nickFromUserDoc(ud) {
+    if (!ud || typeof ud !== 'object') return '';
+    const keys = [
+      'nickname', 'nickName', 'Nickname', 'displayName', 'DisplayName',
+      'username', 'userName', 'userNickname', 'avatarName', 'AvatarName',
+      'gamerTag', 'gamertag', 'handle', 'name', 'Name'
+    ];
+    for (let i = 0; i < keys.length; i++) {
+      const val = ud[keys[i]];
+      if (typeof val === 'string' && val.trim()) return val.trim().replace(/^@+/, '');
+    }
+    return '';
+  }
   function fetchOwnerNick(uid) {
     if (!uid) return Promise.resolve('');
-    if (ownerNickCache.has(uid)) return Promise.resolve(ownerNickCache.get(uid) || '');
+    const cached = ownerNickCache.has(uid) ? ownerNickCache.get(uid) : undefined;
+    if (typeof cached === 'string' && cached.trim()) return Promise.resolve(cached.trim());
     if (ownerNickInflight.has(uid)) return ownerNickInflight.get(uid);
     const p = db.collection('users').doc(uid).get().then(snap => {
-      const ud = (snap && snap.exists) ? (snap.data() || {}) : {};
-      const nick = (ud.nickname || ud.nickName || ud.displayName || ud.username || ud.userName || ud.avatarName || ud.gamerTag || ud.gamertag || ud.handle || '').toString().trim().replace(/^@+/, '');
+      const exists = !!(snap && snap.exists);
+      const ud = exists ? (snap.data() || {}) : {};
+      const nick = nickFromUserDoc(ud);
+      console.log('[activity] owner user lookup', {
+        uid: uid,
+        exists: exists,
+        nick: nick || null,
+        keys: exists ? Object.keys(ud) : [],
+        sample: exists ? {
+          nickname: ud.nickname, nickName: ud.nickName, displayName: ud.displayName,
+          username: ud.username, userName: ud.userName, avatarName: ud.avatarName,
+          handle: ud.handle, name: ud.name
+        } : null
+      });
       ownerNickCache.set(uid, nick || null);
       ownerNickInflight.delete(uid);
       if (nick) applyOwnerNickToDom(uid, nick);
       return nick || '';
-    }).catch(() => {
+    }).catch(err => {
+      console.warn('[activity] owner user lookup failed', uid, err && err.code, err && err.message);
       ownerNickCache.set(uid, null);
       ownerNickInflight.delete(uid);
       return '';
@@ -3110,7 +3137,9 @@
       if (ownerNickFromVisit(v)) return;
       const mine = mineMap[v.propertyId] || null;
       const oid = ownerIdOf(mine, v);
-      if (!oid || seen.has(oid) || ownerNickCache.has(oid)) return;
+      if (!oid || seen.has(oid)) return;
+      const cached = ownerNickCache.has(oid) ? ownerNickCache.get(oid) : undefined;
+      if (typeof cached === 'string' && cached.trim()) return;
       seen.add(oid);
       fetchOwnerNick(oid);
     });
@@ -3205,16 +3234,20 @@
   function renderVisitCard(v, mine) {
     const _replyDbg = ownerReplyText(v);
     if (_replyDbg) {
+      const _oid = ownerIdOf(mine, v);
       console.log('[activity] mine (has reply)', mine);
       console.log('[activity] reply data', {
         checkInId: v && v.id,
         propertyId: v && v.propertyId,
         replyText: _replyDbg,
         replyDate: ownerReplyDate(v),
-        ownerIdResolved: ownerIdOf(mine, v),
+        ownerIdResolved: _oid,
+        mineOwnerId: mine && (mine.ownerId || mine.ownerID),
+        rawOwnerId: mine && mine._raw && (mine._raw.ownerId || mine._raw.ownerID),
         ownerLabel: ownerLabelOf(mine, v),
         visit: v
       });
+      if (_oid) fetchOwnerNick(_oid);
     }
     const name = visitorName(v);
     const safeName = escapeHtml(name);
@@ -3328,7 +3361,7 @@
     delete raw._details;
     delete raw._raw;
     delete raw._raw;
-    const ownerId = m.ownerId || m.ownerUid || m.userId || null;
+    const ownerId = m.ownerId || m.ownerID || m.ownerUid || m.ownerUID || m.userId || m.uid || null;
     return {
       id: m.id,
       mineType: m.mineType || 'rock',
