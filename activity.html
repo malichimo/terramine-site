@@ -454,7 +454,7 @@
 
     /* ── Mine GPS minimap overlay ── */
     .mine-map-overlay {
-      position:fixed; z-index:500;
+      position:fixed !important; z-index:500;
       display:flex; flex-direction:column;
       background:rgba(13,27,42,0.78);
       box-sizing:border-box;
@@ -522,7 +522,7 @@
     }
     .mine-map-close:hover { background:rgba(255,255,255,0.22); }
     .mine-map-body {
-      position:relative; flex:1; min-height:70vh; height:70vh; background:#c8e6c9;
+      position:relative; flex:1; min-height:0; height:auto; background:#c8e6c9;
     }
     .mine-map-canvas { position:absolute; inset:0; }
     .mine-map-tip, .mine-map-msg {
@@ -1235,10 +1235,28 @@
     const main = $('portal-main');
     if (!overlay || !main || overlay.hidden) return;
     const r = main.getBoundingClientRect();
-    overlay.style.left = r.left + 'px';
-    overlay.style.top = r.top + 'px';
-    overlay.style.width = r.width + 'px';
-    overlay.style.height = r.height + 'px';
+    // Keep the map locked to the visible viewport (not #portal-main's
+    // full scroll height). Sit under sticky totals/filter chrome with
+    // bottom padding so it cannot stretch or scroll off-screen.
+    let top = Math.max(0, r.top);
+    main.querySelectorAll('.mine-totals-bar, .mine-toolbar').forEach((el) => {
+      const cr = el.getBoundingClientRect();
+      if (cr.bottom > top && cr.top < (r.top + 160)) {
+        top = Math.max(top, cr.bottom);
+      }
+    });
+    top += 8;
+    const left = Math.max(0, r.left);
+    const width = Math.max(0, Math.min(r.width, window.innerWidth - left));
+    const padBottom = 20;
+    const height = Math.max(200, window.innerHeight - top - padBottom);
+    overlay.style.position = 'fixed';
+    overlay.style.left = left + 'px';
+    overlay.style.top = top + 'px';
+    overlay.style.width = width + 'px';
+    overlay.style.height = height + 'px';
+    overlay.style.right = 'auto';
+    overlay.style.bottom = 'auto';
   }
   function clearMineMapBounds() {
     const overlay = $('mine-map-overlay');
