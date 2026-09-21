@@ -323,7 +323,11 @@
       background:rgba(19,54,101,.92); color:#fff; border-radius:8px;
       padding:8px 12px; font-size:12px; font-weight:600; pointer-events:none;
     }
-    .mine-map-msg { top:12px; bottom:auto; text-align:center; }
+    .mine-map-msg {
+      top:12px; bottom:auto; text-align:center;
+      opacity:1; transition:opacity .4s ease;
+    }
+    .mine-map-msg.is-fading { opacity:0; }
     .mine-map-hover-tip {
       position:absolute; z-index:3; left:0; top:0; max-width:260px;
       display:flex; align-items:center; gap:8px;
@@ -1359,16 +1363,40 @@
   }
 
 
+  let mineMapMsgFadeTimer = null;
+  let mineMapMsgHideTimer = null;
+
   function showMineMapMsg(text, isTip) {
     const tip = $('mine-map-tip');
     const msg = $('mine-map-msg');
+    if (mineMapMsgFadeTimer) { clearTimeout(mineMapMsgFadeTimer); mineMapMsgFadeTimer = null; }
+    if (mineMapMsgHideTimer) { clearTimeout(mineMapMsgHideTimer); mineMapMsgHideTimer = null; }
     if (tip) { tip.hidden = true; tip.textContent = ''; }
-    if (msg) { msg.hidden = true; msg.textContent = ''; }
+    if (msg) {
+      msg.classList.remove('is-fading');
+      msg.hidden = true;
+      msg.textContent = '';
+    }
     if (!text) return;
     const el = isTip ? tip : msg;
     if (!el) return;
     el.textContent = text;
     el.hidden = false;
+    // Status bar (top): auto fade out after 3s. Tips (bottom) stay until replaced.
+    if (!isTip && msg) {
+      mineMapMsgFadeTimer = setTimeout(() => {
+        mineMapMsgFadeTimer = null;
+        if (!msg.isConnected || msg.hidden || msg.textContent !== text) return;
+        msg.classList.add('is-fading');
+        mineMapMsgHideTimer = setTimeout(() => {
+          mineMapMsgHideTimer = null;
+          if (!msg.isConnected || msg.textContent !== text) return;
+          msg.hidden = true;
+          msg.textContent = '';
+          msg.classList.remove('is-fading');
+        }, 400);
+      }, 3000);
+    }
   }
   function clampMineMapZoom(z) {
     const n = Math.round(Number(z));
