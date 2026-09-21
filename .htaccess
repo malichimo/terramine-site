@@ -1,0 +1,25 @@
+# TerraMine clean URLs (portal section)
+# Keep real .html files on disk; rewrite/redirect only.
+
+RewriteEngine On
+RewriteBase /
+
+# Prefer no trailing slash on portal routes
+RewriteRule ^portal/$ /portal [R=301,L]
+RewriteRule ^portal/(mines|visitors|inventory|activity|account)/$ /portal/$1 [R=301,L]
+
+# Old bookmark/share URLs → clean (keep query string)
+RewriteRule ^portal\.html$ /portal [R=301,L,QSA]
+RewriteRule ^mines\.html$ /portal/mines [R=301,L,QSA]
+RewriteRule ^visitors\.html$ /portal/visitors [R=301,L,QSA]
+RewriteRule ^inventory\.html$ /portal/inventory [R=301,L,QSA]
+RewriteRule ^activity\.html$ /portal/activity [R=301,L,QSA]
+RewriteRule ^account\.html$ /portal/account [R=301,L,QSA]
+
+# Clean paths → existing files (internal)
+RewriteRule ^portal$ portal.html [L]
+RewriteRule ^portal/mines$ mines.html [L,QSA]
+RewriteRule ^portal/visitors$ visitors.html [L,QSA]
+RewriteRule ^portal/inventory$ inventory.html [L,QSA]
+RewriteRule ^portal/activity$ activity.html [L,QSA]
+RewriteRule ^portal/account$ account.html [L,QSA]
