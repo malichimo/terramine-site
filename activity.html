@@ -3241,6 +3241,7 @@
     }
     board.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitCard(v, mineMap[v.propertyId] || null)).join('') + '</div>';
     ensureVisitorAvatars(list);
+    ensureOwnerNicks(list);
     bindVisitorPhotoTips();
     bindShowcasePinTips(board);
     bindShowcasePinClicksOnce();
