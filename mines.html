@@ -1224,7 +1224,7 @@
             <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
             <label class="mine-map-zoom">
               <span>Zoom</span>
-              <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
+              <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="17" aria-label="Map zoom">
             </label>
           </div>
           <div class="mine-map-body" id="mine-map-body">
@@ -1753,7 +1753,7 @@
   const MINE_MAP_BUILDINGS_KEY = 'terramine.mineMap.buildings';
   const MINE_MAP_ZOOM_MIN = 10;
   const MINE_MAP_ZOOM_MAX = 21;
-  const MINE_MAP_ZOOM_DEFAULT = 19;
+  const MINE_MAP_ZOOM_DEFAULT = 17;
   const MINE_MAP_LOAD_AREA_DEFAULT_MI = 0.5;
   const MINE_MAP_LOAD_AREA_MIN_MI = 0.25;
   const MINE_MAP_LOAD_AREA_MAX_MI = 2;
@@ -2223,10 +2223,20 @@
     return clamped;
   }
   function centerMineMapOnPath(map, path) {
+    // Fit the parcel in view — do NOT apply the session zoom here.
+    // A saved zoom of 19+ made pin opens look insanely zoomed-in ("zoom 1000").
     const bounds = new google.maps.LatLngBounds();
     path.forEach(p => bounds.extend(p));
-    map.setCenter(bounds.getCenter());
-    applyMineMapZoom(map, getSavedMineMapZoom());
+    if (bounds.isEmpty()) return;
+    map.fitBounds(bounds, { top: 56, right: 56, bottom: 56, left: 56 });
+    google.maps.event.addListenerOnce(map, 'idle', () => {
+      let z = map.getZoom();
+      if (z == null || !Number.isFinite(z)) return;
+      // Tiny parcels can fitBounds to extreme zooms — keep within slider range
+      // and avoid burying the camera past useful parcel context.
+      if (z > 18) z = 18;
+      applyMineMapZoom(map, z);
+    });
   }
 
   function renderMineMapContent(mine) {
@@ -2254,7 +2264,8 @@
         mineMapMarker = overlay;
         const pos = overlay.getPosition();
         map.setCenter({ lat: pos.lat(), lng: pos.lng() });
-        applyMineMapZoom(map, getSavedMineMapZoom());
+        // Marker-only: sensible neighborhood zoom (ignore extreme saved values)
+        applyMineMapZoom(map, Math.min(getSavedMineMapZoom(), 17));
         showMineMapMsg('Parcel corners not found on this mine — showing center only.', true);
       }
       try { map.setTilt(0); } catch (e) {}
