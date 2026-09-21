@@ -1326,7 +1326,8 @@
       zIndex: 0
     });
     const curId = mine.id != null ? String(mine.id) : '';
-    const list = allMines;
+    // Visitors page keeps owned mines in mineMap (id -> entry), not allMines.
+    const list = Object.values(mineMap);
     let added = 0;
     for (let i = 0; i < list.length; i++) {
       const other = list[i];
