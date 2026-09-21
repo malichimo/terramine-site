@@ -159,24 +159,6 @@
           </div>
         </div>
 
-        <!-- My Mines -->
-        <div class="section-header">
-          <div class="section-title">My Mines</div>
-          <a class="section-action" href="/portal/mines">View all →</a>
-        </div>
-        <div class="mines-grid" id="mines-grid">
-          <!-- populated by JS -->
-        </div>
-
-        <!-- Recent Visitors -->
-        <div class="section-header">
-          <div class="section-title">Recent Visitors</div>
-          <a class="section-action" href="/portal/visitors">View all →</a>
-        </div>
-        <div class="visitor-list" id="visitor-list">
-          <!-- populated by JS -->
-        </div>
-
       </main>
     </div>
   </div>
@@ -228,11 +210,6 @@
     { id: 'sky-crater', mineType: 'diamond', customName: 'Sky Crater', upgradeLevel: 2, totalCheckIns: 7, dailyActivitiesRemaining: 1 }
   ];
 
-  const PREVIEW_VISITS = [
-    { id: 'visit-1', visitorNickname: 'Nova', propertyId: 'Iron Ridge', message: 'Great visibility near the north shaft.', tbEarned: 12, timestamp: new Date(Date.now() - 18 * 60 * 1000) },
-    { id: 'visit-2', visitorNickname: 'Atlas', propertyId: 'Gold Vein', message: '', tbEarned: 0, timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000) },
-    { id: 'visit-3', visitorNickname: 'Quinn', propertyId: 'Sky Crater', message: 'Back tomorrow for another run.', tbEarned: 8, timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000) }
-  ];
 
   document.body.classList.add('auth-pending');
 
@@ -258,23 +235,7 @@
     return '$' + parseFloat(n).toFixed(2);
   }
 
-  function timeAgo(ts) {
-    if (!ts) return '';
-    const d = ts.toDate ? ts.toDate() : new Date(ts);
-    const diff = Math.floor((Date.now() - d) / 1000);
-    if (diff < 60)   return 'just now';
-    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-    return Math.floor(diff/86400) + 'd ago';
-  }
 
-  function mineTypeClass(type) {
-    return { rock: 'badge-rock', coal: 'badge-coal', gold: 'badge-gold', diamond: 'badge-diamond' }[type] || 'badge-rock';
-  }
-
-  function mineTypeEmoji(type) {
-    return { rock: '🪨', coal: '🖤', gold: '⭐', diamond: '💎' }[type] || '⛏';
-  }
 
   // Card icons are the mines.html mineIcon() glyphs (rock/coal/gold/diamond).
   var KNOWN_MINE_TYPES = ['rock', 'coal', 'gold', 'diamond'];
@@ -466,11 +427,8 @@
         .get()).docs.map(d => ({ id: d.id, ...d.data() }));
       renderPropertyBreakdown(props);
 
-      // Render mine cards (first 6)
-      await renderMineCards(props.slice(0, 6), user.uid, options);
-
-      // Recent visitors
-      await loadRecentVisitors(user.uid, props, options);
+      // Mines Ready stat (no mine-card grid on dashboard)
+      await updateReadyStat(props, options);
 
     } catch(e) {
       console.error('Dashboard load error:', e);
@@ -478,42 +436,14 @@
     }
   }
 
-  async function renderMineCards(props, userId, options = {}) {
-    const grid = $('mines-grid');
+  async function updateReadyStat(props, options = {}) {
     if (!props.length) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⛏</div><div class="empty-text">No properties yet — buy your first TerraAcre in the app.</div></div>`;
       $('stat-ready').textContent = '0';
       return;
     }
 
     if (options.preview) {
-      let readyCount = 0;
-      grid.innerHTML = props.map(p => {
-        const activityReady = (p.dailyActivitiesRemaining ?? 1) > 0;
-        if (activityReady) readyCount++;
-        const name = p.customName || p.id;
-        const type = p.mineType || 'rock';
-        const level = p.upgradeLevel || 1;
-        const visitors = p.totalCheckIns || 0;
-        return `
-          <div class="mine-card" onclick="window.location='/portal/mines#${p.id}'">
-            <div class="mine-card-top">
-              <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
-              <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
-            </div>
-            <div class="mine-name">${name}</div>
-            <div class="mine-id">${p.id}</div>
-            <div class="mine-stats">
-              <div class="mine-stat"><strong>Lv ${level}</strong>Grade</div>
-              <div class="mine-stat"><strong>${visitors}</strong>Visitors</div>
-              <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
-            </div>
-            <div class="mine-action-row">
-              <a class="mine-btn primary" href="/portal/mines#${p.id}">Maintain</a>
-              <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
-            </div>
-          </div>`;
-      }).join('');
+      const readyCount = props.filter(p => (p.dailyActivitiesRemaining ?? 1) > 0).length;
       $('stat-ready').textContent = readyCount;
       return;
     }
@@ -534,125 +464,10 @@
       return results;
     }
     const details = await fetchInBatches(props);
-    const detailMap = Object.fromEntries(details.map(d => [d.id, d]));
-
-    let readyCount = 0;
-    grid.innerHTML = props.map(p => {
-      const d = detailMap[p.id] || {};
-      const activityReady = (d.dailyActivitiesRemaining ?? 1) > 0;
-      if (activityReady) readyCount++;
-      const name = d.customName || p.id;
-      const type = p.mineType || 'rock';
-      const level = d.upgradeLevel || 1;
-      const visitors = d.totalCheckIns || 0;
-      return `
-        <div class="mine-card" onclick="window.location='/portal/mines#${p.id}'">
-          <div class="mine-card-top">
-            <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
-            <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
-          </div>
-          <div class="mine-name">${name}</div>
-          <div class="mine-id">${p.id}</div>
-          <div class="mine-stats">
-            <div class="mine-stat"><strong>Lv ${level}</strong>Grade</div>
-            <div class="mine-stat"><strong>${visitors}</strong>Visitors</div>
-            <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
-          </div>
-          <div class="mine-action-row">
-            <a class="mine-btn primary" href="/portal/mines#${p.id}">Maintain</a>
-            <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
-          </div>
-        </div>`;
-    }).join('');
-
+    const readyCount = details.filter(d => (d.dailyActivitiesRemaining ?? 1) > 0).length;
     $('stat-ready').textContent = readyCount;
   }
 
-  async function loadRecentVisitors(userId, props, options = {}) {
-    const list = $('visitor-list');
-    if (!props.length) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No visitors yet.</div></div>`;
-      return;
-    }
-
-    if (options.preview) {
-      const visits = options.previewVisits || PREVIEW_VISITS;
-      list.innerHTML = visits.map(v => {
-        const name = v.visitorNickname || v.nickname || 'Anonymous Miner';
-        const propName = v.propertyId || '';
-        const msg = v.message ? `"${v.message}"` : `Visited ${propName}`;
-        const tbEarned = v.tbEarned || v.visitorTBEarned || 0;
-        return `
-          <div class="visitor-row">
-            <div class="visitor-avatar">${initials(name)}</div>
-            <div class="visitor-info">
-              <div class="visitor-name">${name}</div>
-              <div class="visitor-detail">${msg}</div>
-            </div>
-            ${tbEarned ? `<div class="visitor-tb">+${tbEarned} TB</div>` : ''}
-            <div class="visitor-time">${timeAgo(v.timestamp)}</div>
-          </div>`;
-      }).join('');
-      return;
-    }
-
-    // Skeleton while loading
-    list.innerHTML = [1,2,3].map(() => `
-      <div class="visitor-row">
-        <div class="skeleton" style="width:32px;height:32px;border-radius:50%;"></div>
-        <div style="flex:1"><div class="skeleton" style="height:13px;width:120px;margin-bottom:6px;"></div><div class="skeleton" style="height:11px;width:180px;"></div></div>
-      </div>`).join('');
-
-    try {
-      // Get recent check-ins to user's properties
-      const checkSnap = await db.collection('checkIns')
-        .where('propertyOwnerId', '==', userId)
-        .orderBy('timestamp', 'desc')
-        .limit(10)
-        .get();
-
-      const visits = checkSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      if (!visits.length) {
-        list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No visitors yet — share your mine coordinates!</div></div>`;
-        return;
-      }
-
-      list.innerHTML = visits.map(v => {
-        const name = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
-        const propName = v.propertyId || '';
-        const msg = v.message ? `"${v.message}"` : `Visited ${propName}`;
-        const tbEarned = v.tbEarned || v.visitorTBEarned || 0;
-        return `
-          <div class="visitor-row">
-            <div class="visitor-avatar">${initials(name)}</div>
-            <div class="visitor-info">
-              <div class="visitor-name">${name}</div>
-              <div class="visitor-detail">${msg}</div>
-            </div>
-            ${tbEarned ? `<div class="visitor-tb">+${tbEarned} TB</div>` : ''}
-            <div class="visitor-time">${timeAgo(v.timestamp)}</div>
-          </div>`;
-      }).join('');
-    } catch(e) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-text">Could not load visitors.</div></div>`;
-      console.error('Visitors error:', e);
-    }
-  }
-
-  function showComingSoon(e) {
-    e.preventDefault();
-    const btn = e.currentTarget;
-    const orig = btn.textContent;
-    btn.textContent = '🚧 Coming Soon!';
-    btn.style.color = 'var(--brown)';
-    btn.style.borderColor = 'var(--brown)';
-    setTimeout(() => {
-      btn.textContent = orig;
-      btn.style.color = '';
-      btn.style.borderColor = '';
-    }, 2000);
-  }
 </script>
 </body>
 </html>
