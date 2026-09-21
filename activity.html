@@ -2515,21 +2515,20 @@
     });
     if (!mineMapResizeBound) {
       mineMapResizeBound = true;
-      window.addEventListener('resize', () => {
+      const onMineMapViewportChange = () => {
         syncMineMapBounds();
         if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
-          google.maps.event.trigger(mineMapInstance, 'resize');
+          try { google.maps.event.trigger(mineMapInstance, 'resize'); } catch (e) {}
         }
-      });
-      if (typeof ResizeObserver !== 'undefined') {
-        const main = $('portal-main');
-        if (main) {
-          new ResizeObserver(() => {
-            syncMineMapBounds();
-            if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
-              google.maps.event.trigger(mineMapInstance, 'resize');
-            }
-          }).observe(main);
+      };
+      window.addEventListener('resize', onMineMapViewportChange);
+      // Keep the fixed overlay pinned if the page or main column scrolls
+      window.addEventListener('scroll', onMineMapViewportChange, { passive: true });
+      const main = $('portal-main');
+      if (main) {
+        main.addEventListener('scroll', onMineMapViewportChange, { passive: true });
+        if (typeof ResizeObserver !== 'undefined') {
+          new ResizeObserver(onMineMapViewportChange).observe(main);
         }
       }
     }
