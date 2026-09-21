@@ -86,6 +86,7 @@
        TOP NAV (portal shell — no left sidebar)
     ═══════════════════════════════════════════ */
     .top-nav {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 16px;
@@ -94,8 +95,6 @@
       box-sizing: border-box;
       background: rgba(13,27,42,0.97);
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
       z-index: 100;
       flex-shrink: 0;
     }
@@ -284,7 +283,7 @@
       .nav-pill-value { font-size: 15px; }
     }
 
-    .main { flex:1; overflow-x:hidden; overflow-y:auto; background:transparent; position:relative; }
+    .main { flex:1; min-height:0; overflow-x:hidden; overflow-y:auto; background:transparent; position:relative; }
     #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:transparent; padding:24px; }
     .login-card { width:100%; max-width:380px; background:var(--navy2, #111F30); border:1px solid var(--border, rgba(255,255,255,0.07)); border-radius:12px; padding:36px 32px; }
     .login-logo { margin:0 auto 10px; text-align:center; }
@@ -307,7 +306,7 @@
     .login-toggle a { color:var(--cyan, #4FC3F7); text-decoration:none; cursor:pointer; }
 
     /* Filter bar — match mines.html mine-toolbar */
-    .mine-toolbar { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 16px; background:#fff; border-bottom:1px solid #e3e7ee; }
+    .mine-toolbar { position:sticky; top:0; z-index:40; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 16px; background:#fff; border-bottom:1px solid #e3e7ee; box-shadow:0 2px 8px rgba(13,27,42,.08); }
     .tool-field { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; }
     .tool-field select, .tool-search {
       font: 500 13px 'DM Sans', sans-serif; color:#0D1B2A; background:#fff;
@@ -710,8 +709,10 @@
     <div class="login-toggle">Forgot password? <a id="btn-reset">Send reset email</a></div>
   </div>
 </div>
-<div id="portal" style="display:none; flex-direction:column; min-height:100vh;">
-  <nav class="top-nav">
+<div id="portal" style="display:none; flex-direction:column; height:100dvh; max-height:100dvh; overflow:hidden;">
+  <div class="layout">
+<main class="main" id="portal-main">
+      <nav class="top-nav">
     <a class="nav-logo" href="/"><img src="/images/terramine_logo_clear_new_small.png" alt="TerraMine"></a>
     <div class="nav-links">
       <a href="/portal">Dashboard</a>
@@ -741,9 +742,7 @@
       </div>
     </div>
   </nav>
-<div class="layout">
-<main class="main" id="portal-main">
-      <div class="mine-toolbar" id="visitors-toolbar">
+<div class="mine-toolbar" id="visitors-toolbar">
         <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
           <button type="button" class="type-filter-btn" data-type="diamond" aria-label="Filter Diamond" aria-pressed="false" disabled>
             <img src="images/mine-icons/diamond.svg" alt="">
@@ -3743,6 +3742,32 @@
       setToolbar(true);
     }
   }
+
+  
+  function syncStickyFilterOffset() {
+    const main = $('portal-main');
+    const nav = document.querySelector('#portal-main .top-nav') || document.querySelector('.top-nav');
+    const bar = document.querySelector('#portal-main .mine-toolbar');
+    if (!main || !bar) return;
+    let top = 0;
+    if (nav) {
+      const mr = main.getBoundingClientRect();
+      const nr = nav.getBoundingClientRect();
+      // How much of the nav still hangs into the main visible area
+      top = Math.max(0, Math.min(nr.bottom, mr.bottom) - mr.top);
+      // If nav is fully above the main clip, top stays 0
+      if (nr.bottom <= mr.top) top = 0;
+    }
+    bar.style.top = Math.round(top) + 'px';
+  }
+  (function bindStickyFilterOffset() {
+    const main = $('portal-main');
+    if (!main || main.dataset.stickyFilterBound === '1') return;
+    main.dataset.stickyFilterBound = '1';
+    main.addEventListener('scroll', syncStickyFilterOffset, { passive: true });
+    window.addEventListener('resize', syncStickyFilterOffset);
+    syncStickyFilterOffset();
+  })();
 
   auth.onAuthStateChanged(user => {
     if (!authResolved) {
