@@ -8,12 +8,20 @@ RewriteBase /
 RewriteRule ^portal/$ /portal [R=301,L]
 RewriteRule ^portal/(mines|visitors|inventory|activity|account)/$ /portal/$1 [R=301,L]
 
-# Old bookmark/share URLs → clean (keep query string)
+# Old bookmark/share URLs → clean.
+# THE_REQUEST ensures we only redirect real browser hits on *.html,
+# not the internal rewrite target (avoids redirect loops).
+RewriteCond %{THE_REQUEST} \s/+portal\.html[\s?] [NC]
 RewriteRule ^portal\.html$ /portal [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+mines\.html[\s?] [NC]
 RewriteRule ^mines\.html$ /portal/mines [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+visitors\.html[\s?] [NC]
 RewriteRule ^visitors\.html$ /portal/visitors [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+inventory\.html[\s?] [NC]
 RewriteRule ^inventory\.html$ /portal/inventory [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+activity\.html[\s?] [NC]
 RewriteRule ^activity\.html$ /portal/activity [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+account\.html[\s?] [NC]
 RewriteRule ^account\.html$ /portal/account [R=301,L,QSA]
 
 # Clean paths → existing files (internal)
