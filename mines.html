@@ -66,8 +66,9 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 0 20px;
-      height: 64px;
+      padding: 5px 20px;
+      height: 100px;
+      box-sizing: border-box;
       background: rgba(13,27,42,0.97);
       border-bottom: 1px solid var(--border);
       position: sticky;
@@ -76,13 +77,16 @@
       flex-shrink: 0;
     }
     .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px;
-      letter-spacing: 2px;
-      color: var(--cyan);
-      text-decoration: none;
+      display: flex;
+      align-items: center;
       flex-shrink: 0;
-      white-space: nowrap;
+      text-decoration: none;
+      line-height: 0;
+    }
+    .nav-logo img {
+      display: block;
+      width: 90px;
+      height: auto;
     }
     .nav-links {
       display: flex;
@@ -1035,7 +1039,7 @@
 </div>
 <div id="portal" style="display:none; flex-direction:column; min-height:100vh;">
   <nav class="top-nav">
-    <a class="nav-logo" href="/">⛏ TerraMine</a>
+    <a class="nav-logo" href="/"><img src="/images/terramine_logo_clear_new_small.png" alt="TerraMine"></a>
     <div class="nav-links">
       <a href="/portal">Dashboard</a>
       <a href="/portal/mines" class="active">Mines</a>

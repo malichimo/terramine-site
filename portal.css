@@ -136,8 +136,9 @@ body.auth-pending #portal {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 20px;
-  height: 64px;
+  padding: 5px 20px;
+  height: 100px;
+  box-sizing: border-box;
   background: rgba(13,27,42,0.97);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -146,13 +147,16 @@ body.auth-pending #portal {
   flex-shrink: 0;
 }
 .nav-logo {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 22px;
-  letter-spacing: 2px;
-  color: var(--cyan);
-  text-decoration: none;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
-  white-space: nowrap;
+  text-decoration: none;
+  line-height: 0;
+}
+.nav-logo img {
+  display: block;
+  width: 90px;
+  height: auto;
 }
 .nav-links {
   display: flex;
