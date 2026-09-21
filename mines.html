@@ -16,7 +16,9 @@
     html.tm-expect-auth #portal {
       display: flex !important;
       flex-direction: column;
-      min-height: 100vh;
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
     }
     html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
     html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
@@ -40,7 +42,7 @@
       --gray: #8899AA;
       --surface: rgba(255,255,255,0.04);
     }
-    html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
+    html, body { height:100%; margin:0;   font-family: 'DM Sans', sans-serif; }
     body {
       position: relative;
       background-color: #0D1B2A; /* fallback while layers load */
@@ -261,12 +263,7 @@
     .nav-pill-usd .nav-pill-value { color: #FBBF24; }
     .nav-pill-tb .nav-pill-value { color: #4FC3F7; }
 
-    .layout {
-      display: block;
-      width: 100%;
-      flex: 1;
-      min-height: 0;
-    }
+    .layout { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; width:100%; }
     .layout > .content {
       width: 100%;
       min-width: 0;
@@ -283,7 +280,7 @@
       .nav-pill-value { font-size: 15px; }
     }
 
-    .main { flex:1; min-height:0; overflow-x:hidden; overflow-y:auto; background:transparent; position:relative; }
+    .main { flex:1; min-height:0; overflow-x:hidden; overflow-y:auto; background:transparent; position:relative; -webkit-overflow-scrolling:touch; }
     #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:transparent; padding:24px; }
     .login-card { width:100%; max-width:380px; background:var(--navy2, #111F30); border:1px solid var(--border, rgba(255,255,255,0.07)); border-radius:12px; padding:36px 32px; }
     .login-logo { margin:0 auto 10px; text-align:center; }
