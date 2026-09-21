@@ -534,6 +534,7 @@
         <button type="button" class="sort-btn" id="sort-date" data-sort="date" disabled>Date</button>
         <button type="button" class="sort-btn" id="sort-mine" data-sort="mine" disabled>Mine Name</button>
         <button type="button" class="sort-btn" id="sort-visitor" data-sort="visitor" disabled>Visitor Name</button>
+        <button type="button" class="sort-btn" id="sort-replies" data-sort="replies" disabled>Replies</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search visitor or mine name" autocomplete="off" disabled />
         <span class="visitors-note" id="visitors-note" hidden>Loading more check-ins…</span>
         <span class="mine-count" id="match-count"></span>
@@ -3117,6 +3118,9 @@
         return name.includes(q) || mine.includes(q) || msg.includes(q) || reply.includes(q);
       });
     }
+    if (sortKey === 'replies') {
+      list = list.filter(v => !!ownerReplyText(v));
+    }
     const dir = sortDir;
     list.sort((a, b) => {
       const ma = mineMap[a.propertyId] || {};
@@ -3126,6 +3130,9 @@
       }
       if (sortKey === 'visitor') {
         return cmpStr(visitorName(a), visitorName(b), dir);
+      }
+      if (sortKey === 'replies') {
+        return cmpStr(ownerReplyText(a), ownerReplyText(b), dir);
       }
       // date (default): dir>0 newest first
       const tA = visitorTsMillis(a.timestamp);

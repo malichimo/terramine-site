@@ -534,6 +534,7 @@
         <button type="button" class="sort-btn" id="sort-date" data-sort="date" disabled>Date</button>
         <button type="button" class="sort-btn" id="sort-mine" data-sort="mine" disabled>Mine Name</button>
         <button type="button" class="sort-btn" id="sort-visitor" data-sort="visitor" disabled>Visitor Name</button>
+        <button type="button" class="sort-btn" id="sort-replies" data-sort="replies" disabled>Replies</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search visitor or mine name" autocomplete="off" disabled />
         <span class="visitors-note" id="visitors-note" hidden>Loading more check-ins…</span>
         <span class="mine-count" id="match-count"></span>
@@ -667,6 +668,8 @@
   let sortKey = 'date';
   let sortDir = 1; // 1 = newest / high / A→Z depending on key
   let visitorUserCache = new Map();
+  let ownerNickCache = new Map();
+  let ownerNickInflight = new Map();
   let visitorUserInflight = new Map();
   let visitorUserDocAvatarBlockedNoted = false;
   let voImgTip = null;
@@ -2040,7 +2043,7 @@
     document.querySelectorAll('.vo-mine-badge').forEach(badge => {
       if (String(badge.getAttribute('data-mine-id') || '') !== id) return;
       badge.setAttribute('data-mine-name', display);
-      const tip = display + ' — Open in My Mines';
+      const tip = display + ' owned by @' + (badge.getAttribute('data-owner-nick') || '…');
       badge.setAttribute('data-tip', tip);
       badge.setAttribute('aria-label', tip);
       const span = badge.querySelector('span');
@@ -2922,7 +2925,12 @@
     if (tip) return tip;
     const name = (badge.getAttribute('data-mine-name')
       || ((badge.querySelector('span') || {}).textContent || '')).trim();
-    return name ? (name + ' — Open in My Mines') : 'Open in My Mines';
+    {
+    const nick = (badge.getAttribute('data-owner-nick') || '').trim();
+    if (name && nick) return name + ' owned by @' + nick;
+    if (name) return name + ' owned by @…';
+    return 'Mine owned by @…';
+  }
   }
   function showMineTip(badge) {
     if (mineTipTarget !== badge || !badge.isConnected) return;
@@ -3013,6 +3021,89 @@
 
 
   /** Owner reply text on a checkIn (game Your reply), if present. */
+  
+  function ownerIdOf(mine, v) {
+    const cands = [
+      v && (v.propertyOwnerId || v.ownerId || v.mineOwnerId || v.propertyOwnerUid),
+      mine && (mine.ownerId || mine.ownerUid),
+      mine && mine._raw && (mine._raw.ownerId || mine._raw.ownerUid || mine._raw.userId),
+    ];
+    for (let i = 0; i < cands.length; i++) {
+      let id = cands[i];
+      if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
+      if (typeof id === 'string' && id.trim()) return id.trim();
+    }
+    return null;
+  }
+  function ownerNickFromVisit(v) {
+    if (!v || typeof v !== 'object') return '';
+    const keys = [
+      'propertyOwnerNickname', 'ownerNickname', 'mineOwnerNickname',
+      'ownerDisplayName', 'propertyOwnerName', 'ownerName', 'avatarName'
+    ];
+    for (let i = 0; i < keys.length; i++) {
+      const val = v[keys[i]];
+      if (typeof val === 'string' && val.trim()) return val.trim().replace(/^@+/, '');
+    }
+    return '';
+  }
+  function ownerLabelOf(mine, v) {
+    const fromVisit = ownerNickFromVisit(v);
+    if (fromVisit) return fromVisit;
+    const oid = ownerIdOf(mine, v);
+    if (oid && ownerNickCache.has(oid)) {
+      const n = ownerNickCache.get(oid);
+      if (typeof n === 'string' && n.trim()) return n.trim().replace(/^@+/, '');
+    }
+    return '';
+  }
+  function mineOwnedByTip(mine, v) {
+    const name = mineTitle(mine, v) || 'Mine';
+    const who = ownerLabelOf(mine, v);
+    return who ? (name + ' owned by @' + who) : (name + ' owned by @…');
+  }
+  function applyOwnerNickToDom(uid, nick) {
+    if (!uid || !nick) return;
+    document.querySelectorAll('.vo-mine-badge[data-owner-id="' + uid + '"]').forEach(badge => {
+      const mineName = (badge.getAttribute('data-mine-name')
+        || ((badge.querySelector('span') || {}).textContent || '')).trim() || 'Mine';
+      const tip = mineName + ' owned by @' + nick;
+      badge.setAttribute('data-owner-nick', nick);
+      badge.setAttribute('data-tip', tip);
+      badge.setAttribute('aria-label', tip);
+    });
+  }
+  function fetchOwnerNick(uid) {
+    if (!uid) return Promise.resolve('');
+    if (ownerNickCache.has(uid)) return Promise.resolve(ownerNickCache.get(uid) || '');
+    if (ownerNickInflight.has(uid)) return ownerNickInflight.get(uid);
+    const p = db.collection('users').doc(uid).get().then(snap => {
+      const ud = (snap && snap.exists) ? (snap.data() || {}) : {};
+      const nick = (ud.nickname || ud.displayName || ud.avatarName || ud.userName || '').toString().trim().replace(/^@+/, '');
+      ownerNickCache.set(uid, nick || null);
+      ownerNickInflight.delete(uid);
+      if (nick) applyOwnerNickToDom(uid, nick);
+      return nick || '';
+    }).catch(() => {
+      ownerNickCache.set(uid, null);
+      ownerNickInflight.delete(uid);
+      return '';
+    });
+    ownerNickInflight.set(uid, p);
+    return p;
+  }
+  function ensureOwnerNicks(list) {
+    const seen = new Set();
+    (list || []).forEach(v => {
+      if (ownerNickFromVisit(v)) return;
+      const mine = mineMap[v.propertyId] || null;
+      const oid = ownerIdOf(mine, v);
+      if (!oid || seen.has(oid) || ownerNickCache.has(oid)) return;
+      seen.add(oid);
+      fetchOwnerNick(oid);
+    });
+  }
+
   function ownerReplyText(v) {
     if (!v || typeof v !== 'object') return '';
     const prefer = [
@@ -3088,7 +3179,7 @@
       + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
-      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-tip="' + escapeHtml(mineName) + ' — Open in My Mines" aria-label="' + escapeHtml(mineName) + ' — Open in My Mines">'
+      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-owner-id="' + escapeHtml(ownerIdOf(mine, v) || '') + '" data-owner-nick="' + escapeHtml(ownerLabelOf(mine, v)) + '" data-tip="' + escapeHtml(mineOwnedByTip(mine, v)) + '" aria-label="' + escapeHtml(mineOwnedByTip(mine, v)) + '">'
       + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
       + '<span>' + escapeHtml(mineName) + '</span></div>'
       + pinHtml
@@ -3112,6 +3203,9 @@
         return name.includes(q) || mine.includes(q) || msg.includes(q) || reply.includes(q);
       });
     }
+    if (sortKey === 'replies') {
+      list = list.filter(v => !!ownerReplyText(v));
+    }
     const dir = sortDir;
     list.sort((a, b) => {
       const ma = mineMap[a.propertyId] || {};
@@ -3121,6 +3215,9 @@
       }
       if (sortKey === 'visitor') {
         return cmpStr(visitorName(a), visitorName(b), dir);
+      }
+      if (sortKey === 'replies') {
+        return cmpStr(ownerReplyText(a), ownerReplyText(b), dir);
       }
       // date (default): dir>0 newest first
       const tA = visitorTsMillis(a.timestamp);
