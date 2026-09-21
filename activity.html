@@ -3203,6 +3203,19 @@
   }
 
   function renderVisitCard(v, mine) {
+    const _replyDbg = ownerReplyText(v);
+    if (_replyDbg) {
+      console.log('[activity] mine (has reply)', mine);
+      console.log('[activity] reply data', {
+        checkInId: v && v.id,
+        propertyId: v && v.propertyId,
+        replyText: _replyDbg,
+        replyDate: ownerReplyDate(v),
+        ownerIdResolved: ownerIdOf(mine, v),
+        ownerLabel: ownerLabelOf(mine, v),
+        visit: v
+      });
+    }
     const name = visitorName(v);
     const safeName = escapeHtml(name);
     const init = initials(name);
