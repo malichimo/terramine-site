@@ -2,7 +2,26 @@
 <html lang="en">
 <head>
   <base href="/" />
-  <meta charset="UTF-8" />
+    <script>
+  (function () {
+    try {
+      if (sessionStorage.getItem('tmPortalAuthed') === '1') {
+        document.documentElement.classList.add('tm-expect-auth');
+      }
+    } catch (e) {}
+  })();
+  </script>
+  <style>
+    html.tm-expect-auth #login-screen { display: none !important; }
+    html.tm-expect-auth #portal {
+      display: flex !important;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
+    html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
+  </style>
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- ✅ Sept 7, 2026: noindex — this is a login-gated app shell with no
        content for an anonymous visitor or crawler (AdSense flagged the
@@ -21,7 +40,7 @@
        already verified via ads.txt at the site root). -->
   <!-- (adsbygoogle.js removed — see comment above) -->
 </head>
-<body>
+<body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
 <div class="backgroundoverlaycolor" aria-hidden="true"></div>
 <!-- ═══ LOGIN SCREEN ═══ -->
@@ -205,7 +224,6 @@
   ];
 
 
-  document.body.classList.add('auth-pending');
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -299,6 +317,7 @@
   }
 
   function enterPreviewMode() {
+    try { sessionStorage.setItem('tmPortalAuthed', '1'); } catch (e) {}
     document.body.classList.remove('auth-pending');
     authResolved = true;
     $('login-screen').style.display = 'none';
@@ -317,10 +336,17 @@
     }
 
     if (user) {
+      try { sessionStorage.setItem('tmPortalAuthed', '1'); } catch (e) {}
+      document.body.classList.remove('auth-pending');
+
       $('login-screen').style.display = 'none';
       $('portal').style.display = 'flex';
       loadDashboard(user);
     } else {
+
+      try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+      document.documentElement.classList.remove('tm-expect-auth');
+      document.body.classList.remove('auth-pending');
       if (isLocalPreview) {
         enterPreviewMode();
         return;
@@ -399,7 +425,11 @@
   });
 
   // Sign out
-  $('btn-signout').addEventListener('click', () => auth.signOut());
+  $('btn-signout').addEventListener('click', () => {
+    try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+    document.documentElement.classList.remove('tm-expect-auth');
+    auth.signOut();
+  });
 
   (function initAccountMenu() {
     var toggle = document.getElementById('nav-account-toggle');
