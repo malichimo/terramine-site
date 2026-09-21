@@ -525,7 +525,7 @@ body.auth-pending #portal {
   max-width: min(240px, 100%);
   height: auto;
 }
-.login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; text-align: center; }
 .login-divider {
   display: flex;
   align-items: center;
