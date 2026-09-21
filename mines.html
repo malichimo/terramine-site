@@ -30,7 +30,7 @@
     /* Full-viewport background layers (image + frost overlay) */
     .portalbackground,
     .backgroundoverlaycolor {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
@@ -1786,22 +1786,32 @@
     styles = styles.concat(mineMapBuildingsOn ? MINE_MAP_SHOW_BUILDINGS : MINE_MAP_HIDE_BUILDINGS);
     return styles;
   }
+  let mineMapLockedTop = null;
+  function measureMineMapTop(main) {
+    const r = main.getBoundingClientRect();
+    let top = Math.max(0, r.top);
+    const nav = document.querySelector('.top-nav');
+    if (nav) top = Math.max(top, nav.getBoundingClientRect().bottom);
+    main.querySelectorAll('.mine-totals-bar, .mine-toolbar').forEach((el) => {
+      const cr = el.getBoundingClientRect();
+      // Only count chrome still visible near the top — used once at open
+      if (cr.bottom > top && cr.top < (r.top + 160) && cr.bottom > 0) {
+        top = Math.max(top, cr.bottom);
+      }
+    });
+    return top + 8;
+  }
   function syncMineMapBounds() {
     const overlay = $('mine-map-overlay');
     const main = $('portal-main');
     if (!overlay || !main || overlay.hidden) return;
     const r = main.getBoundingClientRect();
-    // Keep the map locked to the visible viewport (not #portal-main's
-    // full scroll height). Sit under sticky totals/filter chrome with
-    // bottom padding so it cannot stretch or scroll off-screen.
-    let top = Math.max(0, r.top);
-    main.querySelectorAll('.mine-totals-bar, .mine-toolbar').forEach((el) => {
-      const cr = el.getBoundingClientRect();
-      if (cr.bottom > top && cr.top < (r.top + 160)) {
-        top = Math.max(top, cr.bottom);
-      }
-    });
-    top += 8;
+    // Lock top on first sync while open so scrolling the filter bar away
+    // does not grow the popup. Still refresh left/width/height for resize.
+    if (mineMapLockedTop == null) {
+      mineMapLockedTop = measureMineMapTop(main);
+    }
+    const top = mineMapLockedTop;
     const left = Math.max(0, r.left);
     const width = Math.max(0, Math.min(r.width, window.innerWidth - left));
     const padBottom = 20;
@@ -1815,6 +1825,7 @@
     overlay.style.bottom = 'auto';
   }
   function clearMineMapBounds() {
+    mineMapLockedTop = null;
     const overlay = $('mine-map-overlay');
     if (!overlay) return;
     overlay.style.left = '';
@@ -2873,14 +2884,16 @@
     });
     if (!mineMapResizeBound) {
       mineMapResizeBound = true;
-      const onMineMapViewportChange = () => {
+      const onMineMapViewportChange = (ev) => {
+        // Resize may change header height — remeasure. Scroll must NOT
+        // unlock top (that was growing the map as filters left the screen).
+        if (ev && ev.type === 'resize') mineMapLockedTop = null;
         syncMineMapBounds();
         if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
           try { google.maps.event.trigger(mineMapInstance, 'resize'); } catch (e) {}
         }
       };
       window.addEventListener('resize', onMineMapViewportChange);
-      // Keep the fixed overlay pinned if the page or main column scrolls
       window.addEventListener('scroll', onMineMapViewportChange, { passive: true });
       const main = $('portal-main');
       if (main) {
