@@ -516,11 +516,14 @@ body.auth-pending #portal {
   padding: 36px 32px;
 }
 .login-logo {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 28px;
-  letter-spacing: 3px;
-  color: var(--cyan);
-  margin-bottom: 4px;
+  margin: 0 auto 10px;
+  text-align: center;
+}
+.login-logo img {
+  display: block;
+  margin: 0 auto;
+  max-width: min(240px, 100%);
+  height: auto;
 }
 .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
 .login-divider {
