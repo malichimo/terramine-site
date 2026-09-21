@@ -277,6 +277,15 @@ body.auth-pending #portal {
 .nav-pill-usd .nav-pill-value { color: #FBBF24; }
 .nav-pill-tb .nav-pill-value { color: #4FC3F7; }
 
+.toolbar-follow-tip {
+  position:fixed; z-index:600; pointer-events:none; display:none;
+  background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,.14);
+  border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.45);
+  font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+  max-width:min(280px, calc(100vw - 16px));
+}
+
+
 .layout {
   display: block;
   width: 100%;

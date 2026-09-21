@@ -310,7 +310,15 @@
     .skeleton { height:120px; border-radius:12px; background:linear-gradient(90deg,#e8ecf1 25%,#f4f6f8 50%,#e8ecf1 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; }
     @keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
     
-  </style>
+  
+    .toolbar-follow-tip {
+      position:fixed; z-index:600; pointer-events:none; display:none;
+      background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,.14);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.45);
+      font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+      max-width:min(280px, calc(100vw - 16px));
+    }
+</style>
 </head>
 <body>
 <div id="login-screen">
@@ -354,11 +362,11 @@
           <button type="button" class="nav-signout" id="btn-signout">Sign out</button>
         </div>
       </div>
-      <div class="nav-pill nav-pill-usd" title="USD Earnings">
+      <div class="nav-pill nav-pill-usd" data-tip="Current USD Earning / Balance">
         <span class="nav-pill-icon nav-pill-usd-icon" aria-hidden="true">$</span>
         <span class="nav-pill-value" id="sb-usd">—</span>
       </div>
-      <div class="nav-pill nav-pill-tb" title="TerraBucks">
+      <div class="nav-pill nav-pill-tb" data-tip="TerraBucks Balance">
         <img class="nav-pill-icon" src="images/mine-icons/terrabucks.svg" alt="" width="16" height="16" />
         <span class="nav-pill-value" id="sb-tb">—</span>
       </div>
@@ -430,6 +438,15 @@
   let loadedUid = null;
   let groupData = {}; // key -> parsed items[]
 
+  function fmtTBBalance(n) {
+    const x = Number(n);
+    if (!isFinite(x)) return '0';
+    return Math.round(x).toLocaleString('en-US');
+  }
+  function fmtUSDBalance(n) {
+    const v = parseFloat(n) || 0;
+    return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
   function fmtNum(n) {
     if (n == null || n === '') return '';
     const x = Number(n);
@@ -710,8 +727,8 @@
       const ud = uSnap.data() || {};
       const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
       $('nav-nickname').textContent = nick;
-      $('sb-tb').textContent = fmtNum(ud.tbBalance || 0);
-      $('sb-usd').textContent = (function(v){v=parseFloat(v)||0;return v.toFixed(2);})(ud.usdEarnings || 0);
+      $('sb-tb').textContent = fmtTBBalance(ud.tbBalance || 0);
+      $('sb-usd').textContent = fmtUSDBalance(ud.usdEarnings || 0);
       const avatarUrl = ud.avatarUrl || ud.avatarURL || user.photoURL || '';
       if (typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')) {
         $('nav-avatar').innerHTML = '<img src="' + escapeHtml(avatarUrl) + '" alt="' + escapeHtml(nick) + '">';
@@ -805,6 +822,77 @@
   })();
 
   $('filter-search').addEventListener('input', () => { if (loadedUid) renderFromFilters(); });
+
+  (function bindNavPillFollowTips() {
+    var DELAY = 320;
+    var tipEl = null, tipTimer = null, tipTarget = null, tipX = 0, tipY = 0;
+    function ensureTip() {
+      if (!tipEl) {
+        tipEl = document.createElement('div');
+        tipEl.className = 'toolbar-follow-tip';
+        tipEl.setAttribute('role', 'tooltip');
+        document.body.appendChild(tipEl);
+      }
+      return tipEl;
+    }
+    function placeTip(x, y) {
+      var tip = ensureTip();
+      var gap = 14, edge = 8;
+      tip.style.visibility = 'hidden';
+      tip.style.display = 'block';
+      var w = tip.offsetWidth, h = tip.offsetHeight;
+      var left = x + gap, top = y + gap;
+      if (left + w > window.innerWidth - edge) left = x - gap - w;
+      if (top + h > window.innerHeight - edge) top = y - gap - h;
+      if (left < edge) left = edge;
+      if (top < edge) top = edge;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+      tip.style.visibility = 'visible';
+    }
+    function hideTip() {
+      if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+      tipTarget = null;
+      if (tipEl) tipEl.style.display = 'none';
+    }
+    function bindPill(el) {
+      if (!el || el.dataset.navPillTipBound === '1') return;
+      el.dataset.navPillTipBound = '1';
+      el.addEventListener('mouseenter', function (e) {
+        if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+        tipTarget = el;
+        tipX = e.clientX; tipY = e.clientY;
+        var tip = ensureTip();
+        tip.textContent = (el.getAttribute('data-tip') || '').trim();
+        tip.style.display = 'none';
+        tipTimer = setTimeout(function () {
+          tipTimer = null;
+          if (tipTarget !== el || !el.isConnected) return;
+          placeTip(tipX, tipY);
+        }, DELAY);
+      });
+      el.addEventListener('mousemove', function (e) {
+        if (tipTarget !== el) return;
+        tipX = e.clientX; tipY = e.clientY;
+        if (tipEl && tipEl.style.display === 'block' && !tipTimer) placeTip(tipX, tipY);
+      });
+      el.addEventListener('mouseleave', function () {
+        if (tipTarget === el) hideTip();
+      });
+      el.addEventListener('blur', function () {
+        if (tipTarget === el) hideTip();
+      });
+    }
+    function ready(fn) {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+      else fn();
+    }
+    ready(function () {
+      bindPill(document.querySelector('.nav-pill-usd'));
+      bindPill(document.querySelector('.nav-pill-tb'));
+    });
+  })();
+
 </script>
 </body>
 </html>
