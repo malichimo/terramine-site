@@ -31,37 +31,204 @@
       min-height: 100vh;
     }
     body.auth-pending #login-screen, body.auth-pending #portal { visibility: hidden; }
-    .top-nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(13,27,42,0.97); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
-    .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--cyan); text-decoration:none; }
-    .nav-user { display:flex; align-items:center; gap:12px; }
-    .nav-avatar { width:32px; height:32px; border-radius:50%; background:var(--navy2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--cyan); overflow:hidden; }
-    .nav-avatar img { width:100%; height:100%; object-fit:cover; }
-    .nav-nickname { font-size:13px; color:#8899AA; }
-    .nav-signout { font-size:12px; color:#556070; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; }
-    .nav-signout:hover { color:white; }
-    .layout { display:flex; flex:1; min-height:0; }
-    .sidebar { width:220px; flex-shrink:0; background:var(--navy2); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 0 16px; }
-    .tb-readout { margin:0 16px 28px; background:linear-gradient(135deg,rgba(79,195,247,0.08),rgba(79,195,247,0.03)); border:1px solid rgba(79,195,247,0.2); border-radius:8px; padding:14px 16px; }
-    .tb-label { font-size:10px; letter-spacing:2px; color:var(--cyan); font-family:'Bebas Neue',sans-serif; margin-bottom:4px; }
-    .tb-amount { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:1px; color:white; line-height:1; }
-    .tb-sub { font-size:11px; color:#556070; margin-top:4px; }
-    .usd-row { margin:0 16px 20px; display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:6px; }
-    .usd-label { font-size:11px; color:#556070; }
-    .usd-amount { font-size:14px; font-weight:700; color:#F59E0B; }
-    .sidebar-section { font-size:10px; letter-spacing:2px; color:#556070; font-family:'Bebas Neue',sans-serif; padding:0 20px; margin-bottom:6px; }
-    .sidebar-nav { list-style:none; margin-bottom:20px; }
-    .sidebar-nav a { display:flex; align-items:center; gap:10px; padding:9px 20px; font-size:13px; color:#8899AA; text-decoration:none; border-left:2px solid transparent; transition:all 0.15s; }
-    .sidebar-nav a:hover { color:white; background:rgba(255,255,255,0.04); }
-    .sidebar-nav a.active { color:var(--cyan); border-left-color:var(--cyan); background:rgba(79,195,247,0.05); }
-    .sidebar-nav .icon { font-size:16px; width:20px; text-align:center; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .sidebar-nav .icon-backpack {
-      width:18px; height:18px; background-color:currentColor;
-      -webkit-mask:url('images/mine-icons/backpack.svg') center / contain no-repeat;
-      mask:url('images/mine-icons/backpack.svg') center / contain no-repeat;
+        /* ═══════════════════════════════════════════
+       TOP NAV (portal shell — no left sidebar)
+    ═══════════════════════════════════════════ */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      height: 56px;
+      background: rgba(13,27,42,0.97);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-shrink: 0;
     }
-    .sidebar-footer { margin-top:auto; padding:12px 20px; font-size:11px; color:#556070; border-top:1px solid var(--border); }
-    .sidebar-footer a { color:#556070; text-decoration:none; }
-    .sidebar-footer a:hover { color:#8899AA; }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-decoration: none;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 500;
+      color: #8899AA;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .nav-links a.active {
+      color: var(--cyan);
+      background: rgba(79,195,247,0.12);
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .nav-account {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .nav-account-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      padding: 4px 6px 4px 4px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .nav-account-link:hover { background: rgba(255,255,255,0.06); }
+    .nav-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--navy3, #16263A);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--cyan);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .nav-nickname {
+      font-size: 13px;
+      color: #8899AA;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .nav-account-toggle {
+      background: none;
+      border: none;
+      color: #8899AA;
+      cursor: pointer;
+      padding: 6px 4px;
+      font-size: 11px;
+      line-height: 1;
+      border-radius: 4px;
+    }
+    .nav-account-toggle:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .nav-account-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 140px;
+      background: #111F30;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      z-index: 200;
+    }
+    .nav-account-dropdown[hidden] { display: none !important; }
+    .nav-signout {
+      display: block;
+      width: 100%;
+      text-align: left;
+      font-size: 13px;
+      color: #8899AA;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-signout:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 10px 0 8px;
+      background: #0D1B2A;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .nav-pill-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      object-fit: contain;
+    }
+    .nav-pill-usd-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(245,158,11,0.18);
+      color: #F59E0B;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .nav-pill-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: #EEF1F4;
+      font-variant-numeric: tabular-nums;
+    }
+    .nav-pill-usd .nav-pill-value { color: #FBBF24; }
+    .nav-pill-tb .nav-pill-value { color: #4FC3F7; }
+
+    .layout {
+      display: block;
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+    .layout > .content {
+      width: 100%;
+      min-width: 0;
+    }
+
+    @media (max-width: 900px) {
+      .nav-nickname { display: none; }
+      .nav-links a { padding: 6px 8px; font-size: 12px; }
+    }
+    @media (max-width: 700px) {
+      .top-nav { padding: 0 12px; gap: 8px; }
+      .nav-links { justify-content: flex-start; }
+      .nav-pill { padding: 0 8px 0 6px; }
+      .nav-pill-value { font-size: 12px; }
+    }
+
     .main { flex:1; overflow-x:hidden; overflow-y:auto; background:transparent; position:relative; }
     #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:rgba(238, 241, 244, 0.7); padding:24px; }
     .login-card { width:100%; max-width:380px; background:white; border:3px solid var(--brown-mid); border-radius:15px; overflow:hidden; box-shadow:0 4px 20px rgba(139,69,19,0.2); }
@@ -406,7 +573,6 @@
       .mine-grid { grid-template-columns:1fr; }
     }
     @media (max-width:700px) {
-      .sidebar { display:none; }
       .mine-grid { grid-template-columns:1fr; }
       .mine-card-left { width:92%; max-width:none; }
     }
@@ -837,36 +1003,36 @@
 <div id="portal" style="display:none; flex-direction:column; min-height:100vh;">
   <nav class="top-nav">
     <a class="nav-logo" href="/">⛏ TerraMine</a>
-    <div class="nav-user">
-      <div class="nav-avatar" id="nav-avatar">—</div>
-      <span class="nav-nickname" id="nav-nickname"></span>
-      <button class="nav-signout" id="btn-signout">Sign out</button>
+    <div class="nav-links">
+      <a href="/portal">Dashboard</a>
+      <a href="/portal/mines" class="active">Mines</a>
+      <a href="/portal/inventory">Inventory</a>
+      <a href="/portal/visitors">Visitors</a>
+      <a href="/portal/activity">Activity</a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-account">
+        <a class="nav-account-link" href="/portal/account" title="Account">
+          <div class="nav-avatar" id="nav-avatar">—</div>
+          <span class="nav-nickname" id="nav-nickname"></span>
+        </a>
+        <button type="button" class="nav-account-toggle" id="nav-account-toggle" aria-label="Account menu" aria-expanded="false">▾</button>
+        <div class="nav-account-dropdown" id="nav-account-dropdown" hidden>
+          <button type="button" class="nav-signout" id="btn-signout">Sign out</button>
+        </div>
+      </div>
+      <div class="nav-pill nav-pill-usd" title="USD Earnings">
+        <span class="nav-pill-icon nav-pill-usd-icon" aria-hidden="true">$</span>
+        <span class="nav-pill-value" id="sb-usd">—</span>
+      </div>
+      <div class="nav-pill nav-pill-tb" title="TerraBucks">
+        <img class="nav-pill-icon" src="images/mine-icons/terrabucks.svg" alt="" width="16" height="16" />
+        <span class="nav-pill-value" id="sb-tb">—</span>
+      </div>
     </div>
   </nav>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="tb-readout">
-        <div class="tb-label">TerraBucks</div>
-        <div class="tb-amount" id="sb-tb">—</div>
-        <div class="tb-sub">Your balance</div>
-      </div>
-      <div class="usd-row">
-        <span class="usd-label">USD Earnings</span>
-        <span class="usd-amount" id="sb-usd">$—</span>
-      </div>
-      <div class="sidebar-section">My Portal</div>
-      <ul class="sidebar-nav">
-        <li><a href="/portal"><span class="icon">📊</span> Dashboard</a></li>
-        <li><a href="/portal/mines" class="active"><span class="icon">⛏</span> My Mines</a></li>
-        <li><a href="/portal/visitors"><span class="icon">👥</span> Visitors</a></li>
-        <li><a href="/portal/inventory"><span class="icon icon-backpack" aria-hidden="true"></span> Inventory</a></li>
-        <li><a href="/portal/activity"><span class="icon">⚡</span> Activity</a></li>
-        <li><a href="/portal/account"><span class="icon">⚙️</span> Account</a></li>
-      </ul>
-
-<div class="sidebar-footer"><a href="/">← Back to site</a></div>
-    </aside>
-    <main class="main" id="portal-main">
+<div class="layout">
+<main class="main" id="portal-main">
       <div class="mine-totals-bar" id="mine-totals-bar" aria-label="Mine production totals">
         <div class="mine-totals-bar-left">
           <div class="mine-group-total" data-group-type="rock">
@@ -5672,6 +5838,27 @@ function updateSortButtons() {
   });
   $('btn-signout').addEventListener('click', () => auth.signOut());
 
+  (function initAccountMenu() {
+    var toggle = document.getElementById('nav-account-toggle');
+    var dropdown = document.getElementById('nav-account-dropdown');
+    var wrap = document.querySelector('.nav-account');
+    if (!toggle || !dropdown) return;
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var willOpen = dropdown.hasAttribute('hidden');
+      if (willOpen) dropdown.removeAttribute('hidden');
+      else dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (!wrap || wrap.contains(e.target)) return;
+      dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  })();
+
+
   async function loadHeader(user) {
     const userSnap = await db.collection('users').doc(user.uid).get();
     const ud = userSnap.data() || {};
@@ -5679,7 +5866,7 @@ function updateSortButtons() {
     const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
     $('nav-nickname').textContent = nick;
     $('sb-tb').textContent = fmtNum(ud.tbBalance || 0);
-    $('sb-usd').textContent = fmtUSD(ud.usdEarnings || 0);
+    $('sb-usd').textContent = (function(v){v=parseFloat(v)||0;return v.toFixed(2);})(ud.usdEarnings || 0);
     const avatarUrl = ud.avatarUrl || user.photoURL || '';
     if (avatarUrl.startsWith('https://')) $('nav-avatar').innerHTML = '<img src="' + avatarUrl + '" alt="' + nick.replace(/"/g, '') + '">';
     else $('nav-avatar').textContent = initials(nick);

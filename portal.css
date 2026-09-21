@@ -59,6 +59,8 @@ body.auth-pending #portal {
 
 .content {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   background: transparent; /* let fixed body bg show through translucent #main-content */
 }
 
@@ -100,13 +102,13 @@ body.auth-pending #portal {
 @media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; max-height: 64px; } }
 
 /* ═══════════════════════════════════════════
-   TOP NAV
+   TOP NAV (portal shell — no left sidebar)
 ═══════════════════════════════════════════ */
 .top-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
+  gap: 16px;
+  padding: 0 20px;
   height: 56px;
   background: rgba(13,27,42,0.97);
   border-bottom: 1px solid var(--border);
@@ -121,17 +123,64 @@ body.auth-pending #portal {
   letter-spacing: 2px;
   color: var(--cyan);
   text-decoration: none;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
-.nav-user {
+.nav-links {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.nav-links::-webkit-scrollbar { display: none; }
+.nav-links a {
+  font-size: 13px;
+  font-weight: 500;
+  color: #8899AA;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-links a:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.nav-links a.active {
+  color: var(--cyan);
+  background: rgba(79,195,247,0.12);
+}
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.nav-account {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.nav-account-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  padding: 4px 6px 4px 4px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.nav-account-link:hover { background: rgba(255,255,255,0.06); }
 .nav-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--navy3);
+  background: var(--navy3, #16263A);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -140,120 +189,115 @@ body.auth-pending #portal {
   font-weight: 700;
   color: var(--cyan);
   overflow: hidden;
+  flex-shrink: 0;
 }
 .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.nav-nickname { font-size: 13px; color: var(--gray); }
+.nav-nickname {
+  font-size: 13px;
+  color: #8899AA;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-account-toggle {
+  background: none;
+  border: none;
+  color: #8899AA;
+  cursor: pointer;
+  padding: 6px 4px;
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.nav-account-toggle:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.nav-account-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: #111F30;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 200;
+}
+.nav-account-dropdown[hidden] { display: none !important; }
 .nav-signout {
-  font-size: 12px;
-  color: var(--muted);
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  color: #8899AA;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: color 0.15s;
-}
-.nav-signout:hover { color: var(--white); }
-
-/* ═══════════════════════════════════════════
-   LAYOUT
-═══════════════════════════════════════════ */
-.layout {
-  display: flex;
-}
-
-/* ═══════════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════════ */
-.sidebar {
-  width: 220px;
-  flex-shrink: 0;
-  background: var(--navy2);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 24px 0 16px;
-}
-
-/* TB Balance — signature element */
-.tb-readout {
-  margin: 0 16px 28px;
-  background: linear-gradient(135deg, rgba(79,195,247,0.08), rgba(79,195,247,0.03));
-  border: 1px solid rgba(79,195,247,0.2);
-  border-radius: 8px;
-  padding: 14px 16px;
-}
-.tb-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--cyan);
-  font-family: 'Bebas Neue', sans-serif;
-  margin-bottom: 4px;
-}
-.tb-amount {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 32px;
-  letter-spacing: 1px;
-  color: var(--white);
-  line-height: 1;
-  animation: countUp 0.6s ease-out;
-}
-.tb-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
-@keyframes countUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-/* USD earnings row */
-.usd-row {
-  margin: 0 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  padding: 8px 10px;
   border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
 }
-.usd-label { font-size: 11px; color: var(--muted); }
-.usd-amount { font-size: 14px; font-weight: 700; color: var(--amber2); }
-
-/* Nav links */
-.sidebar-section {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--muted);
-  font-family: 'Bebas Neue', sans-serif;
-  padding: 0 20px;
-  margin-bottom: 6px;
-}
-.sidebar-nav { list-style: none; margin-bottom: 20px; }
-.sidebar-nav a {
-  display: flex;
+.nav-signout:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.nav-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 20px;
-  font-size: 13px;
-  color: var(--gray);
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  transition: all 0.15s;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 8px;
+  background: #0D1B2A;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  white-space: nowrap;
 }
-.sidebar-nav a:hover { color: var(--white); background: var(--surface); }
-.sidebar-nav a.active { color: var(--cyan); border-left-color: var(--cyan); background: rgba(79,195,247,0.05); }
-.sidebar-nav .icon { font-size: 16px; width: 20px; text-align: center; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.sidebar-nav .icon-backpack {
-  width: 18px; height: 18px; background-color: currentColor;
-  -webkit-mask: url('images/mine-icons/backpack.svg') center / contain no-repeat;
-  mask: url('images/mine-icons/backpack.svg') center / contain no-repeat;
+.nav-pill-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.nav-pill-usd-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(245,158,11,0.18);
+  color: #F59E0B;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.nav-pill-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #EEF1F4;
+  font-variant-numeric: tabular-nums;
+}
+.nav-pill-usd .nav-pill-value { color: #FBBF24; }
+.nav-pill-tb .nav-pill-value { color: #4FC3F7; }
+
+.layout {
+  display: block;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+.layout > .content {
+  width: 100%;
+  min-width: 0;
 }
 
-.sidebar-footer {
-  margin-top: auto;
-  padding: 12px 20px;
-  font-size: 11px;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
+@media (max-width: 900px) {
+  .nav-nickname { display: none; }
+  .nav-links a { padding: 6px 8px; font-size: 12px; }
 }
-.sidebar-footer a { color: var(--muted); text-decoration: none; }
-.sidebar-footer a:hover { color: var(--gray); }
+@media (max-width: 700px) {
+  .top-nav { padding: 0 12px; gap: 8px; }
+  .nav-links { justify-content: flex-start; }
+  .nav-pill { padding: 0 8px 0 6px; }
+  .nav-pill-value { font-size: 12px; }
+}
 
 /* ═══════════════════════════════════════════
    MAIN CONTENT
@@ -546,7 +590,6 @@ body.auth-pending #portal {
    RESPONSIVE
 ═══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .sidebar { display: none; }
   .stat-row { grid-template-columns: repeat(2, 1fr); }
   .main, #main-content { padding: 16px 16px 48px; }
 }

@@ -62,47 +62,40 @@
 <!-- ═══ PORTAL (hidden until auth) ═══ -->
 <div id="portal">
 
-  <div class="layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="tb-readout">
-        <div class="tb-label">TerraBucks</div>
-        <div class="tb-amount" id="sb-tb">—</div>
-        <div class="tb-sub">Your balance</div>
-      </div>
-
-      <div class="usd-row">
-        <span class="usd-label">USD Earnings</span>
-        <span class="usd-amount" id="sb-usd">$—</span>
-      </div>
-
-      <div class="sidebar-section">My Portal</div>
-      <ul class="sidebar-nav">
-        <li><a href="/portal" class="active"><span class="icon">📊</span> Dashboard</a></li>
-        <li><a href="/portal/mines"><span class="icon">⛏</span> My Mines</a></li>
-        <li><a href="/portal/visitors"><span class="icon">👥</span> Visitors</a></li>
-        <li><a href="/portal/inventory"><span class="icon icon-backpack" aria-hidden="true"></span> Inventory</a></li>
-        <li><a href="/portal/activity"><span class="icon">⚡</span> Activity</a></li>
-        <li><a href="/portal/account"><span class="icon">⚙️</span> Account</a></li>
-      </ul>
-
-<div class="sidebar-footer">
-        <a href="/">← Back to site</a>
-      </div>
-    </aside>
-
-    <div class="content">
-      <!-- Top Nav -->
-      <nav class="top-nav">
-        <a class="nav-logo" href="/">⛏ TerraMine</a>
-        <div class="nav-user">
+  
+  <nav class="top-nav">
+    <a class="nav-logo" href="/">⛏ TerraMine</a>
+    <div class="nav-links">
+      <a href="/portal" class="active">Dashboard</a>
+      <a href="/portal/mines">Mines</a>
+      <a href="/portal/inventory">Inventory</a>
+      <a href="/portal/visitors">Visitors</a>
+      <a href="/portal/activity">Activity</a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-account">
+        <a class="nav-account-link" href="/portal/account" title="Account">
           <div class="nav-avatar" id="nav-avatar">—</div>
           <span class="nav-nickname" id="nav-nickname">Loading…</span>
-          <button class="nav-signout" id="btn-signout">Sign out</button>
+        </a>
+        <button type="button" class="nav-account-toggle" id="nav-account-toggle" aria-label="Account menu" aria-expanded="false">▾</button>
+        <div class="nav-account-dropdown" id="nav-account-dropdown" hidden>
+          <button type="button" class="nav-signout" id="btn-signout">Sign out</button>
         </div>
-      </nav>
-
-      <!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
+      </div>
+      <div class="nav-pill nav-pill-usd" title="USD Earnings">
+        <span class="nav-pill-icon nav-pill-usd-icon" aria-hidden="true">$</span>
+        <span class="nav-pill-value" id="sb-usd">—</span>
+      </div>
+      <div class="nav-pill nav-pill-tb" title="TerraBucks">
+        <img class="nav-pill-icon" src="images/mine-icons/terrabucks.svg" alt="" width="16" height="16" />
+        <span class="nav-pill-value" id="sb-tb">—</span>
+      </div>
+    </div>
+  </nav>
+<div class="layout">
+<div class="content">
+<!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
            login-gated shell — see claude/AdSense_LowValueContent_Fix_2026-09-07.md -->
 
       <!-- Main -->
@@ -398,6 +391,27 @@
   // Sign out
   $('btn-signout').addEventListener('click', () => auth.signOut());
 
+  (function initAccountMenu() {
+    var toggle = document.getElementById('nav-account-toggle');
+    var dropdown = document.getElementById('nav-account-dropdown');
+    var wrap = document.querySelector('.nav-account');
+    if (!toggle || !dropdown) return;
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var willOpen = dropdown.hasAttribute('hidden');
+      if (willOpen) dropdown.removeAttribute('hidden');
+      else dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (!wrap || wrap.contains(e.target)) return;
+      dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  })();
+
+
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
     try {
@@ -407,7 +421,7 @@
       $('nav-nickname').textContent = nickname;
       $('welcome-sub').textContent  = 'Welcome back, ' + nickname;
       $('sb-tb').textContent        = fmtNum(userData.tbBalance || 0);
-      $('sb-usd').textContent       = fmtUSD(userData.usdEarnings || 0);
+      $('sb-usd').textContent       = (function(v){v=parseFloat(v)||0;return v.toFixed(2);})(userData.usdEarnings || 0);
       $('stat-tb-earned').textContent = fmtNum(userData.totalTBEarned || 0);
       $('stat-checkins').textContent  = fmtNum(userData.totalCheckIns || 0);
 
