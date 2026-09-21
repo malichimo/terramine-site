@@ -31,3 +31,31 @@ RewriteRule ^portal/visitors$ visitors.html [L,QSA]
 RewriteRule ^portal/inventory$ inventory.html [L,QSA]
 RewriteRule ^portal/activity$ activity.html [L,QSA]
 RewriteRule ^portal/account$ account.html [L,QSA]
+
+# === marketing / public pages ===
+# Prefer no trailing slash
+RewriteRule ^heatmap/$ /heatmap [R=301,L]
+RewriteRule ^players-guide/$ /players-guide [R=301,L]
+RewriteRule ^faq/$ /faq [R=301,L]
+RewriteRule ^privacy/$ /privacy [R=301,L]
+RewriteRule ^terms/$ /terms [R=301,L]
+
+# Old .html bookmarks → clean (THE_REQUEST avoids rewrite loops)
+RewriteCond %{THE_REQUEST} \s/+heatmap\.html[\s?] [NC]
+RewriteRule ^heatmap\.html$ /heatmap [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+guide\.html[\s?] [NC]
+RewriteRule ^guide\.html$ /players-guide [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+faq\.html[\s?] [NC]
+RewriteRule ^faq\.html$ /faq [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+privacy\.html[\s?] [NC]
+RewriteRule ^privacy\.html$ /privacy [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+terms\.html[\s?] [NC]
+RewriteRule ^terms\.html$ /terms [R=301,L,QSA]
+
+# Clean paths → files
+RewriteRule ^heatmap$ heatmap.html [L]
+RewriteRule ^players-guide$ guide.html [L]
+RewriteRule ^faq$ faq.html [L]
+RewriteRule ^privacy$ privacy.html [L]
+RewriteRule ^terms$ terms.html [L]
+
