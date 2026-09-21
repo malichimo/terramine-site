@@ -18,7 +18,18 @@
       --navy2: #111F30; --cyan: #4FC3F7; --border: rgba(255,255,255,0.07);
     }
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
-    body { background: var(--bg); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; }
+    body {
+      background-color: var(--navy);
+      background-image: url('/images/terratown-bg.jpg');
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: cover;
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
     body.auth-pending #login-screen, body.auth-pending #portal { visibility: hidden; }
     .top-nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(13,27,42,0.97); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
     .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--cyan); text-decoration:none; }
@@ -52,7 +63,7 @@
     .sidebar-footer a { color:#556070; text-decoration:none; }
     .sidebar-footer a:hover { color:#8899AA; }
     .main { flex:1; overflow-x:hidden; overflow-y:auto; background:#eef1f4; position:relative; }
-    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:24px; }
+    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:rgba(238, 241, 244, 0.7); padding:24px; }
     .login-card { width:100%; max-width:380px; background:white; border:3px solid var(--brown-mid); border-radius:15px; overflow:hidden; box-shadow:0 4px 20px rgba(139,69,19,0.2); }
     .login-card-header { background:var(--brown); padding:24px 28px 20px; text-align:center; border-bottom:3px solid var(--brown-dark); }
     .login-card-body { padding:24px 28px 28px; }
