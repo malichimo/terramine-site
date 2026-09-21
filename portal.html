@@ -86,20 +86,6 @@
         <li><a href="/portal/account"><span class="icon">⚙️</span> Account</a></li>
       </ul>
 
-      <div class="sidebar-section">Games</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🧠</span> Memory Match</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🪨</span> Miner Maze</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🥇</span> Gold Rush</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">💎</span> Laser Blast</a></li>
-      </ul>
-
-            <div class="sidebar-section">Old Pages</div>
-      <ul class="sidebar-nav">
-        <li><a href="old-visitors.html"><span class="icon">👥</span> Old Visitors</a></li>
-        <li><a href="old-mines.html"><span class="icon">⛏</span> Old Mines</a></li>
-        <li><a href="old-activity.html"><span class="icon">⚡</span> Old Activity</a></li>
-      </ul>
 <div class="sidebar-footer">
         <a href="/">← Back to site</a>
       </div>
@@ -176,7 +162,7 @@
         <!-- My Mines -->
         <div class="section-header">
           <div class="section-title">My Mines</div>
-          <a class="section-action" href="old-mines.html">View all →</a>
+          <a class="section-action" href="/portal/mines">View all →</a>
         </div>
         <div class="mines-grid" id="mines-grid">
           <!-- populated by JS -->
@@ -290,16 +276,16 @@
     return { rock: '🪨', coal: '🖤', gold: '⭐', diamond: '💎' }[type] || '⛏';
   }
 
-  // Card icons are the old-mines.html mineIcon() glyphs (rock/coal/gold/diamond).
+  // Card icons are the mines.html mineIcon() glyphs (rock/coal/gold/diamond).
   var KNOWN_MINE_TYPES = ['rock', 'coal', 'gold', 'diamond'];
 
-  // Exact copy of old-mines.html mineIcon(). Only the Properties type stacks use this.
+  // Exact copy of mines.html mineIcon(). Only the Properties type stacks use this.
   // mineTypeEmoji() is the mine-card badge map and is intentionally not used here.
   function propertyStackIcon(type) {
     return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[type] || '⛏';
   }
 
-  // old-mines.html displays a missing mineType as rock (p.mineType || 'rock').
+  // mines.html displays a missing mineType as rock (p.mineType || 'rock').
   // Any other stored value stays out of the four buckets so it is not dropped
   // from the total and can be shown under the breakdown.
   function bucketMineType(mineType) {
@@ -474,7 +460,7 @@
       }
 
       // No .limit(): the previous cap of 50 made this card disagree with
-      // old-mines.html, which loads every property owned by the signed-in user.
+      // mines.html, which loads every property owned by the signed-in user.
       const props = options.preview ? PREVIEW_PROPERTIES : (await db.collection('properties')
         .where('ownerId', '==', user.uid)
         .get()).docs.map(d => ({ id: d.id, ...d.data() }));
@@ -510,7 +496,7 @@
         const level = p.upgradeLevel || 1;
         const visitors = p.totalCheckIns || 0;
         return `
-          <div class="mine-card" onclick="window.location='old-mines.html#${p.id}'">
+          <div class="mine-card" onclick="window.location='/portal/mines#${p.id}'">
             <div class="mine-card-top">
               <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
               <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
@@ -523,7 +509,7 @@
               <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
             </div>
             <div class="mine-action-row">
-              <a class="mine-btn primary" href="old-mines.html#${p.id}">Maintain</a>
+              <a class="mine-btn primary" href="/portal/mines#${p.id}">Maintain</a>
               <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
             </div>
           </div>`;
@@ -560,7 +546,7 @@
       const level = d.upgradeLevel || 1;
       const visitors = d.totalCheckIns || 0;
       return `
-        <div class="mine-card" onclick="window.location='old-mines.html#${p.id}'">
+        <div class="mine-card" onclick="window.location='/portal/mines#${p.id}'">
           <div class="mine-card-top">
             <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
             <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
@@ -573,7 +559,7 @@
             <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
           </div>
           <div class="mine-action-row">
-            <a class="mine-btn primary" href="old-mines.html#${p.id}">Maintain</a>
+            <a class="mine-btn primary" href="/portal/mines#${p.id}">Maintain</a>
             <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
           </div>
         </div>`;
@@ -666,13 +652,6 @@
       btn.style.color = '';
       btn.style.borderColor = '';
     }, 2000);
-  }
-
-  function sidebarGameComingSoon(e, link) {
-    e.preventDefault();
-    const orig = link.innerHTML;
-    link.innerHTML = '<span class="icon">🚧</span> Coming Soon!';
-    setTimeout(() => { link.innerHTML = orig; }, 2000);
   }
 </script>
 </body>

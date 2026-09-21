@@ -852,19 +852,7 @@
         <li><a href="/portal/activity"><span class="icon">⚡</span> Activity</a></li>
         <li><a href="/portal/account"><span class="icon">⚙️</span> Account</a></li>
       </ul>
-      <div class="sidebar-section">Games</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🧠</span> Memory Match</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🪨</span> Miner Maze</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🥇</span> Gold Rush</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">💎</span> Laser Blast</a></li>
-      </ul>
-            <div class="sidebar-section">Old Pages</div>
-      <ul class="sidebar-nav">
-        <li><a href="old-visitors.html"><span class="icon">👥</span> Old Visitors</a></li>
-        <li><a href="old-mines.html"><span class="icon">⛏</span> Old Mines</a></li>
-        <li><a href="old-activity.html"><span class="icon">⚡</span> Old Activity</a></li>
-      </ul>
+
 <div class="sidebar-footer"><a href="/">← Back to site</a></div>
     </aside>
     <main class="main" id="portal-main">
@@ -5631,13 +5619,6 @@ function updateSortButtons() {
     fillViewport();
     if (sortKey === 'visitors' && !visitorSortSettling) queueMissingVisitorCountsForSort();
     refreshGroupTotals();
-  }
-
-  function sidebarGameComingSoon(e, link) {
-    e.preventDefault();
-    const orig = link.innerHTML;
-    link.innerHTML = '<span class="icon">🚧</span> Coming Soon!';
-    setTimeout(() => { link.innerHTML = orig; }, 2000);
   }
 
   auth.onAuthStateChanged(user => {
