@@ -4,48 +4,22 @@
   <base href="/" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- ✅ Sept 7, 2026: noindex — this is a login-gated app shell with no
-       content for an anonymous visitor or crawler (AdSense flagged the
-       site for "Low value content"; see claude/AdSense_LowValueContent_Fix_2026-09-07.md). -->
   <meta name="robots" content="noindex, nofollow" />
-  <title>My Activity — TerraMine</title>
+  <title>Activity — TerraMine</title>
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-  <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
-       already verified via ads.txt at the site root). -->
-  <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
-       shell with no content for a logged-out visitor; serving/requesting
-       ads here was a likely contributor to AdSense's "Low value content"
-       rejection. See claude/AdSense_LowValueContent_Fix_2026-09-07.md. -->
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:          #e8d5b7;
-      --bg2:         #d4b896;
-      --brown-dark:  #5C3317;
-      --brown:       #8B4513;
-      --brown-mid:   #8B7355;
-      --brown-light: #D2B48C;
-      --gold:        #FFD700;
-      --amber:       #FF9800;
-      --white:       #ffffff;
-      --off-white:   #f5f5f5;
-      --text-dark:   #333333;
-      --text-mid:    #666666;
-      --text-light:  #999999;
-      --green:       #4CAF50;
-      --red:         #f44336;
-      --blue:        #2196F3;
-      --navy:        #0D1B2A;
-      --navy2:       #111F30;
-      --cyan:        #4FC3F7;
-      --border:      rgba(255,255,255,0.07);
+      --bg: #e8d5b7; --brown-dark: #5C3317; --brown: #8B4513; --brown-mid: #8B7355;
+      --gold: #FFD700; --white: #ffffff; --off-white: #f5f5f5; --text-dark: #333333;
+      --text-mid: #666666; --text-light: #999999; --red: #f44336; --navy: #0D1B2A;
+      --navy2: #111F30; --cyan: #4FC3F7; --border: rgba(255,255,255,0.07);
     }
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
     body { background: var(--bg); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; }
-    body.auth-pending #login-screen,
-    body.auth-pending #portal { visibility: hidden; }
-
+    body.auth-pending #login-screen, body.auth-pending #portal { visibility: hidden; }
     .top-nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(13,27,42,0.97); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
     .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--cyan); text-decoration:none; }
     .nav-user { display:flex; align-items:center; gap:12px; }
@@ -54,23 +28,7 @@
     .nav-nickname { font-size:13px; color:#8899AA; }
     .nav-signout { font-size:12px; color:#556070; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; }
     .nav-signout:hover { color:white; }
-
-    /* ── Ad banner (top, below header) — Aug 24, 2026 ── */
-    .ad-banner-wrap {
-      flex-shrink: 0; width: 100%; min-height: 90px; max-height: 100px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-      background: rgba(13,27,42,0.97); border-bottom: 1px solid var(--border);
-      overflow: hidden; padding: 6px 0;
-    }
-    .ad-banner-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #556070; }
-    /* Fixed 728x90 unit, not auto/full-width-responsive — that let Google's
-       script reserve an oversized placeholder for the unfilled slot (seen
-       live, ~350px tall). This plus max-height/overflow above is a hard cap. */
-    .ad-banner-wrap .adsbygoogle { max-width: 100%; }
-    @media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; max-height: 64px; } }
-
     .layout { display:flex; flex:1; min-height:0; }
-
     .sidebar { width:220px; flex-shrink:0; background:var(--navy2); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 0 16px; }
     .tb-readout { margin:0 16px 28px; background:linear-gradient(135deg,rgba(79,195,247,0.08),rgba(79,195,247,0.03)); border:1px solid rgba(79,195,247,0.2); border-radius:8px; padding:14px 16px; }
     .tb-label { font-size:10px; letter-spacing:2px; color:var(--cyan); font-family:'Bebas Neue',sans-serif; margin-bottom:4px; }
@@ -92,65 +50,8 @@
     }
     .sidebar-footer { margin-top:auto; padding:12px 20px; font-size:11px; color:#556070; border-top:1px solid var(--border); }
     .sidebar-footer a { color:#556070; text-decoration:none; }
-
-    .main { flex:1; overflow-y:auto; background:var(--off-white); }
-
-    .page-header { background:var(--brown); padding:16px 20px; border-bottom:3px solid var(--brown-dark); position:sticky; top:0; z-index:10; }
-    .page-header-left { display:flex; align-items:center; gap:10px; }
-    .page-header-icon { font-size:22px; }
-    .page-header-title { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--gold); }
-    .page-header-sub { font-size:12px; color:rgba(255,215,0,0.6); margin-top:1px; }
-
-    /* ── Stats grid (mirrors app's activityTab statsGrid) ── */
-    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:16px; }
-    .stat-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; padding:16px; text-align:center; }
-    .stat-number { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--brown); line-height:1; margin-bottom:4px; }
-    .stat-label { font-size:11px; color:var(--text-mid); }
-
-    /* ── Filter toolbar ── */
-    .toolbar { display:flex; align-items:center; gap:10px; padding:0 16px 12px; flex-wrap:wrap; }
-    .filter-btn { padding:7px 14px; border-radius:8px; border:2px solid var(--brown-mid); background:white; color:var(--text-mid); font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
-    .filter-btn.active { background:var(--brown); color:var(--gold); border-color:var(--brown); font-weight:700; }
-    .result-count { font-size:12px; color:var(--text-mid); margin-left:auto; white-space:nowrap; }
-
-    /* ── Section ── */
-    .section-label { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:2px; color:var(--brown); padding:8px 16px; }
-
-    /* ── Activity feed cards ── */
-    .feed-container { padding:0 16px 24px; }
-    .feed-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; margin-bottom:10px; overflow:hidden; }
-    .feed-card-row { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; }
-    .feed-icon { font-size:24px; flex-shrink:0; width:32px; text-align:center; }
-    .feed-content { flex:1; min-width:0; }
-    .feed-label { font-size:13px; color:var(--text-dark); font-weight:600; line-height:1.4; }
-    .feed-meta-row { display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
-    .feed-mine-badge { font-size:11px; font-weight:700; color:var(--brown); background:rgba(139,69,19,0.08); border:1px solid var(--brown-mid); border-radius:10px; padding:2px 8px; }
-    .feed-time { font-size:11px; color:var(--text-light); }
-    .feed-tb { font-size:12px; font-weight:700; color:var(--amber); flex-shrink:0; }
-    .feed-photo { width:100%; max-height:200px; object-fit:cover; cursor:pointer; display:block; border-top:1px solid #e0d0c0; }
-    .feed-message { font-size:12px; color:var(--text-mid); font-style:italic; margin-top:4px; }
-
-    /* ── Lightbox ── */
-    #lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; }
-    #lightbox.open { display:flex; }
-    #lightbox img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:8px; }
-    #lightbox-close { position:absolute; top:20px; right:24px; color:white; font-size:28px; cursor:pointer; background:none; border:none; }
-
-    /* ── Empty / loading ── */
-    .empty-state { text-align:center; padding:60px 20px; color:var(--text-light); }
-    .empty-icon { font-size:48px; margin-bottom:12px; }
-    .empty-text { font-size:14px; }
-    .skeleton { background:linear-gradient(90deg,#ddd 25%,#eee 50%,#ddd 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:4px; }
-    @keyframes shimmer { to { background-position:-200% 0; } }
-
-    .load-more-btn { display:block; width:calc(100% - 32px); margin:0 16px 20px; padding:12px; background:var(--brown-mid); color:white; border:none; border-radius:8px; font-size:14px; font-weight:700; font-family:'DM Sans',sans-serif; cursor:pointer; text-align:center; transition:background 0.15s; }
-    .load-more-btn:hover { background:var(--brown); }
-
-    #toast { position:fixed; bottom:24px; right:24px; background:var(--brown-dark); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:12px 18px; font-size:13px; color:white; z-index:200; transform:translateY(80px); opacity:0; transition:all 0.25s; pointer-events:none; }
-    #toast.show { transform:none; opacity:1; }
-    #toast.success { border-color:var(--green); }
-    #toast.error { border-color:var(--red); }
-
+    .sidebar-footer a:hover { color:#8899AA; }
+    .main { flex:1; overflow-x:hidden; overflow-y:auto; background:#eef1f4; position:relative; }
     #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:24px; }
     .login-card { width:100%; max-width:380px; background:white; border:3px solid var(--brown-mid); border-radius:15px; overflow:hidden; box-shadow:0 4px 20px rgba(139,69,19,0.2); }
     .login-card-header { background:var(--brown); padding:24px 28px 20px; text-align:center; border-bottom:3px solid var(--brown-dark); }
@@ -173,19 +74,388 @@
     .login-toggle { text-align:center; font-size:12px; color:var(--text-mid); margin-top:16px; }
     .login-toggle a { color:var(--brown); text-decoration:none; cursor:pointer; font-weight:700; }
 
-    @media (max-width:900px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
+    /* Filter bar — match mines.html mine-toolbar */
+    .mine-toolbar { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 16px; background:#fff; border-bottom:1px solid #e3e7ee; }
+    .tool-field { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; }
+    .tool-field select, .tool-search {
+      font: 500 13px 'DM Sans', sans-serif; color:#0D1B2A; background:#fff;
+      border:1px solid #d0d5dc; border-radius:999px; padding:7px 12px; outline:none;
+    }
+    .tool-field select:focus, .tool-search:focus { border-color:var(--cyan); }
+    .sort-btn {
+      font: 700 12px 'DM Sans', sans-serif; color:#243044; background:#fff;
+      border:1px solid #d0d5dc; border-radius:999px; padding:7px 12px; cursor:pointer;
+    }
+    .sort-btn.active { border-color:#4FC3F7; background:#e8f7fe; }
+    .sort-btn:disabled, .tool-field select:disabled, .tool-search:disabled, .type-filter-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .type-filter { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+    .type-filter-btn {
+      width:34px; height:34px; padding:3px; box-sizing:border-box;
+      display:flex; align-items:center; justify-content:center;
+      border:2px solid #d0d5dc; border-radius:10px; background:#fff;
+      cursor:pointer; transition:border-color .15s, background .15s;
+    }
+    .type-filter-btn img { width:24px; height:24px; object-fit:contain; display:block; pointer-events:none; }
+    .type-filter-btn.active { border-color:#4FC3F7; background:#e8f7fe; }
+    .type-filter-btn:focus-visible { outline:2px solid #4FC3F7; outline-offset:2px; }
+    .tool-search { flex:1; min-width:160px; }
+    .mine-count { margin-left:auto; font-size:12px; color:#64748b; font-weight:600; white-space:nowrap; }
+    .visitors-note { font-size:11px; color:#64748b; font-weight:600; }
+    .visitors-status { padding:8px 16px 0; font-size:13px; color:#64748b; min-height:0; }
+    .visitors-board-wrap { padding:14px 16px 40px; }
+    .visitors-grid {
+      display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; align-content:start;
+    }
+    @media (max-width:1100px) { .visitors-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+    @media (max-width:640px) { .visitors-grid { grid-template-columns:1fr; } }
+
+    /* vo-card — ported from mines.html Mine Visitors overlay */
+    .vo-card { background:#1a2330; border:1px solid rgba(255,255,255,.22); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-width:0; }
+    .vo-card:hover { border-color:rgba(255,255,255,.45); }
+    .vo-card-header { display:flex; align-items:center; gap:10px; padding:10px 12px; background:#133665; border-bottom:1px solid rgba(255,255,255,.18); }
+    .vo-avatar {
+      width:72px; height:72px; border-radius:8px; background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.4); display:flex; align-items:center; justify-content:center;
+      font-size:18px; font-weight:700; color:#c5ced8; flex-shrink:0; overflow:hidden;
+    }
+    .vo-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+    .vo-info { flex:1; min-width:0; }
+    .vo-name { font-size:22px; font-weight:700; color:#fff; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vo-time { font-size:17px; color:rgba(255,255,255,.9); margin-top:2px; line-height:1.15; }
+    .vo-mine-meta { display:flex; align-items:center; gap:6px; flex-shrink:0; max-width:48%; }
+    .vo-mine-badge { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:30px; font-size:16.5px; font-weight:700; background:rgba(0,0,0,.22); color:#fff; border:1px solid rgba(255,255,255,.28); min-width:0; cursor:pointer; }
+    .vo-mine-badge:hover { background:rgba(0,0,0,.35); border-color:rgba(255,255,255,.45); }
+    .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+    .vo-mine-badge .vo-type-icon { pointer-events:none; }
+    .vo-type-icon { width:24px; height:24px; flex-shrink:0; object-fit:contain; }
+    .vo-pin { width:33px; height:33px; color:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; border:0; background:transparent; padding:0; margin:0; cursor:pointer; font:inherit; }
+    .vo-pin svg { width:33px; height:33px; display:block; pointer-events:none; }
+    .vo-pin.is-missing { opacity:0.38; pointer-events:none; cursor:default; }
+    .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
+    .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:default; }
+    .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
+    .vo-photo-wrap { position:relative; width:100%; }
+    .vo-photo-wrap > .vo-photo { display:block; width:100%; }
+    .vo-showcase-pin {
+      position:absolute; top:8px; right:8px; z-index:3;
+      width:34px; height:34px; padding:0; margin:0;
+      border:1px solid #fff; border-radius:8px;
+      background:transparent; color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25);
+      line-height:0;
+    }
+    .vo-showcase-pin:hover { background:rgba(255,255,255,.12); }
+    .vo-showcase-pin:focus-visible { outline:2px solid #3d8bfd; outline-offset:2px; }
+    .vo-showcase-pin.is-active {
+      background:#2ea043;
+      border-color:#fff;
+      color:#fff;
+    }
+    .vo-showcase-pin.is-active:hover { background:#2ea043; }
+    .vo-showcase-pin svg { width:18px; height:18px; display:block; pointer-events:none; }
+    .vo-showcase-tip, .vo-mine-tip {
+      position:fixed; z-index:600; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+      max-width:min(280px, calc(100vw - 16px));
+    }
+    .vo-showcase-flash {
+      position:fixed; z-index:350; pointer-events:none; display:none;
+      left:50%; transform:translateX(-50%);
+      background:#8B1E1E; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:8px 12px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:13px; font-weight:600; max-width:min(420px, calc(100vw - 24px));
+      text-align:center;
+    }
+    .vo-message { font-size:20px; color:var(--text-dark); font-style:italic; line-height:1.45; }
+    .vo-message::before { content:'"'; }
+    .vo-message::after { content:'"'; }
+    .vo-no-message { font-size:12px; color:var(--text-light); font-style:italic; }
+
+    .vo-owner-reply {
+      margin-top: 10px;
+      padding: 10px 12px 12px;
+      background: #e3f2fd;
+      border-left: 3px solid #42a5f5;
+      border-radius: 0 8px 8px 0;
+      text-align: left;
+    }
+    .vo-owner-reply-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e88e5;
+      margin-bottom: 6px;
+    }
+    .vo-owner-reply-icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .vo-owner-reply-text {
+      font-size: 14px;
+      color: var(--text-dark);
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .vo-empty, .vo-loading { text-align:center; padding:48px 16px; color:#64748b; font-size:14px; }
+    .vo-loading .skeleton {
+      height:14px; width:160px; margin:0 auto; border-radius:4px;
+      background:linear-gradient(90deg,#d0d5dc 25%,#e8ebf0 50%,#d0d5dc 75%); background-size:200% 100%;
+      animation:vo-shimmer 1.4s infinite;
+    }
+    @keyframes vo-shimmer { to { background-position:-200% 0; } }
+    .vo-img-tip {
+      position:fixed; z-index:320; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:6px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      max-width:calc(100vw - 16px);
+    }
+    .vo-img-tip img {
+      display:block; max-width:min(630px, 90vmin, calc(100vw - 24px));
+      max-height:min(90vmin, calc(100vh - 24px));
+      width:auto; height:auto; object-fit:contain; border-radius:4px;
+      background:#0d1b2a;
+    }
+    .vo-detail-overlay {
+      position:fixed; z-index:280;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(13,27,42,0.78);
+      box-sizing:border-box; padding:12px;
+    }
+    .vo-detail-overlay[hidden] { display:none !important; }
+    .vo-detail-panel {
+      position:relative; width:min(440px, 100%); max-height:100%;
+      overflow:auto; background:#eef1f4; color:#fff;
+      border:1px solid rgba(255,255,255,.22); border-radius:14px;
+      box-shadow:0 12px 28px rgba(6,10,16,.55);
+    }
+    .vo-detail-close {
+      position:absolute; top:10px; right:12px; z-index:2;
+      width:36px; height:36px; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 22px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .vo-detail-close:hover { background:rgba(255,255,255,0.22); }
+    .vo-detail-panel .vo-card { border-radius:0; border:0; }
+    .vo-detail-panel .vo-card-header { padding-right:52px; }
+    .vo-detail-panel .vo-photo {
+      aspect-ratio:auto; max-height:min(60vh, 520px); object-fit:contain;
+      background:#0d1b2a; cursor:default;
+    }
+    .vo-detail-panel .vo-avatar { cursor:default; }
+
+    /* ── Mine GPS minimap overlay ── */
+    .mine-map-overlay {
+      position:fixed; z-index:500;
+      display:flex; flex-direction:column;
+      background:rgba(13,27,42,0.78);
+      box-sizing:border-box;
+    }
+    .mine-map-overlay[hidden] { display:none !important; }
+    .mine-map-panel {
+      position:relative; flex:1; min-height:0; display:flex; flex-direction:column;
+      margin:12px; background:#eef1f4; color:#fff;
+      border:1px solid rgba(255,255,255,.22); border-radius:14px;
+      box-shadow:0 12px 28px rgba(6,10,16,.55); overflow:hidden;
+    }
+    .mine-map-head {
+      flex-shrink:0; display:flex; align-items:center; gap:10px;
+      padding:12px 52px 12px 16px; background:#133665;
+      border-bottom:1px solid rgba(255,255,255,.22);
+    }
+    .mine-map-type-icon {
+      flex-shrink:0; width:26px; height:26px; object-fit:contain; display:block;
+    }
+    .mine-map-type-icon[hidden] { display:none !important; }
+    .mine-map-title {
+      font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:#fff;
+      min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+      cursor:pointer;
+    }
+    .mine-map-title.is-editing {
+      cursor:text; outline:2px solid rgba(79,195,247,.65); outline-offset:2px; border-radius:6px;
+      background:rgba(15,23,42,.28); white-space:normal; text-overflow:clip; overflow:visible;
+    }
+    .mine-map-zoom {
+      flex-shrink:0; display:flex; align-items:center; gap:6px;
+      margin-left:auto; margin-right:2px;
+      color:#fff; font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+      white-space:nowrap;
+    }
+    .mine-map-zoom input[type="range"] {
+      width:88px; height:18px; margin:0; vertical-align:middle; cursor:pointer;
+      accent-color:#4FC3F7;
+    }
+    .mine-map-radius {
+      flex-shrink:0; display:flex; align-items:center; gap:6px;
+      color:#fff; font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+      white-space:nowrap;
+    }
+    .mine-map-radius[hidden] { display:none !important; }
+    .mine-map-radius input[type="range"] {
+      width:100px; height:18px; margin:0; vertical-align:middle; cursor:pointer;
+      accent-color:#ce93d8;
+    }
+    .mine-map-radius-value {
+      min-width:3.2em; font:700 11px/1 'DM Sans',sans-serif; color:#e1bee7;
+    }
+    .mine-map-labels {
+      flex-shrink:0; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12);
+      color:#fff; border-radius:999px; padding:6px 12px; cursor:pointer;
+      font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+    }
+    .mine-map-labels:hover { background:rgba(255,255,255,.22); }
+    .mine-map-labels[aria-pressed="true"] { background:rgba(79,195,247,.35); border-color:#4FC3F7; }
+    .mine-map-close {
+      position:absolute; top:10px; right:12px; z-index:2;
+      width:36px; height:36px; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 22px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .mine-map-close:hover { background:rgba(255,255,255,0.22); }
+    .mine-map-body {
+      position:relative; flex:1; min-height:70vh; height:70vh; background:#c8e6c9;
+    }
+    .mine-map-canvas { position:absolute; inset:0; }
+    .mine-map-tip, .mine-map-msg {
+      position:absolute; left:12px; right:12px; bottom:12px; z-index:2;
+      background:rgba(19,54,101,.92); color:#fff; border-radius:8px;
+      padding:8px 12px; font-size:12px; font-weight:600; pointer-events:none;
+    }
+    .mine-map-msg {
+      top:12px; bottom:auto; text-align:center;
+      opacity:1; transition:opacity .4s ease;
+    }
+    .mine-map-msg.is-fading { opacity:0; }
+    .mine-map-hover-tip {
+      position:absolute; z-index:3; left:0; top:0; max-width:260px;
+      display:flex; align-items:center; gap:8px;
+      background:rgba(19,54,101,.94); color:#fff; border-radius:8px;
+      padding:6px 10px; font-size:12px; font-weight:600; pointer-events:none;
+      box-shadow:0 8px 20px rgba(6,10,16,.45); white-space:nowrap;
+      transform:translate(-9999px,-9999px);
+    }
+    .mine-map-hover-tip[hidden] { display:none !important; }
+    .mine-map-hover-tip img { width:18px; height:18px; object-fit:contain; flex-shrink:0; display:block; }
+    .mine-map-hover-tip span { overflow:hidden; text-overflow:ellipsis; }
+
+    .mine-map-labels.is-bulk-rename-active {
+      background:rgba(79,195,247,.35); border-color:#4FC3F7;
+    }
+    .mine-map-select-layer {
+      position:absolute; inset:0; z-index:8; cursor:crosshair;
+      background:transparent;
+    }
+    .mine-map-select-layer[hidden] { display:none !important; }
+    .mine-map-select-rect {
+      position:absolute; pointer-events:none;
+      border:2px solid #29B6F6;
+      background:rgba(79,195,247,.28);
+      box-sizing:border-box;
+    }
+    .mine-map-select-rect[hidden] { display:none !important; }
+    .mine-map-bulk-rename {
+      position:absolute; z-index:30; left:16px; right:16px; top:58px;
+      max-height:calc(100% - 80px); display:flex; flex-direction:column;
+      background:rgba(19,54,101,.97); color:#fff;
+      border:1px solid rgba(255,255,255,.28); border-radius:12px;
+      box-shadow:0 16px 40px rgba(6,10,16,.55); overflow:hidden;
+    }
+    .mine-map-bulk-rename[hidden] { display:none !important; }
+    .mine-map-bulk-rename-x {
+      position:absolute; top:8px; right:10px; z-index:2;
+      width:32px; height:32px; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 20px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .mine-map-bulk-rename-x:hover { background:rgba(255,255,255,0.22); }
+    .mine-map-bulk-rename-inner {
+      display:flex; gap:0; min-height:0; flex:1; max-height:min(420px, 70vh);
+      padding:14px 44px 14px 14px; box-sizing:border-box;
+    }
+    .mine-map-bulk-rename-list {
+      flex:0 0 42%; min-width:0; overflow:auto; padding-right:10px;
+      border-right:1px solid rgba(255,255,255,.18);
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .mine-map-bulk-rename-item {
+      display:flex; align-items:center; gap:8px;
+      font:600 13px/1.3 'DM Sans',sans-serif;
+      padding:4px 2px;
+    }
+    .mine-map-bulk-rename-item img {
+      width:20px; height:20px; object-fit:contain; flex-shrink:0; display:block;
+    }
+    .mine-map-bulk-rename-item span {
+      flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+
+    .mine-map-bulk-rename-item-remove {
+      margin-left: auto;
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      font: 700 16px/1 "DM Sans", sans-serif;
+      cursor: pointer;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mine-map-bulk-rename-item-remove:hover {
+      background: rgba(244, 67, 54, 0.55);
+    }
+    .mine-map-bulk-rename-form {
+      flex:1; min-width:0; padding-left:14px;
+      display:flex; flex-direction:column; gap:12px; justify-content:flex-start;
+    }
+    .mine-map-bulk-rename-form label.bulk-name-label {
+      display:flex; flex-direction:column; gap:6px;
+      font:700 12px 'DM Sans',sans-serif; letter-spacing:.3px;
+    }
+    .mine-map-bulk-rename-form input[type="text"] {
+      width:100%; box-sizing:border-box;
+      border:1px solid rgba(255,255,255,.35); border-radius:8px;
+      background:rgba(15,23,42,.45); color:#fff;
+      padding:10px 12px; font:600 14px 'DM Sans',sans-serif;
+    }
+    .mine-map-bulk-rename-form label.bulk-seq-label {
+      display:flex; align-items:flex-start; gap:8px;
+      font:500 13px/1.35 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .mine-map-bulk-rename-form label.bulk-seq-label input {
+      margin-top:2px; flex-shrink:0; accent-color:#4FC3F7;
+    }
+    .mine-map-bulk-rename-apply-wrap {
+      align-self:flex-start; margin-top:4px;
+      display:flex; flex-direction:column; align-items:flex-start; gap:8px;
+    }
+    .mine-map-bulk-rename-apply {
+      border:1px solid rgba(255,255,255,.35); background:rgba(79,195,247,.35);
+      color:#fff; border-radius:999px; padding:8px 18px; cursor:pointer;
+      font:700 13px 'DM Sans',sans-serif; letter-spacing:.3px;
+    }
+    .mine-map-bulk-rename-apply:hover { background:rgba(79,195,247,.5); }
+    .mine-map-bulk-rename-apply:disabled { opacity:.55; cursor:not-allowed; }
+    .mine-map-bulk-rename-progress {
+      font:600 13px/1.3 'DM Sans',sans-serif; color:rgba(255,255,255,.92);
+      letter-spacing:.2px; min-height:1.3em;
+    }
     @media (max-width:700px) { .sidebar { display:none; } }
   </style>
 </head>
 <body>
-
-<!-- LOGIN -->
-  <link rel="icon" type="image/png" href="/logo.png?v=2" />
 <div id="login-screen">
   <div class="login-card">
     <div class="login-card-header">
       <div class="login-logo">⛏ TERRAMINE</div>
-      <div class="login-sub">Sign in to view your activity</div>
+      <div class="login-sub">Sign in to manage your mines</div>
     </div>
     <div class="login-card-body">
     <button class="btn-google" id="btn-google-signin">
@@ -201,10 +471,7 @@
     </div>
   </div>
 </div>
-
-<!-- PORTAL -->
 <div id="portal" style="display:none; flex-direction:column; min-height:100vh;">
-
   <nav class="top-nav">
     <a class="nav-logo" href="/">⛏ TerraMine</a>
     <div class="nav-user">
@@ -213,10 +480,6 @@
       <button class="nav-signout" id="btn-signout">Sign out</button>
     </div>
   </nav>
-
-  <!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
-       login-gated shell — see claude/AdSense_LowValueContent_Fix_2026-09-07.md -->
-
   <div class="layout">
     <aside class="sidebar">
       <div class="tb-readout">
@@ -248,279 +511,2954 @@
       <ul class="sidebar-nav">
         <li><a href="old-visitors.html"><span class="icon">👥</span> Old Visitors</a></li>
         <li><a href="old-mines.html"><span class="icon">⛏</span> Old Mines</a></li>
+        <li><a href="old-activity.html"><span class="icon">⚡</span> Old Activity</a></li>
       </ul>
 <div class="sidebar-footer"><a href="/">← Back to site</a></div>
     </aside>
+    <main class="main" id="portal-main">
+      <div class="mine-toolbar" id="visitors-toolbar">
+        <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
+          <button type="button" class="type-filter-btn" data-type="diamond" aria-label="Filter Diamond" aria-pressed="false" disabled>
+            <img src="images/mine-icons/diamond.svg" alt="">
+          </button>
+          <button type="button" class="type-filter-btn" data-type="gold" aria-label="Filter Gold" aria-pressed="false" disabled>
+            <img src="images/mine-icons/gold.svg" alt="">
+          </button>
+          <button type="button" class="type-filter-btn" data-type="coal" aria-label="Filter Coal" aria-pressed="false" disabled>
+            <img src="images/mine-icons/coal.svg" alt="">
+          </button>
+          <button type="button" class="type-filter-btn" data-type="rock" aria-label="Filter Rock" aria-pressed="false" disabled>
+            <img src="images/mine-icons/rock.svg" alt="">
+          </button>
+        </div>
+        <button type="button" class="sort-btn" id="sort-date" data-sort="date" disabled>Date</button>
+        <button type="button" class="sort-btn" id="sort-mine" data-sort="mine" disabled>Mine Name</button>
+        <button type="button" class="sort-btn" id="sort-visitor" data-sort="visitor" disabled>Visitor Name</button>
+        <input class="tool-search" id="filter-search" type="search" placeholder="Search visitor or mine name" autocomplete="off" disabled />
+        <span class="visitors-note" id="visitors-note" hidden>Loading more check-ins…</span>
+        <span class="mine-count" id="match-count"></span>
+      </div>
+      <div class="visitors-status" id="visitors-status"></div>
+      <div class="visitors-board-wrap">
+        <div id="visitors-board"><div class="vo-loading"><div class="skeleton"></div></div></div>
+      </div>
+      <div id="vo-detail-overlay" class="vo-detail-overlay" hidden aria-hidden="true">
+        <div class="vo-detail-panel" role="dialog" aria-modal="true" aria-label="Visitor check-in detail">
+          <button type="button" class="vo-detail-close" id="vo-detail-close" aria-label="Close visitor detail">×</button>
+          <div id="vo-detail-body"></div>
+        </div>
+      </div>
 
-    <main class="main">
-      <div class="page-header">
-        <div class="page-header-left">
-          <span class="page-header-icon">⚡</span>
-          <div>
-            <div class="page-header-title">My Activity</div>
-            <div class="page-header-sub" id="header-sub">Loading your history…</div>
+      <div id="mine-map-overlay" class="mine-map-overlay" hidden aria-hidden="true">
+        <div class="mine-map-panel" role="dialog" aria-modal="true" aria-labelledby="mine-map-title">
+          <button type="button" class="mine-map-close" id="mine-map-close" aria-label="Close map">×</button>
+          <div class="mine-map-head">
+            <img class="mine-map-type-icon" id="mine-map-type-icon" src="images/mine-icons/rock.svg" alt="" width="26" height="26" hidden>
+            <div class="mine-map-title" id="mine-map-title">Mine map</div>
+            <button type="button" class="mine-map-labels" id="mine-map-bulk-rename-btn" data-tip="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-label="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-pressed="false">Bulk Rename</button>
+            <button type="button" class="mine-map-labels" id="mine-map-load-area" data-tip="Load Area shows nearby owned mines and a purple radius ring. Use Radius to set 0.25–2 miles." aria-label="Load Area shows nearby owned mines and a purple radius ring. Use Radius to set 0.25–2 miles." aria-pressed="false">Load Area</button>
+            <label class="mine-map-radius" id="mine-map-radius-field" hidden>
+              <span>Radius</span>
+              <input type="range" id="mine-map-radius" min="0.25" max="2" step="0.25" value="0.5" aria-label="Load area radius in miles">
+              <span class="mine-map-radius-value" id="mine-map-radius-value">0.5 mi</span>
+            </label>
+            <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
+            <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
+            <label class="mine-map-zoom">
+              <span>Zoom</span>
+              <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="19" aria-label="Map zoom">
+            </label>
+          </div>
+          <div class="mine-map-body" id="mine-map-body">
+            <div class="mine-map-canvas" id="mine-map-canvas"></div>
+            <div class="mine-map-select-layer" id="mine-map-select-layer" hidden>
+              <div class="mine-map-select-rect" id="mine-map-select-rect" hidden></div>
+            </div>
+            <div class="mine-map-tip" id="mine-map-tip" hidden></div>
+            <div class="mine-map-hover-tip" id="mine-map-hover-tip" hidden></div>
+            <div class="mine-map-msg" id="mine-map-msg" hidden></div>
+            <div class="mine-map-bulk-rename" id="mine-map-bulk-rename" hidden aria-hidden="true" role="dialog" aria-label="Bulk rename mines">
+              <button type="button" class="mine-map-bulk-rename-x" id="mine-map-bulk-rename-x" aria-label="Cancel bulk rename">×</button>
+              <div class="mine-map-bulk-rename-inner">
+                <div class="mine-map-bulk-rename-list" id="mine-map-bulk-rename-list"></div>
+                <div class="mine-map-bulk-rename-form">
+                  <label class="bulk-name-label" for="mine-map-bulk-rename-input">New name
+                    <input type="text" id="mine-map-bulk-rename-input" autocomplete="off" spellcheck="false">
+                  </label>
+                  <label class="bulk-seq-label">
+                    <input type="checkbox" id="mine-map-bulk-rename-seq">
+                    <span>Apply sequential numbers to the end of all renamed mines</span>
+                  </label>
+                  <div class="mine-map-bulk-rename-apply-wrap">
+                    <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-rename-apply">Apply</button>
+                    <div class="mine-map-bulk-rename-progress" id="mine-map-bulk-rename-progress" hidden aria-live="polite"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- Stats grid — mirrors app's Profile > Activity tab -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-number" id="stat-checkins">—</div>
-          <div class="stat-label">Check-ins Made</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="stat-tb-earned">—</div>
-          <div class="stat-label">TB Earned</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="stat-photos-card">—</div>
-          <div class="stat-label">Photos Shared</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="stat-properties">—</div>
-          <div class="stat-label">Properties</div>
-        </div>
-      </div>
-
-      <div class="section-label">My Check-in History</div>
-
-      <div class="toolbar">
-        <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">All</button>
-        <button class="filter-btn" data-filter="photo" onclick="setFilter('photo', this)">📸 With Photo</button>
-        <button class="filter-btn" data-filter="message" onclick="setFilter('message', this)">💬 With Message</button>
-        <span class="result-count" id="result-count">—</span>
-      </div>
-
-      <div class="feed-container" id="feed-container">
-        ${[1,2,3,4].map(() => `
-          <div class="feed-card">
-            <div class="feed-card-row">
-              <div class="skeleton" style="width:24px;height:24px;border-radius:4px;flex-shrink:0;"></div>
-              <div style="flex:1"><div class="skeleton" style="height:13px;width:200px;margin-bottom:6px;"></div><div class="skeleton" style="height:11px;width:100px;"></div></div>
-            </div>
-          </div>`).join('')}
-      </div>
-
-      <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMore()">Load More</button>
     </main>
   </div>
 </div>
-
-<div id="lightbox">
-  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightbox-img" src="" alt="Check-in photo" />
-</div>
-
-<div id="toast"></div>
-
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
   firebase.initializeApp({
-    apiKey:            "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
-    authDomain:        "terramine-5cda5.firebaseapp.com",
-    projectId:         "terramine-5cda5",
-    storageBucket:     "terramine-5cda5.firebasestorage.app",
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
     messagingSenderId: "183143680304",
-    appId:             "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
   });
   const auth = firebase.auth();
-  const db   = firebase.firestore();
+  const db = firebase.firestore();
   let authResolved = false;
-
   document.body.classList.add('auth-pending');
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
   const $ = id => document.getElementById(id);
-  let currentUser = null;
-  let allMyCheckIns = [];
-  let filteredCheckIns = [];
-  let displayedCount = 0;
-  let activeFilter = 'all';
-  let propertyMineTypes = {}; // propertyId -> mineType (for badge display)
-  const PAGE_SIZE = 20;
+  const TYPE_ORDER = ['diamond', 'gold', 'coal', 'rock'];
+  const TYPE_LABEL = { diamond: 'Diamond', gold: 'Gold', coal: 'Coal', rock: 'Rock' };
+  const ICONS = {
+    rock: 'images/mine-icons/rock.svg',
+    coal: 'images/mine-icons/coal.svg',
+    gold: 'images/mine-icons/gold.svg',
+    diamond: 'images/mine-icons/diamond.svg'
+  };
+  const GPS_PAIRS = [
+    ['latitude', 'longitude'], ['lat', 'lng'], ['lat', 'lon'],
+    ['gpsLatitude', 'gpsLongitude'], ['centerLat', 'centerLng'],
+    ['centerLatitude', 'centerLongitude']
+  ];
+  const GPS_NESTS = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng'];
+  const VISIT_PAGE = 200; // page size only; keep paging until Firestore has no more
+  const DETAILS_FETCH = 40;
+  const VISITOR_AVATAR_CONCURRENCY = 8;
 
-  function showToast(msg, type='') { const t=$('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',3000); }
-  function fmtNum(n) { if(!n)return'0'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return Math.round(n).toLocaleString(); }
-  function fmtUSD(n) { return '$'+(parseFloat(n)||0).toFixed(2); }
-  function initials(name) { if(!name)return'?'; return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
-  function mineIcon(type) { return{rock:'🪨',coal:'⚫',gold:'🟡',diamond:'💎'}[type]||'⛏'; }
+  let loadedUid = null;
+  let allVisits = [];
+  let visitsTruncated = false; // true while more check-ins still loading in background
+  let visitorsLoadId = 0;
+  let visitsLastDoc = null;
 
-  function timeAgo(ts) {
-    if (!ts) return '';
-    const d = typeof ts === 'string' ? new Date(ts) : ts.toDate ? ts.toDate() : new Date(ts);
-    const s = Math.floor((Date.now() - d) / 1000);
+  const FILTER_TYPES_KEY = 'terramine.visitors.filterTypes';
+  function loadSelectedTypes() {
+    try {
+      const raw = sessionStorage.getItem(FILTER_TYPES_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Set();
+      return new Set(arr.filter(t => TYPE_ORDER.indexOf(t) !== -1));
+    } catch (e) { return new Set(); }
+  }
+  function saveSelectedTypes() {
+    try {
+      sessionStorage.setItem(FILTER_TYPES_KEY, JSON.stringify(Array.from(selectedTypes)));
+    } catch (e) {}
+  }
+  let selectedTypes = loadSelectedTypes();
+
+  let mineMap = {};
+  let ownedMineMap = {}; // propertyId -> { id, mineType, customName, _raw, _details }
+  let sortKey = 'date';
+  let sortDir = 1; // 1 = newest / high / A→Z depending on key
+  let visitorUserCache = new Map();
+  let visitorUserInflight = new Map();
+  let visitorUserDocAvatarBlockedNoted = false;
+  let voImgTip = null;
+  let voImgTipTimer = null;
+  let voImgTipTarget = null;
+  let voImgTipX = 0;
+  let voImgTipY = 0;
+  let voDetailBound = false;
+
+  function fmtNum(n) { if (!n) return '0'; if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'; if (n >= 1000) return (n / 1000).toFixed(1) + 'K'; return Math.round(n).toLocaleString(); }
+  function fmtUSD(n) { return '$' + (parseFloat(n) || 0).toFixed(2); }
+  function initials(name) { if (!name) return '?'; return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function numOrNull(v) {
+    if (v == null || v === '' || typeof v === 'boolean') return null;
+    const n = typeof v === 'number' ? v : (typeof v === 'string' ? Number(v.trim()) : NaN);
+    return Number.isFinite(n) ? n : null;
+  }
+  function visitorTsMillis(ts) {
+    if (!ts) return 0;
+    if (typeof ts === 'string') return new Date(ts).getTime() || 0;
+    if (ts.toDate) return ts.toDate().getTime();
+    if (typeof ts.seconds === 'number') return ts.seconds * 1000;
+    return new Date(ts).getTime() || 0;
+  }
+  function visitorTimeAgo(ts) {
+    const ms = visitorTsMillis(ts);
+    if (!ms) return '';
+    const s = Math.floor((Date.now() - ms) / 1000);
     if (s < 60) return 'just now';
-    if (s < 3600) return Math.floor(s/60) + 'm ago';
-    if (s < 86400) return Math.floor(s/3600) + 'h ago';
-    if (s < 86400*7) return Math.floor(s/86400) + 'd ago';
-    return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    if (s < 86400 * 7) return Math.floor(s / 86400) + 'd ago';
+    return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
-  function fullDate(ts) {
-    if (!ts) return '';
-    const d = typeof ts === 'string' ? new Date(ts) : ts.toDate ? ts.toDate() : new Date(ts);
-    return d.toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+  function visitorFullDate(ts) {
+    const ms = visitorTsMillis(ts);
+    if (!ms) return '';
+    return new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
+  function validLatLng(lat, lng) {
+    return lat != null && lng != null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  }
+  function pairOn(obj, prefix) {
+    if (!obj || typeof obj !== 'object') return null;
+    for (const [lk, gk] of GPS_PAIRS) {
+      const lat = numOrNull(obj[lk]);
+      const lng = numOrNull(obj[gk]);
+      if (validLatLng(lat, lng)) return { lat, lng, field: prefix + lk + '+' + gk };
+    }
+    return null;
+  }
+  function findGps(mine) {
+    if (!mine) return null;
+    const sources = [[mine._raw || mine, 'properties.'], [mine._details || {}, 'propertyDetails.']];
+    for (const [obj, prefix] of sources) {
+      const direct = pairOn(obj, prefix);
+      if (direct) return direct;
+      for (const nest of GPS_NESTS) {
+        const nested = pairOn(obj[nest], prefix + nest + '.');
+        if (nested) return nested;
+      }
+    }
+    return null;
+  }
+
+  // Public browser Maps JS key (same as heatmap.html / mines.html on this site).
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y';
+
+  // Greyscale minimap basemap (top-down roadmap).
+  const MINE_MAP_BASE_STYLE = [
+    { elementType: 'geometry', stylers: [{ color: '#e6e6e6' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#555555' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#f2f2f2' }] },
+    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#b0b0b0' }] },
+    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#e6e6e6' }] },
+    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#d9d9d9' }] },
+    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#d4d4d4' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#c8c8c8' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#c0c0c0' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ebebeb' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#b8b8b8' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#b0b8c0' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  ];
+  const MINE_MAP_HIDE_LABELS = [
+    { featureType: 'administrative', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.business', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'landscape.man_made', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'water', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'landscape', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+  ];
+  const MINE_MAP_HIDE_BUILDINGS = [
+    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.business', elementType: 'geometry', stylers: [{ visibility: 'off' }] }
+  ];
+  const MINE_MAP_SHOW_BUILDINGS = [
+    { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ visibility: 'on' }, { color: '#c8c8c8' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ visibility: 'on' }, { color: '#6a6a6a' }, { weight: 1.25 }] },
+    { featureType: 'poi.business', elementType: 'geometry', stylers: [{ visibility: 'on' }, { color: '#d0d0d0' }] }
+  ];
+  const MINE_MAP_PARCEL_COLORS = {
+    rock: { fill: '#7F7F7F', stroke: '#7F7F7F' },
+    coal: { fill: '#000000', stroke: '#000000' },
+    gold: { fill: '#FFD700', stroke: '#FFD700' },
+    diamond: { fill: '#B9F2FF', stroke: '#B9F2FF' }
+  };
+
+  function readLatLngFromKeys(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const latKeys = ['latitude', 'lat', 'Latitude', 'LAT', '_latitude', 'centerLat', 'centerLatitude'];
+    const lngKeys = ['longitude', 'lng', 'lon', 'long', 'Longitude', 'LNG', 'LON', '_longitude', 'centerLng', 'centerLongitude'];
+    let lat = null;
+    let lng = null;
+    for (let i = 0; i < latKeys.length; i++) {
+      lat = numOrNull(obj[latKeys[i]]);
+      if (lat != null) break;
+    }
+    for (let i = 0; i < lngKeys.length; i++) {
+      lng = numOrNull(obj[lngKeys[i]]);
+      if (lng != null) break;
+    }
+    if (validLatLng(lat, lng)) return { lat: lat, lng: lng };
+    const paired = pairOn(obj, '');
+    if (paired) return { lat: paired.lat, lng: paired.lng };
+    return null;
+  }
+  function asLatLngPoint(v) {
+    if (v == null) return null;
+    if (typeof v.lat === 'function' && typeof v.lng === 'function') {
+      const lat = numOrNull(v.lat());
+      const lng = numOrNull(v.lng());
+      return validLatLng(lat, lng) ? { lat: lat, lng: lng } : null;
+    }
+    if (typeof v === 'object' && !Array.isArray(v)) {
+      if (typeof v.toJSON === 'function') {
+        try {
+          const j = v.toJSON();
+          if (j && j !== v) {
+            const fromJson = asLatLngPoint(j);
+            if (fromJson) return fromJson;
+          }
+        } catch (e) {}
+      }
+      const keyed = readLatLngFromKeys(v);
+      if (keyed) return keyed;
+      if (v._latitude != null || v.latitude != null) {
+        const lat = numOrNull(v._latitude != null ? v._latitude : v.latitude);
+        const lng = numOrNull(v._longitude != null ? v._longitude : v.longitude);
+        if (validLatLng(lat, lng)) return { lat: lat, lng: lng };
+      }
+    }
+    if (Array.isArray(v) && v.length >= 2) {
+      const a = numOrNull(v[0]);
+      const b = numOrNull(v[1]);
+      if (a != null && b != null && Math.abs(a) > 90 && validLatLng(b, a)) return { lat: b, lng: a };
+      if (validLatLng(a, b)) return { lat: a, lng: b };
+      if (validLatLng(b, a)) return { lat: b, lng: a };
+    }
+    return null;
+  }
+  function coercePointList(raw) {
+    if (raw == null) return null;
+    let arr = raw;
+    if (typeof arr === 'string') {
+      const t = arr.trim();
+      if (!t) return null;
+      try { arr = JSON.parse(t); } catch (e) { return null; }
+    }
+    if (Array.isArray(arr)) {
+      // ok
+    } else if (arr && typeof arr === 'object' && typeof arr.length === 'number' && arr.length >= 3) {
+      const tmp = [];
+      for (let i = 0; i < arr.length; i++) tmp.push(arr[i]);
+      arr = tmp;
+    } else {
+      return null;
+    }
+    if (arr.length < 3) return null;
+    const pts = [];
+    for (let i = 0; i < arr.length; i++) {
+      const p = asLatLngPoint(arr[i]);
+      if (p) pts.push(p);
+    }
+    return pts.length >= 3 ? pts : null;
+  }
+  function cornersFromNamed(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const namedSets = [
+      ['nw', 'ne', 'se', 'sw'],
+      ['NW', 'NE', 'SE', 'SW'],
+      ['northWest', 'northEast', 'southEast', 'southWest'],
+      ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']
+    ];
+    for (const keys of namedSets) {
+      const pts = keys.map(k => asLatLngPoint(obj[k]));
+      if (pts.every(Boolean)) return pts;
+    }
+    const pairSets = [
+      [['nwLat', 'nwLng'], ['neLat', 'neLng'], ['seLat', 'seLng'], ['swLat', 'swLng']],
+      [['nwLatitude', 'nwLongitude'], ['neLatitude', 'neLongitude'], ['seLatitude', 'seLongitude'], ['swLatitude', 'swLongitude']],
+      [['northWestLat', 'northWestLng'], ['northEastLat', 'northEastLng'], ['southEastLat', 'southEastLng'], ['southWestLat', 'southWestLng']]
+    ];
+    for (const pairs of pairSets) {
+      const pts = pairs.map(([la, ln]) => {
+        const lat = numOrNull(obj[la]);
+        const lng = numOrNull(obj[ln]);
+        return validLatLng(lat, lng) ? { lat: lat, lng: lng } : null;
+      });
+      if (pts.every(Boolean)) return pts;
+    }
+    return null;
+  }
+  function cornersFromBounds(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const boxes = [obj.bounds, obj.geoBox, obj.bbox, obj.box, obj.extent].filter(Boolean);
+    for (const b of boxes) {
+      if (typeof b !== 'object' || Array.isArray(b)) continue;
+      let minLat = numOrNull(b.minLat != null ? b.minLat : (b.south != null ? b.south : null));
+      let maxLat = numOrNull(b.maxLat != null ? b.maxLat : (b.north != null ? b.north : null));
+      let minLng = numOrNull(b.minLng != null ? b.minLng : (b.west != null ? b.west : (b.minLon != null ? b.minLon : null)));
+      let maxLng = numOrNull(b.maxLng != null ? b.maxLng : (b.east != null ? b.east : (b.maxLon != null ? b.maxLon : null)));
+      if (minLat == null && b.southwest) {
+        const sw = asLatLngPoint(b.southwest);
+        const ne = asLatLngPoint(b.northeast);
+        if (sw && ne) { minLat = sw.lat; minLng = sw.lng; maxLat = ne.lat; maxLng = ne.lng; }
+      }
+      if (minLat != null && maxLat != null && minLng != null && maxLng != null
+          && maxLat > minLat && maxLng !== minLng) {
+        return [
+          { lat: maxLat, lng: minLng },
+          { lat: maxLat, lng: maxLng },
+          { lat: minLat, lng: maxLng },
+          { lat: minLat, lng: minLng }
+        ];
+      }
+    }
+    return null;
+  }
+  function findCorners(p) {
+    if (!p || typeof p !== 'object') return null;
+    // mineMap entries store the full property on _raw (corners live there).
+    const sources = [p._raw, p, p._details].filter(Boolean);
+    for (let i = 0; i < sources.length; i++) {
+      const obj = sources[i];
+      const pts = coercePointList(obj.corners);
+      if (pts) return { path: pts, source: i === 0 ? '_raw.corners' : 'corners' };
+    }
+    const arrayKeys = ['cornerCoords', 'polygon', 'coordinates', 'path', 'ring', 'vertices', 'points', 'parcel', 'parcelCoords', 'boundary', 'geoPolygon'];
+    const nestKeys = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng', 'geometry', 'geoBox', 'bounds', 'parcel'];
+    for (let i = 0; i < sources.length; i++) {
+      const obj = sources[i];
+      const named = cornersFromNamed(obj);
+      if (named) return { path: named, source: 'named-corners' };
+      const boxed = cornersFromBounds(obj);
+      if (boxed) return { path: boxed, source: 'bounds' };
+      for (let k = 0; k < arrayKeys.length; k++) {
+        const key = arrayKeys[k];
+        const pts = coercePointList(obj[key]);
+        if (pts) return { path: pts, source: key };
+      }
+      for (let n = 0; n < nestKeys.length; n++) {
+        const nest = nestKeys[n];
+        const child = obj[nest];
+        if (!child || typeof child !== 'object') continue;
+        const cCorners = coercePointList(child.corners);
+        if (cCorners) return { path: cCorners, source: nest + '.corners' };
+        const n2 = cornersFromNamed(child);
+        if (n2) return { path: n2, source: nest + '.named' };
+        const b2 = cornersFromBounds(child);
+        if (b2) return { path: b2, source: nest + '.bounds' };
+        if (Array.isArray(child) || (child && typeof child.length === 'number')) {
+          const pts = coercePointList(child);
+          if (pts) return { path: pts, source: nest };
+        }
+        for (let k = 0; k < arrayKeys.length; k++) {
+          const key = arrayKeys[k];
+          const pts = coercePointList(child[key]);
+          if (pts) return { path: pts, source: nest + '.' + key };
+        }
+      }
+    }
+    return null;
+  }
+
+  let mineMapInstance = null;
+  let mineMapPolygon = null;
+  let mineMapMarker = null;
+  let mineMapLabelsOn = false;
+  let mineMapBuildingsOn = false;
+  let mineMapBound = false;
+  let mineMapLoading = null;
+  let mineMapResizeBound = false;
+  let mineMapZoomSyncing = false;
+  let mineMapAreaOverlays = [];
+  let mineMapAreaCircle = null;
+  let mineMapCurrentMine = null;
+  let bulkRenameMode = false; // drawing or dialog active (not session-persisted)
+  let bulkRenameDragging = false;
+  let bulkRenameStartX = 0;
+  let bulkRenameStartY = 0;
+  let bulkRenameSelected = [];
+  let bulkRenameLayerBound = false;
+  const MINE_MAP_ZOOM_KEY = 'terramine.mineMap.zoom';
+  const MINE_MAP_BUILDINGS_KEY = 'terramine.mineMap.buildings';
+  const MINE_MAP_ZOOM_MIN = 10;
+  const MINE_MAP_ZOOM_MAX = 21;
+  const MINE_MAP_ZOOM_DEFAULT = 19;
+  const MINE_MAP_LOAD_AREA_DEFAULT_MI = 0.5;
+  const MINE_MAP_LOAD_AREA_MIN_MI = 0.25;
+  const MINE_MAP_LOAD_AREA_MAX_MI = 2;
+  const MINE_MAP_LOAD_AREA_STEP_MI = 0.25;
+  const MINE_MAP_MILES_TO_M = 1609.344;
+  let mineMapLoadAreaOn = false;
+  let mineMapLoadAreaRadiusMi = MINE_MAP_LOAD_AREA_DEFAULT_MI;
+  function mineMapLoadAreaRadiusM() {
+    return mineMapLoadAreaRadiusMi * MINE_MAP_MILES_TO_M;
+  }
+  function formatLoadAreaMiles(mi) {
+    const n = Math.round(Number(mi) * 100) / 100;
+    const s = (Math.round(n * 100) % 100 === 0) ? String(Math.round(n)) : String(n);
+    return s + ' mi';
+  }
+  function clampLoadAreaMiles(mi) {
+    let n = Number(mi);
+    if (!Number.isFinite(n)) n = MINE_MAP_LOAD_AREA_DEFAULT_MI;
+    n = Math.round(n / MINE_MAP_LOAD_AREA_STEP_MI) * MINE_MAP_LOAD_AREA_STEP_MI;
+    if (n < MINE_MAP_LOAD_AREA_MIN_MI) n = MINE_MAP_LOAD_AREA_MIN_MI;
+    if (n > MINE_MAP_LOAD_AREA_MAX_MI) n = MINE_MAP_LOAD_AREA_MAX_MI;
+    return Math.round(n * 100) / 100;
+  }
+
+  function mineMapStyles() {
+    let styles = MINE_MAP_BASE_STYLE.slice();
+    // Labels control: street/place/building/business names.
+    if (!mineMapLabelsOn) styles = styles.concat(MINE_MAP_HIDE_LABELS);
+    // Buildings control: footprints/outlines only (not labels).
+    styles = styles.concat(mineMapBuildingsOn ? MINE_MAP_SHOW_BUILDINGS : MINE_MAP_HIDE_BUILDINGS);
+    return styles;
+  }
+  function syncMineMapBounds() {
+    const overlay = $('mine-map-overlay');
+    const main = $('portal-main');
+    if (!overlay || !main || overlay.hidden) return;
+    const r = main.getBoundingClientRect();
+    overlay.style.left = r.left + 'px';
+    overlay.style.top = r.top + 'px';
+    overlay.style.width = r.width + 'px';
+    overlay.style.height = r.height + 'px';
+  }
+  function clearMineMapBounds() {
+    const overlay = $('mine-map-overlay');
+    if (!overlay) return;
+    overlay.style.left = '';
+    overlay.style.top = '';
+    overlay.style.width = '';
+    overlay.style.height = '';
+  }
+  function loadGoogleMapsApi() {
+    if (window.google && window.google.maps) return Promise.resolve();
+    if (mineMapLoading) return mineMapLoading;
+    if (!GOOGLE_MAPS_API_KEY) {
+      return Promise.reject(new Error('Maps API key missing'));
+    }
+    mineMapLoading = new Promise((resolve, reject) => {
+      const prev = window.__tmMineMapInit;
+      window.__tmMineMapInit = function () {
+        if (typeof prev === 'function') try { prev(); } catch (e) {}
+        resolve();
+      };
+      const s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(GOOGLE_MAPS_API_KEY)
+        + '&callback=__tmMineMapInit&loading=async';
+      s.async = true;
+      s.defer = true;
+      s.onerror = () => reject(new Error('Failed to load Google Maps'));
+      document.head.appendChild(s);
+    });
+    return mineMapLoading;
+  }
+  function clearMineMapOverlays() {
+    if (mineMapPolygon) {
+      mineMapPolygon.setMap(null);
+      mineMapPolygon = null;
+    }
+    if (mineMapMarker) {
+      mineMapMarker.setMap(null);
+      mineMapMarker = null;
+    }
+    clearMineMapAreaOverlays();
+  }
+  function ensureMineMap() {
+    const canvas = $('mine-map-canvas');
+    if (!canvas) throw new Error('Map canvas missing');
+    if (mineMapInstance) return mineMapInstance;
+    mineMapInstance = new google.maps.Map(canvas, {
+      mapTypeId: 'roadmap',
+      tilt: 0,
+      heading: 0,
+      disableDefaultUI: true,
+      zoomControl: true,
+      zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
+      gestureHandling: 'greedy',
+      keyboardShortcuts: false,
+      clickableIcons: false,
+      styles: mineMapStyles(),
+      center: { lat: 39.5, lng: -98.35 },
+      zoom: 4
+    });
+    mineMapInstance.setOptions({ rotateControl: false, streetViewControl: false, mapTypeControl: false, fullscreenControl: false });
+    mineMapInstance.addListener('zoom_changed', () => {
+      if (mineMapZoomSyncing) return;
+      const z = mineMapInstance.getZoom();
+      if (z == null || !Number.isFinite(z)) return;
+      const clamped = clampMineMapZoom(z);
+      saveMineMapZoom(clamped);
+      syncMineMapZoomSlider(clamped);
+    });
+    google.maps.event.addListenerOnce(mineMapInstance, 'idle', () => {
+      try { mineMapInstance.setTilt(0); } catch (e) {}
+    });
+    return mineMapInstance;
+  }
+  function updateMineMapLabelsBtn() {
+    const btn = $('mine-map-labels');
+    if (!btn) return;
+    const tipText = mineMapLabelsOn
+      ? 'Hide map labels (streets, places, and building names).'
+      : 'Show map labels (streets, places, and building names).';
+    btn.setAttribute('aria-pressed', mineMapLabelsOn ? 'true' : 'false');
+    btn.textContent = mineMapLabelsOn ? 'Labels on' : 'Labels off';
+    btn.setAttribute('data-tip', tipText);
+    btn.setAttribute('aria-label', tipText);
+    if (loadAreaFollowTipTarget === btn && loadAreaFollowTip && loadAreaFollowTip.style.display === 'block') {
+      loadAreaFollowTip.textContent = tipText;
+    }
+  }
+  function setMineMapLabels(on) {
+    mineMapLabelsOn = !!on;
+    updateMineMapLabelsBtn();
+    if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
+  }
+  function getSavedMineMapBuildings() {
+    try {
+      return sessionStorage.getItem(MINE_MAP_BUILDINGS_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+  function saveMineMapBuildings(on) {
+    try { sessionStorage.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
+  }
+  function updateMineMapBuildingsBtn() {
+    const btn = $('mine-map-buildings');
+    if (!btn) return;
+    const tipText = mineMapBuildingsOn
+      ? 'Hide building footprints and outlines.'
+      : 'Show building footprints and outlines.';
+    btn.setAttribute('aria-pressed', mineMapBuildingsOn ? 'true' : 'false');
+    btn.textContent = mineMapBuildingsOn ? 'Buildings on' : 'Buildings off';
+    btn.setAttribute('data-tip', tipText);
+    btn.setAttribute('aria-label', tipText);
+    if (loadAreaFollowTipTarget === btn && loadAreaFollowTip && loadAreaFollowTip.style.display === 'block') {
+      loadAreaFollowTip.textContent = tipText;
+    }
+  }
+  function setMineMapBuildings(on) {
+    mineMapBuildingsOn = !!on;
+    saveMineMapBuildings(mineMapBuildingsOn);
+    updateMineMapBuildingsBtn();
+    if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
+  }
+
+  function hideMineMapHoverTip() {
+    const tip = $('mine-map-hover-tip');
+    if (!tip) return;
+    tip.hidden = true;
+    tip.innerHTML = '';
+    tip.style.transform = 'translate(-9999px,-9999px)';
+  }
+  function moveMineMapHoverTip(e) {
+    const tip = $('mine-map-hover-tip');
+    const body = $('mine-map-body');
+    if (!tip || !body || tip.hidden) return;
+    const dom = e && (e.domEvent || e);
+    if (!dom || dom.clientX == null) return;
+    const br = body.getBoundingClientRect();
+    let x = dom.clientX - br.left + 14;
+    let y = dom.clientY - br.top + 14;
+    const tw = tip.offsetWidth || 0;
+    const th = tip.offsetHeight || 0;
+    if (x + tw > br.width - 4) x = Math.max(4, br.width - tw - 4);
+    if (y + th > br.height - 4) y = Math.max(4, dom.clientY - br.top - th - 10);
+    tip.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+  }
+  function showMineMapHoverTip(iconSrc, title, e) {
+    const tip = $('mine-map-hover-tip');
+    if (!tip) return;
+    tip.innerHTML = '<img src="' + String(iconSrc || '').replace(/"/g, '&quot;') + '" alt="">'
+      + '<span></span>';
+    const span = tip.querySelector('span');
+    if (span) span.textContent = title || '';
+    tip.hidden = false;
+    moveMineMapHoverTip(e);
+  }
+  function attachMineMapHover(overlay, mine) {
+    if (!overlay || !mine) return;
+    overlay.__tmMine = mine;
+    const type = typeKeyOf(mine, null);
+    const icon = ICONS[type] || ICONS.rock;
+    overlay.addListener('mouseover', function (e) {
+      const title = mineTitle(mine, null) || String(mine.id || '');
+      showMineMapHoverTip(icon, title, e);
+    });
+    overlay.addListener('mousemove', function (e) { moveMineMapHoverTip(e); });
+    overlay.addListener('mouseout', function () { hideMineMapHoverTip(); });
+  }
+  function clearMineMapAreaOverlays() {
+    for (let i = 0; i < mineMapAreaOverlays.length; i++) {
+      try { mineMapAreaOverlays[i].setMap(null); } catch (e) {}
+    }
+    mineMapAreaOverlays = [];
+    if (mineMapAreaCircle) {
+      try { mineMapAreaCircle.setMap(null); } catch (e) {}
+      mineMapAreaCircle = null;
+    }
+    hideMineMapHoverTip();
+  }
+  function haversineMeters(a, b) {
+    const R = 6371000;
+    const toRad = function (d) { return d * Math.PI / 180; };
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+      + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  function mineMapCenterGps(mine) {
+    if (!mine) return null;
+    const g = findGps(mine);
+    return g ? { lat: g.lat, lng: g.lng } : null;
+  }
+  function insetPolygonPath(path, fraction) {
+    fraction = fraction != null ? fraction : 0.03;
+    if (!path || path.length < 3) return path;
+    let sumLat = 0, sumLng = 0;
+    for (let i = 0; i < path.length; i++) {
+      sumLat += path[i].lat;
+      sumLng += path[i].lng;
+    }
+    const n = path.length;
+    const cLat = sumLat / n;
+    const cLng = sumLng / n;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push({
+        lat: path[i].lat + (cLat - path[i].lat) * fraction,
+        lng: path[i].lng + (cLng - path[i].lng) * fraction
+      });
+    }
+    return out;
+  }
+  function drawMineMapParcel(map, mine, opts) {
+    opts = opts || {};
+    const type = typeKeyOf(mine, null);
+    let colors = MINE_MAP_PARCEL_COLORS[type] || { fill: '#FF9800', stroke: '#E65100' };
+    if (opts && opts.purple) {
+      colors = { fill: '#9C27B0', stroke: '#6A1B9A' };
+    }
+    const corners = findCorners(mine);
+    const gps = mineMapCenterGps(mine);
+    let overlay = null;
+    if (corners && corners.path && corners.path.length >= 3) {
+      const fillOpacity = opts.fillOpacity != null ? opts.fillOpacity : 1.0;
+      const strokeWeight = opts.strokeWeight != null ? opts.strokeWeight : 2;
+      const zIndex = opts.zIndex != null ? opts.zIndex : 1;
+      const insetPath = insetPolygonPath(corners.path, 0.03);
+      // Fill on original path (no stroke); stroke-only on inset so shared edges don't double-draw.
+      overlay = new google.maps.Polygon({
+        paths: corners.path,
+        strokeColor: colors.stroke,
+        strokeOpacity: 0,
+        strokeWeight: 0,
+        fillColor: colors.fill,
+        fillOpacity: fillOpacity,
+        map: map,
+        clickable: true,
+        zIndex: zIndex
+      });
+      const strokePoly = new google.maps.Polygon({
+        paths: insetPath,
+        strokeColor: colors.stroke,
+        strokeOpacity: 0.95,
+        strokeWeight: strokeWeight,
+        fillColor: colors.fill,
+        fillOpacity: 0,
+        map: map,
+        clickable: false,
+        zIndex: zIndex + 1
+      });
+      const origSetMap = overlay.setMap.bind(overlay);
+      overlay.setMap = function (m) {
+        origSetMap(m);
+        try { strokePoly.setMap(m); } catch (e) {}
+      };
+    } else if (gps && opts.allowMarker) {
+      overlay = new google.maps.Marker({
+        position: { lat: gps.lat, lng: gps.lng },
+        map: map,
+        title: mineTitle(mine, null) || String(mine.id || ''),
+        clickable: true,
+        zIndex: opts.zIndex != null ? opts.zIndex : 1
+      });
+    }
+    if (overlay) attachMineMapHover(overlay, mine);
+    return overlay;
+  }
+  function syncMineMapLoadAreaUi() {
+    const btn = $('mine-map-load-area');
+    if (btn) {
+      btn.setAttribute('aria-pressed', mineMapLoadAreaOn ? 'true' : 'false');
+      btn.classList.toggle('is-active', !!mineMapLoadAreaOn);
+    }
+    const field = $('mine-map-radius-field');
+    if (field) field.hidden = !mineMapLoadAreaOn;
+    const slider = $('mine-map-radius');
+    const valEl = $('mine-map-radius-value');
+    const mi = clampLoadAreaMiles(mineMapLoadAreaRadiusMi);
+    mineMapLoadAreaRadiusMi = mi;
+    if (slider) slider.value = String(mi);
+    if (valEl) valEl.textContent = formatLoadAreaMiles(mi);
+  }
+  function redrawMineMapLoadArea() {
+    clearMineMapAreaOverlays();
+    if (!mineMapLoadAreaOn) {
+      syncMineMapLoadAreaUi();
+      return;
+    }
+    const mine = mineMapCurrentMine;
+    const map = mineMapInstance;
+    if (!mine || !map) {
+      syncMineMapLoadAreaUi();
+      return;
+    }
+    const center = mineMapCenterGps(mine);
+    if (!center) {
+      showMineMapMsg('No center GPS for this mine \u2014 cannot Load Area.', true);
+      mineMapLoadAreaOn = false;
+      syncMineMapLoadAreaUi();
+      return;
+    }
+    const radiusM = mineMapLoadAreaRadiusM();
+    mineMapAreaCircle = new google.maps.Circle({
+      center: { lat: center.lat, lng: center.lng },
+      radius: radiusM,
+      strokeColor: '#9C27B0',
+      strokeOpacity: 0.95,
+      strokeWeight: 2,
+      fillColor: '#7B1FA2',
+      fillOpacity: 0,
+      map: map,
+      clickable: false,
+      zIndex: 0
+    });
+    const curId = mine.id != null ? String(mine.id) : '';
+    // Visitors page keeps owned mines in mineMap (id -> entry), not allMines.
+    const list = Object.values(ownedMineMap && Object.keys(ownedMineMap).length ? ownedMineMap : mineMap);
+    let added = 0;
+    for (let i = 0; i < list.length; i++) {
+      const other = list[i];
+      if (!other) continue;
+      if (curId && other.id != null && String(other.id) === curId) continue;
+      const ogps = mineMapCenterGps(other);
+      if (!ogps) continue;
+      if (haversineMeters(center, ogps) > radiusM) continue;
+      const overlay = drawMineMapParcel(map, other, { allowMarker: true, fillOpacity: 1.0, zIndex: 2 });
+      if (overlay) {
+        mineMapAreaOverlays.push(overlay);
+        added++;
+      }
+    }
+    const miLabel = formatLoadAreaMiles(mineMapLoadAreaRadiusMi);
+    if (added === 0) {
+      showMineMapMsg('No other owned mines within ' + miLabel + '.', false);
+    } else {
+      showMineMapMsg('Loaded ' + added + ' nearby mine' + (added === 1 ? '' : 's') + ' within ' + miLabel + '.', false);
+    }
+    syncMineMapLoadAreaUi();
+  }
+  function setMineMapLoadAreaOn(on) {
+    mineMapLoadAreaOn = !!on;
+    if (!mineMapLoadAreaOn) {
+      clearMineMapAreaOverlays();
+      syncMineMapLoadAreaUi();
+      return;
+    }
+    redrawMineMapLoadArea();
+  }
+  function loadMineMapArea() {
+    setMineMapLoadAreaOn(!mineMapLoadAreaOn);
+  }
+
+
+  let mineMapMsgFadeTimer = null;
+  let mineMapMsgHideTimer = null;
+
+  function showMineMapMsg(text, isTip) {
+    const tip = $('mine-map-tip');
+    const msg = $('mine-map-msg');
+    if (mineMapMsgFadeTimer) { clearTimeout(mineMapMsgFadeTimer); mineMapMsgFadeTimer = null; }
+    if (mineMapMsgHideTimer) { clearTimeout(mineMapMsgHideTimer); mineMapMsgHideTimer = null; }
+    if (tip) { tip.hidden = true; tip.textContent = ''; }
+    if (msg) {
+      msg.classList.remove('is-fading');
+      msg.hidden = true;
+      msg.textContent = '';
+    }
+    if (!text) return;
+    const el = isTip ? tip : msg;
+    if (!el) return;
+    el.textContent = text;
+    el.hidden = false;
+    // Status bar (top): auto fade out after 3s. Tips (bottom) stay until replaced.
+    if (!isTip && msg) {
+      mineMapMsgFadeTimer = setTimeout(() => {
+        mineMapMsgFadeTimer = null;
+        if (!msg.isConnected || msg.hidden || msg.textContent !== text) return;
+        msg.classList.add('is-fading');
+        mineMapMsgHideTimer = setTimeout(() => {
+          mineMapMsgHideTimer = null;
+          if (!msg.isConnected || msg.textContent !== text) return;
+          msg.hidden = true;
+          msg.textContent = '';
+          msg.classList.remove('is-fading');
+        }, 400);
+      }, 3000);
+    }
+  }
+  function clampMineMapZoom(z) {
+    const n = Math.round(Number(z));
+    if (!Number.isFinite(n)) return MINE_MAP_ZOOM_DEFAULT;
+    return Math.max(MINE_MAP_ZOOM_MIN, Math.min(MINE_MAP_ZOOM_MAX, n));
+  }
+  function getSavedMineMapZoom() {
+    try {
+      const raw = sessionStorage.getItem(MINE_MAP_ZOOM_KEY);
+      if (raw == null || raw === '') return MINE_MAP_ZOOM_DEFAULT;
+      return clampMineMapZoom(raw);
+    } catch (e) {
+      return MINE_MAP_ZOOM_DEFAULT;
+    }
+  }
+  function saveMineMapZoom(z) {
+    const clamped = clampMineMapZoom(z);
+    try { sessionStorage.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
+    return clamped;
+  }
+  function syncMineMapZoomSlider(z) {
+    const el = $('mine-map-zoom');
+    if (!el) return;
+    const clamped = clampMineMapZoom(z != null ? z : getSavedMineMapZoom());
+    if (String(el.value) !== String(clamped)) el.value = String(clamped);
+  }
+  function applyMineMapZoom(map, z) {
+    const clamped = saveMineMapZoom(z != null ? z : getSavedMineMapZoom());
+    syncMineMapZoomSlider(clamped);
+    if (!map) return clamped;
+    mineMapZoomSyncing = true;
+    try { map.setZoom(clamped); } catch (e) {}
+    mineMapZoomSyncing = false;
+    return clamped;
+  }
+  function centerMineMapOnPath(map, path) {
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach(p => bounds.extend(p));
+    map.setCenter(bounds.getCenter());
+    applyMineMapZoom(map, getSavedMineMapZoom());
+  }
+  function renderMineMapContent(mine) {
+    const map = ensureMineMap();
+    mineMapCurrentMine = mine || null;
+    clearMineMapOverlays();
+    showMineMapMsg('', false);
+    hideMineMapHoverTip();
+    if (!mine) {
+      showMineMapMsg('No location data for this mine.', false);
+      return;
+    }
+    const overlay = drawMineMapParcel(map, mine, { allowMarker: true, zIndex: 3, purple: true });
+    if (overlay) {
+      if (overlay instanceof google.maps.Polygon) {
+        mineMapPolygon = overlay;
+        const path = overlay.getPath();
+        const pts = [];
+        for (let i = 0; i < path.getLength(); i++) {
+          const ll = path.getAt(i);
+          pts.push({ lat: ll.lat(), lng: ll.lng() });
+        }
+        centerMineMapOnPath(map, pts);
+      } else {
+        mineMapMarker = overlay;
+        const pos = overlay.getPosition();
+        map.setCenter({ lat: pos.lat(), lng: pos.lng() });
+        applyMineMapZoom(map, getSavedMineMapZoom());
+        showMineMapMsg('Parcel corners not found on this mine — showing center only.', true);
+      }
+      try { map.setTilt(0); } catch (e) {}
+      return;
+    }
+    showMineMapMsg('No location data for this mine.', false);
+  }
+  function getMineMapDrawnMines() {
+    const out = [];
+    const seen = new Set();
+    function add(m) {
+      if (!m || m.id == null) return;
+      const id = String(m.id);
+      if (seen.has(id)) return;
+      seen.add(id);
+      out.push(m);
+    }
+    add(mineMapCurrentMine);
+    for (let i = 0; i < mineMapAreaOverlays.length; i++) {
+      const ov = mineMapAreaOverlays[i];
+      if (ov && ov.__tmMine) add(ov.__tmMine);
+    }
+    if (mineMapPolygon && mineMapPolygon.__tmMine) add(mineMapPolygon.__tmMine);
+    if (mineMapMarker && mineMapMarker.__tmMine) add(mineMapMarker.__tmMine);
+    return out;
+  }
+  function mineMapSelectionCenter(mine) {
+    const g = mineMapCenterGps(mine);
+    if (g) return g;
+    const corners = findCorners(mine);
+    if (corners && corners.path && corners.path.length) {
+      let sumLat = 0, sumLng = 0;
+      for (let i = 0; i < corners.path.length; i++) {
+        sumLat += corners.path[i].lat;
+        sumLng += corners.path[i].lng;
+      }
+      const n = corners.path.length;
+      return { lat: sumLat / n, lng: sumLng / n };
+    }
+    return null;
+  }
+  function updateBulkRenameBtn() {
+    const btn = $('mine-map-bulk-rename-btn');
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', bulkRenameMode ? 'true' : 'false');
+    btn.classList.toggle('is-bulk-rename-active', !!bulkRenameMode);
+  }
+  function clearBulkRenameSelectRect() {
+    const rect = $('mine-map-select-rect');
+    if (rect) {
+      rect.hidden = true;
+      rect.style.left = '';
+      rect.style.top = '';
+      rect.style.width = '';
+      rect.style.height = '';
+    }
+  }
+  function hideBulkRenameDialog() {
+    const dlg = $('mine-map-bulk-rename');
+    if (dlg) {
+      dlg.hidden = true;
+      dlg.setAttribute('aria-hidden', 'true');
+    }
+    const list = $('mine-map-bulk-rename-list');
+    if (list) list.innerHTML = '';
+    const input = $('mine-map-bulk-rename-input');
+    if (input) input.value = '';
+    const seq = $('mine-map-bulk-rename-seq');
+    if (seq) seq.checked = false;
+    const apply = $('mine-map-bulk-rename-apply');
+    if (apply) apply.disabled = false;
+    bulkRenameSelected = [];
+  }
+  function stopBulkRenameDrawLayer() {
+    const layer = $('mine-map-select-layer');
+    if (layer) layer.hidden = true;
+    bulkRenameDragging = false;
+    clearBulkRenameSelectRect();
+  }
+  function exitBulkRenameMode() {
+    bulkRenameMode = false;
+    bulkRenameDragging = false;
+    stopBulkRenameDrawLayer();
+    hideBulkRenameDialog();
+    updateBulkRenameBtn();
+  }
+  function latLngBoundsFromSelectPixels(layer, x1, y1, x2, y2) {
+    if (!mineMapInstance || !window.google || !google.maps) return null;
+    const left = Math.min(x1, x2);
+    const right = Math.max(x1, x2);
+    const top = Math.min(y1, y2);
+    const bottom = Math.max(y1, y2);
+    if (right - left < 4 || bottom - top < 4) return null;
+    const mapBounds = mineMapInstance.getBounds();
+    if (!mapBounds) return null;
+    const mapDiv = mineMapInstance.getDiv();
+    const layerRect = layer.getBoundingClientRect();
+    const mapRect = mapDiv.getBoundingClientRect();
+    const w = mapRect.width || 1;
+    const h = mapRect.height || 1;
+    const ox = layerRect.left - mapRect.left;
+    const oy = layerRect.top - mapRect.top;
+    const ne = mapBounds.getNorthEast();
+    const sw = mapBounds.getSouthWest();
+    function pxToLatLng(px, py) {
+      const fx = (ox + px) / w;
+      const fy = (oy + py) / h;
+      const lat = ne.lat() - fy * (ne.lat() - sw.lat());
+      const lng = sw.lng() + fx * (ne.lng() - sw.lng());
+      return new google.maps.LatLng(lat, lng);
+    }
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(pxToLatLng(left, top));
+    bounds.extend(pxToLatLng(right, bottom));
+    return bounds;
+  }
+  function renderBulkRenameList() {
+    const list = $('mine-map-bulk-rename-list');
+    if (!list) return;
+    list.innerHTML = '';
+    for (let i = 0; i < bulkRenameSelected.length; i++) {
+      const m = bulkRenameSelected[i];
+      const type = typeKeyOf(m || {});
+      const row = document.createElement('div');
+      row.className = 'mine-map-bulk-rename-item';
+      row.dataset.mineId = String(m && m.id != null ? m.id : '');
+      const img = document.createElement('img');
+      img.src = ICONS[type] || ICONS.rock;
+      img.alt = '';
+      const span = document.createElement('span');
+      span.textContent = mineTitle(m) || String(m.id || '');
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'mine-map-bulk-rename-item-remove';
+      remove.setAttribute('aria-label', 'Remove from rename list');
+      remove.textContent = '\u00d7';
+      remove.addEventListener('click', function (ev) {
+        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        const id = String(m && m.id != null ? m.id : '');
+        bulkRenameSelected = bulkRenameSelected.filter(function (x) {
+          return String(x && x.id != null ? x.id : '') !== id;
+        });
+        if (!bulkRenameSelected.length) {
+          exitBulkRenameMode();
+          showMineMapMsg('No mines left to rename.', true);
+          return;
+        }
+        renderBulkRenameList();
+      });
+      row.appendChild(img);
+      row.appendChild(span);
+      row.appendChild(remove);
+      list.appendChild(row);
+    }
+    const apply = $('mine-map-bulk-rename-apply');
+    if (apply) apply.disabled = bulkRenameSelected.length === 0;
+  }
+  function openBulkRenameDialog(mines) {
+    bulkRenameSelected = mines.slice();
+    const dlg = $('mine-map-bulk-rename');
+    if (!dlg) return;
+    renderBulkRenameList();
+    dlg.hidden = false;
+    dlg.setAttribute('aria-hidden', 'false');
+    const input = $('mine-map-bulk-rename-input');
+    if (input) {
+      input.value = '';
+      setTimeout(function () { try { input.focus(); } catch (e) {} }, 0);
+    }
+  }
+
+  function finishBulkRenameSelection(bounds) {
+    stopBulkRenameDrawLayer();
+    if (!bounds) {
+      exitBulkRenameMode();
+      showMineMapMsg('No mines in selection.', true);
+      return;
+    }
+    const drawn = getMineMapDrawnMines();
+    const selected = [];
+    for (let i = 0; i < drawn.length; i++) {
+      const m = drawn[i];
+      const c = mineMapSelectionCenter(m);
+      if (!c) continue;
+      try {
+        if (bounds.contains(new google.maps.LatLng(c.lat, c.lng))) selected.push(m);
+      } catch (e) {}
+    }
+    if (!selected.length) {
+      exitBulkRenameMode();
+      showMineMapMsg('No mines in selection.', true);
+      return;
+    }
+    // Keep mode active while dialog is open
+    bulkRenameMode = true;
+    updateBulkRenameBtn();
+    openBulkRenameDialog(selected);
+  }
+  function startBulkRenameDrawMode() {
+    if (!mineMapInstance) {
+      showMineMapMsg('Map is not ready yet.', true);
+      return;
+    }
+    hideBulkRenameDialog();
+    bulkRenameMode = true;
+    bulkRenameDragging = false;
+    updateBulkRenameBtn();
+    const layer = $('mine-map-select-layer');
+    if (!layer) return;
+    layer.hidden = false;
+    clearBulkRenameSelectRect();
+    showMineMapMsg('Draw a rectangle to select mines. Esc cancels.', true);
+  }
+  function toggleBulkRenameFromButton() {
+    if (bulkRenameMode) {
+      exitBulkRenameMode();
+      showMineMapMsg('', true);
+      return;
+    }
+    startBulkRenameDrawMode();
+  }
+  function handleMineMapEscape() {
+    const dlg = $('mine-map-bulk-rename');
+    if (dlg && !dlg.hidden) {
+      exitBulkRenameMode();
+      return true;
+    }
+    if (bulkRenameMode) {
+      exitBulkRenameMode();
+      showMineMapMsg('', true);
+      return true;
+    }
+    return false;
+  }
+  async function applyBulkRename() {
+    const input = $('mine-map-bulk-rename-input');
+    const seq = $('mine-map-bulk-rename-seq');
+    const applyBtn = $('mine-map-bulk-rename-apply');
+    const base = input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
+    if (!base) {
+      flashShowcaseNote('Enter a new name.');
+      if (input) input.focus();
+      return;
+    }
+    const mines = bulkRenameSelected.slice().sort((a, b) => {
+      const na = String(mineTitle(a, null) || '').localeCompare(String(mineTitle(b, null) || ''), undefined, { sensitivity: 'base', numeric: true });
+      if (na) return na;
+      return String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true });
+    });
+    const useSeq = !!(seq && seq.checked);
+    if (applyBtn) applyBtn.disabled = true;
+    const progress = $('mine-map-bulk-rename-progress');
+    const total = mines.length;
+    if (progress) {
+      progress.hidden = false;
+      progress.textContent = '0 of ' + total + ' done';
+    }
+    let ok = 0, fail = 0;
+    for (let i = 0; i < mines.length; i++) {
+      const name = useSeq ? (base + ' ' + (i + 1)) : base;
+      const id = mines[i].id;
+      try {
+        await safeUpdatePropertyDetails(id, { customName: name }, null);
+        syncLocalMineCustomName(id, name);
+        ok++;
+      } catch (err) {
+        fail++;
+        console.warn('[visitors] bulk rename failed', id, err);
+      }
+      if (progress) progress.textContent = (ok + fail) + ' of ' + total + ' done';
+    }
+    exitBulkRenameMode();
+    if (fail && ok) flashShowcaseNote('Renamed ' + ok + ', ' + fail + ' failed.');
+    else if (fail && !ok) flashShowcaseNote('Could not rename selected mines.');
+    else if (ok) showMineMapMsg('Renamed ' + ok + ' mine' + (ok === 1 ? '' : 's') + '.', true);
+  }
+  function bindBulkRenameLayerOnce() {
+    if (bulkRenameLayerBound) return;
+    bulkRenameLayerBound = true;
+    const layer = $('mine-map-select-layer');
+    const rect = $('mine-map-select-rect');
+    if (!layer || !rect) return;
+    layer.addEventListener('mousedown', e => {
+      if (!bulkRenameMode || e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const r = layer.getBoundingClientRect();
+      bulkRenameDragging = true;
+      bulkRenameStartX = e.clientX - r.left;
+      bulkRenameStartY = e.clientY - r.top;
+      rect.hidden = false;
+      rect.style.left = bulkRenameStartX + 'px';
+      rect.style.top = bulkRenameStartY + 'px';
+      rect.style.width = '0px';
+      rect.style.height = '0px';
+    });
+    layer.addEventListener('mousemove', e => {
+      if (!bulkRenameDragging) return;
+      e.preventDefault();
+      const r = layer.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      const left = Math.min(bulkRenameStartX, x);
+      const top = Math.min(bulkRenameStartY, y);
+      rect.style.left = left + 'px';
+      rect.style.top = top + 'px';
+      rect.style.width = Math.abs(x - bulkRenameStartX) + 'px';
+      rect.style.height = Math.abs(y - bulkRenameStartY) + 'px';
+    });
+    function endDrag(e) {
+      if (!bulkRenameDragging) return;
+      bulkRenameDragging = false;
+      const r = layer.getBoundingClientRect();
+      const x = (e && e.clientX != null) ? (e.clientX - r.left) : bulkRenameStartX;
+      const y = (e && e.clientY != null) ? (e.clientY - r.top) : bulkRenameStartY;
+      const bounds = latLngBoundsFromSelectPixels(layer, bulkRenameStartX, bulkRenameStartY, x, y);
+      clearBulkRenameSelectRect();
+      finishBulkRenameSelection(bounds);
+    }
+    layer.addEventListener('mouseup', endDrag);
+    layer.addEventListener('mouseleave', e => {
+      if (bulkRenameDragging) endDrag(e);
+    });
+  }
+
+  function closeMineMap() {
+    const overlay = $('mine-map-overlay');
+    if (!overlay || overlay.hidden) return;
+    exitBulkRenameMode();
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    clearMineMapBounds();
+    mineMapLoadAreaOn = false;
+    clearMineMapAreaOverlays();
+    syncMineMapLoadAreaUi();
+    hideMineMapHoverTip();
+    mineMapCurrentMine = null;
+    const main = $('portal-main');
+    if (main) {
+      main.style.overflow = '';
+      delete main.dataset.mineMapOpen;
+    }
+  }
+  async function openMineMap(mine) {
+    const overlay = $('mine-map-overlay');
+    const main = $('portal-main');
+    if (!overlay || !mine) return;
+    bindMineMapOnce();
+    syncMineMapZoomSlider(getSavedMineMapZoom());
+    mineMapBuildingsOn = getSavedMineMapBuildings();
+    updateMineMapBuildingsBtn();
+    const type = typeKeyOf(mine, null);
+    const iconEl = $('mine-map-type-icon');
+    if (iconEl) {
+      iconEl.src = ICONS[type] || ICONS.rock;
+      iconEl.alt = (typeof TYPE_LABEL !== 'undefined' && TYPE_LABEL[type]) ? TYPE_LABEL[type] : (type || '');
+      iconEl.hidden = false;
+    }
+    $('mine-map-title').textContent = mineTitle(mine, null) || 'Mine map';
+    updateMineMapLabelsBtn();
+    showMineMapMsg('Loading map…', false);
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    if (main) {
+      main.style.overflow = 'hidden';
+      main.dataset.mineMapOpen = '1';
+    }
+    syncMineMapBounds();
+    if (!GOOGLE_MAPS_API_KEY) {
+      showMineMapMsg('Google Maps JS API key required. Set GOOGLE_MAPS_API_KEY.', false);
+      return;
+    }
+    try {
+      await loadGoogleMapsApi();
+      renderMineMapContent(mine);
+      setTimeout(() => {
+        if (mineMapInstance) google.maps.event.trigger(mineMapInstance, 'resize');
+        renderMineMapContent(mine);
+      }, 50);
+    } catch (err) {
+      console.warn('[visitors] minimap failed', err);
+      showMineMapMsg('Could not load Google Maps. Check the API key and network.', false);
+    }
+  }
+  function findMineById(mineId) {
+    if (mineId == null || mineId === '') return null;
+    return mineMap[String(mineId)] || mineMap[mineId] || null;
+  }
+  function mineHasMapLocation(mine) {
+    if (!mine) return false;
+    if (findGps(mine)) return true;
+    const c = findCorners(mine);
+    return !!(c && c.path && c.path.length >= 3);
+  }
+  function voMapPinHtml(mine, fallbackId) {
+    const id = (mine && mine.id != null) ? String(mine.id)
+      : (fallbackId != null ? String(fallbackId) : '');
+    if (mineHasMapLocation(mine) && id) {
+      return '<button type="button" class="vo-pin" data-mine-id="' + escapeHtml(id)
+        + '" title="Show mine map" aria-label="Show mine map">' + pinSvgHtml() + '</button>';
+    }
+    return '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
+  }
+  let voMapPinBound = false;
+  function bindVoMapPinOnce() {
+    if (voMapPinBound) return;
+    voMapPinBound = true;
+    const root = $('portal-main');
+    if (!root) return;
+    root.addEventListener('click', e => {
+      const pin = e.target.closest('button.vo-pin');
+      if (!pin || pin.classList.contains('is-missing') || !root.contains(pin)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const mineId = pin.getAttribute('data-mine-id') || '';
+      if (!mineId) return;
+      const full = findMineById(mineId);
+      if (!full) return;
+      openMineMap(full);
+    });
+  }
+
+  let loadAreaFollowTip = null;
+  let loadAreaFollowTipTimer = null;
+  let loadAreaFollowTipTarget = null;
+  let loadAreaFollowTipX = 0;
+  let loadAreaFollowTipY = 0;
+  function dismissLoadAreaFollowTip() {
+    if (loadAreaFollowTipTimer) { clearTimeout(loadAreaFollowTipTimer); loadAreaFollowTipTimer = null; }
+    loadAreaFollowTipTarget = null;
+    if (loadAreaFollowTip) loadAreaFollowTip.style.display = 'none';
+  }
+  function ensureLoadAreaFollowTip() {
+    if (!loadAreaFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'vo-mine-tip';
+      tip.setAttribute('role', 'tooltip');
+      loadAreaFollowTip = tip;
+    }
+    if (loadAreaFollowTip.parentNode !== document.body) {
+      document.body.appendChild(loadAreaFollowTip);
+    }
+    return loadAreaFollowTip;
+  }
+  function placeLoadAreaFollowTip(x, y) {
+    const tip = ensureLoadAreaFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function bindLoadAreaFollowTip(btn) {
+    if (!btn || btn.dataset.loadAreaTipBound === '1') return;
+    btn.dataset.loadAreaTipBound = '1';
+    btn.addEventListener('mouseenter', (e) => {
+      if (loadAreaFollowTipTimer) { clearTimeout(loadAreaFollowTipTimer); loadAreaFollowTipTimer = null; }
+      loadAreaFollowTipTarget = btn;
+      loadAreaFollowTipX = e.clientX;
+      loadAreaFollowTipY = e.clientY;
+      const tip = ensureLoadAreaFollowTip();
+      const tipText = (btn.getAttribute('data-tip') || '').trim()
+        || 'Load your other mines within \u00bd mile of this one.';
+      tip.textContent = tipText;
+      tip.style.display = 'none';
+      loadAreaFollowTipTimer = setTimeout(() => {
+        loadAreaFollowTipTimer = null;
+        if (loadAreaFollowTipTarget !== btn || !btn.isConnected) return;
+        placeLoadAreaFollowTip(loadAreaFollowTipX, loadAreaFollowTipY);
+      }, 1000);
+    });
+    btn.addEventListener('mousemove', (e) => {
+      if (loadAreaFollowTipTarget !== btn) return;
+      loadAreaFollowTipX = e.clientX;
+      loadAreaFollowTipY = e.clientY;
+      if (loadAreaFollowTip && loadAreaFollowTip.style.display === 'block' && !loadAreaFollowTipTimer) {
+        placeLoadAreaFollowTip(loadAreaFollowTipX, loadAreaFollowTipY);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (loadAreaFollowTipTarget === btn) dismissLoadAreaFollowTip();
+    });
+  }
+
+  const MINE_TITLE_RENAME_TIP = 'Click the title to rename this mine. Enter saves, Esc cancels.';
+  let mineTitleFollowTip = null;
+  let mineTitleFollowTipTimer = null;
+  let mineTitleFollowTipTarget = null;
+  let mineTitleFollowTipX = 0;
+  let mineTitleFollowTipY = 0;
+  let mineTitleEditingEl = null;
+  function dismissMineTitleFollowTip() {
+    if (mineTitleFollowTipTimer) { clearTimeout(mineTitleFollowTipTimer); mineTitleFollowTipTimer = null; }
+    mineTitleFollowTipTarget = null;
+    if (mineTitleFollowTip) mineTitleFollowTip.style.display = 'none';
+  }
+  function ensureMineTitleFollowTip() {
+    if (!mineTitleFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'vo-mine-tip';
+      tip.setAttribute('role', 'tooltip');
+      mineTitleFollowTip = tip;
+    }
+    if (mineTitleFollowTip.parentNode !== document.body) {
+      document.body.appendChild(mineTitleFollowTip);
+    }
+    return mineTitleFollowTip;
+  }
+  function placeMineTitleFollowTip(x, y) {
+    const tip = ensureMineTitleFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function syncLocalMineCustomName(mineId, customName) {
+    const id = String(mineId);
+    const clean = (typeof customName === 'string') ? customName.trim() : '';
+    const applyToMine = (mine) => {
+      if (!mine) return;
+      if (clean) mine.customName = clean;
+      else delete mine.customName;
+      if (!mine._details) mine._details = {};
+      if (clean) mine._details.customName = clean;
+      else delete mine._details.customName;
+    };
+    applyToMine(mineMap[id]);
+    if (mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+      applyToMine(mineMapCurrentMine);
+    }
+    const display = mineTitle(mineMap[id] || { id: id, customName: clean || null }, null);
+    const mapTitle = $('mine-map-title');
+    if (mapTitle && !mapTitle.classList.contains('is-editing') && mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+      mapTitle.textContent = display || 'Mine map';
+    }
+    document.querySelectorAll('.vo-mine-badge').forEach(badge => {
+      if (String(badge.getAttribute('data-mine-id') || '') !== id) return;
+      badge.setAttribute('data-mine-name', display);
+      const tip = display + ' — Open in My Mines';
+      badge.setAttribute('data-tip', tip);
+      badge.setAttribute('aria-label', tip);
+      const span = badge.querySelector('span');
+      if (span) span.textContent = display;
+    });
+  }
+  async function persistMineCustomName(mineId, nextName, titleEl, previousText) {
+    const trimmed = (nextName || '').replace(/\s+/g, ' ').trim();
+    if (!trimmed) {
+      titleEl.textContent = previousText;
+      return;
+    }
+    if (trimmed === String(previousText || '').trim()) {
+      titleEl.textContent = previousText;
+      return;
+    }
+    try {
+      await safeUpdatePropertyDetails(mineId, { customName: trimmed }, null);
+      syncLocalMineCustomName(mineId, trimmed);
+      titleEl.textContent = trimmed;
+    } catch (err) {
+      console.warn('[visitors] customName update failed', mineId, err);
+      titleEl.textContent = previousText;
+      const msg = (err && err.code === 'permission-denied')
+        ? 'Could not rename mine (permission denied).'
+        : ('Could not rename mine' + (err && err.message ? ': ' + err.message : '.'));
+      flashShowcaseNote(msg);
+    }
+  }
+  function beginMineTitleEdit(titleEl) {
+    return; // activity: no title edit
+    if (!titleEl || titleEl.classList.contains('is-editing')) return;
+    let mineId = '';
+    if (titleEl.id === 'mine-map-title' || titleEl.classList.contains('mine-map-title')) {
+      mineId = mineMapCurrentMine && mineMapCurrentMine.id != null ? String(mineMapCurrentMine.id) : '';
+    }
+    if (!mineId) return;
+    dismissMineTitleFollowTip();
+    const previousText = titleEl.textContent;
+    let finishing = false;
+    mineTitleEditingEl = titleEl;
+    titleEl.classList.add('is-editing');
+    titleEl.setAttribute('contenteditable', 'true');
+    titleEl.setAttribute('spellcheck', 'false');
+    titleEl.focus();
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(titleEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {}
+    function cleanupListeners() {
+      titleEl.removeEventListener('keydown', onKeyDown);
+      titleEl.removeEventListener('blur', onBlur);
+    }
+    function finish(mode) {
+      if (finishing) return;
+      finishing = true;
+      cleanupListeners();
+      titleEl.classList.remove('is-editing');
+      titleEl.removeAttribute('contenteditable');
+      titleEl.removeAttribute('spellcheck');
+      if (mineTitleEditingEl === titleEl) mineTitleEditingEl = null;
+      const raw = titleEl.textContent;
+      if (mode === 'cancel') {
+        titleEl.textContent = previousText;
+        return;
+      }
+      persistMineCustomName(mineId, raw, titleEl, previousText);
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish('save');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish('cancel');
+      }
+    }
+    function onBlur() {
+      finish('save');
+    }
+    titleEl.addEventListener('keydown', onKeyDown);
+    titleEl.addEventListener('blur', onBlur);
+  }
+  function bindMineMapTitleInteractionsOnce() {
+    const title = $('mine-map-title');
+    if (!title || title.dataset.mineTitleBound === '1') return;
+    title.dataset.mineTitleBound = '1';
+    title.removeAttribute('title');
+    title.removeAttribute('alt');
+    title.addEventListener('click', e => {
+      if (title.classList.contains('is-editing')) return;
+      if (e.target !== title && !title.contains(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginMineTitleEdit(title);
+    });
+    title.addEventListener('mouseover', e => {
+      if (title.classList.contains('is-editing')) return;
+      if (mineTitleFollowTipTarget === title) return;
+      if (mineTitleFollowTipTimer) { clearTimeout(mineTitleFollowTipTimer); mineTitleFollowTipTimer = null; }
+      mineTitleFollowTipTarget = title;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      const tip = ensureMineTitleFollowTip();
+      tip.textContent = MINE_TITLE_RENAME_TIP;
+      tip.style.display = 'none';
+      mineTitleFollowTipTimer = setTimeout(() => {
+        mineTitleFollowTipTimer = null;
+        if (mineTitleFollowTipTarget !== title || !title.isConnected || title.classList.contains('is-editing')) return;
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }, 1000);
+    });
+    title.addEventListener('mousemove', e => {
+      if (mineTitleFollowTipTarget !== title) return;
+      mineTitleFollowTipX = e.clientX;
+      mineTitleFollowTipY = e.clientY;
+      if (mineTitleFollowTip && mineTitleFollowTip.style.display === 'block' && !mineTitleFollowTipTimer) {
+        placeMineTitleFollowTip(mineTitleFollowTipX, mineTitleFollowTipY);
+      }
+    });
+    title.addEventListener('mouseout', e => {
+      if (mineTitleFollowTipTarget !== title) return;
+      const related = e.relatedTarget;
+      if (related && (related === title || title.contains(related))) return;
+      dismissMineTitleFollowTip();
+    });
+  }
+
+  function bindMineMapOnce() {
+    if (mineMapBound) return;
+    mineMapBound = true;
+    bindVoMapPinOnce();
+    bindMineMapTitleInteractionsOnce();
+    const closeBtn = $('mine-map-close');
+    if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeMineMap(); });
+    const zoomSlider = $('mine-map-zoom');
+    if (zoomSlider) {
+      syncMineMapZoomSlider(getSavedMineMapZoom());
+      const onZoomInput = () => {
+        const z = clampMineMapZoom(zoomSlider.value);
+        saveMineMapZoom(z);
+        if (mineMapInstance) applyMineMapZoom(mineMapInstance, z);
+      };
+      zoomSlider.addEventListener('input', onZoomInput);
+      zoomSlider.addEventListener('change', onZoomInput);
+    }
+    const zoomLabel = document.querySelector('#mine-map-overlay .mine-map-zoom');
+    if (zoomLabel) {
+      zoomLabel.removeAttribute('title');
+      zoomLabel.removeAttribute('alt');
+    }
+    if (zoomSlider) {
+      zoomSlider.removeAttribute('title');
+      zoomSlider.removeAttribute('alt');
+    }
+    const loadAreaBtn = $('mine-map-load-area');
+    if (loadAreaBtn) {
+      loadAreaBtn.removeAttribute('title');
+      loadAreaBtn.removeAttribute('alt');
+      loadAreaBtn.addEventListener('click', e => {
+        e.preventDefault();
+        loadMineMapArea();
+      });
+      bindLoadAreaFollowTip(loadAreaBtn);
+    }
+    const radiusSlider = $('mine-map-radius');
+    const radiusField = $('mine-map-radius-field');
+    if (radiusField) {
+      radiusField.removeAttribute('title');
+      radiusField.removeAttribute('alt');
+    }
+    if (radiusSlider) {
+      radiusSlider.removeAttribute('title');
+      radiusSlider.removeAttribute('alt');
+      const onRadiusInput = () => {
+        mineMapLoadAreaRadiusMi = clampLoadAreaMiles(radiusSlider.value);
+        const valEl = $('mine-map-radius-value');
+        if (valEl) valEl.textContent = formatLoadAreaMiles(mineMapLoadAreaRadiusMi);
+        if (mineMapLoadAreaOn) redrawMineMapLoadArea();
+      };
+      radiusSlider.addEventListener('input', onRadiusInput);
+      radiusSlider.addEventListener('change', onRadiusInput);
+    }
+    syncMineMapLoadAreaUi();
+
+    const bulkRenameBtn = $('mine-map-bulk-rename-btn');
+    if (bulkRenameBtn) {
+      bulkRenameBtn.removeAttribute('title');
+      bulkRenameBtn.removeAttribute('alt');
+      bulkRenameBtn.addEventListener('click', e => {
+        e.preventDefault();
+        toggleBulkRenameFromButton();
+      });
+      bindLoadAreaFollowTip(bulkRenameBtn);
+    }
+    bindBulkRenameLayerOnce();
+    const bulkRenameX = $('mine-map-bulk-rename-x');
+    if (bulkRenameX) bulkRenameX.addEventListener('click', e => { e.preventDefault(); exitBulkRenameMode(); });
+    const bulkRenameApply = $('mine-map-bulk-rename-apply');
+    if (bulkRenameApply) bulkRenameApply.addEventListener('click', e => { e.preventDefault(); applyBulkRename(); });
+    const bulkRenameInput = $('mine-map-bulk-rename-input');
+    if (bulkRenameInput) {
+      bulkRenameInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          applyBulkRename();
+        }
+      });
+    }
+    const buildingsBtn = $('mine-map-buildings');
+    if (buildingsBtn) {
+      buildingsBtn.removeAttribute('title');
+      buildingsBtn.removeAttribute('alt');
+      buildingsBtn.addEventListener('click', e => {
+        e.preventDefault();
+        setMineMapBuildings(!mineMapBuildingsOn);
+      });
+      bindLoadAreaFollowTip(buildingsBtn);
+    }
+    const labelsBtn = $('mine-map-labels');
+    if (labelsBtn) {
+      labelsBtn.removeAttribute('title');
+      labelsBtn.removeAttribute('alt');
+      labelsBtn.addEventListener('click', e => {
+        e.preventDefault();
+        setMineMapLabels(!mineMapLabelsOn);
+      });
+      bindLoadAreaFollowTip(labelsBtn);
+    }
+    const overlay = $('mine-map-overlay');
+    if (overlay) overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeMineMap();
+    });
+    if (!mineMapResizeBound) {
+      mineMapResizeBound = true;
+      window.addEventListener('resize', () => {
+        syncMineMapBounds();
+        if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
+          google.maps.event.trigger(mineMapInstance, 'resize');
+        }
+      });
+      if (typeof ResizeObserver !== 'undefined') {
+        const main = $('portal-main');
+        if (main) {
+          new ResizeObserver(() => {
+            syncMineMapBounds();
+            if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
+              google.maps.event.trigger(mineMapInstance, 'resize');
+            }
+          }).observe(main);
+        }
+      }
+    }
+  }
+
+  function pinSvgHtml() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.8"></path><circle cx="12" cy="10" r="2.2" fill="currentColor"></circle></svg>';
+  }
+  function mineTitle(mine, v) {
+    if (mine && mine.customName) return mine.customName;
+    if (v && v.propertyName) return String(v.propertyName);
+    if (mine && mine.id) return String(mine.id);
+    if (v && v.propertyId) return String(v.propertyId);
+    return 'Mine';
+  }
+  function typeKeyOf(mine, v) {
+    const raw = (mine && mine.mineType != null) ? mine.mineType : (v && v.mineType) || 'rock';
+    const t = String(raw).trim().toLowerCase();
+    return TYPE_ORDER.includes(t) ? t : 'rock';
+  }
+  function visitorUid(v) {
+    let id = v.userId || v.uid || v.visitorId || null;
+    if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
+    return (typeof id === 'string' && id) ? id : null;
+  }
+  function visitorName(v) {
+    return 'You';
+  }
+  function checkInAvatarUrl(v) {
+    const candidates = [
+      v.visitorPhotoURL, v.visitorPhotoUrl, v.visitorAvatarUrl, v.visitorAvatarURL,
+      v.avatarUrl, v.avatarURL, v.userPhotoURL, v.userPhotoUrl, v.profilePhotoURL, v.profilePhotoUrl
+    ];
+    for (const u of candidates) {
+      if (typeof u === 'string') {
+        const t = u.trim();
+        if (t.startsWith('https://')) return t;
+      }
+    }
+    return null;
+  }
+  function pickUserDocAvatarUrl(ud) {
+    if (!ud || typeof ud !== 'object') return null;
+    const candidates = [ud.avatarUrl, ud.avatarURL, ud.photoURL, ud.photoUrl, ud.profilePhotoURL];
+    for (const u of candidates) {
+      if (typeof u === 'string') {
+        const t = u.trim();
+        if (t.startsWith('https://')) return t;
+      }
+    }
+    return null;
+  }
+  function visitorAvatarUrl(v) {
+    const uid = visitorUid(v);
+    if (uid && visitorUserCache.has(uid)) {
+      const cached = visitorUserCache.get(uid);
+      if (typeof cached === 'string' && cached.startsWith('https://')) return cached;
+    }
+    return checkInAvatarUrl(v);
+  }
+  function visitorCheckInPhoto(v) {
+    if (v.hasPhoto === false) return null;
+    const u = v.photoURL || v.photoUrl || null;
+    return (typeof u === 'string' && u.startsWith('https://')) ? u : null;
+  }
+  function thumbtackSvgHtml() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 12V4h1a1 1 0 1 0 0-2H7a1 1 0 1 0 0 2h1v8l-2 2v2h5.2V22h1.6v-6H18v-2l-2-2z"></path></svg>';
+  }
+  const SHOWCASE_PIN_TIP_SET = 'Selecting this sets this image as the mine\'s showcase visitor image.';
+  const SHOWCASE_PIN_TIP_CLEAR = 'Selecting this clears the mine\'s showcase visitor image.';
+  let showcaseTip = null;
+  let showcaseTipTimer = null;
+  let showcaseTipTarget = null;
+  let showcaseTipX = 0;
+  let showcaseTipY = 0;
+  let showcaseFlashEl = null;
+  let showcaseFlashTimer = null;
+  let showcasePinClicksBound = false;
+  function normalizePhotoUrlKey(u) {
+    if (typeof u !== 'string') return '';
+    const t = u.trim();
+    if (!t) return '';
+    try {
+      const url = new URL(t);
+      url.search = '';
+      url.hash = '';
+      return url.toString();
+    } catch (e) {
+      return t.split('?')[0].split('#')[0];
+    }
+  }
+  function photosMatchUrl(a, b) {
+    const ka = normalizePhotoUrlKey(a);
+    const kb = normalizePhotoUrlKey(b);
+    return !!(ka && kb && ka === kb);
+  }
+  function mineShowcaseUrl(mine) {
+    const u = mine && mine._details && mine._details.profilePhotoURL;
+    if (typeof u !== 'string') return '';
+    const t = u.trim();
+    return /^https?:\/\//i.test(t) ? t : '';
+  }
+  function isMineShowcasePhoto(mine, url) {
+    if (!mine || !url) return false;
+    return photosMatchUrl(mineShowcaseUrl(mine), url);
+  }
+  function showcasePinHtml(mine, photo, checkInId) {
+    return "";
+  }
+  function wrapVisitorPhotoHtml(mine, photo, checkInId) {
+    if (!photo) return '<div class="vo-photo-empty">No photo</div>';
+    const pin = showcasePinHtml(mine, photo, checkInId);
+    const onerr = 'var w=this.closest(\'.vo-photo-wrap\');if(w)w.outerHTML=\'<div class=&quot;vo-photo-empty&quot;>No photo</div>\';';
+    return '<div class="vo-photo-wrap">'
+      + '<img class="vo-photo" src="' + escapeHtml(photo) + '" alt="Check-in photo" loading="lazy" onerror="' + onerr + '">'
+      + pin
+      + '</div>';
+  }
+  function dismissShowcaseTip() {
+    if (showcaseTipTimer) { clearTimeout(showcaseTipTimer); showcaseTipTimer = null; }
+    showcaseTipTarget = null;
+    if (showcaseTip) showcaseTip.style.display = 'none';
+  }
+  function ensureShowcaseTip() {
+    if (showcaseTip) return showcaseTip;
+    const tip = document.createElement('div');
+    tip.className = 'vo-showcase-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    showcaseTip = tip;
+    return tip;
+  }
+  function placeShowcaseTip(x, y) {
+    const tip = ensureShowcaseTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function showShowcaseTip(btn) {
+    if (showcaseTipTarget !== btn || !btn.isConnected) return;
+    const tip = ensureShowcaseTip();
+    tip.textContent = btn.classList.contains('is-active') ? SHOWCASE_PIN_TIP_CLEAR : SHOWCASE_PIN_TIP_SET;
+    placeShowcaseTip(showcaseTipX, showcaseTipY);
+  }
+  function beginShowcaseTipFor(btn, e) {
+    if (!btn) return;
+    if (showcaseTipTimer) { clearTimeout(showcaseTipTimer); showcaseTipTimer = null; }
+    dismissVoImgTip();
+    dismissMineTip();
+    showcaseTipTarget = btn;
+    showcaseTipX = e.clientX;
+    showcaseTipY = e.clientY;
+    if (showcaseTip) showcaseTip.style.display = 'none';
+    showcaseTipTimer = setTimeout(() => {
+      showcaseTipTimer = null;
+      showShowcaseTip(btn);
+    }, 200);
+  }
+  function bindShowcasePinTips(_root) {
+    // Tips + clicks use event delegation on stable parents (visitors-board /
+    // vo-detail-overlay). Safe to call after late appends; no per-pin bind.
+    bindShowcasePinDelegationOnce();
+  }
+  function flashShowcaseNote(msg) {
+    if (!showcaseFlashEl) {
+      showcaseFlashEl = document.createElement('div');
+      showcaseFlashEl.className = 'vo-showcase-flash';
+      showcaseFlashEl.setAttribute('role', 'status');
+      document.body.appendChild(showcaseFlashEl);
+    }
+    showcaseFlashEl.textContent = msg || '';
+    const main = $('portal-main');
+    if (main) {
+      const r = main.getBoundingClientRect();
+      showcaseFlashEl.style.top = Math.max(12, r.top + 16) + 'px';
+    } else {
+      showcaseFlashEl.style.top = '24px';
+    }
+    showcaseFlashEl.style.display = 'block';
+    if (showcaseFlashTimer) clearTimeout(showcaseFlashTimer);
+    showcaseFlashTimer = setTimeout(() => {
+      showcaseFlashTimer = null;
+      if (showcaseFlashEl) showcaseFlashEl.style.display = 'none';
+    }, 3200);
+  }
+  async function safeUpdatePropertyDetails(mineId, updates, removeFields) {
+    const detailsRef = db.collection('propertyDetails').doc(String(mineId));
+    const now = new Date().toISOString();
+    const existing = await detailsRef.get();
+    const payload = Object.assign({}, updates || {});
+    if (removeFields && removeFields.length) {
+      removeFields.forEach(k => {
+        payload[k] = firebase.firestore.FieldValue.delete();
+      });
+    }
+    payload.updatedAt = now;
+    if (!existing.exists) {
+      if (removeFields && removeFields.length && (!updates || !Object.keys(updates).length)) {
+        return;
+      }
+      await detailsRef.set(Object.assign({
+        propertyId: String(mineId),
+        productionLevel: 1,
+        gameLevel: 1,
+        gameXP: 0,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        dailyActivitiesRemaining: 1,
+        doubleRewardAvailable: true,
+        lastDailyReset: now,
+        createdAt: now,
+        lastUpdated: now
+      }, payload));
+    } else {
+      payload.lastUpdated = now;
+      await detailsRef.set(payload, { merge: true });
+    }
+  }
+  /** Update local cache + pin active styles for ONE mine only (never other mines). */
+  function syncLocalShowcaseState(mineId, url) {
+    const id = String(mineId);
+    const mine = mineMap[id];
+    if (mine) {
+      if (!mine._details) mine._details = {};
+      if (url) mine._details.profilePhotoURL = url;
+      else delete mine._details.profilePhotoURL;
+    }
+    const roots = [];
+    const board = $('visitors-board');
+    if (board) roots.push(board);
+    const detailBody = $('vo-detail-body');
+    if (detailBody) roots.push(detailBody);
+    roots.forEach(root => {
+      root.querySelectorAll('.vo-showcase-pin').forEach(btn => {
+        const btnMine = btn.getAttribute('data-mine-id') || '';
+        if (String(btnMine) !== id) return;
+        const photo = btn.getAttribute('data-photo-url') || '';
+        const active = !!(url && photosMatchUrl(photo, url));
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        const tip = active ? SHOWCASE_PIN_TIP_CLEAR : SHOWCASE_PIN_TIP_SET;
+        btn.setAttribute('aria-label', tip);
+      });
+    });
+  }
+  async function toggleShowcaseVisitorImage(btn) {
+    if (!btn) return;
+    const mineId = btn.getAttribute('data-mine-id') || '';
+    const photo = btn.getAttribute('data-photo-url') || '';
+    if (!mineId || !photo) return;
+    const clearing = btn.classList.contains('is-active');
+    dismissShowcaseTip();
+    try {
+      if (clearing) {
+        await safeUpdatePropertyDetails(mineId, null, ['profilePhotoURL']);
+        syncLocalShowcaseState(mineId, '');
+      } else {
+        await safeUpdatePropertyDetails(mineId, { profilePhotoURL: photo }, null);
+        syncLocalShowcaseState(mineId, photo);
+      }
+    } catch (err) {
+      console.warn('[visitors] showcase photo update failed', mineId, err);
+      const msg = (err && err.code === 'permission-denied')
+        ? 'Could not update showcase photo (permission denied).'
+        : ('Could not update showcase photo' + (err && err.message ? ': ' + err.message : '.'));
+      flashShowcaseNote(msg);
+    }
+  }
+  function bindShowcaseHost(host) {
+    if (!host || host.dataset.showcaseDelegBound === '1') return;
+    host.dataset.showcaseDelegBound = '1';
+    host.addEventListener('click', e => {
+      const pinBtn = e.target.closest('.vo-showcase-pin');
+      if (!pinBtn || !host.contains(pinBtn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dismissVoImgTip();
+      dismissShowcaseTip();
+      toggleShowcaseVisitorImage(pinBtn);
+    });
+    // mouseover/mouseout bubble — works for pins appended later
+    host.addEventListener('mouseover', e => {
+      const btn = e.target.closest('.vo-showcase-pin');
+      if (!btn || !host.contains(btn)) return;
+      if (showcaseTipTarget === btn) return;
+      beginShowcaseTipFor(btn, e);
+    });
+    host.addEventListener('mousemove', e => {
+      const btn = e.target.closest('.vo-showcase-pin');
+      if (!btn || showcaseTipTarget !== btn) return;
+      showcaseTipX = e.clientX;
+      showcaseTipY = e.clientY;
+      if (showcaseTip && showcaseTip.style.display === 'block' && !showcaseTipTimer) {
+        placeShowcaseTip(showcaseTipX, showcaseTipY);
+      }
+    });
+    host.addEventListener('mouseout', e => {
+      const btn = showcaseTipTarget;
+      if (!btn || !host.contains(btn)) return;
+      const related = e.relatedTarget;
+      if (related && (related === btn || (related.nodeType === 1 && btn.contains(related)))) return;
+      const fromBtn = e.target && e.target.nodeType === 1 ? e.target.closest('.vo-showcase-pin') : null;
+      if (fromBtn !== btn) return;
+      dismissShowcaseTip();
+    });
+  }
+  function bindShowcasePinDelegationOnce() {
+    if (showcasePinClicksBound) {
+      // Still ensure detail host is bound if it appeared later
+      bindShowcaseHost($('visitors-board'));
+      bindShowcaseHost($('vo-detail-overlay'));
+      return;
+    }
+    showcasePinClicksBound = true;
+    bindShowcaseHost($('visitors-board'));
+    bindShowcaseHost($('vo-detail-overlay'));
+  }
+  function bindShowcasePinClicksOnce() {
+    bindShowcasePinDelegationOnce();
+  }
+  function setStatus(msg) {
+    const el = $('visitors-status');
+    if (el) el.textContent = msg || '';
+  }
+  function setToolbar(on) {
+    $('visitors-toolbar').querySelectorAll('button,input,select').forEach(el => { el.disabled = !on; });
+  }
+  function updateTypeFilterButtons() {
+    document.querySelectorAll('.type-filter-btn').forEach(btn => {
+      const on = selectedTypes.has(btn.dataset.type);
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function updateSortButtons() {
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      const key = btn.dataset.sort;
+      const base = btn.dataset.base || btn.textContent.replace(/ [▲▼]$/, '');
+      btn.dataset.base = base;
+      const on = sortKey === key;
+      btn.classList.toggle('active', on);
+      btn.textContent = on ? base + (sortDir > 0 ? ' ▲' : ' ▼') : base;
+    });
+  }
+  function cmpStr(a, b, dir) {
+    return String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' }) * dir;
+  }
+
+  function applyVisitorAvatarToDom(uid) {
+    const url = visitorUserCache.get(uid);
+    if (typeof url !== 'string' || !url.startsWith('https://')) return;
+    document.querySelectorAll('.vo-avatar[data-uid]').forEach(el => {
+      if (el.getAttribute('data-uid') !== uid) return;
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === url) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.src = url;
+      img.addEventListener('error', () => {
+        el.textContent = el.getAttribute('data-initials') || '?';
+      });
+      el.replaceChildren(img);
+    });
+  }
+  function noteVisitorUserDocAvatarBlocked() {
+    if (visitorUserDocAvatarBlockedNoted) return;
+    visitorUserDocAvatarBlockedNoted = true;
+    console.info('[visitors] visitor user-doc avatars blocked by Firestore rules; using check-in fields or initials');
+  }
+  function fetchUserAvatarUrl(uid) {
+    if (visitorUserCache.has(uid)) return Promise.resolve(visitorUserCache.get(uid));
+    if (visitorUserInflight.has(uid)) return visitorUserInflight.get(uid);
+    const p = db.collection('users').doc(uid).get().then(snap => {
+      const ud = snap.exists ? (snap.data() || {}) : {};
+      const url = pickUserDocAvatarUrl(ud);
+      visitorUserCache.set(uid, url);
+      visitorUserInflight.delete(uid);
+      return url;
+    }).catch(err => {
+      const msg = String(err && err.message ? err.message : err);
+      if (/insufficient permissions|permission-denied|Missing or insufficient/i.test(msg)) {
+        noteVisitorUserDocAvatarBlocked();
+      } else {
+        console.warn('[visitors] user avatar failed', uid, err);
+      }
+      visitorUserCache.set(uid, null);
+      visitorUserInflight.delete(uid);
+      return null;
+    });
+    visitorUserInflight.set(uid, p);
+    return p;
+  }
+  function ensureVisitorAvatars(list) {
+    if (!list || !list.length) return Promise.resolve();
+    const uids = [];
+    const seen = new Set();
+    for (const v of list) {
+      const uid = visitorUid(v);
+      if (!uid || seen.has(uid) || visitorUserCache.has(uid)) continue;
+      seen.add(uid);
+      uids.push(uid);
+    }
+    if (!uids.length) {
+      for (const v of list) {
+        const uid = visitorUid(v);
+        if (uid && visitorUserCache.has(uid)) applyVisitorAvatarToDom(uid);
+      }
+      return Promise.resolve();
+    }
+    let idx = 0;
+    async function worker() {
+      while (idx < uids.length) {
+        const uid = uids[idx++];
+        await fetchUserAvatarUrl(uid);
+        applyVisitorAvatarToDom(uid);
+      }
+    }
+    const n = Math.min(VISITOR_AVATAR_CONCURRENCY, uids.length);
+    return Promise.all(Array.from({ length: n }, () => worker()));
+  }
+
+  function hasRealHttpImgSrc(img) {
+    if (!img || img.tagName !== 'IMG') return false;
+    const src = (img.getAttribute('src') || '').trim();
+    return /^https?:\/\//i.test(src);
+  }
+  function dismissVoImgTip() {
+    if (voImgTipTimer) { clearTimeout(voImgTipTimer); voImgTipTimer = null; }
+    voImgTipTarget = null;
+    if (voImgTip) voImgTip.style.display = 'none';
+  }
+  function ensureVoImgTip() {
+    if (voImgTip) return voImgTip;
+    const tip = document.createElement('div');
+    tip.className = 'vo-img-tip';
+    tip.setAttribute('role', 'tooltip');
+    tip.appendChild(document.createElement('img')).alt = '';
+    document.body.appendChild(tip);
+    voImgTip = tip;
+    return tip;
+  }
+  function placeVoImgTip(x, y) {
+    const tip = voImgTip;
+    if (!tip) return;
+    const gap = 14, edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let left = x + gap, top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function showVoImgTip(img) {
+    if (voImgTipTarget !== img || !img.isConnected) return;
+    if (!hasRealHttpImgSrc(img)) return;
+    const tip = ensureVoImgTip();
+    const tipImg = tip.querySelector('img');
+    tipImg.src = img.getAttribute('src');
+    tipImg.alt = img.getAttribute('alt') || 'Photo';
+    placeVoImgTip(voImgTipX, voImgTipY);
+  }
+  function bindVoPhotoTip(img) {
+    if (!hasRealHttpImgSrc(img) || !img.classList.contains('vo-photo') || img.dataset.voTipBound === '1') return;
+    img.dataset.voTipBound = '1';
+    img.addEventListener('mouseenter', (e) => {
+      if (voImgTipTimer) { clearTimeout(voImgTipTimer); voImgTipTimer = null; }
+      dismissMineTip();
+      voImgTipTarget = img;
+      voImgTipX = e.clientX; voImgTipY = e.clientY;
+      if (voImgTip) voImgTip.style.display = 'none';
+      voImgTipTimer = setTimeout(() => { voImgTipTimer = null; showVoImgTip(img); }, 1000);
+    });
+    img.addEventListener('mousemove', (e) => {
+      if (voImgTipTarget !== img) return;
+      voImgTipX = e.clientX; voImgTipY = e.clientY;
+      if (voImgTip && voImgTip.style.display === 'block' && !voImgTipTimer) placeVoImgTip(voImgTipX, voImgTipY);
+    });
+    img.addEventListener('mouseleave', () => {
+      if (voImgTipTarget === img) dismissVoImgTip();
+    });
+  }
+  function bindVisitorPhotoTips() {
+    const board = $('visitors-board');
+    if (!board) return;
+    board.querySelectorAll('img.vo-photo').forEach(bindVoPhotoTip);
+  }
+  function syncVoDetailBounds() {
+    const detail = $('vo-detail-overlay');
+    const main = $('portal-main');
+    if (!detail || !main || detail.hidden) return;
+    const r = main.getBoundingClientRect();
+    detail.style.left = r.left + 'px';
+    detail.style.top = r.top + 'px';
+    detail.style.width = r.width + 'px';
+    detail.style.height = r.height + 'px';
+  }
+  function closeVoDetail() {
+    const detail = $('vo-detail-overlay');
+    if (!detail || detail.hidden) return;
+    dismissShowcaseTip();
+    detail.hidden = true;
+    detail.setAttribute('aria-hidden', 'true');
+    const body = $('vo-detail-body');
+    if (body) body.innerHTML = '';
+    detail.style.left = detail.style.top = detail.style.width = detail.style.height = '';
+  }
+  function openVoDetail(v) {
+    const detail = $('vo-detail-overlay');
+    const body = $('vo-detail-body');
+    if (!detail || !body || !v) return;
+    dismissVoImgTip();
+    bindVoDetailOnce();
+    const mine = mineMap[v.propertyId] || null;
+    body.innerHTML = renderVisitCard(v, mine);
+    bindShowcasePinTips(body);
+    const av = body.querySelector('.vo-avatar');
+    if (av) av.style.cursor = 'default';
+    detail.hidden = false;
+    detail.setAttribute('aria-hidden', 'false');
+    syncVoDetailBounds();
+    const uid = visitorUid(v);
+    if (uid) fetchUserAvatarUrl(uid).then(() => applyVisitorAvatarToDom(uid));
+  }
+  function bindVoDetailOnce() {
+    if (voDetailBound) return;
+    voDetailBound = true;
+    const closeBtn = $('vo-detail-close');
+    if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeVoDetail(); });
+    const detail = $('vo-detail-overlay');
+    detail.addEventListener('click', e => {
+      // Pin clicks handled by bindShowcaseHost delegation on this overlay
+      if (e.target.closest('.vo-showcase-pin')) return;
+      if (e.target === detail) closeVoDetail();
+    });
+    window.addEventListener('resize', () => { if (!$('vo-detail-overlay').hidden) syncVoDetailBounds(); });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const mapOverlay = $('mine-map-overlay');
+      if (mapOverlay && !mapOverlay.hidden) {
+        e.preventDefault();
+        if (handleMineMapEscape()) return;
+        closeMineMap();
+        return;
+      }
+      closeVoDetail();
+    });
+  }
+  let mineBadgeClickBound = false;
+  let mineTip = null;
+  let mineTipTimer = null;
+  let mineTipTarget = null;
+  let mineTipX = 0;
+  let mineTipY = 0;
+  function dismissMineTip() {
+    if (mineTipTimer) { clearTimeout(mineTipTimer); mineTipTimer = null; }
+    mineTipTarget = null;
+    if (mineTip) mineTip.style.display = 'none';
+  }
+  function ensureMineTip() {
+    if (mineTip) return mineTip;
+    const tip = document.createElement('div');
+    tip.className = 'vo-mine-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    mineTip = tip;
+    return tip;
+  }
+  function placeMineTip(x, y) {
+    const tip = ensureMineTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else {
+        const above = y - gap - h;
+        if (above >= edge) top = above;
+      }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function mineBadgeTipText(badge) {
+    if (!badge) return '';
+    const tip = (badge.getAttribute('data-tip') || '').trim();
+    if (tip) return tip;
+    const name = (badge.getAttribute('data-mine-name')
+      || ((badge.querySelector('span') || {}).textContent || '')).trim();
+    return name ? (name + ' — Open in My Mines') : 'Open in My Mines';
+  }
+  function showMineTip(badge) {
+    if (mineTipTarget !== badge || !badge.isConnected) return;
+    const text = mineBadgeTipText(badge);
+    if (!text) return;
+    const tip = ensureMineTip();
+    tip.textContent = text;
+    placeMineTip(mineTipX, mineTipY);
+  }
+  function beginMineTipFor(badge, e) {
+    if (!badge) return;
+    if (mineTipTimer) { clearTimeout(mineTipTimer); mineTipTimer = null; }
+    dismissShowcaseTip();
+    dismissVoImgTip();
+    mineTipTarget = badge;
+    mineTipX = e.clientX;
+    mineTipY = e.clientY;
+    if (mineTip) mineTip.style.display = 'none';
+    mineTipTimer = setTimeout(() => {
+      mineTipTimer = null;
+      showMineTip(badge);
+    }, 1000);
+  }
+  function navigateToMineFromBadge(badge) {
+    if (!badge) return;
+    const mineId = badge.getAttribute('data-mine-id') || '';
+    if (!mineId) return;
+    const mineName = badge.getAttribute('data-mine-name')
+      || ((badge.querySelector('span') || {}).textContent || '').trim();
+    let url = '/portal/mines?mineId=' + encodeURIComponent(mineId);
+    if (mineName) url += '&mineName=' + encodeURIComponent(mineName);
+    window.location.href = url;
+  }
+  function bindMineBadgeClicksOnce() {
+    if (mineBadgeClickBound) return;
+    mineBadgeClickBound = true;
+    const board = $('visitors-board');
+    if (!board) return;
+    board.addEventListener('click', e => {
+      const badge = null; // activity: mine badge not clickable
+    void e.target.closest('.vo-mine-badge');
+      if (!badge || !board.contains(badge)) return;
+      if (e.target.closest('.vo-pin, .vo-showcase-pin, img.vo-photo')) return;
+      const mineId = badge.getAttribute('data-mine-id') || '';
+      if (!mineId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dismissMineTip();
+      navigateToMineFromBadge(badge);
+    });
+    board.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const badge = e.target.closest('.vo-mine-badge');
+      if (!badge || !board.contains(badge)) return;
+      const mineId = badge.getAttribute('data-mine-id') || '';
+      if (!mineId) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dismissMineTip();
+      navigateToMineFromBadge(badge);
+    });
+    // mouseover/mouseout bubble — works for badges appended later (scroll/filter)
+    board.addEventListener('mouseover', e => {
+      const badge = e.target.closest('.vo-mine-badge');
+      if (!badge || !board.contains(badge)) return;
+      if (mineTipTarget === badge) return;
+      beginMineTipFor(badge, e);
+    });
+    board.addEventListener('mousemove', e => {
+      const badge = e.target.closest('.vo-mine-badge');
+      if (!badge || mineTipTarget !== badge) return;
+      mineTipX = e.clientX;
+      mineTipY = e.clientY;
+      if (mineTip && mineTip.style.display === 'block' && !mineTipTimer) {
+        placeMineTip(mineTipX, mineTipY);
+      }
+    });
+    board.addEventListener('mouseout', e => {
+      const badge = mineTipTarget;
+      if (!badge || !board.contains(badge)) return;
+      const related = e.relatedTarget;
+      if (related && (related === badge || (related.nodeType === 1 && badge.contains(related)))) return;
+      const fromBadge = e.target && e.target.nodeType === 1 ? e.target.closest('.vo-mine-badge') : null;
+      if (fromBadge !== badge) return;
+      dismissMineTip();
+    });
+  }
+
+
+  /** Owner reply text on a checkIn (game Your reply), if present. */
+  function ownerReplyText(v) {
+    if (!v || typeof v !== 'object') return '';
+    const prefer = [
+      'ownerReply', 'ownerReplyText', 'ownerReplyMessage', 'replyText', 'replyMessage',
+      'reply', 'propertyOwnerReply', 'ownerResponse', 'responseText', 'answer'
+    ];
+    function fromVal(val) {
+      if (typeof val === 'string' && val.trim()) return val.trim();
+      if (val && typeof val === 'object') {
+        for (const k of ['text', 'message', 'body', 'content', 'reply']) {
+          if (typeof val[k] === 'string' && val[k].trim()) return val[k].trim();
+        }
+      }
+      return '';
+    }
+    for (const k of prefer) {
+      if (!(k in v)) continue;
+      const t = fromVal(v[k]);
+      if (t) return t;
+    }
+    for (const k of Object.keys(v)) {
+      if (!/reply|response|answer/i.test(k)) continue;
+      if (/moderation|admin|report|count|At$|By$|Id$/i.test(k)) continue;
+      const t = fromVal(v[k]);
+      if (t) return t;
+    }
+    return '';
+  }
+  function ownerReplyHtml(v) {
+    const t = ownerReplyText(v);
+    if (!t) return '';
+    return '<div class="vo-owner-reply">'
+      + '<div class="vo-owner-reply-label">'
+      + '<svg class="vo-owner-reply-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>'
+      + '<span>Their reply</span></div>'
+      + '<div class="vo-owner-reply-text">' + escapeHtml(t) + '</div>'
+      + '</div>';
+  }
+
+  function renderVisitCard(v, mine) {
+    const name = visitorName(v);
+    const safeName = escapeHtml(name);
+    const init = initials(name);
+    const uid = visitorUid(v);
+    const avatar = visitorAvatarUrl(v);
+    const avatarInner = avatar
+      ? '<img src="' + escapeHtml(avatar) + '" alt="" loading="lazy" onerror="var p=this.parentNode;if(p)p.textContent=p.getAttribute(\'data-initials\')||\'?\';">'
+      : escapeHtml(init);
+    const avatarAttrs = (uid ? ' data-uid="' + escapeHtml(uid) + '"' : '')
+      + (v.id ? ' data-checkin-id="' + escapeHtml(v.id) + '"' : '')
+      + ' data-initials="' + escapeHtml(init) + '"';
+    const type = typeKeyOf(mine, v);
+    const mineName = mineTitle(mine, v);
+    const iconSrc = ICONS[type] || ICONS.rock;
+    const pinHtml = voMapPinHtml(mine, v && v.propertyId);
+    const photo = visitorCheckInPhoto(v);
+    const photoHtml = wrapVisitorPhotoHtml(mine, photo, v.id);
+    const msg = (typeof v.message === 'string' && v.message.trim()) ? v.message.trim() : '';
+    const msgHtml = msg
+      ? '<div class="vo-message">' + escapeHtml(msg) + '</div>'
+      : '<div class="vo-no-message">No message left</div>';
+    const mineId = (mine && mine.id != null) ? String(mine.id)
+      : (v && v.propertyId != null ? String(v.propertyId) : '');
+    let mineBadgeAttrs = '';
+    if (mineId) {
+      mineBadgeAttrs = ' data-mine-id="' + escapeHtml(mineId) + '"'
+        + ' data-mine-name="' + escapeHtml(mineName) + '"'
+        ;
+    }
+    return '<article class="vo-card">'
+      + '<div class="vo-card-header">'
+      + '<div class="vo-avatar"' + avatarAttrs + '>' + avatarInner + '</div>'
+      + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
+      + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
+      + '<div class="vo-mine-meta">'
+      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-tip="' + escapeHtml(mineName) + ' — Open in My Mines" aria-label="' + escapeHtml(mineName) + ' — Open in My Mines">'
+      + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
+      + '<span>' + escapeHtml(mineName) + '</span></div>'
+      + pinHtml
+      + '</div></div>'
+      + '<div class="vo-card-body">' + photoHtml + msgHtml + ownerReplyHtml(v) + '</div>'
+      + '</article>';
+  }
+
+  function filteredSortedVisits() {
+    const q = (($('filter-search') || {}).value || '').trim().toLowerCase();
+    let list = allVisits.slice();
+    if (selectedTypes.size > 0) {
+      list = list.filter(v => selectedTypes.has(typeKeyOf(mineMap[v.propertyId], v)));
+    }
+    if (q) {
+      list = list.filter(v => {
+        const name = visitorName(v).toLowerCase();
+        const mine = mineTitle(mineMap[v.propertyId], v).toLowerCase();
+        const msg = (v.message || '').toLowerCase();
+        const reply = ownerReplyText(v).toLowerCase();
+        return name.includes(q) || mine.includes(q) || msg.includes(q) || reply.includes(q);
+      });
+    }
+    const dir = sortDir;
+    list.sort((a, b) => {
+      const ma = mineMap[a.propertyId] || {};
+      const mb = mineMap[b.propertyId] || {};
+      if (sortKey === 'mine') {
+        return cmpStr(mineTitle(ma, a), mineTitle(mb, b), dir);
+      }
+      if (sortKey === 'visitor') {
+        return cmpStr(visitorName(a), visitorName(b), dir);
+      }
+      // date (default): dir>0 newest first
+      const tA = visitorTsMillis(a.timestamp);
+      const tB = visitorTsMillis(b.timestamp);
+      return (tB - tA) * (dir > 0 ? 1 : -1);
+    });
+    return list;
+  }
+
+  function renderFromFilters() {
+    updateSortButtons();
+    const list = filteredSortedVisits();
+    const countEl = $('match-count');
+    if (countEl) countEl.textContent = list.length + ' match' + (list.length === 1 ? '' : 'es');
+    const note = $('visitors-note');
+    if (note) note.hidden = !visitsTruncated;
+    const board = $('visitors-board');
+    if (!list.length) {
+      board.innerHTML = '<div class="vo-empty">No check-ins match your filters.</div>';
+      return;
+    }
+    board.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitCard(v, mineMap[v.propertyId] || null)).join('') + '</div>';
+    ensureVisitorAvatars(list);
+    bindVisitorPhotoTips();
+    bindShowcasePinTips(board);
+    bindShowcasePinClicksOnce();
+    bindMineBadgeClicksOnce();
+  }
+
+  function buildMineMapEntry(m, details) {
+    const d = details || {};
+    const custom = (typeof d.customName === 'string' && d.customName.trim()) ? d.customName.trim() : '';
+    // Keep full property doc on _raw (includes corners) for minimap lookup.
+    const raw = Object.assign({}, m);
+    delete raw._details;
+    return {
+      id: m.id,
+      mineType: m.mineType || 'rock',
+      customName: custom || null,
+      _raw: raw,
+      _details: d,
+      _detailsLoaded: details != null
+    };
+  }
+
+  function applyDetailsToMineMap(mineId, details) {
+    const entry = mineMap[mineId];
+    if (!entry) return;
+    const d = details || {};
+    entry._details = d;
+    entry._detailsLoaded = true;
+    const custom = (typeof d.customName === 'string' && d.customName.trim()) ? d.customName.trim() : '';
+    entry.customName = custom || null;
+  }
+
+  async function fetchPropertyDetailsForIds(ids, onProgress) {
+    const list = (ids || []).map(String).filter(Boolean);
+    for (let i = 0; i < list.length; i += DETAILS_FETCH) {
+      const slice = list.slice(i, i + DETAILS_FETCH);
+      const snaps = await Promise.all(slice.map(id =>
+        db.collection('propertyDetails').doc(id).get().catch(() => null)
+      ));
+      snaps.forEach((s, j) => {
+        applyDetailsToMineMap(slice[j], (s && s.exists) ? (s.data() || {}) : {});
+      });
+      if (onProgress) onProgress(Math.min(i + DETAILS_FETCH, list.length), list.length);
+    }
+  }
+
+  async function loadOwnedMinesSkeleton(uid) {
+    const snap = await db.collection('properties').where('ownerId', '==', uid).get();
+    const mines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const map = {};
+    mines.forEach(m => { map[m.id] = buildMineMapEntry(m, null); });
+    mineMap = map;
+    ownedMineMap = Object.assign({}, map);
+    return mines;
+  }
+
+  function visitMineIdsNeedingDetails(visits) {
+    const out = [];
+    const seen = Object.create(null);
+    (visits || []).forEach(v => {
+      const id = v && v.propertyId != null ? String(v.propertyId) : '';
+      if (!id || seen[id] || !mineMap[id] || mineMap[id]._detailsLoaded) return;
+      seen[id] = 1;
+      out.push(id);
+    });
+    return out;
+  }
+
+  async function ensureDetailsForVisits(visits, onProgress) {
+    const ids = visitMineIdsNeedingDetails(visits);
+    if (!ids.length) return;
+    await fetchPropertyDetailsForIds(ids, onProgress);
+  }
+
+  /**
+   * One page of checkIns (newest first). Pass startAfterDoc for the next page.
+   * No total cap - caller keeps paging until hasMore is false.
+   */
+  
+  async function ensureVisitedMinesInMap(visits) {
+    const ids = [];
+    const seen = Object.create(null);
+    (visits || []).forEach(v => {
+      const id = v && v.propertyId != null ? String(v.propertyId) : '';
+      if (!id || seen[id]) return;
+      seen[id] = 1;
+      ids.push(id);
+    });
+    const missing = ids.filter(id => !mineMap[id]);
+    for (let i = 0; i < missing.length; i += 40) {
+      const slice = missing.slice(i, i + 40);
+      const snaps = await Promise.all(slice.map(id =>
+        db.collection('properties').doc(id).get().catch(() => null)
+      ));
+      snaps.forEach((s, j) => {
+        const id = slice[j];
+        if (s && s.exists) {
+          mineMap[id] = buildMineMapEntry({ id: id, ...(s.data() || {}) }, null);
+        } else {
+          mineMap[id] = buildMineMapEntry({ id: id, mineType: 'rock' }, null);
+        }
+      });
+    }
+  }
+
+  async function loadVisitsPage(uid, startAfterDoc) {
+    let q = db.collection('checkIns')
+      .where('userId', '==', uid)
+      .orderBy('timestamp', 'desc')
+      .limit(VISIT_PAGE);
+    if (startAfterDoc) q = q.startAfter(startAfterDoc);
+    const snap = await q.get();
+    const visits = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+    const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+    const hasMore = snap.size >= VISIT_PAGE;
+    return { visits, lastDoc, hasMore };
+  }
+
+  async function loadPortal(user) {
+    const loadId = ++visitorsLoadId;
+    setToolbar(false);
+    setStatus('Loading\u2026');
+    $('visitors-board').innerHTML = '<div class="vo-loading"><div class="skeleton"></div></div>';
+    $('match-count').textContent = '';
+    visitsTruncated = false;
+    visitsLastDoc = null;
+    allVisits = [];
+    try {
+      const uSnap = await db.collection('users').doc(user.uid).get();
+      if (loadId !== visitorsLoadId) return;
+      const ud = uSnap.data() || {};
+      const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
+      $('nav-nickname').textContent = nick;
+      $('sb-tb').textContent = fmtNum(ud.tbBalance || 0);
+      $('sb-usd').textContent = fmtUSD(ud.usdEarnings || 0);
+      const avatarUrl = ud.avatarUrl || user.photoURL || '';
+      if (typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')) {
+        $('nav-avatar').innerHTML = '<img src="' + escapeHtml(avatarUrl) + '" alt="' + escapeHtml(nick) + '">';
+      } else {
+        $('nav-avatar').textContent = initials(nick);
+      }
+
+      setStatus('Loading your check-ins\u2026');
+      const [mines, firstPage] = await Promise.all([
+        loadOwnedMinesSkeleton(user.uid),
+        loadVisitsPage(user.uid, null)
+      ]);
+      if (loadId !== visitorsLoadId) return;
+
+      allVisits = firstPage.visits;
+      await ensureVisitedMinesInMap(allVisits);
+      visitsLastDoc = firstPage.lastDoc;
+      visitsTruncated = firstPage.hasMore;
+
+      if (allVisits.length) {
+        setStatus('Loading names for visited mines\u2026');
+        await ensureDetailsForVisits(allVisits, (done, total) => {
+          if (loadId !== visitorsLoadId) return;
+          setStatus('Loading visited mine details ' + done + ' / ' + total + '\u2026');
+        });
+        if (loadId !== visitorsLoadId) return;
+      }
+
+      loadedUid = user.uid;
+      setToolbar(true);
+      sortKey = 'date';
+      sortDir = 1;
+      renderFromFilters();
+
+      const n0 = allVisits.length;
+      if (!n0 && !firstPage.hasMore) {
+        setStatus('No visitors yet \u2014 share your mine coordinates!');
+      } else {
+        setStatus(firstPage.hasMore
+          ? ('Showing ' + n0 + ' check-ins \u2014 loading more\u2026')
+          : '');
+      }
+
+      (async function continueProgressiveLoad() {
+        // 1) Page remaining check-ins (no hard total cap)
+        let cursor = firstPage.hasMore ? firstPage.lastDoc : null;
+        while (cursor && loadId === visitorsLoadId) {
+          const page = await loadVisitsPage(user.uid, cursor);
+          if (loadId !== visitorsLoadId) return;
+          if (page.visits.length) {
+            allVisits = allVisits.concat(page.visits);
+          await ensureVisitedMinesInMap(page.visits);
+            await ensureDetailsForVisits(page.visits, null);
+            if (loadId !== visitorsLoadId) return;
+            renderFromFilters();
+          }
+          visitsLastDoc = page.lastDoc;
+          visitsTruncated = page.hasMore;
+          cursor = page.hasMore ? page.lastDoc : null;
+          setStatus(cursor
+            ? ('Showing ' + allVisits.length + ' check-ins \u2014 loading more\u2026')
+            : ('Loaded ' + allVisits.length + ' check-ins \u2014 finishing mine details\u2026'));
+        }
+        if (loadId !== visitorsLoadId) return;
+        visitsTruncated = false;
+        renderFromFilters();
+
+        // 2) Remaining owned-mine details (map / bulk rename)
+        const remaining = mines.map(m => m.id).filter(id => mineMap[id] && !mineMap[id]._detailsLoaded);
+        if (!remaining.length) {
+          setStatus(allVisits.length ? '' : 'No visitors yet \u2014 share your mine coordinates!');
+          return;
+        }
+        setStatus('Loaded ' + allVisits.length + ' check-ins \u2014 loading remaining mine details 0 / ' + remaining.length + '\u2026');
+        for (let i = 0; i < remaining.length; i += DETAILS_FETCH) {
+          if (loadId !== visitorsLoadId) return;
+          const slice = remaining.slice(i, i + DETAILS_FETCH);
+          await fetchPropertyDetailsForIds(slice, null);
+          const loaded = Math.min(i + DETAILS_FETCH, remaining.length);
+          setStatus('Loaded ' + allVisits.length + ' check-ins \u2014 loading remaining mine details ' + loaded + ' / ' + remaining.length + '\u2026');
+          if (loaded === remaining.length || loaded % (DETAILS_FETCH * 5) === 0) {
+            renderFromFilters();
+          }
+        }
+        if (loadId !== visitorsLoadId) return;
+        console.info('[visitors] complete checkIns', allVisits.length, 'mines', mines.length);
+        renderFromFilters();
+        setStatus(allVisits.length ? '' : 'No visitors yet \u2014 share your mine coordinates!');
+      })().catch(e => {
+        console.error('[visitors] progressive load failed', e);
+        if (loadId === visitorsLoadId) {
+          visitsTruncated = false;
+          setStatus('Some visitors or mine details failed to load.');
+          renderFromFilters();
+        }
+      });
+    } catch (e) {
+      console.error('Visitors load error:', e);
+      setStatus('Could not load visitors. ' + (e && e.message ? e.message : ''));
+      $('visitors-board').innerHTML = '<div class="vo-empty">Error loading visitors.</div>';
+      setToolbar(true);
+    }
+  }
+
+  function sidebarGameComingSoon(e, link) {
+    e.preventDefault();
+    if (link) {
+      const prev = link.textContent;
+      link.textContent = ' Coming soon';
+      setTimeout(() => { link.innerHTML = link.getAttribute('data-html') || prev; }, 1200);
+    }
+  }
+  window.sidebarGameComingSoon = sidebarGameComingSoon;
+  document.querySelectorAll('.sidebar-nav a[onclick*="sidebarGameComingSoon"]').forEach(a => {
+    a.setAttribute('data-html', a.innerHTML);
+  });
 
   auth.onAuthStateChanged(user => {
     if (!authResolved) {
       document.body.classList.remove('auth-pending');
       authResolved = true;
     }
-
     if (user) {
-      currentUser = user;
       $('login-screen').style.display = 'none';
       $('portal').style.display = 'flex';
       loadPortal(user);
     } else {
-      $('login-screen').style.display = 'flex';
+      loadedUid = null;
       $('portal').style.display = 'none';
+      $('login-screen').style.display = 'flex';
     }
   });
+
   $('btn-google-signin').addEventListener('click', async () => {
+    $('login-error').textContent = '';
     try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-    catch(e) { $('login-error').textContent = e.message; }
+    catch (e) { $('login-error').textContent = e.message; }
   });
   $('btn-email-signin').addEventListener('click', async () => {
-    const email=$('input-email').value.trim(), pass=$('input-password').value;
-    $('login-error').textContent='';
-    if(!email||!pass){$('login-error').textContent='Enter email and password.';return;}
-    $('btn-email-signin').disabled=true;
-    try { await auth.signInWithEmailAndPassword(email,pass); }
-    catch(e){ $('login-error').textContent=e.code==='auth/wrong-password'||e.code==='auth/user-not-found'?'Incorrect email or password.':e.message; }
-    finally { $('btn-email-signin').disabled=false; }
+    $('login-error').textContent = '';
+    const email = $('input-email').value.trim();
+    const pass = $('input-password').value;
+    try { await auth.signInWithEmailAndPassword(email, pass); }
+    catch (e) {
+      $('login-error').textContent = (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found')
+        ? 'Incorrect email or password.' : e.message;
+    }
   });
-  $('input-password').addEventListener('keydown', e => { if(e.key==='Enter') $('btn-email-signin').click(); });
   $('btn-reset').addEventListener('click', async () => {
-    const email=$('input-email').value.trim();
-    if(!email){$('login-error').textContent='Enter your email first.';return;}
-    try { await auth.sendPasswordResetEmail(email); $('login-error').style.color='#66BB6A'; $('login-error').textContent='Reset email sent!'; }
-    catch(e){ $('login-error').textContent=e.message; }
+    const email = $('input-email').value.trim();
+    if (!email) { $('login-error').textContent = 'Enter your email first.'; return; }
+    try { await auth.sendPasswordResetEmail(email); $('login-error').style.color = '#66BB6A'; $('login-error').textContent = 'Reset email sent!'; }
+    catch (e) { $('login-error').textContent = e.message; }
   });
   $('btn-signout').addEventListener('click', () => auth.signOut());
 
-  async function loadPortal(user) {
-    const uSnap = await db.collection('users').doc(user.uid).get();
-    const ud = uSnap.data() || {};
-    const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
-    $('nav-nickname').textContent = nick;
-    $('sb-tb').textContent  = fmtNum(ud.tbBalance || 0);
-    $('sb-usd').textContent = fmtUSD(ud.usdEarnings || 0);
-    if (user.photoURL?.startsWith('https://'))
-      $('nav-avatar').innerHTML = `<img src="${user.photoURL}" alt="${nick}">`;
-    else $('nav-avatar').textContent = initials(nick);
-
-    // Stat cards from user doc (matches app's Profile > Activity tab summary cards)
-    $('stat-checkins').textContent   = fmtNum(ud.totalCheckIns || 0);
-    $('stat-tb-earned').textContent  = fmtNum(ud.totalTBEarned || 0);
-
-    // Properties count
-    const propsSnap = await db.collection('properties').where('ownerId','==',user.uid).get();
-    const props = propsSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-    $('stat-properties').textContent = fmtNum(props.length);
-    props.forEach(p => { propertyMineTypes[p.id] = p.mineType || 'rock'; });
-
-    await loadMyCheckIns(user.uid);
-  }
-
-  async function loadMyCheckIns(uid) {
-    try {
-      const snap = await db.collection('checkIns')
-        .where('userId','==', uid)
-        .orderBy('timestamp','desc')
-        .limit(200)
-        .get();
-
-      allMyCheckIns = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-
-      const photoCount = allMyCheckIns.filter(c => c.hasPhoto || c.photoURL || c.photoUrl).length;
-      $('stat-photos-card').textContent = fmtNum(photoCount);
-      $('header-sub').textContent = `${allMyCheckIns.length} check-ins to other players' mines`;
-
-      applyFilter();
-    } catch(e) {
-      console.error('Load activity error:', e);
-      $('feed-container').innerHTML = `<div class="empty-state"><div class="empty-text">Error loading activity: ${e.message}</div></div>`;
-    }
-  }
-
-  function applyFilter() {
-    filteredCheckIns = allMyCheckIns.filter(c => {
-      if (activeFilter === 'photo'   && !(c.hasPhoto || c.photoURL || c.photoUrl)) return false;
-      if (activeFilter === 'message' && !c.message) return false;
-      return true;
+  bindShowcasePinDelegationOnce();
+  bindMineBadgeClicksOnce();
+  bindVoMapPinOnce();
+  bindMineMapOnce();
+  updateTypeFilterButtons();
+  document.querySelectorAll('.type-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.type;
+      if (selectedTypes.has(t)) selectedTypes.delete(t);
+      else selectedTypes.add(t);
+      saveSelectedTypes();
+      updateTypeFilterButtons();
+      if (loadedUid) renderFromFilters();
     });
-    displayedCount = 0;
-    renderPage();
-  }
-
-  function renderPage() {
-    const toShow = filteredCheckIns.slice(0, displayedCount + PAGE_SIZE);
-    displayedCount = toShow.length;
-    $('result-count').textContent = `${filteredCheckIns.length} check-in${filteredCheckIns.length !== 1 ? 's' : ''}`;
-
-    if (!filteredCheckIns.length) {
-      $('feed-container').innerHTML = `<div class="empty-state"><div class="empty-icon">⛏</div><div class="empty-text">No check-ins match this filter. Go explore other players' mines!</div></div>`;
-      $('load-more-btn').style.display = 'none';
-      return;
-    }
-
-    $('feed-container').innerHTML = toShow.map(c => renderFeedCard(c)).join('');
-    $('load-more-btn').style.display = displayedCount < filteredCheckIns.length ? 'block' : 'none';
-  }
-
-  function renderFeedCard(c) {
-    const photoURL = c.photoURL || c.photoUrl || null;
-    const type = propertyMineTypes[c.propertyId] || 'rock';
-    const tbEarned = c.tbEarned || c.visitorTBEarned || 0;
-
-    return `<div class="feed-card">
-      <div class="feed-card-row">
-        <span class="feed-icon">✅</span>
-        <div class="feed-content">
-          <div class="feed-label">Checked in to ${mineIcon(type)} a ${type} mine</div>
-          ${c.message ? `<div class="feed-message">"${c.message}"</div>` : ''}
-          <div class="feed-meta-row">
-            <span class="feed-mine-badge">${c.propertyId}</span>
-            <span class="feed-time" title="${fullDate(c.timestamp)}">${timeAgo(c.timestamp)}</span>
-            ${tbEarned ? `<span class="feed-tb">+${tbEarned} TB</span>` : ''}
-          </div>
-        </div>
-      </div>
-      ${photoURL ? `<img class="feed-photo" src="${photoURL}" alt="My check-in photo" onclick="openLightbox('${photoURL}')" loading="lazy" onerror="this.style.display='none'" />` : ''}
-    </div>`;
-  }
-
-  function loadMore() { renderPage(); }
-
-  window.setFilter = function(type, btn) {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeFilter = type;
-    applyFilter();
-  };
-
-  window.openLightbox = function(url) {
-    $('lightbox-img').src = url;
-    $('lightbox').classList.add('open');
-  };
-  window.closeLightbox = function() {
-    $('lightbox').classList.remove('open');
-    $('lightbox-img').src = '';
-  };
-  $('lightbox').addEventListener('click', e => { if(e.target === $('lightbox')) closeLightbox(); });
-  document.addEventListener('keydown', e => { if(e.key==='Escape') closeLightbox(); });
-
-  function sidebarGameComingSoon(e, link) {
-    e.preventDefault();
-    const orig = link.innerHTML;
-    link.innerHTML = '<span class="icon">🚧</span> Coming Soon!';
-    setTimeout(() => { link.innerHTML = orig; }, 2000);
-  }
+  });
+  $('filter-search').addEventListener('input', () => { if (loadedUid) renderFromFilters(); });
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.sort;
+      if (sortKey === key) sortDir *= -1;
+      else { sortKey = key; sortDir = 1; }
+      if (loadedUid) renderFromFilters();
+    });
+  });
 </script>
 </body>
 </html>
