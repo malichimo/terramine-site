@@ -2921,16 +2921,14 @@
   }
   function mineBadgeTipText(badge) {
     if (!badge) return '';
-    const tip = (badge.getAttribute('data-tip') || '').trim();
-    if (tip) return tip;
     const name = (badge.getAttribute('data-mine-name')
       || ((badge.querySelector('span') || {}).textContent || '')).trim();
-    {
     const nick = (badge.getAttribute('data-owner-nick') || '').trim();
     if (name && nick) return name + ' owned by @' + nick;
+    const tip = (badge.getAttribute('data-tip') || '').trim();
+    if (tip && tip.indexOf('@…') === -1 && tip.indexOf('@...') === -1) return tip;
     if (name) return name + ' owned by @…';
     return 'Mine owned by @…';
-  }
   }
   function showMineTip(badge) {
     if (mineTipTarget !== badge || !badge.isConnected) return;
@@ -3023,10 +3021,13 @@
   /** Owner reply text on a checkIn (game Your reply), if present. */
   
   function ownerIdOf(mine, v) {
+    const raw = (mine && (mine._raw || mine._raw)) || null;
+    const details = (mine && mine._details) || null;
     const cands = [
-      v && (v.propertyOwnerId || v.ownerId || v.mineOwnerId || v.propertyOwnerUid),
-      mine && (mine.ownerId || mine.ownerUid),
-      mine && mine._raw && (mine._raw.ownerId || mine._raw.ownerUid || mine._raw.userId),
+      v && (v.propertyOwnerId || v.ownerId || v.mineOwnerId || v.propertyOwnerUid || v.ownerUid || v.ownerUID),
+      mine && (mine.ownerId || mine.ownerUid || mine.ownerID || mine.userId),
+      raw && (raw.ownerId || raw.ownerUid || raw.ownerID || raw.userId || raw.uid || raw.createdBy),
+      details && (details.ownerId || details.ownerUid || details.userId),
     ];
     for (let i = 0; i < cands.length; i++) {
       let id = cands[i];
@@ -3035,7 +3036,7 @@
     }
     return null;
   }
-  function ownerNickFromVisit(v) {
+  function ownerNickFromVisitfunction ownerNickFromVisit(v) {
     if (!v || typeof v !== 'object') return '';
     const keys = [
       'propertyOwnerNickname', 'ownerNickname', 'mineOwnerNickname',
@@ -3072,6 +3073,17 @@
       badge.setAttribute('data-tip', tip);
       badge.setAttribute('aria-label', tip);
     });
+    document.querySelectorAll('.vo-owner-reply[data-owner-id="' + uid + '"]').forEach(box => {
+      const dateStr = (box.getAttribute('data-reply-date') || '').trim();
+      const text = '@' + nick + ' reply' + (dateStr ? ' (' + dateStr + ')' : '');
+      const span = box.querySelector('.vo-owner-reply-label span');
+      if (span) span.textContent = text;
+      box.setAttribute('data-owner-nick', nick);
+    });
+    if (typeof mineTipTarget !== 'undefined' && mineTipTarget && mineTipTarget.getAttribute('data-owner-id') === uid) {
+      const tipEl = document.getElementById('mine-follow-tip') || document.querySelector('.mine-follow-tip');
+      if (tipEl) tipEl.textContent = mineBadgeTipText(mineTipTarget);
+    }
   }
   function fetchOwnerNick(uid) {
     if (!uid) return Promise.resolve('');
@@ -3079,7 +3091,7 @@
     if (ownerNickInflight.has(uid)) return ownerNickInflight.get(uid);
     const p = db.collection('users').doc(uid).get().then(snap => {
       const ud = (snap && snap.exists) ? (snap.data() || {}) : {};
-      const nick = (ud.nickname || ud.displayName || ud.avatarName || ud.userName || '').toString().trim().replace(/^@+/, '');
+      const nick = (ud.nickname || ud.nickName || ud.displayName || ud.username || ud.userName || ud.avatarName || ud.gamerTag || ud.gamertag || ud.handle || '').toString().trim().replace(/^@+/, '');
       ownerNickCache.set(uid, nick || null);
       ownerNickInflight.delete(uid);
       if (nick) applyOwnerNickToDom(uid, nick);
@@ -3132,14 +3144,61 @@
     }
     return '';
   }
-  function ownerReplyHtml(v) {
-    const t = ownerReplyText(v);
-    if (!t) return '';
-    return '<div class="vo-owner-reply">'
+  
+  function ownerReplyDate(v) {
+    if (!v || typeof v !== 'object') return null;
+    const keys = [
+      'ownerReplyAt', 'ownerReplyTimestamp', 'repliedAt', 'replyAt', 'replyTimestamp',
+      'ownerReplyDate', 'replyDate', 'responseAt'
+    ];
+    for (let i = 0; i < keys.length; i++) {
+      if (v[keys[i]] != null) return v[keys[i]];
+    }
+    // nested reply object
+    for (const k of ['ownerReply', 'reply', 'ownerResponse']) {
+      const val = v[k];
+      if (val && typeof val === 'object') {
+        for (const dk of ['at', 'timestamp', 'date', 'createdAt', 'updatedAt']) {
+          if (val[dk] != null) return val[dk];
+        }
+      }
+    }
+    return null;
+  }
+  function formatReplyDate(val) {
+    if (val == null || val === '') return '';
+    let d = null;
+    if (typeof val.toDate === 'function') {
+      try { d = val.toDate(); } catch (e) {}
+    } else if (typeof val === 'object' && val.seconds != null) {
+      d = new Date(val.seconds * 1000);
+    } else if (typeof val === 'number') {
+      d = new Date(val < 1e12 ? val * 1000 : val);
+    } else if (typeof val === 'string') {
+      const t = Date.parse(val);
+      if (!isNaN(t)) d = new Date(t);
+    }
+    if (!d || isNaN(d.getTime())) return '';
+    try {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+      return '';
+    }
+  }
+  function ownerReplyHtml(v, mine) {
+    const text = ownerReplyText(v);
+    if (!text) return '';
+    const nick = ownerLabelOf(mine, v);
+    const dateStr = formatReplyDate(ownerReplyDate(v));
+    const label = nick
+      ? ('@' + nick + ' reply' + (dateStr ? ' (' + dateStr + ')' : ''))
+      : ('Their reply' + (dateStr ? ' (' + dateStr + ')' : ''));
+    const oid = ownerIdOf(mine, v) || '';
+    return '<div class="vo-owner-reply" data-owner-id="' + escapeHtml(oid) + '" data-owner-nick="' + escapeHtml(nick || '') + '" data-reply-date="' + escapeHtml(dateStr) + '">'
       + '<div class="vo-owner-reply-label">'
       + '<svg class="vo-owner-reply-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>'
-      + '<span>Their reply</span></div>'
-      + '<div class="vo-owner-reply-text">' + escapeHtml(t) + '</div>'
+      + '<span>' + escapeHtml(label) + '</span></div>'
+      + '<div class="vo-owner-reply-text">' + escapeHtml(text) + '</div>'
       + '</div>';
   }
 
@@ -3179,12 +3238,12 @@
       + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
-      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-owner-id="' + escapeHtml(ownerIdOf(mine, v) || '') + '" data-owner-nick="' + escapeHtml(ownerLabelOf(mine, v)) + '" data-tip="' + escapeHtml(mineOwnedByTip(mine, v)) + '" aria-label="' + escapeHtml(mineOwnedByTip(mine, v)) + '">'
+      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-mine-name="' + escapeHtml(mineName) + '" data-owner-id="' + escapeHtml(ownerIdOf(mine, v) || '') + '" data-owner-nick="' + escapeHtml(ownerLabelOf(mine, v)) + '" data-tip="' + escapeHtml(mineOwnedByTip(mine, v)) + '" aria-label="' + escapeHtml(mineOwnedByTip(mine, v)) + '">'
       + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
       + '<span>' + escapeHtml(mineName) + '</span></div>'
       + pinHtml
       + '</div></div>'
-      + '<div class="vo-card-body">' + photoHtml + msgHtml + ownerReplyHtml(v) + '</div>'
+      + '<div class="vo-card-body">' + photoHtml + msgHtml + ownerReplyHtml(v, mine) + '</div>'
       + '</article>';
   }
 
@@ -3251,13 +3310,18 @@
   function buildMineMapEntry(m, details) {
     const d = details || {};
     const custom = (typeof d.customName === 'string' && d.customName.trim()) ? d.customName.trim() : '';
-    // Keep full property doc on _raw (includes corners) for minimap lookup.
+    // Keep full property doc on _raw (includes corners + ownerId) for minimap / owner tips.
     const raw = Object.assign({}, m);
     delete raw._details;
+    delete raw._raw;
+    delete raw._raw;
+    const ownerId = m.ownerId || m.ownerUid || m.userId || null;
     return {
       id: m.id,
       mineType: m.mineType || 'rock',
       customName: custom || null,
+      ownerId: ownerId,
+      _raw: raw,
       _raw: raw,
       _details: d,
       _detailsLoaded: details != null
