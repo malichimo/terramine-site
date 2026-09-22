@@ -200,49 +200,52 @@
         </div>
 
         <!-- Stat row -->
-        <div class="stat-row">
-          <div class="stat-card">
-            <div class="stat-card-label">Properties</div>
-            <div class="stat-card-value cyan" id="stat-props">—</div>
-            <div class="stat-card-sub">TerraAcres owned</div>
+                <div class="stat-stack">
+          <div class="stat-card stat-card-properties">
+            <div class="stat-card-head">
+              <div class="stat-card-label">TerraMines Owned</div>
+              <div class="stat-card-value cyan" id="stat-props">—</div>
+            </div>
             <div class="prop-breakdown" id="prop-breakdown">
               <div class="prop-type">
-                <div class="prop-type-icon" data-prop-icon="rock" aria-hidden="true">🪨</div>
+                <div class="prop-type-icon" data-prop-icon="rock" aria-hidden="true"><img src="/images/mine-icons/rock.svg" alt=""></div>
                 <div class="prop-type-count" id="stat-type-rock">—</div>
                 <div class="prop-type-name">Rock Mines</div>
               </div>
               <div class="prop-type">
-                <div class="prop-type-icon" data-prop-icon="coal" aria-hidden="true">⚫</div>
+                <div class="prop-type-icon" data-prop-icon="coal" aria-hidden="true"><img src="/images/mine-icons/coal.svg" alt=""></div>
                 <div class="prop-type-count" id="stat-type-coal">—</div>
                 <div class="prop-type-name">Coal Mines</div>
               </div>
               <div class="prop-type">
-                <div class="prop-type-icon" data-prop-icon="gold" aria-hidden="true">🟡</div>
+                <div class="prop-type-icon" data-prop-icon="gold" aria-hidden="true"><img src="/images/mine-icons/gold.svg" alt=""></div>
                 <div class="prop-type-count" id="stat-type-gold">—</div>
                 <div class="prop-type-name">Gold Mines</div>
               </div>
               <div class="prop-type">
-                <div class="prop-type-icon" data-prop-icon="diamond" aria-hidden="true">💎</div>
+                <div class="prop-type-icon" data-prop-icon="diamond" aria-hidden="true"><img src="/images/mine-icons/diamond.svg" alt=""></div>
                 <div class="prop-type-count" id="stat-type-diamond">—</div>
                 <div class="prop-type-name">Diamond Mines</div>
               </div>
               <div class="prop-type-other" id="stat-type-other" hidden></div>
             </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Total Check-ins</div>
-            <div class="stat-card-value" id="stat-checkins">—</div>
-            <div class="stat-card-sub">Visits to your mines</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">TB Earned</div>
-            <div class="stat-card-value amber" id="stat-tb-earned">—</div>
-            <div class="stat-card-sub">All-time</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Mines Ready</div>
-            <div class="stat-card-value" id="stat-ready">—</div>
-            <div class="stat-card-sub">Daily activity available</div>
+          <div class="stat-row-secondary">
+            <div class="stat-card">
+              <div class="stat-card-label">Total Check-ins</div>
+              <div class="stat-card-value" id="stat-checkins">—</div>
+              <div class="stat-card-sub">Visits to your mines</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Total Terra Bucks Earned</div>
+              <div class="stat-card-value amber" id="stat-tb-earned">—</div>
+              <div class="stat-card-sub">All-time</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Mines Ready for Maintenance</div>
+              <div class="stat-card-value" id="stat-ready">—</div>
+              <div class="stat-card-sub">Daily activity available</div>
+            </div>
           </div>
         </div>
 
@@ -367,8 +370,7 @@
     KNOWN_MINE_TYPES.forEach(function(k) {
       var el = $('stat-type-' + k);
       if (el) el.textContent = fmtNum(counts[k]);
-      var iconEl = document.querySelector('[data-prop-icon="' + k + '"]');
-      if (iconEl) iconEl.textContent = propertyStackIcon(k);
+      /* Mine-type icons are static SVGs (same as Mines page). */
     });
     var other = $('stat-type-other');
     if (other) {

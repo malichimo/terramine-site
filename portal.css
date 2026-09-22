@@ -376,7 +376,7 @@ body.auth-pending #portal {
   margin: 0 0 24px;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 2px solid var(--brown-mid);
   border-radius: 12px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -552,18 +552,20 @@ body.auth-pending #portal {
 }
 
 /* ── Stat row ── */
-.stat-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.stat-stack {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   margin-bottom: 28px;
-  align-items: start;
 }
 .stat-card {
   background: white;
   border: 2px solid var(--brown-mid);
   border-radius: 12px;
   padding: 16px 18px;
+}
+.stat-card-properties .stat-card-head {
+  text-align: center;
 }
 .stat-card-label {
   font-size: 10px;
@@ -583,7 +585,14 @@ body.auth-pending #portal {
 .stat-card-value.amber { color: var(--amber2); }
 .stat-card-sub { font-size: 11px; color: var(--text-mid); margin-top: 4px; }
 
-/* Properties card type breakdown. Icons match old-mines.html mineIcon(). */
+.stat-row-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* Properties card type breakdown — icons match Mines page SVGs. */
 .prop-breakdown {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -600,8 +609,18 @@ body.auth-pending #portal {
   min-width: 0;
 }
 .prop-type-icon {
-  font-size: 16px;
-  line-height: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.prop-type-icon img {
+  width: 28px;
+  height: 28px;
+  display: block;
+  object-fit: contain;
 }
 .prop-type-count {
   font-family: 'Bebas Neue', sans-serif;
@@ -624,6 +643,10 @@ body.auth-pending #portal {
   line-height: 1.3;
   color: var(--text-mid);
   text-align: center;
+}
+
+@media (max-width: 720px) {
+  .stat-row-secondary { grid-template-columns: 1fr; }
 }
 
 /* ── Section header ── */
