@@ -611,6 +611,23 @@ body.auth-pending #portal {
   box-shadow: 0 0 0 2px rgba(212, 160, 23, .4);
 }
 
+.portal-feedback-note {
+  margin: 18px 0 8px;
+  text-align: right;
+  font: 700 12px 'DM Sans', sans-serif;
+  color: #64748b;
+  line-height: 1.45;
+}
+.portal-feedback-note a {
+  color: #1d6fa5;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.portal-feedback-note a:hover {
+  color: #0d4f7a;
+}
+
+
 @media (max-width: 900px) {
   .mine-totals-bar { padding: 8px 10px; }
   .mine-group-total-title { font-size: 9px; }
