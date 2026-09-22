@@ -654,6 +654,15 @@ body.auth-pending #portal {
   gap: 12px;
   align-items: stretch;
 }
+.stat-row-secondary .stat-card {
+  text-align: center;
+}
+.stat-row-secondary .stat-card-label,
+.stat-row-secondary .stat-card-value,
+.stat-row-secondary .stat-card-sub {
+  text-align: center;
+}
+
 
 /* Properties card type breakdown — icons match Mines page SVGs. */
 .prop-breakdown {

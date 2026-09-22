@@ -473,7 +473,7 @@
       const padX = 7;
       const padY = 5;
       const gap = 2;
-      const fontPx = Math.max(10, Math.round(cssSize * 0.038));
+      const fontPx = Math.max(8, Math.round(cssSize * 0.0304)); // 20% smaller than prior %
       ctx.font = '700 ' + fontPx + 'px DM Sans, sans-serif';
       const tw = ctx.measureText(pctText).width;
       const contentW = Math.max(img ? iconSz : 0, tw);
