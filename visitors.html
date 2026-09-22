@@ -3535,6 +3535,9 @@
       if (loadId !== visitorsLoadId) return;
 
       allVisits = firstPage.visits;
+      console.log('[TerraMine Visitors] first 10 visitors', allVisits.slice(0, 10).map(function (v) {
+        return Object.assign({ id: v.id }, v);
+      }));
       visitsLastDoc = firstPage.lastDoc;
       visitsTruncated = firstPage.hasMore;
 
