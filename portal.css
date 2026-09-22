@@ -1018,3 +1018,22 @@ body.auth-pending #portal {
   .prop-type-count { font-size: 18px; }
   .prop-type-name { font-size: 9px; }
 }
+
+.tb-today-tb-val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.tb-today-tb-val img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.tb-today-total .tb-today-tb-val {
+  font-size: 15px;
+  color: #0f172a;
+  font-weight: 700;
+}

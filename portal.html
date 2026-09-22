@@ -268,7 +268,7 @@
                   <table class="tb-today-table" aria-label="Visitor check-ins today">
                     <tbody>
                       <tr>
-                        <th scope="row">Visitors</th>
+                        <th scope="row">Check-ins</th>
                         <td id="tb-today-visitors-count">—</td>
                       </tr>
                       <tr>
@@ -279,7 +279,7 @@
                   </table>
                 </div>
                 <div class="tb-today-section">
-                  <div class="tb-today-section-title">You checking into other mines</div>
+                  <div class="tb-today-section-title">Your activity check-ins to other mines</div>
                   <table class="tb-today-table" aria-label="Your check-ins today">
                     <tbody>
                       <tr>
@@ -1268,19 +1268,24 @@
       return;
     }
     el.classList.remove('tb-today-na');
-    el.textContent = opts.tb ? fmtNum(value) + ' TB' : fmtNum(value);
+    if (opts.tb) {
+      el.innerHTML = '<span class="tb-today-tb-val"><img src="images/mine-icons/terrabucks-small.png" alt="">'
+        + fmtNum(value) + ' TB</span>';
+    } else {
+      el.textContent = fmtNum(value);
+    }
   }
 
   function renderTbTodayPreview() {
     setTbTodayCell('tb-today-visitors-count', 3);
-    setTbTodayCell('tb-today-visitors-tb', null);
+    setTbTodayCell('tb-today-visitors-tb', 6, { tb: true });
     setTbTodayCell('tb-today-yours-count', 2);
     setTbTodayCell('tb-today-yours-tb', null);
     ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
       setTbTodayCell('tb-today-game-' + t + '-plays', null);
       setTbTodayCell('tb-today-game-' + t + '-tb', null);
     });
-    setTbTodayCell('tb-today-known-total', null);
+    setTbTodayCell('tb-today-known-total', 6, { tb: true });
     var note = $('tb-today-note');
     if (note) {
       note.textContent = 'Preview: check-in counts are sample. TB per check-in and mini-game plays are not in the portal Firestore schema we can read yet.';
@@ -1351,12 +1356,8 @@
     setTbTodayCell('tb-today-visitors-count', visitors.length);
     setTbTodayCell('tb-today-yours-count', yours.length);
 
-    var visitorsTbSum = 0;
-    var visitorsTbKnown = 0;
-    visitors.forEach(function (row) {
-      var n = pickCheckInTb(row.data, 'host');
-      if (n != null) { visitorsTbSum += n; visitorsTbKnown++; }
-    });
+    // Host reward is fixed at 2 TB per visitor check-in.
+    var visitorsTbSum = visitors.length * 2;
     var yoursTbSum = 0;
     var yoursTbKnown = 0;
     yours.forEach(function (row) {
@@ -1364,7 +1365,7 @@
       if (n != null) { yoursTbSum += n; yoursTbKnown++; }
     });
 
-    setTbTodayCell('tb-today-visitors-tb', visitorsTbKnown ? visitorsTbSum : null, { tb: true });
+    setTbTodayCell('tb-today-visitors-tb', visitorsTbSum, { tb: true });
     setTbTodayCell('tb-today-yours-tb', yoursTbKnown ? yoursTbSum : null, { tb: true });
 
     // Mini-games: no daily per-type collection exposed to the portal yet.
@@ -1373,10 +1374,7 @@
       setTbTodayCell('tb-today-game-' + t + '-tb', null);
     });
 
-    var knownTotal = null;
-    if (visitorsTbKnown || yoursTbKnown) {
-      knownTotal = (visitorsTbKnown ? visitorsTbSum : 0) + (yoursTbKnown ? yoursTbSum : 0);
-    }
+    var knownTotal = visitorsTbSum + (yoursTbKnown ? yoursTbSum : 0);
     setTbTodayCell('tb-today-known-total', knownTotal, { tb: true });
 
     // Probe first few docs for unexpected keys (helps decide if TB is under another name).
@@ -1397,7 +1395,7 @@
     var bits = [];
     bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
     if (!visitorsTbKnown && !yoursTbKnown) {
-      bits.push('TB amounts are not on those check-in docs (no reward field found), so those cells stay blank.');
+      bits.push('Visitor check-in TB is counted at 2 TB each.');
     } else if (!(visitorsTbKnown === visitors.length && yoursTbKnown === yours.length)) {
       bits.push('Only some check-ins had a TB reward field; totals may be incomplete.');
     }
