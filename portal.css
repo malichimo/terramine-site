@@ -612,11 +612,17 @@ body.auth-pending #portal {
 }
 
 .portal-feedback-note {
-  margin: 18px 0 8px;
+  position: fixed;
+  right: 16px;
+  bottom: 12px;
+  z-index: 40;
+  margin: 0;
+  max-width: min(420px, calc(100vw - 32px));
   text-align: right;
   font: 700 12px 'DM Sans', sans-serif;
   color: #64748b;
   line-height: 1.45;
+  pointer-events: auto;
 }
 .portal-feedback-note a {
   color: #1d6fa5;
