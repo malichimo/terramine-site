@@ -244,8 +244,8 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: rgba(245,158,11,0.18);
-      color: #F59E0B;
+      background: rgba(34,197,94,0.18);
+      color: #22C55E;
       font-size: 22px;
       font-weight: 700;
       line-height: 1;
@@ -256,8 +256,8 @@
       color: #EEF1F4;
       font-variant-numeric: tabular-nums;
     }
-    .nav-pill-usd .nav-pill-value { color: #FBBF24; }
-    .nav-pill-tb .nav-pill-value { color: #4FC3F7; }
+    .nav-pill-usd .nav-pill-value { color: #22C55E; }
+    .nav-pill-tb .nav-pill-value { color: #FACC15; }
 
     .layout { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; width:100%; }
     .layout > .content {
@@ -344,13 +344,24 @@
     }
     .vo-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
     .vo-info { flex:1; min-width:0; }
-    .vo-name { font-size:22px; font-weight:700; color:#fff; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vo-name { font-size:20px; font-weight:700; color:#fff; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .vo-time { font-size:17px; color:rgba(255,255,255,.9); margin-top:2px; line-height:1.15; }
     .vo-mine-meta { display:flex; align-items:center; gap:6px; flex-shrink:0; max-width:48%; }
     .vo-mine-badge { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:30px; font-size:12px; font-weight:700; background:rgba(0,0,0,.22); color:#fff; border:1px solid rgba(255,255,255,.28); min-width:0; cursor:pointer; }
     .vo-mine-badge:hover { background:rgba(0,0,0,.35); border-color:rgba(255,255,255,.45); }
     .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
     .vo-mine-badge .vo-type-icon { pointer-events:none; }
+
+    .vo-tb-earned {
+      display:inline-flex; align-items:center; gap:4px; flex-shrink:0;
+      padding:3px 8px 3px 4px; border-radius:999px;
+      background:rgba(0,0,0,.22); border:1px solid rgba(250,204,21,.45);
+      color:#FACC15; font-size:14px; font-weight:800;
+      font-variant-numeric:tabular-nums; line-height:1; cursor:default;
+    }
+    .vo-tb-earned img { width:18px; height:18px; object-fit:contain; pointer-events:none; }
+    .vo-tb-earned span { pointer-events:none; }
+
     .vo-type-icon { width:24px; height:24px; flex-shrink:0; object-fit:contain; }
     .vo-pin { width:33px; height:33px; color:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; text-decoration:none; border:0; background:transparent; padding:0; margin:0; cursor:pointer; font:inherit; }
     .vo-pin svg { width:33px; height:33px; display:block; pointer-events:none; }
@@ -3177,6 +3188,9 @@
   }
   function mineBadgeTipText(badge) {
     if (!badge) return '';
+    if (badge.classList && badge.classList.contains('vo-tb-earned')) {
+      return (badge.getAttribute('data-tip') || 'TerraBucks Earned').trim();
+    }
     const name = (badge.getAttribute('data-mine-name')
       || ((badge.querySelector('span') || {}).textContent || '')).trim();
     if (name) return name;
@@ -3222,7 +3236,7 @@
     if (!board) return;
     board.addEventListener('click', e => {
       const badge = null; // activity: mine badge not clickable
-    void e.target.closest('.vo-mine-badge');
+    void e.target.closest('.vo-mine-badge, .vo-tb-earned');
       if (!badge || !board.contains(badge)) return;
       if (e.target.closest('.vo-pin, .vo-showcase-pin, img.vo-photo')) return;
       const mineId = badge.getAttribute('data-mine-id') || '';
@@ -3234,7 +3248,7 @@
     });
     board.addEventListener('keydown', e => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      const badge = e.target.closest('.vo-mine-badge');
+      const badge = e.target.closest('.vo-mine-badge, .vo-tb-earned');
       if (!badge || !board.contains(badge)) return;
       const mineId = badge.getAttribute('data-mine-id') || '';
       if (!mineId) return;
@@ -3245,13 +3259,13 @@
     });
     // mouseover/mouseout bubble — works for badges appended later (scroll/filter)
     board.addEventListener('mouseover', e => {
-      const badge = e.target.closest('.vo-mine-badge');
+      const badge = e.target.closest('.vo-mine-badge, .vo-tb-earned');
       if (!badge || !board.contains(badge)) return;
       if (mineTipTarget === badge) return;
       beginMineTipFor(badge, e);
     });
     board.addEventListener('mousemove', e => {
-      const badge = e.target.closest('.vo-mine-badge');
+      const badge = e.target.closest('.vo-mine-badge, .vo-tb-earned');
       if (!badge || mineTipTarget !== badge) return;
       mineTipX = e.clientX;
       mineTipY = e.clientY;
@@ -3264,7 +3278,7 @@
       if (!badge || !board.contains(badge)) return;
       const related = e.relatedTarget;
       if (related && (related === badge || (related.nodeType === 1 && badge.contains(related)))) return;
-      const fromBadge = e.target && e.target.nodeType === 1 ? e.target.closest('.vo-mine-badge') : null;
+      const fromBadge = e.target && e.target.nodeType === 1 ? e.target.closest('.vo-mine-badge, .vo-tb-earned') : null;
       if (fromBadge !== badge) return;
       dismissMineTip();
     });
@@ -3424,12 +3438,19 @@
         + ' data-mine-name="' + escapeHtml(mineName) + '"'
         ;
     }
+    const tbEarnedRaw = (v && (v.tbEarned != null ? v.tbEarned : v.TBEarned));
+    const tbEarnedNum = Number(tbEarnedRaw);
+    const tbEarnedShow = Number.isFinite(tbEarnedNum) ? Math.round(tbEarnedNum) : 0;
+    const tbEarnedHtml = '<div class="vo-tb-earned" data-tip="TerraBucks Earned" aria-label="TerraBucks Earned">'
+      + '<img src="images/mine-icons/terrabucks-small.png" alt="">'
+      + '<span>+' + escapeHtml(String(tbEarnedShow)) + '</span></div>';
     return '<article class="vo-card">'
       + '<div class="vo-card-header">'
       + '<div class="vo-avatar"' + avatarAttrs + '>' + avatarInner + '</div>'
       + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
+      + tbEarnedHtml
       + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-mine-name="' + escapeHtml(mineName) + '" data-owner-id="' + escapeHtml(ownerIdOf(mine, v) || '') + '" data-owner-nick="' + escapeHtml(ownerLabelOf(mine, v)) + '" data-tip="' + escapeHtml(mineOwnedByTip(mine, v)) + '" aria-label="' + escapeHtml(mineOwnedByTip(mine, v)) + '">'
       + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
       + '<span>' + escapeHtml(mineName) + '</span></div>'
