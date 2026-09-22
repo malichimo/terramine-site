@@ -9,10 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="home-page/home-page.css" />
+  <link rel="stylesheet" href="/home-page/site-nav.css" />
 </head>
-<body>
+<body class="has-site-nav home-page">
 
-  <nav>
+  <nav class="site-nav" aria-label="Main">
     <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
     <div class="nav-links" id="nav-links-menu">
       <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
@@ -441,5 +442,6 @@
 
   <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()" style="position: fixed; right: 28px; bottom: 28px; width: 48px; height: 48px; border-radius: 999px; border: 1px solid rgba(91,229,208,0.35); background: rgba(15,22,32,0.92); color: #5BE5D0; display: none; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; z-index: 80; box-shadow: 0 12px 32px rgba(0,0,0,0.32); transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;">↑</button>
 
+  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>

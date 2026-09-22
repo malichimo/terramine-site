@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/home-page/site-nav.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -49,70 +50,7 @@
     }
 
     /* ── NAV (same structure as index.html) ── */
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 0 48px; height: 80px; box-sizing: border-box;
-      background: rgba(8,12,16,0.82);
-      -webkit-backdrop-filter: blur(16px);
-      backdrop-filter: blur(16px);
-      max-width: 1320px;
-      width: min(1320px, 100%);
-      margin: 0 auto;
-      border-radius: 0 0 16px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 24px;
-      letter-spacing: -0.5px;
-      color: var(--gold);
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-    .nav-logo img { display:block; height:60px; width:auto; }
-    .nav-logo span { color: var(--white); }
-    .nav-links {
-      display: flex;
-      gap: 24px;
-      align-items: center;
-      flex: 1 1 auto;
-      justify-content: center;
-    }
-    .nav-links a {
-      color: var(--muted);
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: 500;
-      transition: color 0.18s;
-      white-space: nowrap;
-    }
-    .nav-links a:hover, .nav-links a.active { color: var(--white); }
-    .nav-links a.active { color: var(--gold); }
-    .nav-actions { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; }
-    .nav-actions a.nav-login {
-      display: inline-flex; align-items: center; justify-content: center;
-      color: var(--cyan); text-decoration: none;
-      border: 1px solid var(--cyan);
-      padding: 11px 18px; border-radius: 10px; font-size: 15px;
-      transition: all 0.2s;
-    }
-    .nav-actions a.nav-login:hover { background: rgba(91,229,208,0.1); }
-
-    @media (max-width: 860px) {
-      nav { padding: 14px 18px; border-radius: 0; width: 100%; }
-      .nav-links { display: none; }
-      .nav-logo { font-size: 18px; }
-    }
+    @media (max-width: 860px) {    }
 
     /* ── HERO ── */
     .merch-hero {
@@ -310,20 +248,26 @@
     .footer-copy { font-size: 13px; color: var(--muted); }
   </style>
 </head>
-<body>
+<body class="has-site-nav">
 
-  <nav>
+  <nav class="site-nav" aria-label="Main">
     <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
-    <div class="nav-links">
-      <a href="/#mines">Mine Types</a>
-      <a href="/#how">How It Works</a>
+    <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
       <a href="/heatmap">World Map</a>
       <a href="/players-guide">Player's Guide</a>
       <a href="/faq">FAQ</a>
-      <a href="/merch" class="active">Merch</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
     </div>
     <div class="nav-actions">
       <a href="/portal" class="nav-login">My Portal</a>
+      <a href="/#download" class="nav-cta">Download</a>
+      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
   </nav>
 
@@ -510,5 +454,6 @@
     });
   </script>
 
+  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>

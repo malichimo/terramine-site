@@ -6,6 +6,7 @@
   <title>Download TerraMine for iPhone — iOS Beta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/home-page/site-nav.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -34,29 +35,6 @@
       pointer-events: none;
       z-index: 0;
     }
-
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 40px; height: 80px; box-sizing: border-box;
-      background: rgba(13,27,42,0.9);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(79,195,247,0.1);
-    }
-    .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 26px;
-      letter-spacing: 2px;
-      color: var(--cyan);
-      text-decoration: none;
-    }
-    .nav-logo img { display:block; height:60px; width:auto; }
-    nav a.back { color: var(--gray); text-decoration: none; font-size: 14px; transition: color 0.2s; }
-    nav a.back:hover { color: var(--white); }
 
     .page {
       position: relative;
@@ -270,18 +248,31 @@
       from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    @media (max-width: 600px) {
-      nav { padding: 16px 20px; }
-      .btn-secondary { display: none; }
+    @media (max-width: 600px) {      .btn-secondary { display: none; }
     }
   </style>
 </head>
-<body>
+<body class="has-site-nav">
 
-  <nav>
-  <link rel="icon" type="image/png" href="/logo.png?v=2" />
+  <nav class="site-nav" aria-label="Main">
     <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
-    <a class="back" href="/">← Back to Home</a>
+    <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap">World Map</a>
+      <a href="/players-guide">Player's Guide</a>
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/portal" class="nav-login">My Portal</a>
+      <a href="/#download" class="nav-cta">Download</a>
+      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
   </nav>
 
   <div class="page">
@@ -355,5 +346,6 @@
     <p>&copy; 2026 TerraMine. All rights reserved.</p>
   </footer>
 
+  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>

@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/home-page/site-nav.css" />
   <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
        already verified via ads.txt at the site root). -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4502698429383902" crossorigin="anonymous"></script>
@@ -23,19 +24,6 @@
     }
     html, body { height: 100%; overflow: hidden; }
     body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; }
-
-    nav {
-      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-      padding: 0 28px; height: 80px; box-sizing: border-box; background: rgba(13,27,42,0.95); backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border); z-index: 20;
-    }
-    .nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; color: var(--cyan); text-decoration: none; }
-    .nav-logo img { display:block; height:60px; width:auto; }
-    .nav-right { display: flex; align-items: center; gap: 20px; }
-    nav a.back { color: var(--gray); text-decoration: none; font-size: 13px; transition: color 0.2s; }
-    nav a.back:hover { color: var(--white); }
-    .nav-cta { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1.5px; color: var(--navy); background: var(--cyan); padding: 7px 16px; border-radius: 4px; text-decoration: none; transition: opacity 0.2s; }
-    .nav-cta:hover { opacity: 0.85; }
 
     /* ── Ad banner (top, below header, above toolbar) — Aug 24, 2026 ──
        A real flex row, not an overlay on top of #map — keeps it out of
@@ -105,20 +93,31 @@
     .map-footer { flex-shrink: 0; text-align: center; padding: 8px; font-size: 11px; color: var(--gray); background: rgba(13,27,42,0.9); border-top: 1px solid var(--border); }
     .map-footer a { color: var(--cyan); text-decoration: none; }
 
-    @media (max-width: 600px) {
-      nav { padding: 12px 16px; }
-      .toolbar { padding: 8px 12px; }
+    @media (max-width: 600px) {      .toolbar { padding: 8px 12px; }
       #legend { bottom: 48px; left: 8px; }
     }
   </style>
 </head>
-<body>
+<body class="has-site-nav">
 
-  <nav>
+  <nav class="site-nav" aria-label="Main">
     <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
-    <div class="nav-right">
-      <a class="back" href="/">← Home</a>
-      <a class="nav-cta" href="https://terramine.app">Play Free</a>
+    <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap" class="is-active">World Map</a>
+      <a href="/players-guide">Player's Guide</a>
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/portal" class="nav-login">My Portal</a>
+      <a href="/#download" class="nav-cta">Download</a>
+      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
   </nav>
 
@@ -563,5 +562,6 @@
     async defer>
   </script>
 
+  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>
