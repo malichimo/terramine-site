@@ -257,8 +257,7 @@
               <div class="dash-pie-wrap">
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
-              <div class="dash-pie-legend" id="mine-type-pie-legend"></div>
-            </div>
+</div>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-slot">
             <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="Dashboard slot reserved">
@@ -341,10 +340,10 @@
     return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function fmtNum(n) {
-    if (n === undefined || n === null) return '—';
-    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
-    if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
-    return Math.round(n).toLocaleString();
+    if (n === undefined || n === null || n === '') return '0';
+    const x = Number(n);
+    if (!Number.isFinite(x)) return '0';
+    return Math.round(x).toLocaleString('en-US');
   }
 
   function fmtUSD(n) {
@@ -406,11 +405,12 @@
   }
   async function renderMineTypePie(counts, total) {
     const canvas = $('mine-type-pie');
-    const legend = $('mine-type-pie-legend');
     if (!canvas || !canvas.getContext) return;
+    const wrap = canvas.parentElement;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const cssSize = Math.min(280, canvas.clientWidth || 280);
+    const boxW = (wrap && wrap.clientWidth) ? wrap.clientWidth : (canvas.clientWidth || 280);
+    const cssSize = Math.max(120, Math.round(boxW * 0.9));
     canvas.width = Math.round(cssSize * dpr);
     canvas.height = Math.round(cssSize * dpr);
     canvas.style.width = cssSize + 'px';
@@ -425,22 +425,8 @@
     const sum = slices.reduce(function(a, s) { return a + s.count; }, 0) || 0;
     const cx = cssSize / 2;
     const cy = cssSize / 2;
-    const radius = cssSize * 0.38;
-    const iconR = cssSize * 0.22;
-
-    if (legend) {
-      legend.innerHTML = types.map(function(t) {
-        const n = counts[t] || 0;
-        const pct = sum ? Math.round((n / sum) * 1000) / 10 : 0;
-        return '<div class="dash-pie-legend-row" data-type="' + t + '">'
-          + '<span class="dash-pie-swatch" style="background:' + MINE_TYPE_PIE_COLORS[t] + '"></span>'
-          + '<img class="dash-pie-legend-icon" src="' + MINE_TYPE_PIE_ICONS[t] + '" alt="">'
-          + '<span class="dash-pie-legend-label">' + MINE_TYPE_PIE_LABELS[t] + '</span>'
-          + '<span class="dash-pie-legend-pct">' + pct + '%</span>'
-          + '<span class="dash-pie-legend-count">' + fmtNum(n) + '</span>'
-          + '</div>';
-      }).join('');
-    }
+    const radius = cssSize * 0.48;
+    const labelR = cssSize * 0.28;
 
     if (!sum) {
       ctx.beginPath();
@@ -470,47 +456,53 @@
       ctx.closePath();
       ctx.fillStyle = MINE_TYPE_PIE_COLORS[s.type];
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      const img = icons[s.type];
-      if (img && sweep > 0.25) {
-        const ix = cx + Math.cos(mid) * iconR;
-        const iy = cy + Math.sin(mid) * iconR;
-        const sz = Math.max(18, Math.min(32, cssSize * 0.1));
+      // Icon + percent on the slice (skip tiny wedges)
+      if (sweep > 0.18) {
+        const lx = cx + Math.cos(mid) * labelR;
+        const ly = cy + Math.sin(mid) * labelR;
+        const pct = Math.round((s.count / sum) * 100);
+        const img = icons[s.type];
+        const sz = Math.max(16, Math.min(28, cssSize * 0.09));
         ctx.save();
         ctx.beginPath();
-        ctx.arc(ix, iy, sz * 0.7, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        ctx.arc(lx, ly - (img ? sz * 0.35 : 0), img ? sz * 0.85 : 14, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.94)';
         ctx.fill();
-        ctx.drawImage(img, ix - sz / 2, iy - sz / 2, sz, sz);
+        if (img) {
+          ctx.drawImage(img, lx - sz / 2, ly - sz * 0.95, sz, sz);
+          ctx.fillStyle = '#0D1B2A';
+          ctx.font = '700 ' + Math.max(11, Math.round(cssSize * 0.045)) + 'px DM Sans, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(pct + '%', lx, ly + sz * 0.15);
+        } else {
+          ctx.fillStyle = '#0D1B2A';
+          ctx.font = '700 12px DM Sans, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(pct + '%', lx, ly);
+        }
         ctx.restore();
-      } else if (sweep > 0.35) {
-        const pct = Math.round((s.count / sum) * 100);
-        const tx = cx + Math.cos(mid) * iconR;
-        const ty = cy + Math.sin(mid) * iconR;
-        ctx.fillStyle = '#0D1B2A';
-        ctx.font = '700 12px DM Sans, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(pct + '%', tx, ty);
       }
       angle += sweep;
     });
 
-    // center hole (donut) for readability
+    // Center hole with total
     ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.42, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.arc(cx, cy, radius * 0.36, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.fill();
     ctx.fillStyle = '#0D1B2A';
-    ctx.font = "700 22px 'Bebas Neue', sans-serif";
+    ctx.font = "700 " + Math.max(18, Math.round(cssSize * 0.08)) + "px 'Bebas Neue', sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(fmtNum(total || sum), cx, cy - 8);
     ctx.fillStyle = '#64748b';
-    ctx.font = '600 10px DM Sans, sans-serif';
+    ctx.font = '600 ' + Math.max(9, Math.round(cssSize * 0.035)) + 'px DM Sans, sans-serif';
     ctx.fillText('MINES', cx, cy + 12);
   }
 

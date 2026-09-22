@@ -594,7 +594,7 @@
     const v = parseFloat(n) || 0;
     return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  function fmtNum(n) { if(!n)return'0'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return Math.round(n).toLocaleString(); }
+  function fmtNum(n) { if (n === undefined || n === null || n === '') return '0'; const x = Number(n); if (!Number.isFinite(x)) return '0'; return Math.round(x).toLocaleString('en-US'); }
   function fmtUSD(n) { return '$'+(parseFloat(n)||0).toFixed(2); }
   function initials(name) { if(!name)return'?'; return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 

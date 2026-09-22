@@ -578,53 +578,18 @@ body.auth-pending #portal {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 4px 4px;
+  padding: 4px 0 8px;
   flex: 1;
+  width: 100%;
 }
 .dash-pie-wrap canvas {
-  max-width: 100%;
+  display: block;
+  max-width: 90%;
+  width: 90%;
   height: auto;
 }
-.dash-pie-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-.dash-pie-legend-row {
-  display: grid;
-  grid-template-columns: 10px 18px 1fr auto auto;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #334155;
-}
-.dash-pie-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-.dash-pie-legend-icon {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  display: block;
-}
-.dash-pie-legend-label { font-weight: 600; }
-.dash-pie-legend-pct {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--brown);
-  min-width: 2.6em;
-  text-align: right;
-}
-.dash-pie-legend-count {
-  font-variant-numeric: tabular-nums;
-  color: #64748b;
-  min-width: 2em;
-  text-align: right;
-}
+.dash-pie-legend { display: none !important; }
+
 .dash-slot-placeholder {
   flex: 1;
   display: flex;

@@ -492,12 +492,10 @@
     return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function fmtNum(n) {
-    if (n == null || n === '') return '';
+    if (n === undefined || n === null || n === '') return '0';
     const x = Number(n);
-    if (!isFinite(x)) return String(n);
-    if (Math.abs(x) >= 1000000) return (x / 1000000).toFixed(1) + 'M';
-    if (Math.abs(x) >= 1000) return (x / 1000).toFixed(1) + 'K';
-    return Number.isInteger(x) ? x.toLocaleString() : String(x);
+    if (!Number.isFinite(x)) return '0';
+    return Math.round(x).toLocaleString('en-US');
   }
   function fmtUSD(n) { return '$' + (parseFloat(n) || 0).toFixed(2); }
   function initials(name) { if (!name) return '?'; return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
