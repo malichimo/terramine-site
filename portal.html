@@ -122,7 +122,7 @@
       <main class="main" id="main-content">
         <div class="mine-totals-wrap" id="mine-totals-wrap">
           <div class="mine-totals-controls">
-            <button type="button" class="compare-pill" id="compare-pill" aria-pressed="false" title="Compare minute, Day, Month, Year production values.">Compare</button>
+            <button type="button" class="compare-pill" id="compare-pill" aria-pressed="false">Compare</button>
             <div class="page-settings" id="page-settings">
               <button type="button" class="page-settings-btn" id="page-settings-btn" aria-label="Page settings" aria-expanded="false" aria-controls="page-settings-panel">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1055,7 +1055,7 @@
       else show = period === active;
       row.hidden = !show;
       row.style.display = show ? '' : 'none';
-      row.classList.toggle('is-active-period', period === active);
+      row.classList.toggle('is-active-period', !!compareOn && period === active);
     });
   }
 
@@ -1077,6 +1077,38 @@
     });
   }
 
+  const COMPARE_TIP_TEXT = 'Compare minute, Day, Month, Year production values.';
+  function bindCompareFollowTip(pill) {
+    if (!pill || pill.dataset.compareTipBound === '1') return;
+    pill.dataset.compareTipBound = '1';
+    pill.removeAttribute('title');
+    pill.addEventListener('mouseenter', (e) => {
+      if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+      totalsFollowTipTarget = pill;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      const tip = ensureTotalsFollowTip();
+      tip.textContent = COMPARE_TIP_TEXT;
+      tip.style.display = 'none';
+      totalsFollowTipTimer = setTimeout(() => {
+        totalsFollowTipTimer = null;
+        if (totalsFollowTipTarget !== pill || !pill.isConnected) return;
+        tip.textContent = COMPARE_TIP_TEXT;
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }, 1000);
+    });
+    pill.addEventListener('mousemove', (e) => {
+      if (totalsFollowTipTarget !== pill) return;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      if (totalsFollowTip && totalsFollowTip.style.display === 'block' && !totalsFollowTipTimer) {
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }
+    });
+    pill.addEventListener('mouseleave', () => {
+      if (totalsFollowTipTarget === pill) dismissTotalsFollowTip();
+    });
+  }
   function initComparePill() {
     const pill = $('compare-pill');
     if (!pill || pill.dataset.bound === '1') return;
@@ -1085,6 +1117,7 @@
     saveCompareOn(false);
     pill.setAttribute('aria-pressed', 'false');
     pill.classList.remove('is-on');
+    bindCompareFollowTip(pill);
     pill.addEventListener('click', function () {
       compareOn = !compareOn;
       saveCompareOn(compareOn);
