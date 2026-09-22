@@ -410,7 +410,8 @@
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
     const boxW = (wrap && wrap.clientWidth) ? wrap.clientWidth : (canvas.clientWidth || 280);
-    const cssSize = Math.max(120, Math.round(boxW * 0.9));
+    // Leave a little padding so callout boxes can sit in the white space
+    const cssSize = Math.max(140, Math.round(boxW * 0.9));
     canvas.width = Math.round(cssSize * dpr);
     canvas.height = Math.round(cssSize * dpr);
     canvas.style.width = cssSize + 'px';
@@ -425,13 +426,73 @@
     const sum = slices.reduce(function(a, s) { return a + s.count; }, 0) || 0;
     const cx = cssSize / 2;
     const cy = cssSize / 2;
-    const radius = cssSize * 0.48;
-    const labelR = cssSize * 0.28;
+    // Donut ring: outer radius leaves margin for callouts; hole sized for "99,999" + MINES
+    const radius = cssSize * 0.36;
+    const holeR = Math.max(28, Math.min(radius * 0.42, cssSize * 0.145));
+    const innerLabelR = (holeR + radius) / 2;
+    const OUTER_SWEEP = 0.28; // below this → leader-line callout
+
+    function roundRect(x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function drawLabelBox(lx, ly, img, pctText, anchor) {
+      // anchor: 'center' | 'left' | 'right' — box position relative to (lx, ly)
+      const iconSz = Math.max(14, Math.min(22, cssSize * 0.07));
+      const padX = 6;
+      const padY = 4;
+      const gap = 4;
+      ctx.font = '700 ' + Math.max(11, Math.round(cssSize * 0.042)) + 'px DM Sans, sans-serif';
+      const tw = ctx.measureText(pctText).width;
+      const contentW = (img ? iconSz + gap : 0) + tw;
+      const boxW2 = contentW + padX * 2;
+      const boxH = Math.max(iconSz, 14) + padY * 2;
+      let bx = lx - boxW2 / 2;
+      let by = ly - boxH / 2;
+      if (anchor === 'left') { bx = lx; }
+      if (anchor === 'right') { bx = lx - boxW2; }
+
+      // Keep box inside canvas
+      bx = Math.max(2, Math.min(cssSize - boxW2 - 2, bx));
+      by = Math.max(2, Math.min(cssSize - boxH - 2, by));
+
+      ctx.save();
+      roundRect(bx, by, boxW2, boxH, 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.96)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(13,27,42,0.18)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      let cx2 = bx + padX;
+      const midY = by + boxH / 2;
+      if (img) {
+        ctx.drawImage(img, cx2, midY - iconSz / 2, iconSz, iconSz);
+        cx2 += iconSz + gap;
+      }
+      ctx.fillStyle = '#0D1B2A';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pctText, cx2, midY);
+      ctx.restore();
+      return { x: bx, y: by, w: boxW2, h: boxH };
+    }
 
     if (!sum) {
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(148,163,184,0.35)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, holeR, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
       ctx.fill();
       ctx.fillStyle = '#64748b';
       ctx.font = '600 13px DM Sans, sans-serif';
@@ -446,7 +507,9 @@
       icons[s.type] = await loadPieIcon(MINE_TYPE_PIE_ICONS[s.type]);
     }));
 
+    // First pass: draw wedges and collect label jobs
     let angle = -Math.PI / 2;
+    const labelJobs = [];
     slices.forEach(function(s) {
       const sweep = (s.count / sum) * Math.PI * 2;
       const mid = angle + sweep / 2;
@@ -460,50 +523,82 @@
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Icon + percent on the slice (skip tiny wedges)
-      if (sweep > 0.18) {
-        const lx = cx + Math.cos(mid) * labelR;
-        const ly = cy + Math.sin(mid) * labelR;
-        const pct = Math.round((s.count / sum) * 100);
-        const img = icons[s.type];
-        const sz = Math.max(16, Math.min(28, cssSize * 0.09));
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(lx, ly - (img ? sz * 0.35 : 0), img ? sz * 0.85 : 14, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.94)';
-        ctx.fill();
-        if (img) {
-          ctx.drawImage(img, lx - sz / 2, ly - sz * 0.95, sz, sz);
-          ctx.fillStyle = '#0D1B2A';
-          ctx.font = '700 ' + Math.max(11, Math.round(cssSize * 0.045)) + 'px DM Sans, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          ctx.fillText(pct + '%', lx, ly + sz * 0.15);
-        } else {
-          ctx.fillStyle = '#0D1B2A';
-          ctx.font = '700 12px DM Sans, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(pct + '%', lx, ly);
-        }
-        ctx.restore();
-      }
+      const pct = Math.round((s.count / sum) * 100);
+      labelJobs.push({
+        type: s.type,
+        mid: mid,
+        sweep: sweep,
+        pct: pct,
+        img: icons[s.type]
+      });
       angle += sweep;
     });
 
-    // Center hole with total
+    // Center hole (smaller, still fits 99,999 MINES)
     ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.36, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.arc(cx, cy, holeR, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
     ctx.fill();
+    const totalText = fmtNum(total || sum);
+    const totalFont = Math.max(14, Math.min(22, Math.round(holeR * 0.72)));
     ctx.fillStyle = '#0D1B2A';
-    ctx.font = "700 " + Math.max(18, Math.round(cssSize * 0.08)) + "px 'Bebas Neue', sans-serif";
+    ctx.font = "700 " + totalFont + "px 'Bebas Neue', sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(fmtNum(total || sum), cx, cy - 8);
+    ctx.fillText(totalText, cx, cy - holeR * 0.18);
     ctx.fillStyle = '#64748b';
-    ctx.font = '600 ' + Math.max(9, Math.round(cssSize * 0.035)) + 'px DM Sans, sans-serif';
-    ctx.fillText('MINES', cx, cy + 12);
+    ctx.font = '600 ' + Math.max(8, Math.round(holeR * 0.32)) + 'px DM Sans, sans-serif';
+    ctx.fillText('MINES', cx, cy + holeR * 0.38);
+
+    // Second pass: labels — on-slice for large wedges, callouts for slivers
+    // Stagger external callouts vertically to avoid overlap
+    const callouts = labelJobs.filter(function(j) { return j.sweep <= OUTER_SWEEP; });
+    callouts.sort(function(a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
+    const usedYs = [];
+
+    labelJobs.forEach(function(j) {
+      const pctText = j.pct + '%';
+      if (j.sweep > OUTER_SWEEP) {
+        const lx = cx + Math.cos(j.mid) * innerLabelR;
+        const ly = cy + Math.sin(j.mid) * innerLabelR;
+        drawLabelBox(lx, ly, j.img, pctText, 'center');
+        return;
+      }
+
+      // Leader line to white space outside the ring
+      const edgeX = cx + Math.cos(j.mid) * radius;
+      const edgeY = cy + Math.sin(j.mid) * radius;
+      const side = Math.cos(j.mid) >= 0 ? 1 : -1;
+      const elbowR = radius + cssSize * 0.06;
+      let elbowX = cx + Math.cos(j.mid) * elbowR;
+      let elbowY = cy + Math.sin(j.mid) * elbowR;
+      // Pull further out horizontally into margin
+      const labelX = side > 0 ? cssSize - 8 : 8;
+      let labelY = elbowY;
+      // Avoid stacking on the same Y
+      for (let guard = 0; guard < 12; guard++) {
+        let clash = false;
+        for (let i = 0; i < usedYs.length; i++) {
+          if (Math.abs(usedYs[i] - labelY) < 26) { clash = true; break; }
+        }
+        if (!clash) break;
+        labelY += (labelY >= cy ? 1 : -1) * 26;
+      }
+      labelY = Math.max(16, Math.min(cssSize - 16, labelY));
+      usedYs.push(labelY);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(edgeX, edgeY);
+      ctx.lineTo(elbowX, elbowY);
+      ctx.lineTo(labelX + (side > 0 ? -4 : 4), labelY);
+      ctx.strokeStyle = 'rgba(13,27,42,0.45)';
+      ctx.lineWidth = 1.25;
+      ctx.stroke();
+      ctx.restore();
+
+      drawLabelBox(labelX, labelY, j.img, pctText, side > 0 ? 'right' : 'left');
+    });
   }
 
   function renderPropertyBreakdown(props) {
