@@ -584,8 +584,8 @@ body.auth-pending #portal {
 }
 .dash-pie-wrap canvas {
   display: block;
-  max-width: 90%;
-  width: 90%;
+  max-width: 100%;
+  width: 100%;
   height: auto;
 }
 .dash-pie-legend { display: none !important; }

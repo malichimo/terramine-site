@@ -379,6 +379,13 @@
     gold: '#FFD700',
     diamond: '#6EC6FF'
   };
+  // Radial gradient: inner (lighter/start) -> outer (darker/current)
+  const MINE_TYPE_PIE_GRADIENTS = {
+    rock:    { inner: '#B0B0B0', outer: '#7F7F7F' },
+    coal:    { inner: '#4A4A4A', outer: '#000000' },
+    gold:    { inner: '#FFE566', outer: '#C9A000' },
+    diamond: { inner: '#B8E7FF', outer: '#3BA8E0' }
+  };
   const MINE_TYPE_PIE_ICONS = {
     rock: '/images/mine-icons/rock.svg',
     coal: '/images/mine-icons/coal.svg',
@@ -410,8 +417,8 @@
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
     const boxW = (wrap && wrap.clientWidth) ? wrap.clientWidth : (canvas.clientWidth || 280);
-    // Leave a little padding so callout boxes can sit in the white space
-    const cssSize = Math.max(140, Math.round(boxW * 0.9));
+    // Fill the full width of the card
+    const cssSize = Math.max(140, Math.round(boxW));
     canvas.width = Math.round(cssSize * dpr);
     canvas.height = Math.round(cssSize * dpr);
     canvas.style.width = cssSize + 'px';
@@ -426,11 +433,20 @@
     const sum = slices.reduce(function(a, s) { return a + s.count; }, 0) || 0;
     const cx = cssSize / 2;
     const cy = cssSize / 2;
-    // Donut ring: outer radius leaves margin for callouts; hole sized for "99,999" + MINES
-    const radius = cssSize * 0.36;
+    // Leave a thin outer margin so callout boxes can sit just inside the canvas
+    const radius = cssSize * 0.38;
     const holeR = Math.max(28, Math.min(radius * 0.42, cssSize * 0.145));
     const innerLabelR = (holeR + radius) / 2;
-    const OUTER_SWEEP = 0.28; // below this → leader-line callout
+    const OUTER_SWEEP = 0.28;
+
+    function formatPct(count, totalN) {
+      if (!totalN) return '0%';
+      const raw = (count / totalN) * 100;
+      // Up to 2 decimal places; trim trailing zeros (0.58%, 29%, 61.71%)
+      let s = raw.toFixed(2).replace(/\.?0+$/, '');
+      if (s === '') s = '0';
+      return s + '%';
+    }
 
     function roundRect(x, y, w, h, r) {
       const rr = Math.min(r, w / 2, h / 2);
@@ -443,23 +459,30 @@
       ctx.closePath();
     }
 
+    function sliceGradient(type) {
+      const gdef = MINE_TYPE_PIE_GRADIENTS[type] || { inner: '#ccc', outer: '#888' };
+      const g = ctx.createRadialGradient(cx, cy, holeR * 0.2, cx, cy, radius);
+      g.addColorStop(0, gdef.inner);
+      g.addColorStop(1, gdef.outer);
+      return g;
+    }
+
+    // Vertical stack: icon above, percent below, inside rounded white box
     function drawLabelBox(lx, ly, img, pctText, anchor) {
-      // anchor: 'center' | 'left' | 'right' — box position relative to (lx, ly)
-      const iconSz = Math.max(14, Math.min(22, cssSize * 0.07));
-      const padX = 6;
-      const padY = 4;
-      const gap = 4;
-      ctx.font = '700 ' + Math.max(11, Math.round(cssSize * 0.042)) + 'px DM Sans, sans-serif';
+      const iconSz = Math.max(14, Math.min(24, cssSize * 0.075));
+      const padX = 7;
+      const padY = 5;
+      const gap = 2;
+      const fontPx = Math.max(10, Math.round(cssSize * 0.038));
+      ctx.font = '700 ' + fontPx + 'px DM Sans, sans-serif';
       const tw = ctx.measureText(pctText).width;
-      const contentW = (img ? iconSz + gap : 0) + tw;
+      const contentW = Math.max(img ? iconSz : 0, tw);
       const boxW2 = contentW + padX * 2;
-      const boxH = Math.max(iconSz, 14) + padY * 2;
+      const boxH = padY + (img ? iconSz : 0) + (img ? gap : 0) + fontPx + padY;
       let bx = lx - boxW2 / 2;
       let by = ly - boxH / 2;
-      if (anchor === 'left') { bx = lx; }
-      if (anchor === 'right') { bx = lx - boxW2; }
-
-      // Keep box inside canvas
+      if (anchor === 'left') bx = lx;
+      if (anchor === 'right') bx = lx - boxW2;
       bx = Math.max(2, Math.min(cssSize - boxW2 - 2, bx));
       by = Math.max(2, Math.min(cssSize - boxH - 2, by));
 
@@ -471,16 +494,15 @@
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      let cx2 = bx + padX;
-      const midY = by + boxH / 2;
+      let y = by + padY;
       if (img) {
-        ctx.drawImage(img, cx2, midY - iconSz / 2, iconSz, iconSz);
-        cx2 += iconSz + gap;
+        ctx.drawImage(img, bx + (boxW2 - iconSz) / 2, y, iconSz, iconSz);
+        y += iconSz + gap;
       }
       ctx.fillStyle = '#0D1B2A';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(pctText, cx2, midY);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(pctText, bx + boxW2 / 2, y);
       ctx.restore();
       return { x: bx, y: by, w: boxW2, h: boxH };
     }
@@ -507,7 +529,6 @@
       icons[s.type] = await loadPieIcon(MINE_TYPE_PIE_ICONS[s.type]);
     }));
 
-    // First pass: draw wedges and collect label jobs
     let angle = -Math.PI / 2;
     const labelJobs = [];
     slices.forEach(function(s) {
@@ -517,24 +538,23 @@
       ctx.moveTo(cx, cy);
       ctx.arc(cx, cy, radius, angle, angle + sweep);
       ctx.closePath();
-      ctx.fillStyle = MINE_TYPE_PIE_COLORS[s.type];
+      ctx.fillStyle = sliceGradient(s.type);
       ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.9)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      const pct = Math.round((s.count / sum) * 100);
       labelJobs.push({
         type: s.type,
         mid: mid,
         sweep: sweep,
-        pct: pct,
+        pctText: formatPct(s.count, sum),
         img: icons[s.type]
       });
       angle += sweep;
     });
 
-    // Center hole (smaller, still fits 99,999 MINES)
+    // Center hole
     ctx.beginPath();
     ctx.arc(cx, cy, holeR, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.96)';
@@ -550,41 +570,32 @@
     ctx.font = '600 ' + Math.max(8, Math.round(holeR * 0.32)) + 'px DM Sans, sans-serif';
     ctx.fillText('MINES', cx, cy + holeR * 0.38);
 
-    // Second pass: labels — on-slice for large wedges, callouts for slivers
-    // Stagger external callouts vertically to avoid overlap
-    const callouts = labelJobs.filter(function(j) { return j.sweep <= OUTER_SWEEP; });
-    callouts.sort(function(a, b) { return Math.sin(a.mid) - Math.sin(b.mid); });
     const usedYs = [];
-
     labelJobs.forEach(function(j) {
-      const pctText = j.pct + '%';
       if (j.sweep > OUTER_SWEEP) {
         const lx = cx + Math.cos(j.mid) * innerLabelR;
         const ly = cy + Math.sin(j.mid) * innerLabelR;
-        drawLabelBox(lx, ly, j.img, pctText, 'center');
+        drawLabelBox(lx, ly, j.img, j.pctText, 'center');
         return;
       }
 
-      // Leader line to white space outside the ring
       const edgeX = cx + Math.cos(j.mid) * radius;
       const edgeY = cy + Math.sin(j.mid) * radius;
       const side = Math.cos(j.mid) >= 0 ? 1 : -1;
-      const elbowR = radius + cssSize * 0.06;
-      let elbowX = cx + Math.cos(j.mid) * elbowR;
-      let elbowY = cy + Math.sin(j.mid) * elbowR;
-      // Pull further out horizontally into margin
-      const labelX = side > 0 ? cssSize - 8 : 8;
+      const elbowR = radius + cssSize * 0.05;
+      const elbowX = cx + Math.cos(j.mid) * elbowR;
+      const elbowY = cy + Math.sin(j.mid) * elbowR;
+      const labelX = side > 0 ? cssSize - 6 : 6;
       let labelY = elbowY;
-      // Avoid stacking on the same Y
       for (let guard = 0; guard < 12; guard++) {
         let clash = false;
         for (let i = 0; i < usedYs.length; i++) {
-          if (Math.abs(usedYs[i] - labelY) < 26) { clash = true; break; }
+          if (Math.abs(usedYs[i] - labelY) < 34) { clash = true; break; }
         }
         if (!clash) break;
-        labelY += (labelY >= cy ? 1 : -1) * 26;
+        labelY += (labelY >= cy ? 1 : -1) * 34;
       }
-      labelY = Math.max(16, Math.min(cssSize - 16, labelY));
+      labelY = Math.max(20, Math.min(cssSize - 20, labelY));
       usedYs.push(labelY);
 
       ctx.save();
@@ -597,7 +608,7 @@
       ctx.stroke();
       ctx.restore();
 
-      drawLabelBox(labelX, labelY, j.img, pctText, side > 0 ? 'right' : 'left');
+      drawLabelBox(labelX, labelY, j.img, j.pctText, side > 0 ? 'right' : 'left');
     });
   }
 
