@@ -375,7 +375,7 @@ body.auth-pending #portal {
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 28px 12px 10px;
+  padding: 20px 12px 10px;
   background: rgba(255, 255, 255, 0.85);
   border: 2px solid var(--brown-mid);
   border-radius: 12px;
