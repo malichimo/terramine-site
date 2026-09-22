@@ -240,3 +240,5 @@ body.has-site-nav {
 body.has-site-nav.home-page {
   padding-top: 0;
 }
+
+.nav-links a.is-active { color: var(--sn-white); }

@@ -149,19 +149,7 @@
       if (status === 'idle') return 'status-idle';
       if (status === 'dnd') return 'status-dnd';
       return 'status-offline';
-    }
-
-    function setupMobileNav() {
-      const nav = document.querySelector('nav');
-      const toggle = document.getElementById('nav-menu-toggle');
-      const links = document.getElementById('nav-links-menu');
-
-      if (!nav || !toggle || !links) return;
-
-      const closeMenu = () => {
-        nav.classList.remove('nav-open');
-        toggle.setAttribute('aria-expanded', 'false');
-      };
+    };
 
       const openMenu = () => {
         nav.classList.add('nav-open');
@@ -262,7 +250,6 @@
 
     loadStats();
     loadDiscordCommunity();
-    setupMobileNav();
   </script>
 
   <!-- ── MINE TYPES ── -->
