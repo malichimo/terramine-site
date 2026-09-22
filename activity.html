@@ -506,8 +506,8 @@
     .mine-map-overlay[hidden] { display:none !important; }
     .mine-map-panel {
       position:relative; flex:1; min-height:0; display:flex; flex-direction:column;
-      margin:12px; background:#eef1f4; color:#fff;
-      border:1px solid rgba(255,255,255,.22); border-radius:14px;
+      margin:0; background:#eef1f4; color:#fff;
+      border:1px solid rgba(255,255,255,.22); border-radius:0;
       box-shadow:0 12px 28px rgba(6,10,16,.55); overflow:hidden;
     }
     .mine-map-head {
@@ -1270,46 +1270,19 @@
     styles = styles.concat(mineMapBuildingsOn ? MINE_MAP_SHOW_BUILDINGS : MINE_MAP_HIDE_BUILDINGS);
     return styles;
   }
-  let mineMapLockedTop = null;
-  function measureMineMapTop(main) {
-    const r = main.getBoundingClientRect();
-    let top = Math.max(0, r.top);
-    const nav = document.querySelector('.top-nav');
-    if (nav) top = Math.max(top, nav.getBoundingClientRect().bottom);
-    main.querySelectorAll('.mine-totals-bar, .mine-toolbar').forEach((el) => {
-      const cr = el.getBoundingClientRect();
-      // Only count chrome still visible near the top — used once at open
-      if (cr.bottom > top && cr.top < (r.top + 160) && cr.bottom > 0) {
-        top = Math.max(top, cr.bottom);
-      }
-    });
-    return top + 8;
-  }
   function syncMineMapBounds() {
     const overlay = $('mine-map-overlay');
-    const main = $('portal-main');
-    if (!overlay || !main || overlay.hidden) return;
-    const r = main.getBoundingClientRect();
-    // Lock top on first sync while open so scrolling the filter bar away
-    // does not grow the popup. Still refresh left/width/height for resize.
-    if (mineMapLockedTop == null) {
-      mineMapLockedTop = measureMineMapTop(main);
-    }
-    const top = mineMapLockedTop;
-    const left = Math.max(0, r.left);
-    const width = Math.max(0, Math.min(r.width, window.innerWidth - left));
-    const padBottom = 20;
-    const height = Math.max(200, window.innerHeight - top - padBottom);
+    if (!overlay || overlay.hidden) return;
+    // Full viewport — covers top nav and fills screen height/width.
     overlay.style.position = 'fixed';
-    overlay.style.left = left + 'px';
-    overlay.style.top = top + 'px';
-    overlay.style.width = width + 'px';
-    overlay.style.height = height + 'px';
+    overlay.style.left = '0';
+    overlay.style.top = '0';
+    overlay.style.width = window.innerWidth + 'px';
+    overlay.style.height = window.innerHeight + 'px';
     overlay.style.right = 'auto';
     overlay.style.bottom = 'auto';
   }
   function clearMineMapBounds() {
-    mineMapLockedTop = null;
     const overlay = $('mine-map-overlay');
     if (!overlay) return;
     overlay.style.left = '';
@@ -2569,7 +2542,6 @@
       const onMineMapViewportChange = (ev) => {
         // Resize may change header height — remeasure. Scroll must NOT
         // unlock top (that was growing the map as filters left the screen).
-        if (ev && ev.type === 'resize') mineMapLockedTop = null;
         syncMineMapBounds();
         if (mineMapInstance && $('mine-map-overlay') && !$('mine-map-overlay').hidden) {
           try { google.maps.event.trigger(mineMapInstance, 'resize'); } catch (e) {}
