@@ -1025,15 +1025,29 @@ body.auth-pending #portal {
   justify-content: flex-end;
   gap: 5px;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
+  vertical-align: middle;
 }
 .tb-today-tb-val img {
   width: 18px;
   height: 18px;
   object-fit: contain;
   flex-shrink: 0;
+  display: block;
+  align-self: center;
 }
 .tb-today-total .tb-today-tb-val {
   font-size: 15px;
   color: #0f172a;
   font-weight: 700;
+}
+.tb-today-total .tb-today-tb-val img {
+  width: 28px;
+  height: 28px;
+}
+.tb-today-section-soon {
+  filter: grayscale(1);
+  opacity: 0.48;
+  pointer-events: none;
+  user-select: none;
 }
