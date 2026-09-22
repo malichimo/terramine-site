@@ -1173,11 +1173,11 @@
       $('stat-tb-earned').textContent = fmtNum(userData.totalTBEarned || 0);
       $('stat-checkins').textContent  = fmtNum(userData.totalCheckIns || 0);
 
-      // Avatar
-      if (user.photoURL && user.photoURL.startsWith('https://')) {
-        $('nav-avatar').innerHTML = `<img src="${user.photoURL}" alt="${nickname}" />`;
-      } else if (userData.avatarURL && userData.avatarURL.startsWith('https://')) {
-        $('nav-avatar').innerHTML = `<img src="${userData.avatarURL}" alt="${nickname}" />`;
+      // Avatar: prefer Firestore profile avatar (same as Mines/Visitors/Activity),
+      // then fall back to Auth photoURL, then initials.
+      const avatarUrl = userData.avatarUrl || userData.avatarURL || user.photoURL || '';
+      if (typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')) {
+        $('nav-avatar').innerHTML = `<img src="${avatarUrl}" alt="${nickname}" />`;
       } else {
         $('nav-avatar').textContent = initials(nickname);
       }
