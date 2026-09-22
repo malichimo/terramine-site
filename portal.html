@@ -120,50 +120,9 @@
 
       <!-- Main -->
       <main class="main" id="main-content">
-        <div class="mine-totals-bar" id="mine-totals-bar" aria-label="Mine production totals">
-          <div class="mine-totals-bar-left">
-            <div class="mine-group-total" data-group-type="diamond">
-              <div class="mine-group-total-icon"><img src="/images/mine-icons/diamond.svg" alt=""></div>
-              <div class="mine-group-total-body">
-                <span class="mine-group-total-title">Diamond Mine Production</span>
-                <span class="mine-group-total-value">$0</span>
-              </div>
-            </div>
-            <div class="mine-group-total" data-group-type="gold">
-              <div class="mine-group-total-icon"><img src="/images/mine-icons/gold.svg" alt=""></div>
-              <div class="mine-group-total-body">
-                <span class="mine-group-total-title">Gold Mine Production</span>
-                <span class="mine-group-total-value">$0</span>
-              </div>
-            </div>
-            <div class="mine-group-total" data-group-type="coal">
-              <div class="mine-group-total-icon"><img src="/images/mine-icons/coal.svg" alt=""></div>
-              <div class="mine-group-total-body">
-                <span class="mine-group-total-title">Coal Mine Production</span>
-                <span class="mine-group-total-value">$0</span>
-              </div>
-            </div>
-            <div class="mine-group-total" data-group-type="rock">
-              <div class="mine-group-total-icon"><img src="/images/mine-icons/rock.svg" alt=""></div>
-              <div class="mine-group-total-body">
-                <span class="mine-group-total-title">Rock Mine Production</span>
-                <span class="mine-group-total-value">$0</span>
-              </div>
-            </div>
-          </div>
-          <div class="mine-totals-bar-right">
-            <div class="mine-group-total mine-totals-all" data-group-type="all">
-              <div class="mine-group-total-icons-all" aria-hidden="true">
-                <img src="/images/mine-icons/diamond.svg" alt="">
-                <img src="/images/mine-icons/gold.svg" alt="">
-                <img src="/images/mine-icons/coal.svg" alt="">
-                <img src="/images/mine-icons/rock.svg" alt="">
-              </div>
-              <div class="mine-group-total-body">
-                <span class="mine-group-total-title">All Mines Production</span>
-                <span class="mine-group-total-value">$0</span>
-              </div>
-            </div>
+        <div class="mine-totals-wrap" id="mine-totals-wrap">
+          <div class="mine-totals-controls">
+            <button type="button" class="compare-pill" id="compare-pill" aria-pressed="false" title="Compare minute, Day, Month, Year production values.">Compare</button>
             <div class="page-settings" id="page-settings">
               <button type="button" class="page-settings-btn" id="page-settings-btn" aria-label="Page settings" aria-expanded="false" aria-controls="page-settings-panel">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -197,6 +156,7 @@
               </div>
             </div>
           </div>
+          <div class="mine-totals-rows" id="mine-totals-rows" aria-label="Mine production totals"></div>
         </div>
 
         <!-- Stat row -->
@@ -873,20 +833,18 @@
   }
   function applyTypeOrderLayout() {
     syncTypeOrderFromFlag();
-    const left = document.querySelector('#mine-totals-bar .mine-totals-bar-left');
-    if (left) {
+    document.querySelectorAll('#mine-totals-rows .mine-totals-bar-left').forEach(function (left) {
       TYPE_ORDER.forEach(function (typ) {
         const box = left.querySelector('.mine-group-total[data-group-type="' + typ + '"]');
         if (box) left.appendChild(box);
       });
-    }
-    const allIcons = document.querySelector('#mine-totals-bar .mine-group-total-icons-all');
-    if (allIcons) {
+    });
+    document.querySelectorAll('#mine-totals-rows .mine-group-total-icons-all').forEach(function (allIcons) {
       TYPE_ORDER.forEach(function (typ) {
         const img = allIcons.querySelector('img[src*="' + typ + '.svg"]');
         if (img) allIcons.appendChild(img);
       });
-    }
+    });
   }
 
   function numOrNull(v) {
@@ -969,31 +927,163 @@
     if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
     return '$' + s;
   }
-  function groupProductionSum(type, mines) {
+  function groupProductionSum(type, mines, pref) {
+    pref = pref || displayPref;
     let sum = 0;
     (mines || []).forEach(m => {
       if (type && typeKey(m) !== type) return;
       const level = effectiveLevel((m._details || {}).productionLevel);
-      sum += displayAmount(typeKey(m), level, displayPref);
+      sum += displayAmount(typeKey(m), level, pref);
     });
     return sum;
   }
-  function applyGroupTotalValue(el, type) {
-    const mines = allMines;
-    const sum = type === 'all' ? groupProductionSum(null, mines) : groupProductionSum(type, mines);
-    const n = (sum == null || !Number.isFinite(sum)) ? 0 : sum;
-    el.textContent = fmtRate(n, displayPref.period) + PERIOD_SUFFIX[displayPref.period];
-    el.className = 'mine-group-total-value';
-    if (n > 0 && displayPref.rate !== 'base') el.classList.add('is-boosted');
+  const COMPARE_KEY = 'terramine.mines.compare';
+  const COMPARE_PERIODS = ['min', 'day', 'month', 'year'];
+  const ROW_PERIOD_LABEL = { sec: 'Second', min: 'Minute', day: 'Day', month: 'Month', year: 'Year' };
+  const TYPE_TITLE = {
+    diamond: 'Diamond Mine Production',
+    gold: 'Gold Mine Production',
+    coal: 'Coal Mine Production',
+    rock: 'Rock Mine Production',
+    all: 'All Mines Production'
+  };
+  function loadCompareOn() {
+    try { return sessionStorage.getItem(COMPARE_KEY) === '1'; } catch (e) { return false; }
   }
+  function saveCompareOn(on) {
+    try { sessionStorage.setItem(COMPARE_KEY, on ? '1' : '0'); } catch (e) {}
+  }
+  let compareOn = loadCompareOn();
+
+  function applyGroupTotalValue(el, type, pref) {
+    pref = pref || displayPref;
+    const mines = allMines;
+    const sum = type === 'all' ? groupProductionSum(null, mines, pref) : groupProductionSum(type, mines, pref);
+    const n = (sum == null || !Number.isFinite(sum)) ? 0 : sum;
+    el.textContent = fmtRate(n, pref.period) + PERIOD_SUFFIX[pref.period];
+    el.className = 'mine-group-total-value';
+    if (n > 0 && pref.rate !== 'base') el.classList.add('is-boosted');
+  }
+
+  function buildGroupTotalBox(type) {
+    const box = document.createElement('div');
+    box.className = 'mine-group-total' + (type === 'all' ? ' mine-totals-all' : '');
+    box.dataset.groupType = type;
+    if (type === 'all') {
+      const icons = document.createElement('div');
+      icons.className = 'mine-group-total-icons-all';
+      icons.setAttribute('aria-hidden', 'true');
+      TYPE_ORDER.forEach(function (typ) {
+        const img = document.createElement('img');
+        img.src = '/images/mine-icons/' + typ + '.svg';
+        img.alt = '';
+        icons.appendChild(img);
+      });
+      box.appendChild(icons);
+    } else {
+      const icon = document.createElement('div');
+      icon.className = 'mine-group-total-icon';
+      const img = document.createElement('img');
+      img.src = '/images/mine-icons/' + type + '.svg';
+      img.alt = '';
+      icon.appendChild(img);
+      box.appendChild(icon);
+    }
+    const body = document.createElement('div');
+    body.className = 'mine-group-total-body';
+    const title = document.createElement('span');
+    title.className = 'mine-group-total-title';
+    title.textContent = TYPE_TITLE[type] || type;
+    const val = document.createElement('span');
+    val.className = 'mine-group-total-value';
+    val.textContent = '$0';
+    body.appendChild(title);
+    body.appendChild(val);
+    box.appendChild(body);
+    return box;
+  }
+
+  function buildPeriodRow(period) {
+    const row = document.createElement('div');
+    row.className = 'mine-totals-bar';
+    row.dataset.period = period;
+    const label = document.createElement('div');
+    label.className = 'mine-totals-period-label';
+    label.textContent = ROW_PERIOD_LABEL[period] || period;
+    const left = document.createElement('div');
+    left.className = 'mine-totals-bar-left';
+    TYPE_ORDER.forEach(function (typ) { left.appendChild(buildGroupTotalBox(typ)); });
+    const right = document.createElement('div');
+    right.className = 'mine-totals-bar-right';
+    right.appendChild(buildGroupTotalBox('all'));
+    row.appendChild(label);
+    row.appendChild(left);
+    row.appendChild(right);
+    return row;
+  }
+
+  function ensureTotalsRows() {
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    if (host.dataset.built !== '1') {
+      host.innerHTML = '';
+      DISPLAY_PERIODS.forEach(function (period) {
+        host.appendChild(buildPeriodRow(period));
+      });
+      host.dataset.built = '1';
+      bindMineTotalsFollowTips();
+    }
+    applyTypeOrderLayout();
+  }
+
+  function syncCompareUi() {
+    const wrap = $('mine-totals-wrap');
+    const pill = $('compare-pill');
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    ensureTotalsRows();
+    if (wrap) wrap.classList.toggle('is-comparing', !!compareOn);
+    if (pill) {
+      pill.setAttribute('aria-pressed', compareOn ? 'true' : 'false');
+      pill.classList.toggle('is-on', !!compareOn);
+    }
+    const active = displayPref.period;
+    host.querySelectorAll('.mine-totals-bar').forEach(function (row) {
+      const period = row.dataset.period;
+      let show;
+      if (compareOn) show = COMPARE_PERIODS.indexOf(period) !== -1;
+      else show = period === active;
+      row.hidden = !show;
+      row.classList.toggle('is-active-period', period === active);
+    });
+  }
+
   function refreshGroupTotals() {
-    const bar = $('mine-totals-bar');
-    if (!bar) return;
-    bar.querySelectorAll('.mine-group-total').forEach(box => {
-      const type = box.dataset.groupType;
-      const val = box.querySelector('.mine-group-total-value');
-      if (!type || !val) return;
-      applyGroupTotalValue(val, type);
+    ensureTotalsRows();
+    syncCompareUi();
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    host.querySelectorAll('.mine-totals-bar').forEach(function (row) {
+      const period = row.dataset.period;
+      if (!period) return;
+      const pref = { period: period, rate: displayPref.rate, hours: displayPref.hours };
+      row.querySelectorAll('.mine-group-total').forEach(function (box) {
+        const type = box.dataset.groupType;
+        const val = box.querySelector('.mine-group-total-value');
+        if (!type || !val) return;
+        applyGroupTotalValue(val, type, pref);
+      });
+    });
+  }
+
+  function initComparePill() {
+    const pill = $('compare-pill');
+    if (!pill || pill.dataset.bound === '1') return;
+    pill.dataset.bound = '1';
+    pill.addEventListener('click', function () {
+      compareOn = !compareOn;
+      saveCompareOn(compareOn);
+      refreshGroupTotals();
     });
   }
 
@@ -1068,12 +1158,16 @@
       totalsFollowTipX = e.clientX;
       totalsFollowTipY = e.clientY;
       const tip = ensureTotalsFollowTip();
-      tip.textContent = totalsDisplayTipText(displayPref);
+      const row = box.closest('.mine-totals-bar');
+      const rowPref = row && row.dataset.period
+        ? { period: row.dataset.period, rate: displayPref.rate, hours: displayPref.hours }
+        : displayPref;
+      tip.textContent = totalsDisplayTipText(rowPref);
       tip.style.display = 'none';
       totalsFollowTipTimer = setTimeout(() => {
         totalsFollowTipTimer = null;
         if (totalsFollowTipTarget !== box || !box.isConnected) return;
-        tip.textContent = totalsDisplayTipText(displayPref);
+        tip.textContent = totalsDisplayTipText(rowPref);
         placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
       }, 1000);
     });
@@ -1090,9 +1184,9 @@
     });
   }
   function bindMineTotalsFollowTips() {
-    const bar = $('mine-totals-bar');
-    if (!bar) return;
-    bar.querySelectorAll('.mine-group-total').forEach(bindTotalsFollowTip);
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    host.querySelectorAll('.mine-group-total').forEach(bindTotalsFollowTip);
   }
 
   async function fetchPropertyDetailsForProps(props, batchSize = 40) {
@@ -1156,6 +1250,9 @@
     periodEl.addEventListener('change', onDisplayChange);
     rateEl.addEventListener('change', onDisplayChange);
     hoursEl.addEventListener('input', onDisplayChange);
+    initComparePill();
+    ensureTotalsRows();
+    syncCompareUi();
   }
 
 
