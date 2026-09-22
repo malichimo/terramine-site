@@ -369,7 +369,21 @@
     .vo-pin.is-missing { opacity:0.38; pointer-events:none; cursor:default; }
     .vo-card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; background:white; }
     .vo-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #e0d0c0; background:#f0e6d8; cursor:default; }
-    .vo-photo-empty { width:100%; aspect-ratio:4/3; border-radius:8px; border:1px dashed #d2c0a8; background:#faf6f0; display:flex; align-items:center; justify-content:center; color:var(--text-light); font-size:12px; font-style:italic; }
+    .vo-photo-empty {
+      width:100%; aspect-ratio:4/3; border-radius:8px;
+      border:1px dashed #d2c0a8; background:#faf6f0;
+      display:flex; align-items:center; justify-content:center;
+      position:relative; overflow:hidden;
+      color:transparent; font-size:0;
+    }
+    .vo-photo-empty::before {
+      content:'';
+      position:absolute; inset:14%;
+      background:url('/images/terramine_logo_clear_new_small.png') center / contain no-repeat;
+      filter:grayscale(1);
+      opacity:0.28;
+      pointer-events:none;
+    }
     .vo-photo-wrap { position:relative; width:100%; }
     .vo-photo-wrap > .vo-photo { display:block; width:100%; }
     .vo-showcase-pin {
@@ -2678,9 +2692,9 @@
     return "";
   }
   function wrapVisitorPhotoHtml(mine, photo, checkInId) {
-    if (!photo) return '<div class="vo-photo-empty">No photo</div>';
+    if (!photo) return '<div class="vo-photo-empty" role="img" aria-label="No photo"></div>';
     const pin = showcasePinHtml(mine, photo, checkInId);
-    const onerr = 'var w=this.closest(\'.vo-photo-wrap\');if(w)w.outerHTML=\'<div class=&quot;vo-photo-empty&quot;>No photo</div>\';';
+    const onerr = 'var w=this.closest(\'.vo-photo-wrap\');if(w)w.outerHTML=\'<div class=&quot;vo-photo-empty&quot; role=&quot;img&quot; aria-label=&quot;No photo&quot;></div>\';';
     return '<div class="vo-photo-wrap">'
       + '<img class="vo-photo" src="' + escapeHtml(photo) + '" alt="Check-in photo" loading="lazy" onerror="' + onerr + '">'
       + pin
