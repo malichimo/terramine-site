@@ -120,9 +120,83 @@
 
       <!-- Main -->
       <main class="main" id="main-content">
-        <div class="page-header">
-          <div class="page-title">Dashboard</div>
-          <div class="page-sub" id="welcome-sub">Welcome back</div>
+        <div class="mine-totals-bar" id="mine-totals-bar" aria-label="Mine production totals">
+          <div class="mine-totals-bar-left">
+            <div class="mine-group-total" data-group-type="diamond">
+              <div class="mine-group-total-icon"><img src="/images/mine-icons/diamond.svg" alt=""></div>
+              <div class="mine-group-total-body">
+                <span class="mine-group-total-title">Diamond Mine Production</span>
+                <span class="mine-group-total-value">$0</span>
+              </div>
+            </div>
+            <div class="mine-group-total" data-group-type="gold">
+              <div class="mine-group-total-icon"><img src="/images/mine-icons/gold.svg" alt=""></div>
+              <div class="mine-group-total-body">
+                <span class="mine-group-total-title">Gold Mine Production</span>
+                <span class="mine-group-total-value">$0</span>
+              </div>
+            </div>
+            <div class="mine-group-total" data-group-type="coal">
+              <div class="mine-group-total-icon"><img src="/images/mine-icons/coal.svg" alt=""></div>
+              <div class="mine-group-total-body">
+                <span class="mine-group-total-title">Coal Mine Production</span>
+                <span class="mine-group-total-value">$0</span>
+              </div>
+            </div>
+            <div class="mine-group-total" data-group-type="rock">
+              <div class="mine-group-total-icon"><img src="/images/mine-icons/rock.svg" alt=""></div>
+              <div class="mine-group-total-body">
+                <span class="mine-group-total-title">Rock Mine Production</span>
+                <span class="mine-group-total-value">$0</span>
+              </div>
+            </div>
+          </div>
+          <div class="mine-totals-bar-right">
+            <div class="mine-group-total mine-totals-all" data-group-type="all">
+              <div class="mine-group-total-icons-all" aria-hidden="true">
+                <img src="/images/mine-icons/diamond.svg" alt="">
+                <img src="/images/mine-icons/gold.svg" alt="">
+                <img src="/images/mine-icons/coal.svg" alt="">
+                <img src="/images/mine-icons/rock.svg" alt="">
+              </div>
+              <div class="mine-group-total-body">
+                <span class="mine-group-total-title">All Mines Production</span>
+                <span class="mine-group-total-value">$0</span>
+              </div>
+            </div>
+            <div class="page-settings" id="page-settings">
+              <button type="button" class="page-settings-btn" id="page-settings-btn" aria-label="Page settings" aria-expanded="false" aria-controls="page-settings-panel">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </button>
+              <div class="page-settings-panel" id="page-settings-panel" role="dialog" aria-label="Page settings" hidden>
+                <div class="page-settings-title">Production Calculations Display</div>
+                <label class="page-settings-field">Period
+                  <select id="display-period">
+                    <option value="sec">Per Second</option>
+                    <option value="min">Per Min</option>
+                    <option value="day">Per Day</option>
+                    <option value="month">Per Month</option>
+                    <option value="year">Per Year</option>
+                  </select>
+                </label>
+                <label class="page-settings-field">Rate
+                  <select id="display-rate">
+                    <option value="bonus">Base Rate + Production %</option>
+                    <option value="boost">20x Boost</option>
+                  </select>
+                </label>
+                <label class="page-settings-field" id="display-hours-field" hidden>Hours Boosted Per Day
+                  <div class="page-settings-hours-row">
+                    <input type="range" id="display-hours" min="1" max="24" step="1" value="8" aria-valuemin="1" aria-valuemax="24" aria-valuenow="8" />
+                    <span class="page-settings-hours-value" id="display-hours-value">8</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Stat row -->
@@ -452,6 +526,307 @@
   })();
 
 
+
+  // ── Mine production totals (shared semantics with mines.html) ─────────────
+  let allMines = [];
+  const TYPE_ORDER_DEFAULT = ['diamond', 'gold', 'coal', 'rock'];
+  const TYPE_ORDER_FLIP_KEY = 'terramine.mines.typeOrderFlipped';
+  function loadTypeOrderFlipped() {
+    try { return sessionStorage.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
+  }
+  let typeOrderFlipped = loadTypeOrderFlipped();
+  let TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
+  function syncTypeOrderFromFlag() {
+    TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
+  }
+  function applyTypeOrderLayout() {
+    syncTypeOrderFromFlag();
+    const left = document.querySelector('#mine-totals-bar .mine-totals-bar-left');
+    if (left) {
+      TYPE_ORDER.forEach(function (typ) {
+        const box = left.querySelector('.mine-group-total[data-group-type="' + typ + '"]');
+        if (box) left.appendChild(box);
+      });
+    }
+    const allIcons = document.querySelector('#mine-totals-bar .mine-group-total-icons-all');
+    if (allIcons) {
+      TYPE_ORDER.forEach(function (typ) {
+        const img = allIcons.querySelector('img[src*="' + typ + '.svg"]');
+        if (img) allIcons.appendChild(img);
+      });
+    }
+  }
+
+  function numOrNull(v) {
+    if (v == null || v === '' || typeof v === 'boolean') return null;
+    const n = typeof v === 'number' ? v : (typeof v === 'string' ? Number(v.trim()) : NaN);
+    return Number.isFinite(n) ? n : null;
+  }
+  function typeKey(p) {
+    const t = String(p.mineType == null ? '' : p.mineType).trim().toLowerCase();
+    return (t === 'rock' || t === 'coal' || t === 'gold' || t === 'diamond') ? t : 'rock';
+  }
+  function productionBase(type) {
+    return { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
+  }
+  function productionBonus(level) { return Math.max(0, level - 1); }
+  function productionRate(type, level) {
+    return productionBase(type) * (1 + productionBonus(level) / 100);
+  }
+  function periodAmount(perSec, period) {
+    if (period === 'sec') return perSec;
+    if (period === 'min') return perSec * 60;
+    if (period === 'day') return perSec * 60 * 60 * 24;
+    if (period === 'year') return perSec * 60 * 60 * 24 * 365;
+    return perSec * 60 * 60 * 24 * 30;
+  }
+  const DISPLAY_KEY = 'terramine.mines.display';
+  const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
+  const DISPLAY_RATES = ['bonus', 'boost'];
+  const LEGACY_RATE_HOURS = { '12': 12, '18': 18, '24': 24 };
+  const PERIOD_SUFFIX = { sec: '/sec', min: '/min', day: '/day', month: '/mo', year: '/yr' };
+  const DEFAULT_BOOST_HOURS = 8;
+  function clampBoostHours(h) {
+    const n = Number(h);
+    if (!Number.isFinite(n)) return DEFAULT_BOOST_HOURS;
+    return Math.min(24, Math.max(1, Math.round(n)));
+  }
+  function defaultDisplay() { return { period: 'month', rate: 'bonus', hours: DEFAULT_BOOST_HOURS }; }
+  function normalizeDisplay(o) {
+    if (!o || DISPLAY_PERIODS.indexOf(o.period) === -1) return defaultDisplay();
+    let rate = String(o.rate);
+    let hours = clampBoostHours(o.hours != null ? o.hours : DEFAULT_BOOST_HOURS);
+    if (LEGACY_RATE_HOURS[rate] != null) {
+      hours = LEGACY_RATE_HOURS[rate];
+      rate = 'boost';
+    }
+    if (rate === 'base') rate = 'bonus';
+    if (DISPLAY_RATES.indexOf(rate) === -1) return defaultDisplay();
+    return { period: o.period, rate: rate, hours: hours };
+  }
+  function loadDisplay() {
+    try {
+      const raw = sessionStorage.getItem(DISPLAY_KEY);
+      if (!raw) return defaultDisplay();
+      return normalizeDisplay(JSON.parse(raw));
+    } catch (e) {
+      return defaultDisplay();
+    }
+  }
+  let displayPref = loadDisplay();
+  function boostPerSec(boostedPerSec, hours) {
+    const h = clampBoostHours(hours);
+    return boostedPerSec * (h * 20 + (24 - h) * 1) / 24;
+  }
+  function displayAmount(type, level, pref) {
+    const base = productionBase(type);
+    const boosted = level == null ? base : productionRate(type, level);
+    let perSec = boosted;
+    if (pref.rate === 'base') perSec = base;
+    else if (pref.rate === 'boost') perSec = boostPerSec(boosted, pref.hours);
+    return periodAmount(perSec, pref.period);
+  }
+  function effectiveLevel(raw) {
+    const n = numOrNull(raw);
+    if (n == null || !Number.isFinite(n) || n < 1) return 1;
+    return n;
+  }
+  function fmtRate(n, period) {
+    const digits = period === 'sec' ? 11 : (period === 'min' ? 10 : 8);
+    let s = n.toFixed(digits);
+    if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return '$' + s;
+  }
+  function groupProductionSum(type, mines) {
+    let sum = 0;
+    (mines || []).forEach(m => {
+      if (type && typeKey(m) !== type) return;
+      const level = effectiveLevel((m._details || {}).productionLevel);
+      sum += displayAmount(typeKey(m), level, displayPref);
+    });
+    return sum;
+  }
+  function applyGroupTotalValue(el, type) {
+    const mines = allMines;
+    const sum = type === 'all' ? groupProductionSum(null, mines) : groupProductionSum(type, mines);
+    const n = (sum == null || !Number.isFinite(sum)) ? 0 : sum;
+    el.textContent = fmtRate(n, displayPref.period) + PERIOD_SUFFIX[displayPref.period];
+    el.className = 'mine-group-total-value';
+    if (n > 0 && displayPref.rate !== 'base') el.classList.add('is-boosted');
+  }
+  function refreshGroupTotals() {
+    const bar = $('mine-totals-bar');
+    if (!bar) return;
+    bar.querySelectorAll('.mine-group-total').forEach(box => {
+      const type = box.dataset.groupType;
+      const val = box.querySelector('.mine-group-total-value');
+      if (!type || !val) return;
+      applyGroupTotalValue(val, type);
+    });
+  }
+
+  const TOTALS_PERIOD_LABEL = {
+    sec: 'Per Second', min: 'Per Min', day: 'Per Day', month: 'Per Month', year: 'Per Year'
+  };
+  function totalsDisplayTipText(pref) {
+    pref = pref || displayPref;
+    let basis;
+    if (pref.rate === 'base') basis = 'Base Rate';
+    else if (pref.rate === 'bonus') basis = 'Base Rate + Production %';
+    else basis = '20x Boost at ' + clampBoostHours(pref.hours) + ' hours a day';
+    const periodLabel = TOTALS_PERIOD_LABEL[pref.period] || '';
+    if (periodLabel) {
+      return 'Calculations are based on ' + basis + ' and shown ' + periodLabel + '.';
+    }
+    return 'Calculations are based on ' + basis + '.';
+  }
+  let totalsFollowTip = null;
+  let totalsFollowTipTimer = null;
+  let totalsFollowTipTarget = null;
+  let totalsFollowTipX = 0;
+  let totalsFollowTipY = 0;
+  function dismissTotalsFollowTip() {
+    if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+    totalsFollowTipTarget = null;
+    if (totalsFollowTip) totalsFollowTip.style.display = 'none';
+  }
+  function ensureTotalsFollowTip() {
+    if (!totalsFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'toolbar-follow-tip';
+      tip.setAttribute('role', 'tooltip');
+      totalsFollowTip = tip;
+    }
+    if (totalsFollowTip.parentNode !== document.body) {
+      document.body.appendChild(totalsFollowTip);
+    }
+    return totalsFollowTip;
+  }
+  function placeTotalsFollowTip(x, y) {
+    const tip = ensureTotalsFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function refreshOpenTotalsFollowTip() {
+    if (!totalsFollowTip || totalsFollowTip.style.display !== 'block') return;
+    if (!totalsFollowTipTarget) return;
+    totalsFollowTip.textContent = totalsDisplayTipText(displayPref);
+    placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+  }
+  function bindTotalsFollowTip(box) {
+    if (!box || box.dataset.totalsTipBound === '1') return;
+    box.dataset.totalsTipBound = '1';
+    box.removeAttribute('title');
+    box.addEventListener('mouseenter', (e) => {
+      if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+      totalsFollowTipTarget = box;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      const tip = ensureTotalsFollowTip();
+      tip.textContent = totalsDisplayTipText(displayPref);
+      tip.style.display = 'none';
+      totalsFollowTipTimer = setTimeout(() => {
+        totalsFollowTipTimer = null;
+        if (totalsFollowTipTarget !== box || !box.isConnected) return;
+        tip.textContent = totalsDisplayTipText(displayPref);
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }, 1000);
+    });
+    box.addEventListener('mousemove', (e) => {
+      if (totalsFollowTipTarget !== box) return;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      if (totalsFollowTip && totalsFollowTip.style.display === 'block' && !totalsFollowTipTimer) {
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }
+    });
+    box.addEventListener('mouseleave', () => {
+      if (totalsFollowTipTarget === box) dismissTotalsFollowTip();
+    });
+  }
+  function bindMineTotalsFollowTips() {
+    const bar = $('mine-totals-bar');
+    if (!bar) return;
+    bar.querySelectorAll('.mine-group-total').forEach(bindTotalsFollowTip);
+  }
+
+  async function fetchPropertyDetailsForProps(props, batchSize = 40) {
+    for (let i = 0; i < props.length; i += batchSize) {
+      const slice = props.slice(i, i + batchSize);
+      const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
+      snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
+    }
+    return props;
+  }
+
+  function setPageSettingsOpen(open) {
+    const panel = $('page-settings-panel');
+    const btn = $('page-settings-btn');
+    if (!panel || !btn) return;
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function syncHoursControl() {
+    const show = displayPref.rate === 'boost';
+    const field = $('display-hours-field');
+    const slider = $('display-hours');
+    const label = $('display-hours-value');
+    if (!field || !slider || !label) return;
+    field.hidden = !show;
+    field.style.display = show ? '' : 'none';
+    const h = clampBoostHours(displayPref.hours);
+    slider.value = String(h);
+    slider.setAttribute('aria-valuenow', String(h));
+    label.textContent = String(h);
+  }
+  function onDisplayChange() {
+    const period = $('display-period').value;
+    const rate = $('display-rate').value;
+    const hours = clampBoostHours($('display-hours').value);
+    displayPref = normalizeDisplay({ period: period, rate: rate, hours: hours });
+    $('display-rate').value = displayPref.rate;
+    syncHoursControl();
+    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    refreshGroupTotals();
+    refreshOpenTotalsFollowTip();
+  }
+  function initPageSettings() {
+    const periodEl = $('display-period');
+    const rateEl = $('display-rate');
+    const hoursEl = $('display-hours');
+    const btn = $('page-settings-btn');
+    if (!periodEl || !rateEl || !hoursEl || !btn) return;
+    periodEl.value = displayPref.period;
+    rateEl.value = displayPref.rate;
+    syncHoursControl();
+    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    btn.addEventListener('click', () => {
+      setPageSettingsOpen($('page-settings-panel').hidden);
+    });
+    document.addEventListener('click', (e) => {
+      const wrap = $('page-settings');
+      if (!wrap || wrap.contains(e.target)) return;
+      setPageSettingsOpen(false);
+    });
+    periodEl.addEventListener('change', onDisplayChange);
+    rateEl.addEventListener('change', onDisplayChange);
+    hoursEl.addEventListener('input', onDisplayChange);
+  }
+
+
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
     try {
@@ -459,7 +834,8 @@
 
       const nickname = userData.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
       $('nav-nickname').textContent = nickname;
-      $('welcome-sub').textContent  = 'Welcome back, ' + nickname;
+      const welcomeSub = $('welcome-sub');
+      if (welcomeSub) welcomeSub.textContent = 'Welcome back, ' + nickname;
       $('sb-tb').textContent = fmtTBBalance(userData.tbBalance || 0);
       $('sb-usd').textContent = fmtUSDBalance(userData.usdEarnings || 0);
       $('stat-tb-earned').textContent = fmtNum(userData.totalTBEarned || 0);
@@ -476,13 +852,22 @@
 
       // No .limit(): the previous cap of 50 made this card disagree with
       // mines.html, which loads every property owned by the signed-in user.
-      const props = options.preview ? PREVIEW_PROPERTIES : (await db.collection('properties')
-        .where('ownerId', '==', user.uid)
-        .get()).docs.map(d => ({ id: d.id, ...d.data() }));
+      const props = options.preview
+        ? PREVIEW_PROPERTIES.map(p => ({ ...p, _details: { productionLevel: p.upgradeLevel || 1, dailyActivitiesRemaining: p.dailyActivitiesRemaining } }))
+        : (await db.collection('properties')
+            .where('ownerId', '==', user.uid)
+            .get()).docs.map(d => ({ id: d.id, ...d.data(), _details: {} }));
       renderPropertyBreakdown(props);
 
+      if (!options.preview) {
+        await fetchPropertyDetailsForProps(props);
+      }
+      allMines = props;
+      applyTypeOrderLayout();
+      refreshGroupTotals();
+
       // Mines Ready stat (no mine-card grid on dashboard)
-      await updateReadyStat(props, options);
+      updateReadyStat(props, options);
 
     } catch(e) {
       console.error('Dashboard load error:', e);
@@ -490,38 +875,25 @@
     }
   }
 
-  async function updateReadyStat(props, options = {}) {
+  function updateReadyStat(props, options = {}) {
     if (!props.length) {
       $('stat-ready').textContent = '0';
       return;
     }
-
     if (options.preview) {
-      const readyCount = props.filter(p => (p.dailyActivitiesRemaining ?? 1) > 0).length;
+      const readyCount = props.filter(p => ((p._details && p._details.dailyActivitiesRemaining) ?? p.dailyActivitiesRemaining ?? 1) > 0).length;
       $('stat-ready').textContent = readyCount;
       return;
     }
-
-    // Fetch property details in batches of 10 to avoid Firestore 400 errors
-    async function fetchInBatches(ids, batchSize = 10) {
-      const results = [];
-      for (let i = 0; i < ids.length; i += batchSize) {
-        const batch = ids.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
-          batch.map(p => db.collection('propertyDetails').doc(p.id).get()
-            .then(s => ({ id: p.id, ...(s.data() || {}) }))
-            .catch(() => ({ id: p.id }))
-          )
-        );
-        results.push(...batchResults);
-      }
-      return results;
-    }
-    const details = await fetchInBatches(props);
-    const readyCount = details.filter(d => (d.dailyActivitiesRemaining ?? 1) > 0).length;
+    const readyCount = props.filter(p => ((p._details || {}).dailyActivitiesRemaining ?? 1) > 0).length;
     $('stat-ready').textContent = readyCount;
   }
 
+
+
+  applyTypeOrderLayout();
+  initPageSettings();
+  bindMineTotalsFollowTips();
 
   (function bindNavPillFollowTips() {
     var DELAY = 320;
