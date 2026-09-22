@@ -598,8 +598,7 @@ body.auth-pending #portal {
   font: 700 12px 'DM Sans', sans-serif;
   letter-spacing: .4px;
   color: #475569;
-  text-transform: uppercase;
-  line-height: 1;
+    line-height: 1;
   pointer-events: none;
 }
 
