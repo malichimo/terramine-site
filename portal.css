@@ -103,7 +103,7 @@ body.auth-pending #portal {
   flex-shrink: 0;
   width: 100%;
   min-height: 90px;
-  max-height: 100px;
+  max-height: 70px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -155,8 +155,8 @@ body.auth-pending #portal {
 }
 .nav-logo img {
   display: block;
-  width: 90px;
-  height: auto;
+  height: 60px;
+  width: auto;
 }
 .nav-links {
   display: flex;
@@ -526,8 +526,9 @@ body.auth-pending #portal {
 .login-logo img {
   display: block;
   margin: 0 auto;
-  max-width: min(240px, 100%);
-  height: auto;
+  height: 60px;
+  width: auto;
+  max-width: 100%;
 }
 .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; text-align: center; }
 .login-divider {

@@ -117,7 +117,7 @@
       align-items: center;
       gap: 16px;
       padding: 5px 20px;
-      height: 100px;
+      height: 70px;
       box-sizing: border-box;
       background: rgba(13,27,42,0.97);
       border-bottom: 1px solid var(--border);
@@ -133,11 +133,7 @@
       text-decoration: none;
       line-height: 0;
     }
-    .nav-logo img {
-      display: block;
-      width: 90px;
-      height: auto;
-    }
+    .nav-logo img { display:block; height:60px; width:auto; }
     .nav-links {
       display: flex;
       align-items: center;
@@ -388,7 +384,7 @@
     #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:transparent; padding:24px; }
     .login-card { width:100%; max-width:380px; background:var(--navy2, #111F30); border:1px solid var(--border, rgba(255,255,255,0.07)); border-radius:12px; padding:36px 32px; }
     .login-logo { margin:0 auto 10px; text-align:center; }
-    .login-logo img { display:block; margin:0 auto; max-width:min(240px, 100%); height:auto; }
+    .login-logo img { display:block; margin:0 auto; height:60px; width:auto; max-width:100%; }
     .login-sub { font-size:13px; color:var(--muted, #556070); margin-bottom:28px; text-align:center; }
     .input-group { margin-bottom:14px; }
     .input-label { font-size:11px; color:var(--gray, #8899AA); margin-bottom:5px; display:block; letter-spacing:0.5px; }
@@ -421,7 +417,7 @@
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo"><img src="/images/terramine_logo_clear_new_small.png" alt="TerraMine"></div>
+    <div class="login-logo"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></div></div>
     <div class="login-sub">Sign in to manage your account</div>
 
 <button class="btn-google" id="btn-google-signin">
@@ -441,7 +437,7 @@
 <div id="portal" style="display:none; flex-direction:column; min-height:100vh;">
 
   <nav class="top-nav">
-    <a class="nav-logo" href="/"><img src="/images/terramine_logo_clear_new_small.png" alt="TerraMine"></a>
+    <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a></a>
     <div class="nav-links">
       <a href="/portal">Dashboard</a>
       <a href="/portal/mines">Mines</a>

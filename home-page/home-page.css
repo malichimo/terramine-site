@@ -84,6 +84,7 @@ nav {
   gap: 4px;
   white-space: nowrap;
 }
+.nav-logo img { display:block; height:60px; width:auto; }
 .nav-logo span { color: var(--white); }
 .nav-links {
   display: flex;
@@ -991,6 +992,7 @@ footer {
   color: var(--gold);
   text-decoration: none;
 }
+.footer-logo img { display:block; height:60px; width:auto; }
 .footer-links {
   display: flex;
   gap: 28px;
