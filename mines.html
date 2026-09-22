@@ -540,16 +540,20 @@
       background-image:linear-gradient(rgba(206,150,70,.30), rgba(206,150,70,.30));
       color:#fff6e8;
     }
-    /* Continuous gold outline around the optional settings boost column as a whole */
+    /* Continuous gold outline around the selected rate column (bonus or boost) */
     .prod-tip th.prod-tip-boost-col,
-    .prod-tip td.prod-tip-boost-col {
+    .prod-tip td.prod-tip-boost-col,
+    .prod-tip th.prod-tip-active-col,
+    .prod-tip td.prod-tip-active-col {
       border-left: 2px solid #FFD700;
       border-right: 2px solid #FFD700;
     }
-    .prod-tip thead th.prod-tip-boost-col {
+    .prod-tip thead th.prod-tip-boost-col,
+    .prod-tip thead th.prod-tip-active-col {
       border-top: 2px solid #FFD700;
     }
-    .prod-tip tbody tr:last-child td.prod-tip-boost-col {
+    .prod-tip tbody tr:last-child td.prod-tip-boost-col,
+    .prod-tip tbody tr:last-child td.prod-tip-active-col {
       border-bottom: 2px solid #FFD700;
     }
     .prod-tip-note {
@@ -2938,14 +2942,18 @@
     return cols;
   }
   function tipColumnMeta(pref) {
+    const rate = pref && pref.rate;
     const cols = [
       ['c-base', 'Base Rate'],
-      ['c-bonus', 'Base Rate + Production %'],
+      [
+        'c-bonus' + (rate === 'bonus' ? ' prod-tip-active-col' : ''),
+        'Base Rate + Production %'
+      ],
       ['c-24', '20\u00d7 24h']
     ];
-    if (pref && pref.rate === 'boost') {
+    if (rate === 'boost') {
       const h = clampBoostHours(pref.hours);
-      cols.push(['c-boost prod-tip-boost-col', '20\u00d7 boost ' + h + 'h']);
+      cols.push(['c-boost prod-tip-boost-col prod-tip-active-col', '20\u00d7 boost ' + h + 'h']);
     }
     return cols;
   }
