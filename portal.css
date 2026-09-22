@@ -591,6 +591,10 @@ body.auth-pending #portal {
   color: #475569;
   text-transform: uppercase;
 }
+
+.mine-totals-bar[hidden] {
+  display: none !important;
+}
 .mine-totals-bar.is-active-period {
   border-color: #d4a017;
   box-shadow: 0 0 0 2px rgba(212, 160, 23, .4);

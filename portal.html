@@ -953,7 +953,7 @@
   function saveCompareOn(on) {
     try { sessionStorage.setItem(COMPARE_KEY, on ? '1' : '0'); } catch (e) {}
   }
-  let compareOn = loadCompareOn();
+  let compareOn = false; // always start OFF; toggled by the Compare pill
 
   function applyGroupTotalValue(el, type, pref) {
     pref = pref || displayPref;
@@ -1054,6 +1054,7 @@
       if (compareOn) show = COMPARE_PERIODS.indexOf(period) !== -1;
       else show = period === active;
       row.hidden = !show;
+      row.style.display = show ? '' : 'none';
       row.classList.toggle('is-active-period', period === active);
     });
   }
@@ -1080,6 +1081,10 @@
     const pill = $('compare-pill');
     if (!pill || pill.dataset.bound === '1') return;
     pill.dataset.bound = '1';
+    compareOn = false;
+    saveCompareOn(false);
+    pill.setAttribute('aria-pressed', 'false');
+    pill.classList.remove('is-on');
     pill.addEventListener('click', function () {
       compareOn = !compareOn;
       saveCompareOn(compareOn);
