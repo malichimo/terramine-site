@@ -260,9 +260,79 @@
 </div>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-slot">
-            <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="Dashboard slot reserved">
-              <div class="stat-card-label">Coming Soon</div>
-              <div class="dash-slot-placeholder">More breakdowns will go here</div>
+            <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
+              <div class="stat-card-label">TerraBucks Earned Today</div>
+              <div class="tb-today" id="tb-today">
+                <div class="tb-today-section">
+                  <div class="tb-today-section-title">Visitor check-ins to your mines</div>
+                  <table class="tb-today-table" aria-label="Visitor check-ins today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Visitors</th>
+                        <td id="tb-today-visitors-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned from them</th>
+                        <td id="tb-today-visitors-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tb-today-section">
+                  <div class="tb-today-section-title">You checking into other mines</div>
+                  <table class="tb-today-table" aria-label="Your check-ins today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Check-ins</th>
+                        <td id="tb-today-yours-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned</th>
+                        <td id="tb-today-yours-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tb-today-section">
+                  <div class="tb-today-section-title">Mini games today</div>
+                  <table class="tb-today-table tb-today-table-games" aria-label="Mini games today">
+                    <thead>
+                      <tr>
+                        <th scope="col">Type</th>
+                        <th scope="col">Played</th>
+                        <th scope="col">TB earned</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr data-game="rock">
+                        <th scope="row"><img src="/images/mine-icons/rock.svg" alt=""> Rock</th>
+                        <td id="tb-today-game-rock-plays">—</td>
+                        <td id="tb-today-game-rock-tb">—</td>
+                      </tr>
+                      <tr data-game="coal">
+                        <th scope="row"><img src="/images/mine-icons/coal.svg" alt=""> Coal</th>
+                        <td id="tb-today-game-coal-plays">—</td>
+                        <td id="tb-today-game-coal-tb">—</td>
+                      </tr>
+                      <tr data-game="gold">
+                        <th scope="row"><img src="/images/mine-icons/gold.svg" alt=""> Gold</th>
+                        <td id="tb-today-game-gold-plays">—</td>
+                        <td id="tb-today-game-gold-tb">—</td>
+                      </tr>
+                      <tr data-game="diamond">
+                        <th scope="row"><img src="/images/mine-icons/diamond.svg" alt=""> Diamond</th>
+                        <td id="tb-today-game-diamond-plays">—</td>
+                        <td id="tb-today-game-diamond-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tb-today-total">
+                  <span>Known TB today</span>
+                  <strong id="tb-today-known-total">—</strong>
+                </div>
+                <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
+              </div>
             </div>
           </div>
         </div>
@@ -1131,6 +1201,9 @@
       // Mines Ready stat (no mine-card grid on dashboard)
       updateReadyStat(props, options);
 
+      // Column 3: TerraBucks earned today (check-in counts + any TB fields we can find)
+      await loadTbTodayEarned(user, options);
+
     } catch(e) {
       console.error('Dashboard load error:', e);
       showToast('Error loading dashboard: ' + e.message, 'error');
@@ -1149,6 +1222,187 @@
     }
     const readyCount = props.filter(p => ((p._details || {}).dailyActivitiesRemaining ?? 1) > 0).length;
     $('stat-ready').textContent = readyCount;
+  }
+
+  // Field names that might carry TB on a checkIns doc (app may write any of these).
+  var TB_TODAY_REWARD_KEYS = [
+    'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb',
+    'hostReward', 'hostTB', 'hostTb', 'ownerReward', 'ownerTB', 'ownerTb',
+    'visitorReward', 'visitorTB', 'visitorTb', 'points', 'tb'
+  ];
+
+  function todayStartISO() {
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return start.toISOString();
+  }
+
+  function checkInTsMillis(ts) {
+    if (!ts) return 0;
+    if (typeof ts === 'string') return new Date(ts).getTime() || 0;
+    if (ts.toDate) return ts.toDate().getTime();
+    if (typeof ts.seconds === 'number') return ts.seconds * 1000;
+    return new Date(ts).getTime() || 0;
+  }
+
+  function pickCheckInTb(data, role) {
+    // role: 'host' (someone visited your mine) or 'visitor' (you checked in elsewhere)
+    if (!data || typeof data !== 'object') return null;
+    var preferred = role === 'host'
+      ? ['hostReward', 'hostTB', 'hostTb', 'ownerReward', 'ownerTB', 'ownerTb', 'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb', 'points', 'tb']
+      : ['visitorReward', 'visitorTB', 'visitorTb', 'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb', 'points', 'tb'];
+    for (var i = 0; i < preferred.length; i++) {
+      var k = preferred[i];
+      if (data[k] != null && data[k] !== '' && !isNaN(Number(data[k]))) return Number(data[k]);
+    }
+    return null;
+  }
+
+  function setTbTodayCell(id, value, opts) {
+    var el = $(id);
+    if (!el) return;
+    opts = opts || {};
+    if (value == null || (typeof value === 'number' && isNaN(value))) {
+      el.textContent = '—';
+      el.classList.add('tb-today-na');
+      return;
+    }
+    el.classList.remove('tb-today-na');
+    el.textContent = opts.tb ? fmtNum(value) + ' TB' : fmtNum(value);
+  }
+
+  function renderTbTodayPreview() {
+    setTbTodayCell('tb-today-visitors-count', 3);
+    setTbTodayCell('tb-today-visitors-tb', null);
+    setTbTodayCell('tb-today-yours-count', 2);
+    setTbTodayCell('tb-today-yours-tb', null);
+    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
+      setTbTodayCell('tb-today-game-' + t + '-plays', null);
+      setTbTodayCell('tb-today-game-' + t + '-tb', null);
+    });
+    setTbTodayCell('tb-today-known-total', null);
+    var note = $('tb-today-note');
+    if (note) {
+      note.textContent = 'Preview: check-in counts are sample. TB per check-in and mini-game plays are not in the portal Firestore schema we can read yet.';
+    }
+  }
+
+  async function queryTodayCheckIns(field, uid, startISO) {
+    try {
+      var snap = await db.collection('checkIns')
+        .where(field, '==', uid)
+        .where('timestamp', '>=', startISO)
+        .orderBy('timestamp', 'desc')
+        .get();
+      return snap.docs.map(function (d) { return { id: d.id, data: d.data() || {} }; });
+    } catch (err) {
+      // Missing composite index or timestamp type mismatch — fall back to recent page + client filter.
+      console.warn('tb-today query with date failed (' + field + '):', err && err.message);
+      var snap2 = await db.collection('checkIns')
+        .where(field, '==', uid)
+        .orderBy('timestamp', 'desc')
+        .limit(200)
+        .get();
+      var startMs = new Date(startISO).getTime();
+      return snap2.docs
+        .map(function (d) { return { id: d.id, data: d.data() || {} }; })
+        .filter(function (row) { return checkInTsMillis(row.data.timestamp) >= startMs; });
+    }
+  }
+
+  async function loadTbTodayEarned(user, options) {
+    options = options || {};
+    if (options.preview) {
+      renderTbTodayPreview();
+      return;
+    }
+    var note = $('tb-today-note');
+    if (note) note.textContent = 'Loading today\u2019s check-ins\u2026';
+
+    var startISO = todayStartISO();
+    var uid = user.uid;
+    var visitorRows = [];
+    var yoursRows = [];
+    var loadErr = null;
+
+    try {
+      var both = await Promise.all([
+        queryTodayCheckIns('propertyOwnerId', uid, startISO),
+        queryTodayCheckIns('userId', uid, startISO)
+      ]);
+      visitorRows = both[0];
+      yoursRows = both[1];
+    } catch (e) {
+      loadErr = e;
+      console.error('tb-today load error:', e);
+    }
+
+    // Visitors to your mines: exclude self check-ins on your own property.
+    var visitors = visitorRows.filter(function (row) {
+      var vUid = row.data.userId || row.data.uid || '';
+      return vUid && vUid !== uid;
+    });
+    // Your check-ins at other players' mines.
+    var yours = yoursRows.filter(function (row) {
+      var owner = row.data.propertyOwnerId || row.data.ownerId || '';
+      return owner && owner !== uid;
+    });
+
+    setTbTodayCell('tb-today-visitors-count', visitors.length);
+    setTbTodayCell('tb-today-yours-count', yours.length);
+
+    var visitorsTbSum = 0;
+    var visitorsTbKnown = 0;
+    visitors.forEach(function (row) {
+      var n = pickCheckInTb(row.data, 'host');
+      if (n != null) { visitorsTbSum += n; visitorsTbKnown++; }
+    });
+    var yoursTbSum = 0;
+    var yoursTbKnown = 0;
+    yours.forEach(function (row) {
+      var n = pickCheckInTb(row.data, 'visitor');
+      if (n != null) { yoursTbSum += n; yoursTbKnown++; }
+    });
+
+    setTbTodayCell('tb-today-visitors-tb', visitorsTbKnown ? visitorsTbSum : null, { tb: true });
+    setTbTodayCell('tb-today-yours-tb', yoursTbKnown ? yoursTbSum : null, { tb: true });
+
+    // Mini-games: no daily per-type collection exposed to the portal yet.
+    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
+      setTbTodayCell('tb-today-game-' + t + '-plays', null);
+      setTbTodayCell('tb-today-game-' + t + '-tb', null);
+    });
+
+    var knownTotal = null;
+    if (visitorsTbKnown || yoursTbKnown) {
+      knownTotal = (visitorsTbKnown ? visitorsTbSum : 0) + (yoursTbKnown ? yoursTbSum : 0);
+    }
+    setTbTodayCell('tb-today-known-total', knownTotal, { tb: true });
+
+    // Probe first few docs for unexpected keys (helps decide if TB is under another name).
+    var sampleKeys = {};
+    visitors.concat(yours).slice(0, 8).forEach(function (row) {
+      Object.keys(row.data).forEach(function (k) { sampleKeys[k] = true; });
+    });
+    var keyList = Object.keys(sampleKeys).sort().join(', ');
+    if (typeof console !== 'undefined' && console.info) {
+      console.info('tb-today checkIn sample keys:', keyList || '(none)');
+    }
+
+    if (!note) return;
+    if (loadErr) {
+      note.textContent = 'Could not load today\u2019s check-ins: ' + (loadErr.message || loadErr);
+      return;
+    }
+    var bits = [];
+    bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
+    if (!visitorsTbKnown && !yoursTbKnown) {
+      bits.push('TB amounts are not on those check-in docs (no reward field found), so those cells stay blank.');
+    } else if (!(visitorsTbKnown === visitors.length && yoursTbKnown === yours.length)) {
+      bits.push('Only some check-ins had a TB reward field; totals may be incomplete.');
+    }
+    bits.push('Mini-game plays/TB by type (rock/coal/gold/diamond) for today are not in the portal Firebase data we can read yet.');
+    note.textContent = bits.join(' ');
   }
 
 
