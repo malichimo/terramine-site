@@ -357,7 +357,8 @@
     .vo-tb-earned span { pointer-events:none; }
 
     .vo-time { font-size:17px; color:rgba(255,255,255,.9); margin-top:2px; line-height:1.15; }
-    .vo-mine-meta { display:flex; align-items:center; gap:6px; flex-shrink:0; max-width:48%; }
+    .vo-mine-meta { display:flex; flex-direction:column; align-items:flex-end; justify-content:center; gap:4px; flex-shrink:0; max-width:48%; }
+    .vo-mine-meta-row { display:flex; align-items:center; gap:6px; max-width:100%; }
     .vo-mine-badge { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:30px; font-size:12px; font-weight:700; background:rgba(0,0,0,.22); color:#fff; border:1px solid rgba(255,255,255,.28); min-width:0; cursor:pointer; }
     .vo-mine-badge:hover { background:rgba(0,0,0,.35); border-color:rgba(255,255,255,.45); }
     .vo-mine-badge span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
@@ -3369,10 +3370,12 @@
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
       + tbEarnedHtml
-            + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-tip="' + escapeHtml(mineName) + ' — Open in My Mines" aria-label="' + escapeHtml(mineName) + ' — Open in My Mines">'
+      + '<div class="vo-mine-meta-row">'
+      + '<div class="vo-mine-badge"' + mineBadgeAttrs + ' data-tip="' + escapeHtml(mineName) + ' — Open in My Mines" aria-label="' + escapeHtml(mineName) + ' — Open in My Mines">'
       + '<img class="vo-type-icon" src="' + escapeHtml(iconSrc) + '" alt="">'
       + '<span>' + escapeHtml(mineName) + '</span></div>'
       + pinHtml
+      + '</div>'
       + '</div></div>'
       + '<div class="vo-card-body">' + photoHtml + msgHtml + ownerReplyHtml(v) + '</div>'
       + '</article>';
