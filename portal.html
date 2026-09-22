@@ -1394,12 +1394,13 @@
     }
     var bits = [];
     bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
-    if (!visitorsTbKnown && !yoursTbKnown) {
-      bits.push('Visitor check-in TB is counted at 2 TB each.');
-    } else if (!(visitorsTbKnown === visitors.length && yoursTbKnown === yours.length)) {
-      bits.push('Only some check-ins had a TB reward field; totals may be incomplete.');
+    bits.push('Visitor check-in TB is counted at 2 TB each.');
+    if (yours.length && !yoursTbKnown) {
+      bits.push('Your check-in TB amounts were not on those docs, so that total stays blank.');
+    } else if (yours.length && yoursTbKnown !== yours.length) {
+      bits.push('Only some of your check-ins had a TB reward field; that total may be incomplete.');
     }
-    bits.push('Mini-game plays/TB by type (rock/coal/gold/diamond) for today are not in the portal Firebase data we can read yet.');
+    bits.push('Mini-game plays/TB by type are not in the portal Firebase data we can read yet.');
     note.textContent = bits.join(' ');
   }
 
