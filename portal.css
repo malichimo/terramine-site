@@ -369,12 +369,13 @@ body.auth-pending #portal {
    MINE PRODUCTION TOTALS BAR (dashboard)
 ═══════════════════════════════════════════ */
 .mine-totals-bar {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 10px 12px;
+  padding: 28px 12px 10px;
   background: rgba(255, 255, 255, 0.85);
   border: 2px solid var(--brown-mid);
   border-radius: 12px;
@@ -387,6 +388,7 @@ body.auth-pending #portal {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 .mine-totals-bar-right {
   display: flex;
@@ -588,12 +590,17 @@ body.auth-pending #portal {
   gap: 8px;
 }
 .mine-totals-period-label {
-  flex-shrink: 0;
-  min-width: 64px;
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 1;
+  min-width: 0;
   font: 700 12px 'DM Sans', sans-serif;
   letter-spacing: .4px;
   color: #475569;
   text-transform: uppercase;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .mine-totals-bar[hidden] {
