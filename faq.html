@@ -8,7 +8,6 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/home-page/site-nav.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -49,6 +48,51 @@
     }
 
     /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(8,12,16,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--white); }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-login {
+      border: 1px solid var(--cyan);
+      color: var(--cyan) !important;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .nav-cta {
+      background: var(--gold);
+      color: #080C10 !important;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
     /* ── HERO ── */
     .hero {
       position: relative;
@@ -272,14 +316,16 @@
       gap: 16px;
     }
     .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--gold); text-decoration: none; }
-    .footer-logo img { display:block; height:60px; width:auto; }
     .footer-links { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
     .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .footer-links a:hover { color: var(--white); }
     .footer-copy { font-size: 13px; color: var(--muted); }
 
     /* ── RESPONSIVE ── */
-    @media (max-width: 768px) {      .hero { padding: 48px 20px 36px; }
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 48px 20px 36px; }
       .page-layout { grid-template-columns: 1fr; padding: 0 20px 60px; gap: 0; }
       .toc { display: none; }
       .cta-banner { margin: 0 20px 48px; padding: 24px 20px; }
@@ -289,28 +335,18 @@
     }
   </style>
 </head>
-<body class="has-site-nav">
+<body>
 
-<nav class="site-nav" aria-label="Main">
-    <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
-    <div class="nav-links" id="nav-links-menu">
-      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
-      <a href="/heatmap">World Map</a>
-      <a href="/players-guide">Player's Guide</a>
-      <a href="/faq" class="is-active">FAQ</a>
-      <a href="/privacy">Privacy</a>
-      <a href="/terms">Terms</a>
-    </div>
-    <div class="nav-actions">
-      <a href="/portal" class="nav-login">My Portal</a>
-      <a href="/#download" class="nav-cta">Download</a>
-      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-  </nav>
+<nav>
+  <a class="nav-logo" href="index.html">⛏ Terra<span>Mine</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="heatmap.html">World Map</a>
+    <a href="portal.html" class="nav-login">My Portal</a>
+    <a href="index.html#download" class="nav-cta">Download</a>
+  </div>
+</nav>
 
 <!-- HERO -->
 <div class="hero">
@@ -404,7 +440,7 @@
       <div class="faq-list">
         <details class="faq-item">
           <summary>What is TerraMine?</summary>
-          <div class="faq-answer">TerraMine is a GPS-based mobile game where every property you buy — a TerraAcre (TA) — is tied to a real-world location. Each one generates TerraBucks (TB) and a trickle of passive USD income over time. Walk around, claim unclaimed grid squares near you, and run their daily mini-games to level them up. See the full <a href="/players-guide">Player's Guide</a> for a step-by-step walkthrough.</div>
+          <div class="faq-answer">TerraMine is a GPS-based mobile game where every property you buy — a TerraAcre (TA) — is tied to a real-world location. Each one generates TerraBucks (TB) and a trickle of passive USD income over time. Walk around, claim unclaimed grid squares near you, and run their daily mini-games to level them up. See the full <a href="guide.html">Player's Guide</a> for a step-by-step walkthrough.</div>
         </details>
         <details class="faq-item">
           <summary>How do I claim a mine?</summary>
@@ -438,7 +474,7 @@
         </details>
         <details class="faq-item">
           <summary>Is there a fee to cash out, and does it depend on my country?</summary>
-          <div class="faq-answer">Yes — a withdrawal exchange fee applies and it varies by country tier, from 0% up to 38%. See <a href="/exchange-rates">Withdrawal Exchange Rates</a> for the full country-by-country breakdown. These rates are reviewed periodically and subject to change, so check that page for the current rate before withdrawing.</div>
+          <div class="faq-answer">Yes — a withdrawal exchange fee applies and it varies by country tier, from 0% up to 38%. See <a href="exchange-rates.html">Withdrawal Exchange Rates</a> for the full country-by-country breakdown. These rates are reviewed periodically and subject to change, so check that page for the current rate before withdrawing.</div>
         </details>
         <details class="faq-item">
           <summary>Can I cash out as a gift card instead of PayPal?</summary>
@@ -474,7 +510,7 @@
         </details>
         <details class="faq-item">
           <summary>What happens if I stop playing for a while?</summary>
-          <div class="faq-answer">Individual mines that go untouched for an extended period get flagged and can have their passive earnings paused — you'll see a warning in-app well before that happens. Your account itself follows a similar staged warning process for long-term inactivity. Full details are in our <a href="/terms">Terms of Service</a>. Your TerraBucks and USD balance are never deleted.</div>
+          <div class="faq-answer">Individual mines that go untouched for an extended period get flagged and can have their passive earnings paused — you'll see a warning in-app well before that happens. Your account itself follows a similar staged warning process for long-term inactivity. Full details are in our <a href="terms.html">Terms of Service</a>. Your TerraBucks and USD balance are never deleted.</div>
         </details>
       </div>
     </section>
@@ -510,7 +546,7 @@
         </details>
         <details class="faq-item">
           <summary>Do I need to play a mine's mini-game every day?</summary>
-          <div class="faq-answer">Not required, but it keeps that mine's activity level up and unlocks higher rewards as you level it. Each of the four mine types — Rock, Coal, Gold, and Diamond — has its own mini-game. See the <a href="/players-guide">Player's Guide</a> for details on each.</div>
+          <div class="faq-answer">Not required, but it keeps that mine's activity level up and unlocks higher rewards as you level it. Each of the four mine types — Rock, Coal, Gold, and Diamond — has its own mini-game. See the <a href="guide.html">Player's Guide</a> for details on each.</div>
         </details>
       </div>
     </section>
@@ -546,14 +582,14 @@
 </div>
 
 <footer>
-  <a class="footer-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
+  <a class="footer-logo" href="index.html">⛏ TerraMine</a>
   <div class="footer-links">
-    <a href="/faq">FAQ</a>
-    <a href="/players-guide">Player's Guide</a>
-    <a href="/heatmap">World Map</a>
-    <a href="/privacy">Privacy Policy</a>
-    <a href="/terms">Terms of Service</a>
-    <a href="/portal">My Portal</a>
+    <a href="faq.html">FAQ</a>
+    <a href="guide.html">Player's Guide</a>
+    <a href="heatmap.html">World Map</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+    <a href="portal.html">My Portal</a>
     <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
     <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
   </div>
@@ -578,6 +614,5 @@
 
   sections.forEach(s => observer.observe(s));
 </script>
-  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>

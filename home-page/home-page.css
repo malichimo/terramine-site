@@ -60,7 +60,7 @@ nav {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 0 48px; height: 80px; box-sizing: border-box;
+  padding: 18px 48px;
   background: rgba(8,12,16,0.82);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
@@ -84,7 +84,6 @@ nav {
   gap: 4px;
   white-space: nowrap;
 }
-.nav-logo img { display:block; height:60px; width:auto; }
 .nav-logo span { color: var(--white); }
 .nav-links {
   display: flex;
@@ -600,14 +599,7 @@ section.content {
 .mine-card.gold:hover    { border-color: var(--gold); }
 .mine-card.diamond:hover { border-color: var(--cyan); }
 
-.mine-icon {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  margin: 0 auto 18px;
-  display: block;
-}
-img.mine-icon { font-size: 0; }
+.mine-icon { font-size: 36px; margin-bottom: 18px; display: block; }
 .mine-name {
   font-family: 'Syne', sans-serif;
   font-weight: 800;
@@ -999,7 +991,6 @@ footer {
   color: var(--gold);
   text-decoration: none;
 }
-.footer-logo img { display:block; height:60px; width:auto; }
 .footer-links {
   display: flex;
   gap: 28px;
@@ -1172,7 +1163,7 @@ footer {
   .mine-grid { grid-template-columns: 1fr; }
   .mine-grid { gap: 10px; }
   .mine-card { padding: 24px 20px 20px; }
-  .mine-icon { width: 52px; height: 52px; margin-bottom: 14px; }
+  .mine-icon { font-size: 30px; margin-bottom: 14px; }
   .mine-name { font-size: 18px; }
   .mine-desc { font-size: 14px; }
   .mine-rate { font-size: 13px; }
