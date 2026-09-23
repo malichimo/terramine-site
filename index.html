@@ -9,21 +9,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="home-page/home-page.css" />
+  <link rel="stylesheet" href="/home-page/site-nav.css" />
 </head>
-<body>
+<body class="has-site-nav home-page">
 
-  <nav>
-    <a class="nav-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 32px; width: auto;" /> <span style="font-size: 0.9em;">TerraMine</span></a>
+  <nav class="site-nav" aria-label="Main">
+    <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
     <div class="nav-links" id="nav-links-menu">
       <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
-      <a href="/heatmap.html">World Map</a>
-      <a href="/guide.html">Player's Guide</a>
-      <a href="/faq.html">FAQ</a>
-      <a href="/privacy.html">Privacy</a>
-      <a href="/terms.html">Terms</a>
+      <a href="/heatmap">World Map</a>
+      <a href="/players-guide">Player's Guide</a>
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
     </div>
     <div class="nav-actions">
-      <a href="/portal.html" class="nav-login">My Portal</a>
+      <a href="/portal" class="nav-login">My Portal</a>
       <a href="#download" class="nav-cta">Download</a>
       <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
         <span></span>
@@ -148,19 +149,7 @@
       if (status === 'idle') return 'status-idle';
       if (status === 'dnd') return 'status-dnd';
       return 'status-offline';
-    }
-
-    function setupMobileNav() {
-      const nav = document.querySelector('nav');
-      const toggle = document.getElementById('nav-menu-toggle');
-      const links = document.getElementById('nav-links-menu');
-
-      if (!nav || !toggle || !links) return;
-
-      const closeMenu = () => {
-        nav.classList.remove('nav-open');
-        toggle.setAttribute('aria-expanded', 'false');
-      };
+    };
 
       const openMenu = () => {
         nav.classList.add('nav-open');
@@ -261,7 +250,6 @@
 
     loadStats();
     loadDiscordCommunity();
-    setupMobileNav();
   </script>
 
   <!-- ── MINE TYPES ── -->
@@ -270,25 +258,25 @@
     <h2 class="section-title">Four Mines.<br/>One Map.</h2>
     <div class="mine-grid">
       <div class="mine-card rock">
-        <span class="mine-icon">🪨</span>
+        <img class="mine-icon" src="images/mine-icons/rock.svg" alt="Rock Mine">
         <div class="mine-name">Rock Mine</div>
         <p class="mine-desc">The most common mine. Steady, reliable passive income. Found on 60% of all properties.</p>
         <span class="mine-rate">Base rate</span>
       </div>
       <div class="mine-card coal">
-        <span class="mine-icon">⚫</span>
+        <img class="mine-icon" src="images/mine-icons/coal.svg" alt="Coal Mine">
         <div class="mine-name">Coal Mine</div>
         <p class="mine-desc">Dark and productive. Earns 1.5× a rock mine. About 30% of all properties yield coal.</p>
         <span class="mine-rate">1.5× rock</span>
       </div>
       <div class="mine-card gold">
-        <span class="mine-icon">🟡</span>
+        <img class="mine-icon" src="images/mine-icons/gold.svg" alt="Gold Mine">
         <div class="mine-name">Gold Mine</div>
         <p class="mine-desc">Rare and lucrative. 2× the earnings of rock. Only 9% of properties strike gold.</p>
         <span class="mine-rate">2× rock</span>
       </div>
       <div class="mine-card diamond">
-        <span class="mine-icon">💎</span>
+        <img class="mine-icon" src="images/mine-icons/diamond.svg" alt="Diamond Mine">
         <div class="mine-name">Diamond Mine</div>
         <p class="mine-desc">Ultra-rare. 4× earnings. Just 1% of all properties are diamond mines.</p>
         <span class="mine-rate">4× rock</span>
@@ -425,14 +413,14 @@
 
   <!-- ── FOOTER ── -->
   <footer>
-    <a class="footer-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 32px; width: auto;" /> <span style="font-size: 0.9em;">TerraMine</span></a>
+    <a class="footer-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
     <div class="footer-links">
-      <a href="/guide.html">Player's Guide</a>
-      <a href="/faq.html">FAQ</a>
-      <a href="/heatmap.html">World Map</a>
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-      <a href="/portal.html">My Portal</a>
+      <a href="/players-guide">Player's Guide</a>
+      <a href="/faq">FAQ</a>
+      <a href="/heatmap">World Map</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/portal">My Portal</a>
       <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
       <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
     </div>
@@ -441,5 +429,6 @@
 
   <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()" style="position: fixed; right: 28px; bottom: 28px; width: 48px; height: 48px; border-radius: 999px; border: 1px solid rgba(91,229,208,0.35); background: rgba(15,22,32,0.92); color: #5BE5D0; display: none; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; z-index: 80; box-shadow: 0 12px 32px rgba(0,0,0,0.32); transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;">↑</button>
 
+  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>

@@ -7,6 +7,7 @@
   <meta name="description" content="Your complete guide to getting started with TerraMine — mines, currencies, mini-games, boosts, check-ins, and referrals." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/home-page/site-nav.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -47,51 +48,6 @@
     }
 
     /* ── NAV ── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 40px;
-      height: 64px;
-      background: rgba(8,12,16,0.92);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 24px;
-      letter-spacing: 3px;
-      color: var(--gold);
-      text-decoration: none;
-    }
-    .nav-logo span { color: var(--white); }
-    .nav-links { display: flex; align-items: center; gap: 28px; }
-    .nav-links a {
-      font-size: 13px;
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--white); }
-    .nav-login {
-      border: 1px solid var(--cyan);
-      color: var(--cyan) !important;
-      padding: 6px 14px;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    .nav-cta {
-      background: var(--gold);
-      color: #080C10 !important;
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
     /* ── HERO ── */
     .hero {
       position: relative;
@@ -399,16 +355,14 @@
       gap: 16px;
     }
     .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--gold); text-decoration: none; }
+    .footer-logo img { display:block; height:60px; width:auto; }
     .footer-links { display: flex; gap: 28px; align-items: center; }
     .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .footer-links a:hover { color: var(--white); }
     .footer-copy { font-size: 13px; color: var(--muted); }
 
     /* ── RESPONSIVE ── */
-    @media (max-width: 768px) {
-      nav { padding: 0 20px; }
-      .nav-links { display: none; }
-      .hero { padding: 48px 20px 36px; }
+    @media (max-width: 768px) {      .hero { padding: 48px 20px 36px; }
       .guide-layout { grid-template-columns: 1fr; padding: 0 20px 60px; gap: 0; }
       .toc { display: none; }
       .cta-banner { margin: 0 20px 48px; padding: 24px 20px; }
@@ -418,19 +372,28 @@
     }
   </style>
 </head>
-<body>
+<body class="has-site-nav">
 
-<nav>
-  <link rel="icon" type="image/png" href="/logo.png?v=2" />
-  <a class="nav-logo" href="index.html">⛏ Terra<span>Mine</span></a>
-  <div class="nav-links">
-    <a href="index.html">Home</a>
-    <a href="faq.html">FAQ</a>
-    <a href="heatmap.html">World Map</a>
-    <a href="portal.html" class="nav-login">My Portal</a>
-    <a href="index.html#download" class="nav-cta">Download</a>
-  </div>
-</nav>
+<nav class="site-nav" aria-label="Main">
+    <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
+    <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap">World Map</a>
+      <a href="/players-guide" class="is-active">Player's Guide</a>
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/portal" class="nav-login">My Portal</a>
+      <a href="/#download" class="nav-cta">Download</a>
+      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
 
 <!-- HERO -->
 <div class="hero">
@@ -673,19 +636,19 @@
   <div class="cta-buttons">
     <a class="btn-app" href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">🍎 App Store</a>
     <a class="btn-app" href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">🤖 Google Play</a>
-    <a class="btn-app secondary" href="portal.html">My Portal →</a>
+    <a class="btn-app secondary" href="/portal">My Portal →</a>
   </div>
 </div>
 
 <footer>
-  <a class="footer-logo" href="index.html">⛏ TerraMine</a>
+  <a class="footer-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
   <div class="footer-links">
-    <a href="guide.html">Player's Guide</a>
-    <a href="faq.html">FAQ</a>
-    <a href="heatmap.html">World Map</a>
-    <a href="privacy.html">Privacy Policy</a>
-    <a href="terms.html">Terms of Service</a>
-    <a href="portal.html">My Portal</a>
+    <a href="/players-guide">Player's Guide</a>
+    <a href="/faq">FAQ</a>
+    <a href="/heatmap">World Map</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+    <a href="/portal">My Portal</a>
     <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
     <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
   </div>
@@ -710,5 +673,6 @@
 
   chapters.forEach(ch => observer.observe(ch));
 </script>
+  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>

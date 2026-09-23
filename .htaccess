@@ -1,0 +1,93 @@
+# TerraMine clean URLs (portal section)
+# Keep real .html files on disk; rewrite/redirect only.
+
+RewriteEngine On
+RewriteBase /
+
+# Prefer no trailing slash on portal routes
+RewriteRule ^portal/$ /portal [R=301,L]
+RewriteRule ^portal/(mines|visitors|inventory|activity|account)/$ /portal/$1 [R=301,L]
+
+# Old bookmark/share URLs → clean.
+# THE_REQUEST ensures we only redirect real browser hits on *.html,
+# not the internal rewrite target (avoids redirect loops).
+RewriteCond %{THE_REQUEST} \s/+portal\.html[\s?] [NC]
+RewriteRule ^portal\.html$ /portal [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+mines\.html[\s?] [NC]
+RewriteRule ^mines\.html$ /portal/mines [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+visitors\.html[\s?] [NC]
+RewriteRule ^visitors\.html$ /portal/visitors [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+inventory\.html[\s?] [NC]
+RewriteRule ^inventory\.html$ /portal/inventory [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+activity\.html[\s?] [NC]
+RewriteRule ^activity\.html$ /portal/activity [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+account\.html[\s?] [NC]
+RewriteRule ^account\.html$ /portal/account [R=301,L,QSA]
+
+# Clean paths → existing files (internal)
+RewriteRule ^portal$ portal.html [L]
+RewriteRule ^portal/mines$ mines.html [L,QSA]
+RewriteRule ^portal/visitors$ visitors.html [L,QSA]
+RewriteRule ^portal/inventory$ inventory.html [L,QSA]
+RewriteRule ^portal/activity$ activity.html [L,QSA]
+RewriteRule ^portal/account$ account.html [L,QSA]
+
+# === marketing / public pages ===
+# Prefer no trailing slash
+RewriteRule ^heatmap/$ /heatmap [R=301,L]
+RewriteRule ^players-guide/$ /players-guide [R=301,L]
+RewriteRule ^faq/$ /faq [R=301,L]
+RewriteRule ^privacy/$ /privacy [R=301,L]
+RewriteRule ^terms/$ /terms [R=301,L]
+
+# Old .html bookmarks → clean (THE_REQUEST avoids rewrite loops)
+RewriteCond %{THE_REQUEST} \s/+heatmap\.html[\s?] [NC]
+RewriteRule ^heatmap\.html$ /heatmap [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+guide\.html[\s?] [NC]
+RewriteRule ^guide\.html$ /players-guide [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+faq\.html[\s?] [NC]
+RewriteRule ^faq\.html$ /faq [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+privacy\.html[\s?] [NC]
+RewriteRule ^privacy\.html$ /privacy [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+terms\.html[\s?] [NC]
+RewriteRule ^terms\.html$ /terms [R=301,L,QSA]
+
+# Clean paths → files
+RewriteRule ^heatmap$ heatmap.html [L]
+RewriteRule ^players-guide$ guide.html [L]
+RewriteRule ^faq$ faq.html [L]
+RewriteRule ^privacy$ privacy.html [L]
+RewriteRule ^terms$ terms.html [L]
+
+# === more public + admin clean URLs ===
+RewriteRule ^merch/$ /merch [R=301,L]
+RewriteRule ^exchange-rates/$ /exchange-rates [R=301,L]
+RewriteRule ^join/$ /join [R=301,L]
+RewriteRule ^download/android/$ /download/android [R=301,L]
+RewriteRule ^download/ios/$ /download/ios [R=301,L]
+RewriteRule ^admin/moderation/$ /admin/moderation [R=301,L]
+
+# Old .html → clean (THE_REQUEST avoids loops)
+RewriteCond %{THE_REQUEST} \s/+merch\.html[\s?] [NC]
+RewriteRule ^merch\.html$ /merch [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+exchange-rates\.html[\s?] [NC]
+RewriteRule ^exchange-rates\.html$ /exchange-rates [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+join\.html[\s?] [NC]
+RewriteRule ^join\.html$ /join [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+download-android\.html[\s?] [NC]
+RewriteRule ^download-android\.html$ /download/android [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+download-ios\.html[\s?] [NC]
+RewriteRule ^download-ios\.html$ /download/ios [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+admin-moderation\.html[\s?] [NC]
+RewriteRule ^admin-moderation\.html$ /admin/moderation [R=301,L,QSA]
+RewriteCond %{THE_REQUEST} \s/+admin/admin-moderation\.html[\s?] [NC]
+RewriteRule ^admin/admin-moderation\.html$ /admin/moderation [R=301,L,QSA]
+
+# Clean → files
+RewriteRule ^merch$ merch.html [L]
+RewriteRule ^exchange-rates$ exchange-rates.html [L]
+RewriteRule ^join$ join.html [L]
+RewriteRule ^download/android$ download-android.html [L]
+RewriteRule ^download/ios$ download-ios.html [L]
+RewriteRule ^admin/moderation$ admin/admin-moderation.html [L]
+

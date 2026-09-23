@@ -3,6 +3,8 @@ Disallow: /admin/
 Disallow: /admin-moderation.html
 Disallow: /portal.html
 Disallow: /mines.html
+Disallow: /old-mines.html
+Disallow: /old-visitors.html
 Disallow: /visitors.html
 Disallow: /activity.html
 Disallow: /account.html

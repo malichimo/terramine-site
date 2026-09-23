@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/home-page/site-nav.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -34,29 +35,7 @@
       background-size: 48px 48px;
       pointer-events: none;
       z-index: 0;
-    }
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 40px;
-      background: rgba(13,27,42,0.9);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 26px;
-      letter-spacing: 2px;
-      color: var(--cyan);
-      text-decoration: none;
-    }
-    nav a.back { color: var(--gray); text-decoration: none; font-size: 14px; transition: color 0.2s; }
-    nav a.back:hover { color: var(--white); }
-    .page {
+    }    .page {
       position: relative;
       z-index: 1;
       max-width: 760px;
@@ -120,11 +99,27 @@
     footer p { font-size: 13px; color: var(--gray); }
   </style>
 </head>
-<body>
+<body class="has-site-nav">
 
-  <nav>
-    <a class="nav-logo" href="index.html">⛏ TerraMine</a>
-    <a class="back" href="index.html">← Back to Home</a>
+  <nav class="site-nav" aria-label="Main">
+    <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
+    <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap">World Map</a>
+      <a href="/players-guide">Player's Guide</a>
+      <a href="/faq">FAQ</a>
+      <a href="/privacy" class="is-active">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/portal" class="nav-login">My Portal</a>
+      <a href="/#download" class="nav-cta">Download</a>
+      <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
   </nav>
 
   <div class="page">
@@ -299,12 +294,13 @@
 
   <footer>
     <nav>
-      <a href="index.html">Home</a>
-      <a href="privacy.html">Privacy Policy</a>
-      <a href="terms.html">Terms of Service</a>
+      <a href="/">Home</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
     </nav>
     <p>&copy; 2026 TerraMine. All rights reserved.</p>
   </footer>
 
+  <script src="/home-page/site-nav.js" defer></script>
 </body>
 </html>
