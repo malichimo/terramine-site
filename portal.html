@@ -1,7 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <base href="/" />
+    <script>
+  (function () {
+    try {
+      if (sessionStorage.getItem('tmPortalAuthed') === '1') {
+        document.documentElement.classList.add('tm-expect-auth');
+      }
+    } catch (e) {}
+  })();
+  </script>
+  <style>
+    html.tm-expect-auth #login-screen { display: none !important; }
+    html.tm-expect-auth #portal {
+      display: flex !important;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
+    html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
+  </style>
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- ✅ Sept 7, 2026: noindex — this is a login-gated app shell with no
        content for an anonymous visitor or crawler (AdSense flagged the
@@ -20,12 +40,13 @@
        already verified via ads.txt at the site root). -->
   <!-- (adsbygoogle.js removed — see comment above) -->
 </head>
-<body>
-
+<body class="auth-pending">
+<div class="portalbackground" aria-hidden="true"></div>
+<div class="backgroundoverlaycolor" aria-hidden="true"></div>
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo">⛏ TerraMine</div>
+    <div class="login-logo"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></div>
     <div class="login-sub">Sign in to manage your mines</div>
 
     <button class="btn-google" id="btn-google-signin">
@@ -61,104 +82,225 @@
 <!-- ═══ PORTAL (hidden until auth) ═══ -->
 <div id="portal">
 
-  <div class="layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="tb-readout">
-        <div class="tb-label">TerraBucks</div>
-        <div class="tb-amount" id="sb-tb">—</div>
-        <div class="tb-sub">Your balance</div>
-      </div>
-
-      <div class="usd-row">
-        <span class="usd-label">USD Earnings</span>
-        <span class="usd-amount" id="sb-usd">$—</span>
-      </div>
-
-      <div class="sidebar-section">My Portal</div>
-      <ul class="sidebar-nav">
-        <li><a href="dashboard.html" class="active"><span class="icon">📊</span> Dashboard</a></li>
-        <li><a href="mines.html"><span class="icon">⛏</span> My Mines</a></li>
-        <li><a href="visitors.html"><span class="icon">👥</span> Visitors</a></li>
-        <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
-        <li><a href="account.html"><span class="icon">⚙️</span> Account</a></li>
-      </ul>
-
-      <div class="sidebar-section">Games</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🧠</span> Memory Match</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🪨</span> Miner Maze</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🥇</span> Gold Rush</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">💎</span> Laser Blast</a></li>
-      </ul>
-
-      <div class="sidebar-footer">
-        <a href="index.html">← Back to site</a>
-      </div>
-    </aside>
-
-    <div class="content">
-      <!-- Top Nav -->
-      <nav class="top-nav">
-        <a class="nav-logo" href="index.html">⛏ TerraMine</a>
-        <div class="nav-user">
+  
+  <nav class="top-nav">
+    <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
+    <div class="nav-links">
+      <a href="/portal" class="active">Dashboard</a>
+      <a href="/portal/mines">Mines</a>
+      <a href="/portal/inventory">Inventory</a>
+      <a href="/portal/visitors">Visitors</a>
+      <a href="/portal/activity">Activity</a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-account">
+        <a class="nav-account-link" href="/portal/account" title="Account">
           <div class="nav-avatar" id="nav-avatar">—</div>
           <span class="nav-nickname" id="nav-nickname">Loading…</span>
-          <button class="nav-signout" id="btn-signout">Sign out</button>
+        </a>
+        <button type="button" class="nav-account-toggle" id="nav-account-toggle" aria-label="Account menu" aria-expanded="false">▾</button>
+        <div class="nav-account-dropdown" id="nav-account-dropdown" hidden>
+          <button type="button" class="nav-signout" id="btn-signout">Sign out</button>
         </div>
-      </nav>
-
-      <!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
+      </div>
+      <div class="nav-pill nav-pill-usd" data-tip="Current USD Earning / Balance">
+        <span class="nav-pill-icon nav-pill-usd-icon" aria-hidden="true">$</span>
+        <span class="nav-pill-value" id="sb-usd">—</span>
+      </div>
+      <div class="nav-pill nav-pill-tb" data-tip="TerraBucks Balance">
+        <img class="nav-pill-icon" src="images/mine-icons/terrabucks-small.png" alt="" width="40" height="40" />
+        <span class="nav-pill-value" id="sb-tb">—</span>
+      </div>
+    </div>
+  </nav>
+<div class="layout">
+<div class="content">
+<!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
            login-gated shell — see claude/AdSense_LowValueContent_Fix_2026-09-07.md -->
 
       <!-- Main -->
       <main class="main" id="main-content">
-        <div class="page-header">
-          <div class="page-title">Dashboard</div>
-          <div class="page-sub" id="welcome-sub">Welcome back</div>
+        <div class="mine-totals-wrap" id="mine-totals-wrap">
+          <div class="mine-totals-controls">
+            <button type="button" class="compare-pill" id="compare-pill" aria-pressed="false">Compare</button>
+            <div class="page-settings" id="page-settings">
+              <button type="button" class="page-settings-btn" id="page-settings-btn" aria-label="Page settings" aria-expanded="false" aria-controls="page-settings-panel">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </button>
+              <div class="page-settings-panel" id="page-settings-panel" role="dialog" aria-label="Page settings" hidden>
+                <div class="page-settings-title">Production Calculations Display</div>
+                <label class="page-settings-field">Period
+                  <select id="display-period">
+                    <option value="sec">Per Second</option>
+                    <option value="min">Per Min</option>
+                    <option value="day">Per Day</option>
+                    <option value="month">Per Month</option>
+                    <option value="year">Per Year</option>
+                  </select>
+                </label>
+                <label class="page-settings-field">Rate
+                  <select id="display-rate">
+                    <option value="bonus">Base Rate + Production %</option>
+                    <option value="boost">20x Boost</option>
+                  </select>
+                </label>
+                <label class="page-settings-field" id="display-hours-field" hidden>Hours Boosted Per Day
+                  <div class="page-settings-hours-row">
+                    <input type="range" id="display-hours" min="1" max="24" step="1" value="8" aria-valuemin="1" aria-valuemax="24" aria-valuenow="8" />
+                    <span class="page-settings-hours-value" id="display-hours-value">8</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="mine-totals-rows" id="mine-totals-rows" aria-label="Mine production totals"></div>
         </div>
 
         <!-- Stat row -->
-        <div class="stat-row">
-          <div class="stat-card">
-            <div class="stat-card-label">Properties</div>
-            <div class="stat-card-value cyan" id="stat-props">—</div>
-            <div class="stat-card-sub">TerraAcres owned</div>
+                <div class="dash-breakdown-row">
+          <div class="dash-breakdown-col dash-breakdown-col-stats">
+<div class="stat-stack">
+          <div class="stat-card stat-card-properties">
+            <div class="stat-card-head">
+              <div class="stat-card-label">TerraMines Owned</div>
+              <div class="stat-card-value cyan" id="stat-props">—</div>
+            </div>
+            <div class="prop-breakdown" id="prop-breakdown">
+              <div class="prop-type">
+                <div class="prop-type-icon" data-prop-icon="rock" aria-hidden="true"><img src="/images/mine-icons/rock.svg" alt=""></div>
+                <div class="prop-type-count" id="stat-type-rock">—</div>
+                <div class="prop-type-name">Rock Mines</div>
+              </div>
+              <div class="prop-type">
+                <div class="prop-type-icon" data-prop-icon="coal" aria-hidden="true"><img src="/images/mine-icons/coal.svg" alt=""></div>
+                <div class="prop-type-count" id="stat-type-coal">—</div>
+                <div class="prop-type-name">Coal Mines</div>
+              </div>
+              <div class="prop-type">
+                <div class="prop-type-icon" data-prop-icon="gold" aria-hidden="true"><img src="/images/mine-icons/gold.svg" alt=""></div>
+                <div class="prop-type-count" id="stat-type-gold">—</div>
+                <div class="prop-type-name">Gold Mines</div>
+              </div>
+              <div class="prop-type">
+                <div class="prop-type-icon" data-prop-icon="diamond" aria-hidden="true"><img src="/images/mine-icons/diamond.svg" alt=""></div>
+                <div class="prop-type-count" id="stat-type-diamond">—</div>
+                <div class="prop-type-name">Diamond Mines</div>
+              </div>
+              <div class="prop-type-other" id="stat-type-other" hidden></div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Total Check-ins</div>
-            <div class="stat-card-value" id="stat-checkins">—</div>
-            <div class="stat-card-sub">Visits to your mines</div>
+          <div class="stat-row-secondary">
+            <div class="stat-card">
+              <div class="stat-card-label">Total Check-ins</div>
+              <div class="stat-card-value" id="stat-checkins">—</div>
+              <div class="stat-card-sub">Visits to your mines</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Total Terra Bucks Earned</div>
+              <div class="stat-card-value amber" id="stat-tb-earned">—</div>
+              <div class="stat-card-sub">All-time</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Mines Ready for Maintenance</div>
+              <div class="stat-card-value" id="stat-ready">—</div>
+              <div class="stat-card-sub">Daily activity available</div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-card-label">TB Earned</div>
-            <div class="stat-card-value amber" id="stat-tb-earned">—</div>
-            <div class="stat-card-sub">All-time</div>
+        </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Mines Ready</div>
-            <div class="stat-card-value" id="stat-ready">—</div>
-            <div class="stat-card-sub">Daily activity available</div>
+          <div class="dash-breakdown-col dash-breakdown-col-pie">
+            <div class="stat-card dash-pie-card">
+              <div class="stat-card-label">Mines by Type</div>
+              <div class="dash-pie-wrap">
+                <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
+              </div>
+</div>
+          </div>
+          <div class="dash-breakdown-col dash-breakdown-col-slot">
+            <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
+              <div class="stat-card-label">TerraBucks Earned Today</div>
+              <div class="tb-today" id="tb-today">
+                <div class="tb-today-section">
+                  <div class="tb-today-section-title">Visitor check-ins to your mines</div>
+                  <table class="tb-today-table" aria-label="Visitor check-ins today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Check-ins</th>
+                        <td id="tb-today-visitors-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned from them</th>
+                        <td id="tb-today-visitors-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tb-today-section">
+                  <div class="tb-today-section-title">Your activity check-ins to other mines</div>
+                  <table class="tb-today-table" aria-label="Your check-ins today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Check-ins</th>
+                        <td id="tb-today-yours-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned</th>
+                        <td id="tb-today-yours-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tb-today-section tb-today-section-soon" aria-disabled="true">
+                  <div class="tb-today-section-title">Mini games today</div>
+                  <table class="tb-today-table tb-today-table-games" aria-label="Mini games today">
+                    <thead>
+                      <tr>
+                        <th scope="col">Type</th>
+                        <th scope="col">Played</th>
+                        <th scope="col">TB earned</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr data-game="rock">
+                        <th scope="row"><img src="/images/mine-icons/rock.svg" alt=""> Rock</th>
+                        <td id="tb-today-game-rock-plays">—</td>
+                        <td id="tb-today-game-rock-tb">—</td>
+                      </tr>
+                      <tr data-game="coal">
+                        <th scope="row"><img src="/images/mine-icons/coal.svg" alt=""> Coal</th>
+                        <td id="tb-today-game-coal-plays">—</td>
+                        <td id="tb-today-game-coal-tb">—</td>
+                      </tr>
+                      <tr data-game="gold">
+                        <th scope="row"><img src="/images/mine-icons/gold.svg" alt=""> Gold</th>
+                        <td id="tb-today-game-gold-plays">—</td>
+                        <td id="tb-today-game-gold-tb">—</td>
+                      </tr>
+                      <tr data-game="diamond">
+                        <th scope="row"><img src="/images/mine-icons/diamond.svg" alt=""> Diamond</th>
+                        <td id="tb-today-game-diamond-plays">—</td>
+                        <td id="tb-today-game-diamond-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tb-today-total">
+                  <span>Known TB today</span>
+                  <strong id="tb-today-known-total">—</strong>
+                </div>
+                <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- My Mines -->
-        <div class="section-header">
-          <div class="section-title">My Mines</div>
-          <a class="section-action" href="mines.html">View all →</a>
-        </div>
-        <div class="mines-grid" id="mines-grid">
-          <!-- populated by JS -->
-        </div>
-
-        <!-- Recent Visitors -->
-        <div class="section-header">
-          <div class="section-title">Recent Visitors</div>
-          <a class="section-action" href="visitors.html">View all →</a>
-        </div>
-        <div class="visitor-list" id="visitor-list">
-          <!-- populated by JS -->
-        </div>
+        <p class="portal-feedback-note">
+          Questions or feedback on the website? Contact <strong>@nfoguides</strong> in the
+          <a href="https://discord.com/invite/YHzzvzwb" target="_blank" rel="noopener noreferrer">TerraMine Discord</a>.
+        </p>
 
       </main>
     </div>
@@ -211,13 +353,7 @@
     { id: 'sky-crater', mineType: 'diamond', customName: 'Sky Crater', upgradeLevel: 2, totalCheckIns: 7, dailyActivitiesRemaining: 1 }
   ];
 
-  const PREVIEW_VISITS = [
-    { id: 'visit-1', visitorNickname: 'Nova', propertyId: 'Iron Ridge', message: 'Great visibility near the north shaft.', tbEarned: 12, timestamp: new Date(Date.now() - 18 * 60 * 1000) },
-    { id: 'visit-2', visitorNickname: 'Atlas', propertyId: 'Gold Vein', message: '', tbEarned: 0, timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000) },
-    { id: 'visit-3', visitorNickname: 'Quinn', propertyId: 'Sky Crater', message: 'Back tomorrow for another run.', tbEarned: 8, timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000) }
-  ];
 
-  document.body.classList.add('auth-pending');
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -229,11 +365,20 @@
     setTimeout(() => t.className = '', 3000);
   }
 
+  function fmtTBBalance(n) {
+    const x = Number(n);
+    if (!isFinite(x)) return '0';
+    return Math.round(x).toLocaleString('en-US');
+  }
+  function fmtUSDBalance(n) {
+    const v = parseFloat(n) || 0;
+    return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
   function fmtNum(n) {
-    if (n === undefined || n === null) return '—';
-    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
-    if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
-    return Math.round(n).toLocaleString();
+    if (n === undefined || n === null || n === '') return '0';
+    const x = Number(n);
+    if (!Number.isFinite(x)) return '0';
+    return Math.round(x).toLocaleString('en-US');
   }
 
   function fmtUSD(n) {
@@ -241,22 +386,300 @@
     return '$' + parseFloat(n).toFixed(2);
   }
 
-  function timeAgo(ts) {
-    if (!ts) return '';
-    const d = ts.toDate ? ts.toDate() : new Date(ts);
-    const diff = Math.floor((Date.now() - d) / 1000);
-    if (diff < 60)   return 'just now';
-    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-    return Math.floor(diff/86400) + 'd ago';
+
+
+  // Card icons are the mines.html mineIcon() glyphs (rock/coal/gold/diamond).
+  var KNOWN_MINE_TYPES = ['rock', 'coal', 'gold', 'diamond'];
+
+  // Exact copy of mines.html mineIcon(). Only the Properties type stacks use this.
+  // mineTypeEmoji() is the mine-card badge map and is intentionally not used here.
+  function propertyStackIcon(type) {
+    return { rock:'🪨', coal:'⚫', gold:'🟡', diamond:'💎' }[type] || '⛏';
   }
 
-  function mineTypeClass(type) {
-    return { rock: 'badge-rock', coal: 'badge-coal', gold: 'badge-gold', diamond: 'badge-diamond' }[type] || 'badge-rock';
+  // mines.html displays a missing mineType as rock (p.mineType || 'rock').
+  // Any other stored value stays out of the four buckets so it is not dropped
+  // from the total and can be shown under the breakdown.
+  function bucketMineType(mineType) {
+    if (mineType == null || mineType === '') return 'rock';
+    var key = String(mineType).trim().toLowerCase();
+    if (!key) return 'rock';
+    return KNOWN_MINE_TYPES.indexOf(key) === -1 ? null : key;
   }
 
-  function mineTypeEmoji(type) {
-    return { rock: '🪨', coal: '🖤', gold: '⭐', diamond: '💎' }[type] || '⛏';
+  
+  const MINE_TYPE_PIE_COLORS = {
+    rock: '#7F7F7F',
+    coal: '#2F2F2F',
+    gold: '#FFD700',
+    diamond: '#6EC6FF'
+  };
+  // Radial gradient: inner (lighter/start) -> outer (darker/current)
+  const MINE_TYPE_PIE_GRADIENTS = {
+    rock:    { inner: '#B0B0B0', outer: '#7F7F7F' },
+    coal:    { inner: '#4A4A4A', outer: '#000000' },
+    gold:    { inner: '#FFE566', outer: '#C9A000' },
+    diamond: { inner: '#B8E7FF', outer: '#3BA8E0' }
+  };
+  const MINE_TYPE_PIE_ICONS = {
+    rock: '/images/mine-icons/rock.svg',
+    coal: '/images/mine-icons/coal.svg',
+    gold: '/images/mine-icons/gold.svg',
+    diamond: '/images/mine-icons/diamond.svg'
+  };
+  const MINE_TYPE_PIE_LABELS = {
+    rock: 'Rock',
+    coal: 'Coal',
+    gold: 'Gold',
+    diamond: 'Diamond'
+  };
+  const _pieIconCache = {};
+  function loadPieIcon(src) {
+    if (_pieIconCache[src]) return _pieIconCache[src];
+    const p = new Promise(function(resolve) {
+      const img = new Image();
+      img.onload = function() { resolve(img); };
+      img.onerror = function() { resolve(null); };
+      img.src = src;
+    });
+    _pieIconCache[src] = p;
+    return p;
+  }
+  async function renderMineTypePie(counts, total) {
+    const canvas = $('mine-type-pie');
+    if (!canvas || !canvas.getContext) return;
+    const wrap = canvas.parentElement;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const boxW = (wrap && wrap.clientWidth) ? wrap.clientWidth : (canvas.clientWidth || 280);
+    // Fill the full width of the card
+    const cssSize = Math.max(140, Math.round(boxW));
+    canvas.width = Math.round(cssSize * dpr);
+    canvas.height = Math.round(cssSize * dpr);
+    canvas.style.width = cssSize + 'px';
+    canvas.style.height = cssSize + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssSize, cssSize);
+
+    const types = KNOWN_MINE_TYPES.slice();
+    const slices = types.map(function(t) {
+      return { type: t, count: counts[t] || 0 };
+    }).filter(function(s) { return s.count > 0; });
+    const sum = slices.reduce(function(a, s) { return a + s.count; }, 0) || 0;
+    const cx = cssSize / 2;
+    const cy = cssSize / 2;
+    // Leave a thin outer margin so callout boxes can sit just inside the canvas
+    const radius = cssSize * 0.38;
+    const holeR = Math.max(28, Math.min(radius * 0.42, cssSize * 0.145));
+    const innerLabelR = (holeR + radius) / 2;
+    const OUTER_SWEEP = 0.28;
+
+    function formatPct(count, totalN) {
+      if (!totalN) return '0%';
+      const raw = (count / totalN) * 100;
+      // Up to 2 decimal places; trim trailing zeros (0.58%, 29%, 61.71%)
+      let s = raw.toFixed(2).replace(/\.?0+$/, '');
+      if (s === '') s = '0';
+      return s + '%';
+    }
+
+    function roundRect(x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function sliceGradient(type) {
+      const gdef = MINE_TYPE_PIE_GRADIENTS[type] || { inner: '#ccc', outer: '#888' };
+      const g = ctx.createRadialGradient(cx, cy, holeR * 0.2, cx, cy, radius);
+      g.addColorStop(0, gdef.inner);
+      g.addColorStop(1, gdef.outer);
+      return g;
+    }
+
+    // Vertical stack: icon above, percent below, inside rounded white box
+    function drawLabelBox(lx, ly, img, pctText, anchor) {
+      const iconSz = Math.max(14, Math.min(24, cssSize * 0.075));
+      const padX = 7;
+      const padY = 5;
+      const gap = 2;
+      const fontPx = Math.max(8, Math.round(cssSize * 0.0304)); // 20% smaller than prior %
+      ctx.font = '700 ' + fontPx + 'px DM Sans, sans-serif';
+      const tw = ctx.measureText(pctText).width;
+      const contentW = Math.max(img ? iconSz : 0, tw);
+      const boxW2 = contentW + padX * 2;
+      const boxH = padY + (img ? iconSz : 0) + (img ? gap : 0) + fontPx + padY;
+      let bx = lx - boxW2 / 2;
+      let by = ly - boxH / 2;
+      if (anchor === 'left') bx = lx;
+      if (anchor === 'right') bx = lx - boxW2;
+      bx = Math.max(2, Math.min(cssSize - boxW2 - 2, bx));
+      by = Math.max(2, Math.min(cssSize - boxH - 2, by));
+
+      ctx.save();
+      roundRect(bx, by, boxW2, boxH, 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.96)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(13,27,42,0.18)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      let y = by + padY;
+      if (img) {
+        ctx.drawImage(img, bx + (boxW2 - iconSz) / 2, y, iconSz, iconSz);
+        y += iconSz + gap;
+      }
+      ctx.fillStyle = '#0D1B2A';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(pctText, bx + boxW2 / 2, y);
+      ctx.restore();
+      return { x: bx, y: by, w: boxW2, h: boxH };
+    }
+
+    if (!sum) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(148,163,184,0.35)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, holeR, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.font = '600 13px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('No mines yet', cx, cy);
+      return;
+    }
+
+    const icons = {};
+    await Promise.all(slices.map(async function(s) {
+      icons[s.type] = await loadPieIcon(MINE_TYPE_PIE_ICONS[s.type]);
+    }));
+
+    let angle = -Math.PI / 2;
+    const labelJobs = [];
+    slices.forEach(function(s) {
+      const sweep = (s.count / sum) * Math.PI * 2;
+      const mid = angle + sweep / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, angle, angle + sweep);
+      ctx.closePath();
+      ctx.fillStyle = sliceGradient(s.type);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      labelJobs.push({
+        type: s.type,
+        mid: mid,
+        sweep: sweep,
+        pctText: formatPct(s.count, sum),
+        img: icons[s.type]
+      });
+      angle += sweep;
+    });
+
+    // Center hole
+    ctx.beginPath();
+    ctx.arc(cx, cy, holeR, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.fill();
+    const totalText = fmtNum(total || sum);
+    const totalFont = Math.max(14, Math.min(22, Math.round(holeR * 0.72)));
+    ctx.fillStyle = '#0D1B2A';
+    ctx.font = "700 " + totalFont + "px 'Bebas Neue', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(totalText, cx, cy - holeR * 0.18);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '600 ' + Math.max(8, Math.round(holeR * 0.32)) + 'px DM Sans, sans-serif';
+    ctx.fillText('MINES', cx, cy + holeR * 0.38);
+
+    const usedYs = [];
+    labelJobs.forEach(function(j) {
+      if (j.sweep > OUTER_SWEEP) {
+        const lx = cx + Math.cos(j.mid) * innerLabelR;
+        const ly = cy + Math.sin(j.mid) * innerLabelR;
+        drawLabelBox(lx, ly, j.img, j.pctText, 'center');
+        return;
+      }
+
+      const edgeX = cx + Math.cos(j.mid) * radius;
+      const edgeY = cy + Math.sin(j.mid) * radius;
+      const side = Math.cos(j.mid) >= 0 ? 1 : -1;
+      const elbowR = radius + cssSize * 0.05;
+      const elbowX = cx + Math.cos(j.mid) * elbowR;
+      const elbowY = cy + Math.sin(j.mid) * elbowR;
+      const labelX = side > 0 ? cssSize - 6 : 6;
+      let labelY = elbowY;
+      for (let guard = 0; guard < 12; guard++) {
+        let clash = false;
+        for (let i = 0; i < usedYs.length; i++) {
+          if (Math.abs(usedYs[i] - labelY) < 34) { clash = true; break; }
+        }
+        if (!clash) break;
+        labelY += (labelY >= cy ? 1 : -1) * 34;
+      }
+      labelY = Math.max(20, Math.min(cssSize - 20, labelY));
+      usedYs.push(labelY);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(edgeX, edgeY);
+      ctx.lineTo(elbowX, elbowY);
+      ctx.lineTo(labelX + (side > 0 ? -4 : 4), labelY);
+      ctx.strokeStyle = 'rgba(13,27,42,0.45)';
+      ctx.lineWidth = 1.25;
+      ctx.stroke();
+      ctx.restore();
+
+      drawLabelBox(labelX, labelY, j.img, j.pctText, side > 0 ? 'right' : 'left');
+    });
+  }
+
+  function renderPropertyBreakdown(props) {
+    var counts = { rock: 0, coal: 0, gold: 0, diamond: 0 };
+    var unmapped = {};
+    props.forEach(function(p) {
+      var key = bucketMineType(p.mineType);
+      if (key) {
+        counts[key]++;
+      } else {
+        var label = String(p.mineType).trim() || '(blank)';
+        unmapped[label] = (unmapped[label] || 0) + 1;
+      }
+    });
+    $('stat-props').textContent = fmtNum(props.length);
+    KNOWN_MINE_TYPES.forEach(function(k) {
+      var el = $('stat-type-' + k);
+      if (el) el.textContent = fmtNum(counts[k]);
+      /* Mine-type icons are static SVGs (same as Mines page). */
+    });
+    var other = $('stat-type-other');
+    if (other) {
+      var labels = Object.keys(unmapped);
+      if (!labels.length) {
+        other.hidden = true;
+        other.textContent = '';
+      } else {
+        other.hidden = false;
+        other.textContent = 'Also owned: ' + labels.map(function(label) {
+          return unmapped[label] + ' ' + label;
+        }).join(', ');
+      }
+    }
+  
+    renderMineTypePie(counts, props.length);
   }
 
   function initials(name) {
@@ -265,6 +688,7 @@
   }
 
   function enterPreviewMode() {
+    try { sessionStorage.setItem('tmPortalAuthed', '1'); } catch (e) {}
     document.body.classList.remove('auth-pending');
     authResolved = true;
     $('login-screen').style.display = 'none';
@@ -283,10 +707,17 @@
     }
 
     if (user) {
+      try { sessionStorage.setItem('tmPortalAuthed', '1'); } catch (e) {}
+      document.body.classList.remove('auth-pending');
+
       $('login-screen').style.display = 'none';
       $('portal').style.display = 'flex';
       loadDashboard(user);
     } else {
+
+      try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+      document.documentElement.classList.remove('tm-expect-auth');
+      document.body.classList.remove('auth-pending');
       if (isLocalPreview) {
         enterPreviewMode();
         return;
@@ -365,7 +796,508 @@
   });
 
   // Sign out
-  $('btn-signout').addEventListener('click', () => auth.signOut());
+  $('btn-signout').addEventListener('click', () => {
+    try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+    document.documentElement.classList.remove('tm-expect-auth');
+    auth.signOut();
+  });
+
+  (function initAccountMenu() {
+    var toggle = document.getElementById('nav-account-toggle');
+    var dropdown = document.getElementById('nav-account-dropdown');
+    var wrap = document.querySelector('.nav-account');
+    if (!toggle || !dropdown) return;
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var willOpen = dropdown.hasAttribute('hidden');
+      if (willOpen) dropdown.removeAttribute('hidden');
+      else dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (!wrap || wrap.contains(e.target)) return;
+      dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  })();
+
+
+
+  // ── Mine production totals (shared semantics with mines.html) ─────────────
+  let allMines = [];
+  const TYPE_ORDER_DEFAULT = ['diamond', 'gold', 'coal', 'rock'];
+  const TYPE_ORDER_FLIP_KEY = 'terramine.mines.typeOrderFlipped';
+  function loadTypeOrderFlipped() {
+    try { return sessionStorage.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
+  }
+  let typeOrderFlipped = loadTypeOrderFlipped();
+  let TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
+  function syncTypeOrderFromFlag() {
+    TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
+  }
+  function applyTypeOrderLayout() {
+    syncTypeOrderFromFlag();
+    document.querySelectorAll('#mine-totals-rows .mine-totals-bar-left').forEach(function (left) {
+      TYPE_ORDER.forEach(function (typ) {
+        const box = left.querySelector('.mine-group-total[data-group-type="' + typ + '"]');
+        if (box) left.appendChild(box);
+      });
+    });
+    document.querySelectorAll('#mine-totals-rows .mine-group-total-icons-all').forEach(function (allIcons) {
+      TYPE_ORDER.forEach(function (typ) {
+        const img = allIcons.querySelector('img[src*="' + typ + '.svg"]');
+        if (img) allIcons.appendChild(img);
+      });
+    });
+  }
+
+  function numOrNull(v) {
+    if (v == null || v === '' || typeof v === 'boolean') return null;
+    const n = typeof v === 'number' ? v : (typeof v === 'string' ? Number(v.trim()) : NaN);
+    return Number.isFinite(n) ? n : null;
+  }
+  function typeKey(p) {
+    const t = String(p.mineType == null ? '' : p.mineType).trim().toLowerCase();
+    return (t === 'rock' || t === 'coal' || t === 'gold' || t === 'diamond') ? t : 'rock';
+  }
+  function productionBase(type) {
+    return { rock: 0.0000000011, coal: 0.0000000016, gold: 0.0000000022, diamond: 0.0000000044 }[type] || 0.0000000011;
+  }
+  function productionBonus(level) { return Math.max(0, level - 1); }
+  function productionRate(type, level) {
+    return productionBase(type) * (1 + productionBonus(level) / 100);
+  }
+  function periodAmount(perSec, period) {
+    if (period === 'sec') return perSec;
+    if (period === 'min') return perSec * 60;
+    if (period === 'day') return perSec * 60 * 60 * 24;
+    if (period === 'year') return perSec * 60 * 60 * 24 * 365;
+    return perSec * 60 * 60 * 24 * 30;
+  }
+  const DISPLAY_KEY = 'terramine.mines.display';
+  const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
+  const DISPLAY_RATES = ['bonus', 'boost'];
+  const LEGACY_RATE_HOURS = { '12': 12, '18': 18, '24': 24 };
+  const PERIOD_SUFFIX = { sec: '/sec', min: '/min', day: '/day', month: '/mo', year: '/yr' };
+  const DEFAULT_BOOST_HOURS = 8;
+  function clampBoostHours(h) {
+    const n = Number(h);
+    if (!Number.isFinite(n)) return DEFAULT_BOOST_HOURS;
+    return Math.min(24, Math.max(1, Math.round(n)));
+  }
+  function defaultDisplay() { return { period: 'month', rate: 'bonus', hours: DEFAULT_BOOST_HOURS }; }
+  function normalizeDisplay(o) {
+    if (!o || DISPLAY_PERIODS.indexOf(o.period) === -1) return defaultDisplay();
+    let rate = String(o.rate);
+    let hours = clampBoostHours(o.hours != null ? o.hours : DEFAULT_BOOST_HOURS);
+    if (LEGACY_RATE_HOURS[rate] != null) {
+      hours = LEGACY_RATE_HOURS[rate];
+      rate = 'boost';
+    }
+    if (rate === 'base') rate = 'bonus';
+    if (DISPLAY_RATES.indexOf(rate) === -1) return defaultDisplay();
+    return { period: o.period, rate: rate, hours: hours };
+  }
+  function loadDisplay() {
+    try {
+      const raw = sessionStorage.getItem(DISPLAY_KEY);
+      if (!raw) return defaultDisplay();
+      return normalizeDisplay(JSON.parse(raw));
+    } catch (e) {
+      return defaultDisplay();
+    }
+  }
+  let displayPref = loadDisplay();
+  function boostPerSec(boostedPerSec, hours) {
+    const h = clampBoostHours(hours);
+    return boostedPerSec * (h * 20 + (24 - h) * 1) / 24;
+  }
+  function displayAmount(type, level, pref) {
+    const base = productionBase(type);
+    const boosted = level == null ? base : productionRate(type, level);
+    let perSec = boosted;
+    if (pref.rate === 'base') perSec = base;
+    else if (pref.rate === 'boost') perSec = boostPerSec(boosted, pref.hours);
+    return periodAmount(perSec, pref.period);
+  }
+  function effectiveLevel(raw) {
+    const n = numOrNull(raw);
+    if (n == null || !Number.isFinite(n) || n < 1) return 1;
+    return n;
+  }
+  function fmtRate(n, period) {
+    const digits = period === 'sec' ? 11 : (period === 'min' ? 10 : 8);
+    let s = n.toFixed(digits);
+    if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return '$' + s;
+  }
+  function groupProductionSum(type, mines, pref) {
+    pref = pref || displayPref;
+    let sum = 0;
+    (mines || []).forEach(m => {
+      if (type && typeKey(m) !== type) return;
+      const level = effectiveLevel((m._details || {}).productionLevel);
+      sum += displayAmount(typeKey(m), level, pref);
+    });
+    return sum;
+  }
+  const COMPARE_KEY = 'terramine.mines.compare';
+  const COMPARE_PERIODS = ['min', 'day', 'month', 'year'];
+  const ROW_PERIOD_LABEL = { sec: 'Production Per Second', min: 'Production Per Minute', day: 'Production Per Day', month: 'Production Per Month', year: 'Production Per Year' };
+  const TYPE_TITLE = {
+    diamond: 'Diamond Mine Production',
+    gold: 'Gold Mine Production',
+    coal: 'Coal Mine Production',
+    rock: 'Rock Mine Production',
+    all: 'All Mines Production'
+  };
+  function loadCompareOn() {
+    try { return sessionStorage.getItem(COMPARE_KEY) === '1'; } catch (e) { return false; }
+  }
+  function saveCompareOn(on) {
+    try { sessionStorage.setItem(COMPARE_KEY, on ? '1' : '0'); } catch (e) {}
+  }
+  let compareOn = false; // always start OFF; toggled by the Compare pill
+
+  function applyGroupTotalValue(el, type, pref) {
+    pref = pref || displayPref;
+    const mines = allMines;
+    const sum = type === 'all' ? groupProductionSum(null, mines, pref) : groupProductionSum(type, mines, pref);
+    const n = (sum == null || !Number.isFinite(sum)) ? 0 : sum;
+    el.textContent = fmtRate(n, pref.period) + PERIOD_SUFFIX[pref.period];
+    el.className = 'mine-group-total-value';
+    if (n > 0 && pref.rate !== 'base') el.classList.add('is-boosted');
+  }
+
+  function buildGroupTotalBox(type) {
+    const box = document.createElement('div');
+    box.className = 'mine-group-total' + (type === 'all' ? ' mine-totals-all' : '');
+    box.dataset.groupType = type;
+    if (type === 'all') {
+      const icons = document.createElement('div');
+      icons.className = 'mine-group-total-icons-all';
+      icons.setAttribute('aria-hidden', 'true');
+      TYPE_ORDER.forEach(function (typ) {
+        const img = document.createElement('img');
+        img.src = '/images/mine-icons/' + typ + '.svg';
+        img.alt = '';
+        icons.appendChild(img);
+      });
+      box.appendChild(icons);
+    } else {
+      const icon = document.createElement('div');
+      icon.className = 'mine-group-total-icon';
+      const img = document.createElement('img');
+      img.src = '/images/mine-icons/' + type + '.svg';
+      img.alt = '';
+      icon.appendChild(img);
+      box.appendChild(icon);
+    }
+    const body = document.createElement('div');
+    body.className = 'mine-group-total-body';
+    const title = document.createElement('span');
+    title.className = 'mine-group-total-title';
+    title.textContent = TYPE_TITLE[type] || type;
+    const val = document.createElement('span');
+    val.className = 'mine-group-total-value';
+    val.textContent = '$0';
+    body.appendChild(title);
+    body.appendChild(val);
+    box.appendChild(body);
+    return box;
+  }
+
+  function buildPeriodRow(period) {
+    const row = document.createElement('div');
+    row.className = 'mine-totals-bar';
+    row.dataset.period = period;
+    const label = document.createElement('div');
+    label.className = 'mine-totals-period-label';
+    label.textContent = ROW_PERIOD_LABEL[period] || period;
+    const left = document.createElement('div');
+    left.className = 'mine-totals-bar-left';
+    TYPE_ORDER.forEach(function (typ) { left.appendChild(buildGroupTotalBox(typ)); });
+    const right = document.createElement('div');
+    right.className = 'mine-totals-bar-right';
+    right.appendChild(buildGroupTotalBox('all'));
+    row.appendChild(label);
+    row.appendChild(left);
+    row.appendChild(right);
+    return row;
+  }
+
+  function ensureTotalsRows() {
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    if (host.dataset.built !== '1') {
+      host.innerHTML = '';
+      DISPLAY_PERIODS.forEach(function (period) {
+        host.appendChild(buildPeriodRow(period));
+      });
+      host.dataset.built = '1';
+      bindMineTotalsFollowTips();
+    }
+    applyTypeOrderLayout();
+  }
+
+  function syncCompareUi() {
+    const wrap = $('mine-totals-wrap');
+    const pill = $('compare-pill');
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    ensureTotalsRows();
+    if (wrap) wrap.classList.toggle('is-comparing', !!compareOn);
+    if (pill) {
+      pill.setAttribute('aria-pressed', compareOn ? 'true' : 'false');
+      pill.classList.toggle('is-on', !!compareOn);
+    }
+    const active = displayPref.period;
+    host.querySelectorAll('.mine-totals-bar').forEach(function (row) {
+      const period = row.dataset.period;
+      let show;
+      if (compareOn) show = COMPARE_PERIODS.indexOf(period) !== -1;
+      else show = period === active;
+      row.hidden = !show;
+      row.style.display = show ? '' : 'none';
+      row.classList.toggle('is-active-period', !!compareOn && period === active);
+    });
+  }
+
+  function refreshGroupTotals() {
+    ensureTotalsRows();
+    syncCompareUi();
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    host.querySelectorAll('.mine-totals-bar').forEach(function (row) {
+      const period = row.dataset.period;
+      if (!period) return;
+      const pref = { period: period, rate: displayPref.rate, hours: displayPref.hours };
+      row.querySelectorAll('.mine-group-total').forEach(function (box) {
+        const type = box.dataset.groupType;
+        const val = box.querySelector('.mine-group-total-value');
+        if (!type || !val) return;
+        applyGroupTotalValue(val, type, pref);
+      });
+    });
+  }
+
+  const COMPARE_TIP_TEXT = 'Compare minute, Day, Month, Year production values.';
+  function bindCompareFollowTip(pill) {
+    if (!pill || pill.dataset.compareTipBound === '1') return;
+    pill.dataset.compareTipBound = '1';
+    pill.removeAttribute('title');
+    pill.addEventListener('mouseenter', (e) => {
+      if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+      totalsFollowTipTarget = pill;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      const tip = ensureTotalsFollowTip();
+      tip.textContent = COMPARE_TIP_TEXT;
+      tip.style.display = 'none';
+      totalsFollowTipTimer = setTimeout(() => {
+        totalsFollowTipTimer = null;
+        if (totalsFollowTipTarget !== pill || !pill.isConnected) return;
+        tip.textContent = COMPARE_TIP_TEXT;
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }, 1000);
+    });
+    pill.addEventListener('mousemove', (e) => {
+      if (totalsFollowTipTarget !== pill) return;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      if (totalsFollowTip && totalsFollowTip.style.display === 'block' && !totalsFollowTipTimer) {
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }
+    });
+    pill.addEventListener('mouseleave', () => {
+      if (totalsFollowTipTarget === pill) dismissTotalsFollowTip();
+    });
+  }
+  function initComparePill() {
+    const pill = $('compare-pill');
+    if (!pill || pill.dataset.bound === '1') return;
+    pill.dataset.bound = '1';
+    compareOn = false;
+    saveCompareOn(false);
+    pill.setAttribute('aria-pressed', 'false');
+    pill.classList.remove('is-on');
+    bindCompareFollowTip(pill);
+    pill.addEventListener('click', function () {
+      compareOn = !compareOn;
+      saveCompareOn(compareOn);
+      refreshGroupTotals();
+    });
+  }
+
+  const TOTALS_PERIOD_LABEL = {
+    sec: 'Per Second', min: 'Per Min', day: 'Per Day', month: 'Per Month', year: 'Per Year'
+  };
+  function totalsDisplayTipText(pref) {
+    pref = pref || displayPref;
+    let basis;
+    if (pref.rate === 'base') basis = 'Base Rate';
+    else if (pref.rate === 'bonus') basis = 'Base Rate + Production %';
+    else basis = '20x Boost at ' + clampBoostHours(pref.hours) + ' hours a day';
+    const periodLabel = TOTALS_PERIOD_LABEL[pref.period] || '';
+    if (periodLabel) {
+      return 'Calculations are based on ' + basis + ' and shown ' + periodLabel + '.';
+    }
+    return 'Calculations are based on ' + basis + '.';
+  }
+  let totalsFollowTip = null;
+  let totalsFollowTipTimer = null;
+  let totalsFollowTipTarget = null;
+  let totalsFollowTipX = 0;
+  let totalsFollowTipY = 0;
+  function dismissTotalsFollowTip() {
+    if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+    totalsFollowTipTarget = null;
+    if (totalsFollowTip) totalsFollowTip.style.display = 'none';
+  }
+  function ensureTotalsFollowTip() {
+    if (!totalsFollowTip) {
+      const tip = document.createElement('div');
+      tip.className = 'toolbar-follow-tip';
+      tip.setAttribute('role', 'tooltip');
+      totalsFollowTip = tip;
+    }
+    if (totalsFollowTip.parentNode !== document.body) {
+      document.body.appendChild(totalsFollowTip);
+    }
+    return totalsFollowTip;
+  }
+  function placeTotalsFollowTip(x, y) {
+    const tip = ensureTotalsFollowTip();
+    const gap = 14;
+    const edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function refreshOpenTotalsFollowTip() {
+    if (!totalsFollowTip || totalsFollowTip.style.display !== 'block') return;
+    if (!totalsFollowTipTarget) return;
+    totalsFollowTip.textContent = totalsDisplayTipText(displayPref);
+    placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+  }
+  function bindTotalsFollowTip(box) {
+    if (!box || box.dataset.totalsTipBound === '1') return;
+    box.dataset.totalsTipBound = '1';
+    box.removeAttribute('title');
+    box.addEventListener('mouseenter', (e) => {
+      if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+      totalsFollowTipTarget = box;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      const tip = ensureTotalsFollowTip();
+      const row = box.closest('.mine-totals-bar');
+      const rowPref = row && row.dataset.period
+        ? { period: row.dataset.period, rate: displayPref.rate, hours: displayPref.hours }
+        : displayPref;
+      tip.textContent = totalsDisplayTipText(rowPref);
+      tip.style.display = 'none';
+      totalsFollowTipTimer = setTimeout(() => {
+        totalsFollowTipTimer = null;
+        if (totalsFollowTipTarget !== box || !box.isConnected) return;
+        tip.textContent = totalsDisplayTipText(rowPref);
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }, 1000);
+    });
+    box.addEventListener('mousemove', (e) => {
+      if (totalsFollowTipTarget !== box) return;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      if (totalsFollowTip && totalsFollowTip.style.display === 'block' && !totalsFollowTipTimer) {
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }
+    });
+    box.addEventListener('mouseleave', () => {
+      if (totalsFollowTipTarget === box) dismissTotalsFollowTip();
+    });
+  }
+  function bindMineTotalsFollowTips() {
+    const host = $('mine-totals-rows');
+    if (!host) return;
+    host.querySelectorAll('.mine-group-total').forEach(bindTotalsFollowTip);
+  }
+
+  async function fetchPropertyDetailsForProps(props, batchSize = 40) {
+    for (let i = 0; i < props.length; i += batchSize) {
+      const slice = props.slice(i, i + batchSize);
+      const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
+      snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
+    }
+    return props;
+  }
+
+  function setPageSettingsOpen(open) {
+    const panel = $('page-settings-panel');
+    const btn = $('page-settings-btn');
+    if (!panel || !btn) return;
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function syncHoursControl() {
+    const show = displayPref.rate === 'boost';
+    const field = $('display-hours-field');
+    const slider = $('display-hours');
+    const label = $('display-hours-value');
+    if (!field || !slider || !label) return;
+    field.hidden = !show;
+    field.style.display = show ? '' : 'none';
+    const h = clampBoostHours(displayPref.hours);
+    slider.value = String(h);
+    slider.setAttribute('aria-valuenow', String(h));
+    label.textContent = String(h);
+  }
+  function onDisplayChange() {
+    const period = $('display-period').value;
+    const rate = $('display-rate').value;
+    const hours = clampBoostHours($('display-hours').value);
+    displayPref = normalizeDisplay({ period: period, rate: rate, hours: hours });
+    $('display-rate').value = displayPref.rate;
+    syncHoursControl();
+    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    refreshGroupTotals();
+    refreshOpenTotalsFollowTip();
+  }
+  function initPageSettings() {
+    const periodEl = $('display-period');
+    const rateEl = $('display-rate');
+    const hoursEl = $('display-hours');
+    const btn = $('page-settings-btn');
+    if (!periodEl || !rateEl || !hoursEl || !btn) return;
+    periodEl.value = displayPref.period;
+    rateEl.value = displayPref.rate;
+    syncHoursControl();
+    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    btn.addEventListener('click', () => {
+      setPageSettingsOpen($('page-settings-panel').hidden);
+    });
+    document.addEventListener('click', (e) => {
+      const wrap = $('page-settings');
+      if (!wrap || wrap.contains(e.target)) return;
+      setPageSettingsOpen(false);
+    });
+    periodEl.addEventListener('change', onDisplayChange);
+    rateEl.addEventListener('change', onDisplayChange);
+    hoursEl.addEventListener('input', onDisplayChange);
+    initComparePill();
+    ensureTotalsRows();
+    syncCompareUi();
+  }
+
 
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
@@ -374,32 +1306,43 @@
 
       const nickname = userData.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
       $('nav-nickname').textContent = nickname;
-      $('welcome-sub').textContent  = 'Welcome back, ' + nickname;
-      $('sb-tb').textContent        = fmtNum(userData.tbBalance || 0);
-      $('sb-usd').textContent       = fmtUSD(userData.usdEarnings || 0);
+      const welcomeSub = $('welcome-sub');
+      if (welcomeSub) welcomeSub.textContent = 'Welcome back, ' + nickname;
+      $('sb-tb').textContent = fmtTBBalance(userData.tbBalance || 0);
+      $('sb-usd').textContent = fmtUSDBalance(userData.usdEarnings || 0);
       $('stat-tb-earned').textContent = fmtNum(userData.totalTBEarned || 0);
       $('stat-checkins').textContent  = fmtNum(userData.totalCheckIns || 0);
 
-      // Avatar
-      if (user.photoURL && user.photoURL.startsWith('https://')) {
-        $('nav-avatar').innerHTML = `<img src="${user.photoURL}" alt="${nickname}" />`;
-      } else if (userData.avatarURL && userData.avatarURL.startsWith('https://')) {
-        $('nav-avatar').innerHTML = `<img src="${userData.avatarURL}" alt="${nickname}" />`;
+      // Avatar: prefer Firestore profile avatar (same as Mines/Visitors/Activity),
+      // then fall back to Auth photoURL, then initials.
+      const avatarUrl = userData.avatarUrl || userData.avatarURL || user.photoURL || '';
+      if (typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')) {
+        $('nav-avatar').innerHTML = `<img src="${avatarUrl}" alt="${nickname}" />`;
       } else {
         $('nav-avatar').textContent = initials(nickname);
       }
 
-      const props = options.preview ? PREVIEW_PROPERTIES : (await db.collection('properties')
-        .where('ownerId', '==', user.uid)
-        .limit(50)
-        .get()).docs.map(d => ({ id: d.id, ...d.data() }));
-      $('stat-props').textContent = fmtNum(props.length);
+      // No .limit(): the previous cap of 50 made this card disagree with
+      // mines.html, which loads every property owned by the signed-in user.
+      const props = options.preview
+        ? PREVIEW_PROPERTIES.map(p => ({ ...p, _details: { productionLevel: p.upgradeLevel || 1, dailyActivitiesRemaining: p.dailyActivitiesRemaining } }))
+        : (await db.collection('properties')
+            .where('ownerId', '==', user.uid)
+            .get()).docs.map(d => ({ id: d.id, ...d.data(), _details: {} }));
+      renderPropertyBreakdown(props);
 
-      // Render mine cards (first 6)
-      await renderMineCards(props.slice(0, 6), user.uid, options);
+      if (!options.preview) {
+        await fetchPropertyDetailsForProps(props);
+      }
+      allMines = props;
+      applyTypeOrderLayout();
+      refreshGroupTotals();
 
-      // Recent visitors
-      await loadRecentVisitors(user.uid, props, options);
+      // Mines Ready stat (no mine-card grid on dashboard)
+      updateReadyStat(props, options);
+
+      // Column 3: TerraBucks earned today (check-in counts + any TB fields we can find)
+      await loadTbTodayEarned(user, options);
 
     } catch(e) {
       console.error('Dashboard load error:', e);
@@ -407,188 +1350,276 @@
     }
   }
 
-  async function renderMineCards(props, userId, options = {}) {
-    const grid = $('mines-grid');
+  function updateReadyStat(props, options = {}) {
     if (!props.length) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⛏</div><div class="empty-text">No properties yet — buy your first TerraAcre in the app.</div></div>`;
       $('stat-ready').textContent = '0';
       return;
     }
-
     if (options.preview) {
-      let readyCount = 0;
-      grid.innerHTML = props.map(p => {
-        const activityReady = (p.dailyActivitiesRemaining ?? 1) > 0;
-        if (activityReady) readyCount++;
-        const name = p.customName || p.id;
-        const type = p.mineType || 'rock';
-        const level = p.upgradeLevel || 1;
-        const visitors = p.totalCheckIns || 0;
-        return `
-          <div class="mine-card" onclick="window.location='mines.html#${p.id}'">
-            <div class="mine-card-top">
-              <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
-              <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
-            </div>
-            <div class="mine-name">${name}</div>
-            <div class="mine-id">${p.id}</div>
-            <div class="mine-stats">
-              <div class="mine-stat"><strong>Lv ${level}</strong>Grade</div>
-              <div class="mine-stat"><strong>${visitors}</strong>Visitors</div>
-              <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
-            </div>
-            <div class="mine-action-row">
-              <a class="mine-btn primary" href="mines.html#${p.id}">Maintain</a>
-              <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
-            </div>
-          </div>`;
-      }).join('');
+      const readyCount = props.filter(p => ((p._details && p._details.dailyActivitiesRemaining) ?? p.dailyActivitiesRemaining ?? 1) > 0).length;
       $('stat-ready').textContent = readyCount;
       return;
     }
-
-    // Fetch property details in batches of 10 to avoid Firestore 400 errors
-    async function fetchInBatches(ids, batchSize = 10) {
-      const results = [];
-      for (let i = 0; i < ids.length; i += batchSize) {
-        const batch = ids.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
-          batch.map(p => db.collection('propertyDetails').doc(p.id).get()
-            .then(s => ({ id: p.id, ...(s.data() || {}) }))
-            .catch(() => ({ id: p.id }))
-          )
-        );
-        results.push(...batchResults);
-      }
-      return results;
-    }
-    const details = await fetchInBatches(props);
-    const detailMap = Object.fromEntries(details.map(d => [d.id, d]));
-
-    let readyCount = 0;
-    grid.innerHTML = props.map(p => {
-      const d = detailMap[p.id] || {};
-      const activityReady = (d.dailyActivitiesRemaining ?? 1) > 0;
-      if (activityReady) readyCount++;
-      const name = d.customName || p.id;
-      const type = p.mineType || 'rock';
-      const level = d.upgradeLevel || 1;
-      const visitors = d.totalCheckIns || 0;
-      return `
-        <div class="mine-card" onclick="window.location='mines.html#${p.id}'">
-          <div class="mine-card-top">
-            <span class="mine-type-badge ${mineTypeClass(type)}">${mineTypeEmoji(type)} ${type.toUpperCase()}</span>
-            <span class="mine-activity-dot ${activityReady ? 'ready' : 'done'}" title="${activityReady ? 'Daily activity ready' : 'Activity done for today'}"></span>
-          </div>
-          <div class="mine-name">${name}</div>
-          <div class="mine-id">${p.id}</div>
-          <div class="mine-stats">
-            <div class="mine-stat"><strong>Lv ${level}</strong>Grade</div>
-            <div class="mine-stat"><strong>${visitors}</strong>Visitors</div>
-            <div class="mine-stat"><strong>${activityReady ? '✓' : '—'}</strong>Activity</div>
-          </div>
-          <div class="mine-action-row">
-            <a class="mine-btn primary" href="mines.html#${p.id}">Maintain</a>
-            <button class="mine-btn" onclick="showComingSoon(event)">Play Game</button>
-          </div>
-        </div>`;
-    }).join('');
-
+    const readyCount = props.filter(p => ((p._details || {}).dailyActivitiesRemaining ?? 1) > 0).length;
     $('stat-ready').textContent = readyCount;
   }
 
-  async function loadRecentVisitors(userId, props, options = {}) {
-    const list = $('visitor-list');
-    if (!props.length) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No visitors yet.</div></div>`;
+  // Field names that might carry TB on a checkIns doc (app may write any of these).
+  var TB_TODAY_REWARD_KEYS = [
+    'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb',
+    'hostReward', 'hostTB', 'hostTb', 'ownerReward', 'ownerTB', 'ownerTb',
+    'visitorReward', 'visitorTB', 'visitorTb', 'points', 'tb'
+  ];
+
+  function todayStartISO() {
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return start.toISOString();
+  }
+
+  function checkInTsMillis(ts) {
+    if (!ts) return 0;
+    if (typeof ts === 'string') return new Date(ts).getTime() || 0;
+    if (ts.toDate) return ts.toDate().getTime();
+    if (typeof ts.seconds === 'number') return ts.seconds * 1000;
+    return new Date(ts).getTime() || 0;
+  }
+
+  function pickCheckInTb(data, role) {
+    // role: 'host' (someone visited your mine) or 'visitor' (you checked in elsewhere)
+    if (!data || typeof data !== 'object') return null;
+    var preferred = role === 'host'
+      ? ['hostReward', 'hostTB', 'hostTb', 'ownerReward', 'ownerTB', 'ownerTb', 'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb', 'points', 'tb']
+      : ['visitorReward', 'visitorTB', 'visitorTb', 'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb', 'points', 'tb'];
+    for (var i = 0; i < preferred.length; i++) {
+      var k = preferred[i];
+      if (data[k] != null && data[k] !== '' && !isNaN(Number(data[k]))) return Number(data[k]);
+    }
+    return null;
+  }
+
+  function setTbTodayCell(id, value, opts) {
+    var el = $(id);
+    if (!el) return;
+    opts = opts || {};
+    if (value == null || (typeof value === 'number' && isNaN(value))) {
+      el.textContent = '—';
+      el.classList.add('tb-today-na');
       return;
     }
+    el.classList.remove('tb-today-na');
+    if (opts.tb) {
+      el.innerHTML = '<span class="tb-today-tb-val"><img src="images/mine-icons/terrabucks-small.png" alt="">'
+        + fmtNum(value) + ' TB</span>';
+    } else {
+      el.textContent = fmtNum(value);
+    }
+  }
 
+  function renderTbTodayPreview() {
+    setTbTodayCell('tb-today-visitors-count', 3);
+    setTbTodayCell('tb-today-visitors-tb', 6, { tb: true });
+    setTbTodayCell('tb-today-yours-count', 2);
+    setTbTodayCell('tb-today-yours-tb', null);
+    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
+      setTbTodayCell('tb-today-game-' + t + '-plays', null);
+      setTbTodayCell('tb-today-game-' + t + '-tb', null);
+    });
+    setTbTodayCell('tb-today-known-total', 6, { tb: true });
+    var note = $('tb-today-note');
+    if (note) {
+      note.textContent = 'Preview: check-in counts are sample. Currently the database doesn\'t store minigame data. We hope to add this in the future.';
+    }
+  }
+
+  async function queryTodayCheckIns(field, uid, startISO) {
+    try {
+      var snap = await db.collection('checkIns')
+        .where(field, '==', uid)
+        .where('timestamp', '>=', startISO)
+        .orderBy('timestamp', 'desc')
+        .get();
+      return snap.docs.map(function (d) { return { id: d.id, data: d.data() || {} }; });
+    } catch (err) {
+      // Missing composite index or timestamp type mismatch — fall back to recent page + client filter.
+      console.warn('tb-today query with date failed (' + field + '):', err && err.message);
+      var snap2 = await db.collection('checkIns')
+        .where(field, '==', uid)
+        .orderBy('timestamp', 'desc')
+        .limit(200)
+        .get();
+      var startMs = new Date(startISO).getTime();
+      return snap2.docs
+        .map(function (d) { return { id: d.id, data: d.data() || {} }; })
+        .filter(function (row) { return checkInTsMillis(row.data.timestamp) >= startMs; });
+    }
+  }
+
+  async function loadTbTodayEarned(user, options) {
+    options = options || {};
     if (options.preview) {
-      const visits = options.previewVisits || PREVIEW_VISITS;
-      list.innerHTML = visits.map(v => {
-        const name = v.visitorNickname || v.nickname || 'Anonymous Miner';
-        const propName = v.propertyId || '';
-        const msg = v.message ? `"${v.message}"` : `Visited ${propName}`;
-        const tbEarned = v.tbEarned || v.visitorTBEarned || 0;
-        return `
-          <div class="visitor-row">
-            <div class="visitor-avatar">${initials(name)}</div>
-            <div class="visitor-info">
-              <div class="visitor-name">${name}</div>
-              <div class="visitor-detail">${msg}</div>
-            </div>
-            ${tbEarned ? `<div class="visitor-tb">+${tbEarned} TB</div>` : ''}
-            <div class="visitor-time">${timeAgo(v.timestamp)}</div>
-          </div>`;
-      }).join('');
+      renderTbTodayPreview();
       return;
     }
+    var note = $('tb-today-note');
+    if (note) note.textContent = 'Loading today\u2019s check-ins\u2026';
 
-    // Skeleton while loading
-    list.innerHTML = [1,2,3].map(() => `
-      <div class="visitor-row">
-        <div class="skeleton" style="width:32px;height:32px;border-radius:50%;"></div>
-        <div style="flex:1"><div class="skeleton" style="height:13px;width:120px;margin-bottom:6px;"></div><div class="skeleton" style="height:11px;width:180px;"></div></div>
-      </div>`).join('');
+    var startISO = todayStartISO();
+    var uid = user.uid;
+    var visitorRows = [];
+    var yoursRows = [];
+    var loadErr = null;
 
     try {
-      // Get recent check-ins to user's properties
-      const checkSnap = await db.collection('checkIns')
-        .where('propertyOwnerId', '==', userId)
-        .orderBy('timestamp', 'desc')
-        .limit(10)
-        .get();
-
-      const visits = checkSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      if (!visits.length) {
-        list.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No visitors yet — share your mine coordinates!</div></div>`;
-        return;
-      }
-
-      list.innerHTML = visits.map(v => {
-        const name = v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
-        const propName = v.propertyId || '';
-        const msg = v.message ? `"${v.message}"` : `Visited ${propName}`;
-        const tbEarned = v.tbEarned || v.visitorTBEarned || 0;
-        return `
-          <div class="visitor-row">
-            <div class="visitor-avatar">${initials(name)}</div>
-            <div class="visitor-info">
-              <div class="visitor-name">${name}</div>
-              <div class="visitor-detail">${msg}</div>
-            </div>
-            ${tbEarned ? `<div class="visitor-tb">+${tbEarned} TB</div>` : ''}
-            <div class="visitor-time">${timeAgo(v.timestamp)}</div>
-          </div>`;
-      }).join('');
-    } catch(e) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-text">Could not load visitors.</div></div>`;
-      console.error('Visitors error:', e);
+      var both = await Promise.all([
+        queryTodayCheckIns('propertyOwnerId', uid, startISO),
+        queryTodayCheckIns('userId', uid, startISO)
+      ]);
+      visitorRows = both[0];
+      yoursRows = both[1];
+    } catch (e) {
+      loadErr = e;
+      console.error('tb-today load error:', e);
     }
+
+    // Visitors to your mines: exclude self check-ins on your own property.
+    var visitors = visitorRows.filter(function (row) {
+      var vUid = row.data.userId || row.data.uid || '';
+      return vUid && vUid !== uid;
+    });
+    // Your check-ins at other players' mines.
+    var yours = yoursRows.filter(function (row) {
+      var owner = row.data.propertyOwnerId || row.data.ownerId || '';
+      return owner && owner !== uid;
+    });
+
+    setTbTodayCell('tb-today-visitors-count', visitors.length);
+    setTbTodayCell('tb-today-yours-count', yours.length);
+
+    // Host reward is fixed at 2 TB per visitor check-in.
+    var visitorsTbSum = visitors.length * 2;
+    var yoursTbSum = 0;
+    var yoursTbKnown = 0;
+    yours.forEach(function (row) {
+      var n = pickCheckInTb(row.data, 'visitor');
+      if (n != null) { yoursTbSum += n; yoursTbKnown++; }
+    });
+
+    setTbTodayCell('tb-today-visitors-tb', visitorsTbSum, { tb: true });
+    setTbTodayCell('tb-today-yours-tb', yoursTbKnown ? yoursTbSum : null, { tb: true });
+
+    // Mini-games: no daily per-type collection exposed to the portal yet.
+    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
+      setTbTodayCell('tb-today-game-' + t + '-plays', null);
+      setTbTodayCell('tb-today-game-' + t + '-tb', null);
+    });
+
+    var knownTotal = visitorsTbSum + (yoursTbKnown ? yoursTbSum : 0);
+    setTbTodayCell('tb-today-known-total', knownTotal, { tb: true });
+
+    // Probe first few docs for unexpected keys (helps decide if TB is under another name).
+    var sampleKeys = {};
+    visitors.concat(yours).slice(0, 8).forEach(function (row) {
+      Object.keys(row.data).forEach(function (k) { sampleKeys[k] = true; });
+    });
+    var keyList = Object.keys(sampleKeys).sort().join(', ');
+    if (typeof console !== 'undefined' && console.info) {
+      console.info('tb-today checkIn sample keys:', keyList || '(none)');
+    }
+
+    if (!note) return;
+    if (loadErr) {
+      note.textContent = 'Could not load today\u2019s check-ins: ' + (loadErr.message || loadErr);
+      return;
+    }
+    var bits = [];
+    bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
+    bits.push('Visitor check-in TB is counted at 2 TB each.');
+    if (yours.length && !yoursTbKnown) {
+      bits.push('Your check-in TB amounts were not on those docs, so that total stays blank.');
+    } else if (yours.length && yoursTbKnown !== yours.length) {
+      bits.push('Only some of your check-ins had a TB reward field; that total may be incomplete.');
+    }
+    bits.push('Currently the database doesn\'t store minigame data. We hope to add this in the future.');
+    note.textContent = bits.join(' ');
   }
 
-  function showComingSoon(e) {
-    e.preventDefault();
-    const btn = e.currentTarget;
-    const orig = btn.textContent;
-    btn.textContent = '🚧 Coming Soon!';
-    btn.style.color = 'var(--brown)';
-    btn.style.borderColor = 'var(--brown)';
-    setTimeout(() => {
-      btn.textContent = orig;
-      btn.style.color = '';
-      btn.style.borderColor = '';
-    }, 2000);
-  }
 
-  function sidebarGameComingSoon(e, link) {
-    e.preventDefault();
-    const orig = link.innerHTML;
-    link.innerHTML = '<span class="icon">🚧</span> Coming Soon!';
-    setTimeout(() => { link.innerHTML = orig; }, 2000);
-  }
+
+  applyTypeOrderLayout();
+  initPageSettings();
+  bindMineTotalsFollowTips();
+
+  (function bindNavPillFollowTips() {
+    var DELAY = 320;
+    var tipEl = null, tipTimer = null, tipTarget = null, tipX = 0, tipY = 0;
+    function ensureTip() {
+      if (!tipEl) {
+        tipEl = document.createElement('div');
+        tipEl.className = 'toolbar-follow-tip';
+        tipEl.setAttribute('role', 'tooltip');
+        document.body.appendChild(tipEl);
+      }
+      return tipEl;
+    }
+    function placeTip(x, y) {
+      var tip = ensureTip();
+      var gap = 14, edge = 8;
+      tip.style.visibility = 'hidden';
+      tip.style.display = 'block';
+      var w = tip.offsetWidth, h = tip.offsetHeight;
+      var left = x + gap, top = y + gap;
+      if (left + w > window.innerWidth - edge) left = x - gap - w;
+      if (top + h > window.innerHeight - edge) top = y - gap - h;
+      if (left < edge) left = edge;
+      if (top < edge) top = edge;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+      tip.style.visibility = 'visible';
+    }
+    function hideTip() {
+      if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+      tipTarget = null;
+      if (tipEl) tipEl.style.display = 'none';
+    }
+    function bindPill(el) {
+      if (!el || el.dataset.navPillTipBound === '1') return;
+      el.dataset.navPillTipBound = '1';
+      el.addEventListener('mouseenter', function (e) {
+        if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+        tipTarget = el;
+        tipX = e.clientX; tipY = e.clientY;
+        var tip = ensureTip();
+        tip.textContent = (el.getAttribute('data-tip') || '').trim();
+        tip.style.display = 'none';
+        tipTimer = setTimeout(function () {
+          tipTimer = null;
+          if (tipTarget !== el || !el.isConnected) return;
+          placeTip(tipX, tipY);
+        }, DELAY);
+      });
+      el.addEventListener('mousemove', function (e) {
+        if (tipTarget !== el) return;
+        tipX = e.clientX; tipY = e.clientY;
+        if (tipEl && tipEl.style.display === 'block' && !tipTimer) placeTip(tipX, tipY);
+      });
+      el.addEventListener('mouseleave', function () {
+        if (tipTarget === el) hideTip();
+      });
+      el.addEventListener('blur', function () {
+        if (tipTarget === el) hideTip();
+      });
+    }
+    function ready(fn) {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+      else fn();
+    }
+    ready(function () {
+      bindPill(document.querySelector('.nav-pill-usd'));
+      bindPill(document.querySelector('.nav-pill-tb'));
+    });
+  })();
+
 </script>
 </body>
 </html>

@@ -1,7 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <base href="/" />
+    <script>
+  (function () {
+    try {
+      if (sessionStorage.getItem('tmPortalAuthed') === '1') {
+        document.documentElement.classList.add('tm-expect-auth');
+      }
+    } catch (e) {}
+  })();
+  </script>
+  <style>
+    html.tm-expect-auth #login-screen { display: none !important; }
+    html.tm-expect-auth #portal {
+      display: flex !important;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
+    html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
+  </style>
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- ✅ Sept 7, 2026: noindex — this is a login-gated app shell with no
        content for an anonymous visitor or crawler (AdSense flagged the
@@ -39,18 +59,244 @@
       --navy2:       #111F30;
       --cyan:        #4FC3F7;
       --border:      rgba(255,255,255,0.07);
+      --navy3: #16263A;
+      --muted: #556070;
+      --gray: #8899AA;
+      --surface: rgba(255,255,255,0.04);
     }
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
-    body { background: var(--bg); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; }
+    body {
+      position: relative;
+      background-color: #0D1B2A; /* fallback while layers load */
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-    .top-nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:56px; background:rgba(13,27,42,0.97); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
-    .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--cyan); text-decoration:none; }
-    .nav-user { display:flex; align-items:center; gap:12px; }
-    .nav-avatar { width:32px; height:32px; border-radius:50%; background:var(--navy2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--cyan); overflow:hidden; }
-    .nav-avatar img { width:100%; height:100%; object-fit:cover; }
-    .nav-nickname { font-size:13px; color:#8899AA; }
-    .nav-signout { font-size:12px; color:#556070; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; }
-    .nav-signout:hover { color:white; }
+    /* Full-viewport background layers (image + frost overlay) */
+    .portalbackground,
+    .backgroundoverlaycolor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .portalbackground {
+      z-index: 0;
+      background-image: url('/images/terratown-bg.jpg');
+      background-repeat: no-repeat;
+      background-position: top center;
+      background-size: cover;
+    }
+    .backgroundoverlaycolor {
+      z-index: 1;
+      background: rgba(238, 241, 244, 0.7); /* #eef1f4 @ 70% */
+    }
+    /* Portal chrome / content above the layers (top-nav keeps its own higher z-index later) */
+    #login-screen,
+    #portal,
+    .layout,
+    .main,
+    .content {
+      position: relative;
+      z-index: 2;
+    }
+
+    body.auth-pending #login-screen,
+    body.auth-pending #portal { visibility: hidden; }
+
+
+/* ═══════════════════════════════════════════
+       TOP NAV (portal shell — no left sidebar)
+    ═══════════════════════════════════════════ */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 5px 20px;
+      height: 80px;
+      box-sizing: border-box;
+      background: rgba(13,27,42,0.97);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      text-decoration: none;
+      line-height: 0;
+    }
+    .nav-logo img { display:block; height:60px; width:auto; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-links a {
+      font-size: 18px;
+      font-weight: 500;
+      color: #8899AA;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      white-space: nowrap;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .nav-links a.active {
+      color: var(--cyan);
+      background: rgba(79,195,247,0.12);
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .nav-account {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .nav-account-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      padding: 4px 6px 4px 4px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .nav-account-link:hover { background: rgba(255,255,255,0.06); }
+    .nav-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size:18px;
+      font-weight: 700;
+      color: var(--cyan);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .nav-nickname {
+      font-size: 18px;
+      color: #8899AA;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .nav-account-toggle {
+      background: none;
+      border: none;
+      color: #8899AA;
+      cursor: pointer;
+      padding: 6px 4px;
+      font-size: 11px;
+      line-height: 1;
+      border-radius: 4px;
+    }
+    .nav-account-toggle:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .nav-account-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 140px;
+      background: #111F30;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      z-index: 200;
+    }
+    .nav-account-dropdown[hidden] { display: none !important; }
+    .nav-signout {
+      display: block;
+      width: 100%;
+      text-align: left;
+      font-size: 18px;
+      color: #8899AA;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-signout:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 52px;
+      padding: 0 10px 0 8px;
+      background: #0D1B2A;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .nav-pill-icon {
+      width: auto;
+      height: 40px;
+      flex-shrink: 0;
+      object-fit: contain;
+    }
+    .nav-pill-usd-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(34,197,94,0.18);
+      color: #22C55E;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .nav-pill-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #EEF1F4;
+      font-variant-numeric: tabular-nums;
+    }
+    .nav-pill-usd .nav-pill-value { color: #22C55E; }
+    .nav-pill-tb .nav-pill-value { color: #FACC15; }
+
+    @media (max-width: 900px) {
+      .nav-nickname { display: none; }
+      .nav-links a { padding: 6px 10px; font-size: 15px; }
+    }
+    @media (max-width: 700px) {
+      .top-nav { padding: 0 12px; gap: 8px; }
+      .nav-links { justify-content: flex-start; }
+      .nav-pill { padding: 0 8px 0 6px; }
+      .nav-pill-value { font-size: 15px; }
+    }
+
+
 
     /* ── Ad banner (top, below header) — Aug 24, 2026 ── */
     .ad-banner-wrap {
@@ -66,32 +312,14 @@
     .ad-banner-wrap .adsbygoogle { max-width: 100%; }
     @media (max-width: 600px) { .ad-banner-wrap { min-height: 54px; max-height: 64px; } }
 
-    .layout { display:flex; flex:1; min-height:0; }
+    .layout {
+      display: block;
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
 
-    .sidebar { width:220px; flex-shrink:0; background:var(--navy2); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 0 16px; }
-    .tb-readout { margin:0 16px 28px; background:linear-gradient(135deg,rgba(79,195,247,0.08),rgba(79,195,247,0.03)); border:1px solid rgba(79,195,247,0.2); border-radius:8px; padding:14px 16px; }
-    .tb-label { font-size:10px; letter-spacing:2px; color:var(--cyan); font-family:'Bebas Neue',sans-serif; margin-bottom:4px; }
-    .tb-amount { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:1px; color:white; line-height:1; }
-    .tb-sub { font-size:11px; color:#556070; margin-top:4px; }
-    .usd-row { margin:0 16px 20px; display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:6px; }
-    .usd-label { font-size:11px; color:#556070; }
-    .usd-amount { font-size:14px; font-weight:700; color:#F59E0B; }
-    .sidebar-section { font-size:10px; letter-spacing:2px; color:#556070; font-family:'Bebas Neue',sans-serif; padding:0 20px; margin-bottom:6px; }
-    .sidebar-nav { list-style:none; margin-bottom:20px; }
-    .sidebar-nav a { display:flex; align-items:center; gap:10px; padding:9px 20px; font-size:13px; color:#8899AA; text-decoration:none; border-left:2px solid transparent; transition:all 0.15s; }
-    .sidebar-nav a:hover { color:white; background:rgba(255,255,255,0.04); }
-    .sidebar-nav a.active { color:var(--cyan); border-left-color:var(--cyan); background:rgba(79,195,247,0.05); }
-    .sidebar-nav .icon { font-size:16px; width:20px; text-align:center; }
-    .sidebar-footer { margin-top:auto; padding:12px 20px; font-size:11px; color:#556070; border-top:1px solid var(--border); }
-    .sidebar-footer a { color:#556070; text-decoration:none; }
-
-    .main { flex:1; overflow-y:auto; background:var(--off-white); }
-
-    .page-header { background:var(--brown); padding:16px 20px; border-bottom:3px solid var(--brown-dark); position:sticky; top:0; z-index:10; }
-    .page-header-left { display:flex; align-items:center; gap:10px; }
-    .page-header-icon { font-size:22px; }
-    .page-header-title { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--gold); }
-    .page-header-sub { font-size:12px; color:rgba(255,215,0,0.6); margin-top:1px; }
+    .main { flex:1; overflow-y:auto; background:transparent; }
 
     .content { max-width: 600px; margin: 0 auto; padding: 24px 16px 48px; }
 
@@ -153,42 +381,46 @@
     #toast.error { border-color:var(--red); }
 
     /* ── Login ── */
-    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:24px; }
-    .login-card { width:100%; max-width:380px; background:white; border:3px solid var(--brown-mid); border-radius:15px; overflow:hidden; box-shadow:0 4px 20px rgba(139,69,19,0.2); }
-    .login-card-header { background:var(--brown); padding:24px 28px 20px; text-align:center; border-bottom:3px solid var(--brown-dark); }
-    .login-card-body { padding:24px 28px 28px; }
-    .login-logo { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; color:var(--gold); margin-bottom:4px; }
-    .login-sub { font-size:13px; color:rgba(255,215,0,0.7); }
+    #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:transparent; padding:24px; }
+    .login-card { width:100%; max-width:380px; background:var(--navy2, #111F30); border:1px solid var(--border, rgba(255,255,255,0.07)); border-radius:12px; padding:36px 32px; }
+    .login-logo { margin:0 auto 10px; text-align:center; }
+    .login-logo img { display:block; margin:0 auto; height:60px; width:auto; max-width:100%; }
+    .login-sub { font-size:13px; color:var(--muted, #556070); margin-bottom:28px; text-align:center; }
     .input-group { margin-bottom:14px; }
-    .input-label { font-size:11px; color:var(--text-mid); margin-bottom:5px; display:block; font-weight:600; }
-    .input-field { width:100%; background:var(--off-white); border:2px solid var(--brown-mid); border-radius:8px; padding:10px 12px; font-size:14px; color:var(--text-dark); font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s; }
-    .input-field:focus { border-color:var(--brown); }
-    .input-field::placeholder { color:var(--text-light); }
-    .btn-primary { width:100%; padding:12px; background:var(--brown); color:var(--gold); border:none; border-radius:8px; font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; cursor:pointer; margin-top:4px; transition:background 0.15s; }
-    .btn-primary:hover { background:var(--brown-dark); }
-    .btn-primary:disabled { background:var(--brown-mid); cursor:not-allowed; }
-    .btn-google { width:100%; padding:10px; background:var(--off-white); color:var(--text-dark); border:2px solid var(--brown-mid); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:border-color 0.15s; }
-    .btn-google:hover { border-color:var(--brown); }
-    .login-divider { display:flex; align-items:center; gap:12px; margin:16px 0; font-size:11px; color:var(--text-light); }
-    .login-divider::before, .login-divider::after { content:''; flex:1; height:1px; background:var(--brown-mid); opacity:0.4; }
-    .login-error { font-size:12px; color:var(--red); margin-top:8px; min-height:16px; }
-    .login-toggle { text-align:center; font-size:12px; color:var(--text-mid); margin-top:16px; }
-    .login-toggle a { color:var(--brown); text-decoration:none; cursor:pointer; font-weight:700; }
-
-    @media (max-width:700px) { .sidebar { display:none; } }
-  </style>
+    .input-label { font-size:11px; color:var(--gray, #8899AA); margin-bottom:5px; display:block; letter-spacing:0.5px; }
+    .input-field { width:100%; background:var(--navy, #0D1B2A); border:1px solid var(--border, rgba(255,255,255,0.07)); border-radius:6px; padding:10px 12px; font-size:14px; color:var(--white, #F0F4FF); font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.15s; }
+    .input-field:focus { border-color:var(--cyan, #4FC3F7); }
+    .input-field::placeholder { color:var(--muted, #556070); }
+    .btn-primary { width:100%; padding:11px; background:var(--cyan, #4FC3F7); color:var(--navy, #0D1B2A); border:none; border-radius:6px; font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1.5px; cursor:pointer; margin-top:4px; transition:opacity 0.15s; }
+    .btn-primary:hover { opacity:0.88; }
+    .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+    .btn-google { width:100%; padding:10px; background:var(--surface, rgba(255,255,255,0.04)); color:var(--white, #F0F4FF); border:1px solid var(--border, rgba(255,255,255,0.07)); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:border-color 0.15s, background 0.15s; }
+    .btn-google:hover { border-color:var(--gray, #8899AA); background:var(--navy3, #16263A); }
+    .login-divider { display:flex; align-items:center; gap:12px; margin:20px 0; font-size:11px; color:var(--muted, #556070); }
+    .login-divider::before, .login-divider::after { content:''; flex:1; height:1px; background:var(--border, rgba(255,255,255,0.07)); }
+    .login-error { font-size:12px; color:var(--red, #EF5350); margin-top:8px; min-height:16px; }
+    .login-toggle { text-align:center; font-size:12px; color:var(--muted, #556070); margin-top:16px; }
+    .login-toggle a { color:var(--cyan, #4FC3F7); text-decoration:none; cursor:pointer; }
+  
+    .toolbar-follow-tip {
+      position:fixed; z-index:600; pointer-events:none; display:none;
+      background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,.14);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.45);
+      font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+      max-width:min(280px, calc(100vw - 16px));
+    }
+</style>
 </head>
-<body>
-
+<body class="auth-pending">
+<div class="portalbackground" aria-hidden="true"></div>
+<div class="backgroundoverlaycolor" aria-hidden="true"></div>
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-card-header">
-      <div class="login-logo">⛏ TERRAMINE</div>
-      <div class="login-sub">Sign in to manage your account</div>
-    </div>
-    <div class="login-card-body">
-    <button class="btn-google" id="btn-google-signin">
+    <div class="login-logo"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></div>
+    <div class="login-sub">Sign in to manage your account</div>
+
+<button class="btn-google" id="btn-google-signin">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
       Continue with Google
     </button>
@@ -198,7 +430,6 @@
     <div class="login-error" id="login-error"></div>
     <button class="btn-primary" id="btn-email-signin">Sign In</button>
     <div class="login-toggle">Forgot password? <a id="btn-reset">Send reset email</a></div>
-    </div>
   </div>
 </div>
 
@@ -206,57 +437,41 @@
 <div id="portal" style="display:none; flex-direction:column; min-height:100vh;">
 
   <nav class="top-nav">
-    <a class="nav-logo" href="index.html">⛏ TerraMine</a>
-    <div class="nav-user">
-      <div class="nav-avatar" id="nav-avatar">—</div>
-      <span class="nav-nickname" id="nav-nickname"></span>
-      <button class="nav-signout" id="btn-signout">Sign out</button>
+    <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
+    <div class="nav-links">
+      <a href="/portal">Dashboard</a>
+      <a href="/portal/mines">Mines</a>
+      <a href="/portal/inventory">Inventory</a>
+      <a href="/portal/visitors">Visitors</a>
+      <a href="/portal/activity">Activity</a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-account">
+        <a class="nav-account-link" href="/portal/account" title="Account">
+          <div class="nav-avatar" id="nav-avatar">—</div>
+          <span class="nav-nickname" id="nav-nickname"></span>
+        </a>
+        <button type="button" class="nav-account-toggle" id="nav-account-toggle" aria-label="Account menu" aria-expanded="false">▾</button>
+        <div class="nav-account-dropdown" id="nav-account-dropdown" hidden>
+          <button type="button" class="nav-signout" id="btn-signout">Sign out</button>
+        </div>
+      </div>
+      <div class="nav-pill nav-pill-usd" data-tip="Current USD Earning / Balance">
+        <span class="nav-pill-icon nav-pill-usd-icon" aria-hidden="true">$</span>
+        <span class="nav-pill-value" id="sb-usd">—</span>
+      </div>
+      <div class="nav-pill nav-pill-tb" data-tip="TerraBucks Balance">
+        <img class="nav-pill-icon" src="images/mine-icons/terrabucks-small.png" alt="" width="40" height="40" />
+        <span class="nav-pill-value" id="sb-tb">—</span>
+      </div>
     </div>
   </nav>
 
-  <!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
+<!-- ✅ Sept 7, 2026: ad banner (slot 5814017695) removed from this
        login-gated shell — see claude/AdSense_LowValueContent_Fix_2026-09-07.md -->
 
   <div class="layout">
-    <aside class="sidebar">
-      <div class="tb-readout">
-        <div class="tb-label">TerraBucks</div>
-        <div class="tb-amount" id="sb-tb">—</div>
-        <div class="tb-sub">Your balance</div>
-      </div>
-      <div class="usd-row">
-        <span class="usd-label">USD Earnings</span>
-        <span class="usd-amount" id="sb-usd">$—</span>
-      </div>
-      <div class="sidebar-section">My Portal</div>
-      <ul class="sidebar-nav">
-        <li><a href="portal.html"><span class="icon">📊</span> Dashboard</a></li>
-        <li><a href="mines.html"><span class="icon">⛏</span> My Mines</a></li>
-        <li><a href="visitors.html"><span class="icon">👥</span> Visitors</a></li>
-        <li><a href="activity.html"><span class="icon">⚡</span> Activity</a></li>
-        <li><a href="account.html" class="active"><span class="icon">⚙️</span> Account</a></li>
-      </ul>
-      <div class="sidebar-section">Games</div>
-      <ul class="sidebar-nav">
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🧠</span> Memory Match</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🪨</span> Miner Maze</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">🥇</span> Gold Rush</a></li>
-        <li><a href="#" onclick="sidebarGameComingSoon(event, this)"><span class="icon">💎</span> Laser Blast</a></li>
-      </ul>
-      <div class="sidebar-footer"><a href="index.html">← Back to site</a></div>
-    </aside>
-
-    <main class="main">
-      <div class="page-header">
-        <div class="page-header-left">
-          <span class="page-header-icon">⚙️</span>
-          <div>
-            <div class="page-header-title">My Account</div>
-            <div class="page-header-sub">Manage your profile and login</div>
-          </div>
-        </div>
-      </div>
-
+<main class="main">
       <div class="content">
 
         <!-- Profile card -->
@@ -370,17 +585,33 @@
   let currentNickname = '';
 
   function showToast(msg, type='') { const t=$('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',3000); }
-  function fmtNum(n) { if(!n)return'0'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return Math.round(n).toLocaleString(); }
+  function fmtTBBalance(n) {
+    const x = Number(n);
+    if (!isFinite(x)) return '0';
+    return Math.round(x).toLocaleString('en-US');
+  }
+  function fmtUSDBalance(n) {
+    const v = parseFloat(n) || 0;
+    return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtNum(n) { if (n === undefined || n === null || n === '') return '0'; const x = Number(n); if (!Number.isFinite(x)) return '0'; return Math.round(x).toLocaleString('en-US'); }
   function fmtUSD(n) { return '$'+(parseFloat(n)||0).toFixed(2); }
   function initials(name) { if(!name)return'?'; return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 
   auth.onAuthStateChanged(user => {
     if (user) {
+      try { sessionStorage.setItem('tmPortalAuthed', '1'); } catch (e) {}
+      document.body.classList.remove('auth-pending');
+
       currentUser = user;
       $('login-screen').style.display = 'none';
       $('portal').style.display = 'flex';
       loadAccountPage(user);
     } else {
+
+      try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+      document.documentElement.classList.remove('tm-expect-auth');
+      document.body.classList.remove('auth-pending');
       $('login-screen').style.display = 'flex';
       $('portal').style.display = 'none';
     }
@@ -405,14 +636,32 @@
     try { await auth.sendPasswordResetEmail(email); $('login-error').style.color='#66BB6A'; $('login-error').textContent='Reset email sent!'; }
     catch(e){ $('login-error').textContent=e.message; }
   });
-  $('btn-signout').addEventListener('click', () => auth.signOut());
+  $('btn-signout').addEventListener('click', () => {
+    try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+    document.documentElement.classList.remove('tm-expect-auth');
+    auth.signOut();
+  });
 
-  function sidebarGameComingSoon(e, link) {
-    e.preventDefault();
-    const orig = link.innerHTML;
-    link.innerHTML = '<span class="icon">🚧</span> Coming Soon!';
-    setTimeout(() => { link.innerHTML = orig; }, 2000);
-  }
+  (function initAccountMenu() {
+    var toggle = document.getElementById('nav-account-toggle');
+    var dropdown = document.getElementById('nav-account-dropdown');
+    var wrap = document.querySelector('.nav-account');
+    if (!toggle || !dropdown) return;
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var willOpen = dropdown.hasAttribute('hidden');
+      if (willOpen) dropdown.removeAttribute('hidden');
+      else dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (!wrap || wrap.contains(e.target)) return;
+      dropdown.setAttribute('hidden', '');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  })();
+
 
   async function loadAccountPage(user) {
     const uSnap = await db.collection('users').doc(user.uid).get();
@@ -421,8 +670,8 @@
     currentNickname = nick;
 
     $('nav-nickname').textContent = nick;
-    $('sb-tb').textContent  = fmtNum(ud.tbBalance || 0);
-    $('sb-usd').textContent = fmtUSD(ud.usdEarnings || 0);
+    $('sb-tb').textContent = fmtTBBalance(ud.tbBalance || 0);
+    $('sb-usd').textContent = fmtUSDBalance(ud.usdEarnings || 0);
 
     // Avatar — check user doc avatarUrl first, fall back to provider photo
     const avatarUrl = ud.avatarUrl || user.photoURL || null;
@@ -577,6 +826,77 @@
       setTimeout(() => { status.textContent = ''; }, 4000);
     }
   }
+
+  (function bindNavPillFollowTips() {
+    var DELAY = 320;
+    var tipEl = null, tipTimer = null, tipTarget = null, tipX = 0, tipY = 0;
+    function ensureTip() {
+      if (!tipEl) {
+        tipEl = document.createElement('div');
+        tipEl.className = 'toolbar-follow-tip';
+        tipEl.setAttribute('role', 'tooltip');
+        document.body.appendChild(tipEl);
+      }
+      return tipEl;
+    }
+    function placeTip(x, y) {
+      var tip = ensureTip();
+      var gap = 14, edge = 8;
+      tip.style.visibility = 'hidden';
+      tip.style.display = 'block';
+      var w = tip.offsetWidth, h = tip.offsetHeight;
+      var left = x + gap, top = y + gap;
+      if (left + w > window.innerWidth - edge) left = x - gap - w;
+      if (top + h > window.innerHeight - edge) top = y - gap - h;
+      if (left < edge) left = edge;
+      if (top < edge) top = edge;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+      tip.style.visibility = 'visible';
+    }
+    function hideTip() {
+      if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+      tipTarget = null;
+      if (tipEl) tipEl.style.display = 'none';
+    }
+    function bindPill(el) {
+      if (!el || el.dataset.navPillTipBound === '1') return;
+      el.dataset.navPillTipBound = '1';
+      el.addEventListener('mouseenter', function (e) {
+        if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+        tipTarget = el;
+        tipX = e.clientX; tipY = e.clientY;
+        var tip = ensureTip();
+        tip.textContent = (el.getAttribute('data-tip') || '').trim();
+        tip.style.display = 'none';
+        tipTimer = setTimeout(function () {
+          tipTimer = null;
+          if (tipTarget !== el || !el.isConnected) return;
+          placeTip(tipX, tipY);
+        }, DELAY);
+      });
+      el.addEventListener('mousemove', function (e) {
+        if (tipTarget !== el) return;
+        tipX = e.clientX; tipY = e.clientY;
+        if (tipEl && tipEl.style.display === 'block' && !tipTimer) placeTip(tipX, tipY);
+      });
+      el.addEventListener('mouseleave', function () {
+        if (tipTarget === el) hideTip();
+      });
+      el.addEventListener('blur', function () {
+        if (tipTarget === el) hideTip();
+      });
+    }
+    function ready(fn) {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+      else fn();
+    }
+    ready(function () {
+      bindPill(document.querySelector('.nav-pill-usd'));
+      bindPill(document.querySelector('.nav-pill-tb'));
+    });
+  })();
+
 </script>
 </body>
 </html>
