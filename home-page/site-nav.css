@@ -138,51 +138,7 @@ nav.site-nav {
 .nav-menu-toggle span:nth-child(2) { transform: translateY(0); }
 .nav-menu-toggle span:nth-child(3) { transform: translateY(5px); }
 
-@media (max-width: 1320px) {
-  nav.site-nav {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "logo actions"
-      "links links";
-    align-items: center;
-    row-gap: 10px;
-    column-gap: 14px;
-    padding: 14px 20px 12px;
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    border-radius: 0;
-  }
-  .nav-logo {
-    grid-area: logo;
-    flex: 0 0 auto;
-    justify-self: start;
-  }
-  .nav-links {
-    grid-area: links;
-    justify-self: stretch;
-    justify-content: center;
-    gap: 10px 16px;
-    width: 100%;
-    min-width: 0;
-  }
-  .nav-actions {
-    grid-area: actions;
-    justify-self: end;
-    margin-left: 0;
-    gap: 12px;
-  }
-  .nav-links a,
-  .nav-cta {
-    font-size: clamp(14px, 1.2vw, 17px);
-  }
-  .nav-actions a.nav-login {
-    font-size: clamp(14px, 1.2vw, 17px);
-  }
-}
-
-@media (max-width: 1024px) {
+@media (max-width: 1330px) {
   nav.site-nav {
     display: flex;
     flex-wrap: nowrap;
