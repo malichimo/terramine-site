@@ -3268,7 +3268,7 @@
     return daysLeft;
   }
   function maintenanceView(mine, now) {
-    const ms = activityMs(mine && mine.lastDailyReset);
+    const ms = activityMs(mine && mine.lastUpdated);
     if (ms == null) return { missing: true, recent: false, daysLeft: null, bar: 0, tone: '' };
     const msSince = now - ms;
     const daysLeft = daysLeftOf(mine, now);
