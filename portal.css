@@ -452,6 +452,35 @@ body.auth-pending #portal {
   .mine-totals-bar { padding: 8px 10px; }
   .mine-group-total-title { font-size: 9px; }
   .mine-group-total-value { font-size: 13px; }
+
+  /* Full-width left so 4 group boxes wrap 2×2; ALL (in right / sibling) drops to row 3 */
+  .mine-totals-bar-left {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  /* gap: 8px → each half is calc(50% - 4px); box-sizing:border-box is global */
+  .mine-totals-bar-left > .mine-group-total {
+    flex: 1 1 calc(50% - 4px);
+    max-width: calc(50% - 4px);
+    min-width: 0;
+  }
+  /* Portal: ALL lives in .mine-totals-bar-right — keep content-sized + right-aligned on row 3 */
+  .mine-totals-bar-right {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+  /* Mines (and any bar where ALL is a direct sibling of left) */
+  .mine-totals-bar > .mine-group-total.mine-totals-all {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 500px) {
+  .mine-totals-bar-left > .mine-group-total {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
 }
 
 /* ── Stat row ── */

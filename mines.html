@@ -222,6 +222,24 @@
     .mine-group-total[data-group-type="all"] .mine-group-total-title { color:#0f5132; }
     .mine-group-total[data-group-type="all"] .mine-group-total-value { color:#000; }
     .mine-totals-bar .mine-group-total.mine-totals-all { margin-left:auto; }
+    @media (max-width: 900px) {
+      .mine-totals-bar-left { flex: 1 1 100%; width: 100%; }
+      .mine-totals-bar-left > .mine-group-total {
+        flex: 1 1 calc(50% - 4px);
+        max-width: calc(50% - 4px);
+        min-width: 0;
+      }
+      .mine-totals-bar > .mine-group-total.mine-totals-all {
+        flex: 0 0 auto;
+        margin-left: auto;
+      }
+    }
+    @media (max-width: 500px) {
+      .mine-totals-bar-left > .mine-group-total {
+        flex: 1 1 100%;
+        max-width: 100%;
+      }
+    }
     .mine-group-total-icon {
       flex-shrink:0; width:32px; height:32px;
       display:flex; align-items:center; justify-content:center;
