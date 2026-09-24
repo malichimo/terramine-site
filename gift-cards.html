@@ -7,7 +7,7 @@
   <meta name="description" content="Browse the full list of US gift card brands available for redeeming your TerraMine USD earnings, powered by Tango." />
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -43,28 +43,6 @@
       pointer-events: none;
       z-index: 0;
     }
-
-    /* ── NAV ── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 40px;
-      height: 64px;
-      background: rgba(8,12,16,0.92);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 3px; color: var(--gold); text-decoration: none; }
-    .nav-logo span { color: var(--white); }
-    .nav-links { display: flex; align-items: center; gap: 28px; }
-    .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-    .nav-links a:hover { color: var(--white); }
-    .nav-login { border: 1px solid var(--cyan); color: var(--cyan) !important; padding: 6px 14px; border-radius: 4px; font-size: 13px; }
-    .nav-cta { background: var(--gold); color: #080C10 !important; padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; }
 
     /* ── HERO ── */
     .hero { position: relative; z-index: 1; padding: 72px 40px 40px; max-width: 960px; margin: 0 auto; }
@@ -185,27 +163,39 @@
       .summary-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
     }
     @media (max-width: 768px) {
-      nav { padding: 0 20px; }
-      .nav-links { display: none; }
       .hero { padding: 48px 20px 32px; }
       .update-notice, .summary-grid, .page-layout { padding-left: 20px; padding-right: 20px; }
       .summary-grid { grid-template-columns: 1fr; }
       footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; }
     }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="home-page/site-nav.css" />
 </head>
-<body>
+<body class="has-site-nav">
 
-<nav>
-  <a class="nav-logo" href="index.html">⛏ Terra<span>Mine</span></a>
-  <div class="nav-links">
-    <a href="index.html">Home</a>
-    <a href="guide.html">Player's Guide</a>
-    <a href="faq.html">FAQ</a>
-    <a href="portal.html" class="nav-login">My Portal</a>
-    <a href="index.html#download" class="nav-cta">Download</a>
+
+<nav class="site-nav">
+  <a class="nav-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 32px; width: auto;" /> <span style="font-size: 0.9em;">TerraMine</span></a>
+  <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap.html">World Map</a>
+      <a href="/guide.html">Player's Guide</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+  </div>
+  <div class="nav-actions">
+    <a href="/portal.html" class="nav-login">My Portal</a>
+    <a href="/index.html#download" class="nav-cta">Download</a>
+    <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </nav>
+
 
 <!-- HERO -->
 <div class="hero">
@@ -689,5 +679,6 @@
 
   render();
 </script>
+  <script src="home-page/site-nav.js" defer></script>
 </body>
 </html>

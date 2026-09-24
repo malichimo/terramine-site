@@ -6,7 +6,7 @@
   <title>World Map — TerraMine</title>
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
   <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
        already verified via ads.txt at the site root). -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4502698429383902" crossorigin="anonymous"></script>
@@ -23,18 +23,6 @@
     }
     html, body { height: 100%; overflow: hidden; }
     body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; }
-
-    nav {
-      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 28px; background: rgba(13,27,42,0.95); backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border); z-index: 20;
-    }
-    .nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; color: var(--cyan); text-decoration: none; }
-    .nav-right { display: flex; align-items: center; gap: 20px; }
-    nav a.back { color: var(--gray); text-decoration: none; font-size: 13px; transition: color 0.2s; }
-    nav a.back:hover { color: var(--white); }
-    .nav-cta { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1.5px; color: var(--navy); background: var(--cyan); padding: 7px 16px; border-radius: 4px; text-decoration: none; transition: opacity 0.2s; }
-    .nav-cta:hover { opacity: 0.85; }
 
     /* ── Ad banner (top, below header, above toolbar) — Aug 24, 2026 ──
        A real flex row, not an overlay on top of #map — keeps it out of
@@ -105,21 +93,50 @@
     .map-footer a { color: var(--cyan); text-decoration: none; }
 
     @media (max-width: 600px) {
-      nav { padding: 12px 16px; }
       .toolbar { padding: 8px 12px; }
       #legend { bottom: 48px; left: 8px; }
     }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="home-page/site-nav.css" />
+  <style>
+    /* Keep map flex layout: nav in document flow at portal height */
+    body.heatmap-page.has-site-nav { padding-top: 0; }
+    body.heatmap-page nav.site-nav {
+      position: relative;
+      flex-shrink: 0;
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      margin: 0;
+      border-radius: 0;
+    }
+  </style>
 </head>
-<body>
+<body class="has-site-nav heatmap-page">
 
-  <nav>
-    <a class="nav-logo" href="index.html">⛏ TerraMine</a>
-    <div class="nav-right">
-      <a class="back" href="index.html">← Home</a>
-      <a class="nav-cta" href="https://terramine.app">Play Free</a>
-    </div>
-  </nav>
+  
+<nav class="site-nav">
+  <a class="nav-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 32px; width: auto;" /> <span style="font-size: 0.9em;">TerraMine</span></a>
+  <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap.html" class="is-active">World Map</a>
+      <a href="/guide.html">Player's Guide</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+  </div>
+  <div class="nav-actions">
+    <a href="/portal.html" class="nav-login">My Portal</a>
+    <a href="/index.html#download" class="nav-cta">Download</a>
+    <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</nav>
+
 
   <!-- ═══ AD BANNER ═══ -->
   <!-- ✅ Aug 25, 2026: real AdSense slot ID applied (TerraMine Site Banner, slot 5814017695) -->
@@ -562,5 +579,6 @@
     async defer>
   </script>
 
+  <script src="home-page/site-nav.js" defer></script>
 </body>
 </html>

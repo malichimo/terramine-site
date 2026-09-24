@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Download TerraMine for Android — Beta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -36,34 +36,12 @@
       z-index: 0;
     }
 
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 40px;
-      background: rgba(13,27,42,0.9);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(61,220,132,0.1);
-    }
-    .nav-logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 26px;
-      letter-spacing: 2px;
-      color: var(--cyan);
-      text-decoration: none;
-    }
-    nav a.back { color: var(--gray); text-decoration: none; font-size: 14px; transition: color 0.2s; }
-    nav a.back:hover { color: var(--white); }
-
     .page {
       position: relative;
       z-index: 1;
       max-width: 640px;
       margin: 0 auto;
-      padding: 120px 24px 80px;
+      padding: 48px 24px 80px;
       text-align: center;
     }
 
@@ -269,18 +247,37 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     @media (max-width: 600px) {
-      nav { padding: 16px 20px; }
       .btn-secondary { display: none; }
     }
   </style>
-</head>
-<body>
-
-  <nav>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="home-page/site-nav.css" />
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
-    <a class="nav-logo" href="index.html">⛏ TerraMine</a>
-    <a class="back" href="index.html">← Back to Home</a>
-  </nav>
+</head>
+<body class="has-site-nav">
+
+  
+<nav class="site-nav">
+  <a class="nav-logo" href="/"><img src="/logo.png?v=3" alt="TerraMine" style="height: 32px; width: auto;" /> <span style="font-size: 0.9em;">TerraMine</span></a>
+  <div class="nav-links" id="nav-links-menu">
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap.html">World Map</a>
+      <a href="/guide.html">Player's Guide</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+  </div>
+  <div class="nav-actions">
+    <a href="/portal.html" class="nav-login">My Portal</a>
+    <a href="/index.html#download" class="nav-cta">Download</a>
+    <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</nav>
+
 
   <div class="page">
     <div class="platform-badge">🤖 Android — Beta</div>
@@ -358,5 +355,6 @@
     <p>&copy; 2026 TerraMine. All rights reserved.</p>
   </footer>
 
+  <script src="home-page/site-nav.js" defer></script>
 </body>
 </html>

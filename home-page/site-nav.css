@@ -9,7 +9,7 @@
   --sn-muted: #6B7C93;
 }
 
-nav {
+nav.site-nav {
   position: fixed;
   top: 0;
   left: 0;
@@ -139,7 +139,7 @@ nav {
 .nav-menu-toggle span:nth-child(3) { transform: translateY(5px); }
 
 @media (max-width: 1320px) {
-  nav {
+  nav.site-nav {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
@@ -183,7 +183,7 @@ nav {
 }
 
 @media (max-width: 1024px) {
-  nav {
+  nav.site-nav {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -230,7 +230,7 @@ nav {
     margin-left: auto;
   }
   .nav-menu-toggle { display: inline-flex; }
-  nav.nav-open .nav-links { display: flex; }
+  nav.site-nav.nav-open .nav-links { display: flex; }
 }
 
 /* Clear fixed nav on content pages */
