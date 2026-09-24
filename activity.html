@@ -397,16 +397,71 @@
     }
     .mine-map-msg.is-fading { opacity:0; }
     .mine-map-hover-tip {
-      position:absolute; z-index:3; left:0; top:0; max-width:260px;
-      display:flex; align-items:center; gap:8px;
+      position:absolute; z-index:3; left:0; top:0; max-width:280px;
+      display:flex; flex-direction:column; align-items:stretch; gap:4px;
       background:rgba(19,54,101,.94); color:#fff; border-radius:8px;
       padding:6px 10px; font-size:12px; font-weight:600; pointer-events:none;
-      box-shadow:0 8px 20px rgba(6,10,16,.45); white-space:nowrap;
+      box-shadow:0 8px 20px rgba(6,10,16,.45); white-space:normal;
       transform:translate(-9999px,-9999px);
     }
     .mine-map-hover-tip[hidden] { display:none !important; }
+    .mine-map-hover-tip-row { display:flex; align-items:center; gap:8px; min-width:0; }
     .mine-map-hover-tip img { width:18px; height:18px; object-fit:contain; flex-shrink:0; display:block; }
-    .mine-map-hover-tip span { overflow:hidden; text-overflow:ellipsis; }
+    .mine-map-hover-tip-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+    .mine-map-hover-tip-greeting { font-size:11px; font-weight:500; line-height:1.35; opacity:.95; }
+    .mine-map-hover-tip-greeting em { font-style:italic; font-weight:500; }
+    .mine-map-edit {
+      position:absolute; z-index:31; left:50%; top:72px; transform:translateX(-50%);
+      width:min(360px, calc(100% - 32px));
+      background:rgba(19,54,101,.97); color:#fff;
+      border:1px solid rgba(255,255,255,.28); border-radius:12px;
+      box-shadow:0 16px 40px rgba(6,10,16,.55);
+      padding:14px 44px 14px 14px; box-sizing:border-box;
+      font-family:'DM Sans',sans-serif;
+    }
+    .mine-map-edit[hidden] { display:none !important; }
+    .mine-map-edit-x {
+      position:absolute; top:8px; right:10px; z-index:2;
+      width:32px; height:32px; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 20px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .mine-map-edit-x:hover { background:rgba(255,255,255,0.22); }
+    .mine-map-edit-head {
+      display:flex; align-items:center; gap:10px; margin-bottom:10px;
+    }
+    .mine-map-edit-head img {
+      width:28px; height:28px; object-fit:contain; flex-shrink:0; display:block;
+    }
+    .mine-map-edit-head input {
+      flex:1; min-width:0; border:1px solid rgba(255,255,255,.25); border-radius:8px;
+      background:rgba(0,0,0,.25); color:#fff;
+      font:600 14px/1.3 'DM Sans',sans-serif; padding:8px 10px; outline:none;
+    }
+    .mine-map-edit-head input:focus { border-color:#4FC3F7; }
+    .mine-map-edit-label {
+      display:flex; flex-direction:column; gap:6px;
+      font:600 12px/1.2 'DM Sans',sans-serif; margin-bottom:10px;
+    }
+    .mine-map-edit-label textarea {
+      width:100%; box-sizing:border-box;
+      border:1px solid rgba(255,255,255,.25); border-radius:8px;
+      background:rgba(0,0,0,.25); color:#fff;
+      font:500 13px/1.35 'DM Sans',sans-serif; padding:8px 10px;
+      outline:none; resize:vertical; min-height:64px;
+    }
+    .mine-map-edit-label textarea:focus { border-color:#4FC3F7; }
+    .mine-map-edit-footer {
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .mine-map-edit-count { font:500 11px/1 'DM Sans',sans-serif; color:rgba(255,255,255,.7); }
+    .mine-map-edit-apply {
+      border:1px solid rgba(255,255,255,.35); border-radius:8px;
+      background:rgba(79,195,247,.35); color:#fff;
+      font:700 13px/1 'DM Sans',sans-serif; padding:8px 16px; cursor:pointer;
+    }
+    .mine-map-edit-apply:hover { background:rgba(79,195,247,.5); }
+    .mine-map-edit-apply:disabled { opacity:.55; cursor:not-allowed; }
 
     .mine-map-labels.is-bulk-rename-active {
       background:rgba(79,195,247,.35); border-color:#4FC3F7;
@@ -651,6 +706,20 @@
             </div>
             <div class="mine-map-tip" id="mine-map-tip" hidden></div>
             <div class="mine-map-hover-tip" id="mine-map-hover-tip" hidden></div>
+            <div class="mine-map-edit" id="mine-map-edit" hidden aria-hidden="true" role="dialog" aria-label="Edit mine title and greeting">
+              <button type="button" class="mine-map-edit-x" id="mine-map-edit-x" aria-label="Close without saving">×</button>
+              <div class="mine-map-edit-head">
+                <img id="mine-map-edit-icon" src="" alt="">
+                <input type="text" id="mine-map-edit-title" autocomplete="off" spellcheck="false" aria-label="Mine title">
+              </div>
+              <label class="mine-map-edit-label" for="mine-map-edit-greeting">Greeting
+                <textarea id="mine-map-edit-greeting" maxlength="100" rows="3" placeholder="Greeting for visitors…"></textarea>
+              </label>
+              <div class="mine-map-edit-footer">
+                <span class="mine-map-edit-count" id="mine-map-edit-count">0/100</span>
+                <button type="button" class="mine-map-edit-apply" id="mine-map-edit-apply">Apply</button>
+              </div>
+            </div>
             <div class="mine-map-msg" id="mine-map-msg" hidden></div>
             <div class="mine-map-bulk-rename" id="mine-map-bulk-rename" hidden aria-hidden="true" role="dialog" aria-label="Bulk rename mines">
               <button type="button" class="mine-map-bulk-rename-x" id="mine-map-bulk-rename-x" aria-label="Cancel bulk rename">×</button>
@@ -1264,13 +1333,165 @@
     if (y + th > br.height - 4) y = Math.max(4, dom.clientY - br.top - th - 10);
     tip.style.transform = 'translate(' + x + 'px,' + y + 'px)';
   }
-  function showMineMapHoverTip(iconSrc, title, e) {
+
+  let mineMapEditMine = null;
+  let mineMapEditMapClickBound = false;
+  function syncLocalMineGreeting(mineId, greeting) {
+    const id = String(mineId);
+    const clean = (typeof greeting === 'string') ? greeting.trim().slice(0, 100) : '';
+    function apply(m) {
+      if (!m) return;
+      if (!m._details) m._details = {};
+      m._details.greeting = clean;
+    }
+    if (typeof findMineById === 'function') apply(findMineById(id));
+    if (typeof mineMap !== 'undefined' && mineMap && typeof mineMap === 'object') apply(mineMap[id]);
+    if (typeof allMines !== 'undefined' && Array.isArray(allMines)) {
+      for (let i = 0; i < allMines.length; i++) {
+        if (allMines[i] && String(allMines[i].id) === id) apply(allMines[i]);
+      }
+    }
+    if (typeof mineMapCurrentMine !== 'undefined' && mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
+      apply(mineMapCurrentMine);
+    }
+    if (mineMapEditMine && String(mineMapEditMine.id) === id) apply(mineMapEditMine);
+    if (typeof mineMapAreaOverlays !== 'undefined' && mineMapAreaOverlays && mineMapAreaOverlays.length) {
+      for (let i = 0; i < mineMapAreaOverlays.length; i++) {
+        const ov = mineMapAreaOverlays[i];
+        if (ov && ov.__tmMine && String(ov.__tmMine.id) === id) apply(ov.__tmMine);
+      }
+    }
+  }
+  function closeMineMapEdit() {
+    const dlg = $('mine-map-edit');
+    if (dlg) {
+      dlg.hidden = true;
+      dlg.setAttribute('aria-hidden', 'true');
+    }
+    mineMapEditMine = null;
+    const applyBtn = $('mine-map-edit-apply');
+    if (applyBtn) applyBtn.disabled = false;
+  }
+  function updateMineMapEditCount() {
+    const ta = $('mine-map-edit-greeting');
+    const count = $('mine-map-edit-count');
+    if (!ta || !count) return;
+    const n = String(ta.value || '').length;
+    count.textContent = n + '/100';
+  }
+  function openMineMapEdit(mine) {
+    if (!mine || mine.id == null) return;
+    const dlg = $('mine-map-edit');
+    if (!dlg) return;
+    mineMapEditMine = mine;
+    const type = typeKeyOf(mine, null);
+    const icon = ICONS[type] || ICONS.rock;
+    const iconEl = $('mine-map-edit-icon');
+    if (iconEl) iconEl.src = icon;
+    const titleInput = $('mine-map-edit-title');
+    if (titleInput) titleInput.value = mineTitle(mine, null) || String(mine.id || '');
+    const greetInput = $('mine-map-edit-greeting');
+    if (greetInput) {
+      greetInput.value = greetingOf(mine).slice(0, 100);
+    }
+    updateMineMapEditCount();
+    dlg.hidden = false;
+    dlg.setAttribute('aria-hidden', 'false');
+    bindMineMapEditUiOnce();
+    bindMineMapEditMapClickOnce();
+    if (titleInput) {
+      try { titleInput.focus(); titleInput.select(); } catch (err) {}
+    }
+  }
+  async function applyMineMapEdit() {
+    const mine = mineMapEditMine;
+    if (!mine || mine.id == null) return;
+    const titleInput = $('mine-map-edit-title');
+    const greetInput = $('mine-map-edit-greeting');
+    const applyBtn = $('mine-map-edit-apply');
+    const nextTitle = titleInput ? String(titleInput.value || '').replace(/\s+/g, ' ').trim() : '';
+    let nextGreeting = greetInput ? String(greetInput.value || '').trim() : '';
+    if (nextGreeting.length > 100) nextGreeting = nextGreeting.slice(0, 100);
+    if (!nextTitle) {
+      if (typeof flashShowcaseNote === 'function') flashShowcaseNote('Enter a mine title.');
+      else if (typeof showMineMapMsg === 'function') showMineMapMsg('Enter a mine title.', false);
+      if (titleInput) titleInput.focus();
+      return;
+    }
+    if (applyBtn) applyBtn.disabled = true;
+    try {
+      await safeUpdatePropertyDetails(mine.id, { customName: nextTitle, greeting: nextGreeting }, null);
+      if (typeof syncLocalMineCustomName === 'function') syncLocalMineCustomName(mine.id, nextTitle);
+      else {
+        if (!mine._details) mine._details = {};
+        mine._details.customName = nextTitle;
+        if (typeof allMines !== 'undefined' && Array.isArray(allMines)) {
+          for (let i = 0; i < allMines.length; i++) {
+            if (allMines[i] && String(allMines[i].id) === String(mine.id)) {
+              if (!allMines[i]._details) allMines[i]._details = {};
+              allMines[i]._details.customName = nextTitle;
+            }
+          }
+        }
+      }
+      syncLocalMineGreeting(mine.id, nextGreeting);
+      closeMineMapEdit();
+      if (typeof showMineMapMsg === 'function') showMineMapMsg('Mine updated.', true);
+    } catch (err) {
+      console.warn('[map] mine edit failed', mine.id, err);
+      if (applyBtn) applyBtn.disabled = false;
+      const msg = (err && err.code === 'permission-denied')
+        ? 'Could not update mine (permission denied).'
+        : ('Could not update mine' + (err && err.message ? ': ' + err.message : '.'));
+      if (typeof flashShowcaseNote === 'function') flashShowcaseNote(msg);
+      else if (typeof showMineMapMsg === 'function') showMineMapMsg(msg, false);
+    }
+  }
+  let mineMapEditUiBound = false;
+  function bindMineMapEditUiOnce() {
+    if (mineMapEditUiBound) return;
+    mineMapEditUiBound = true;
+    const x = $('mine-map-edit-x');
+    if (x) x.addEventListener('click', function (e) { e.preventDefault(); closeMineMapEdit(); });
+    const apply = $('mine-map-edit-apply');
+    if (apply) apply.addEventListener('click', function (e) { e.preventDefault(); applyMineMapEdit(); });
+    const greet = $('mine-map-edit-greeting');
+    if (greet) greet.addEventListener('input', updateMineMapEditCount);
+    const title = $('mine-map-edit-title');
+    if (title) {
+      title.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); applyMineMapEdit(); }
+      });
+    }
+    const dlg = $('mine-map-edit');
+    if (dlg) {
+      dlg.addEventListener('click', function (e) { e.stopPropagation(); });
+      dlg.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    }
+  }
+  function bindMineMapEditMapClickOnce() {
+    if (mineMapEditMapClickBound) return;
+    if (!mineMapInstance) return;
+    mineMapEditMapClickBound = true;
+    mineMapInstance.addListener('click', function () {
+      if (mineMapEditMine) closeMineMapEdit();
+    });
+  }
+  function greetingOf(p) {
+    const d = (p && p._details) || {};
+    return (typeof d.greeting === 'string') ? d.greeting : '';
+  }
+  function showMineMapHoverTip(iconSrc, title, greeting, e) {
     const tip = $('mine-map-hover-tip');
     if (!tip) return;
-    tip.innerHTML = '<img src="' + String(iconSrc || '').replace(/"/g, '&quot;') + '" alt="">'
-      + '<span></span>';
-    const span = tip.querySelector('span');
+    tip.innerHTML = '<div class="mine-map-hover-tip-row">'
+      + '<img src="' + String(iconSrc || '').replace(/"/g, '&quot;') + '" alt="">'
+      + '<span></span></div>'
+      + '<div class="mine-map-hover-tip-greeting">Greeting: <em></em></div>';
+    const span = tip.querySelector('.mine-map-hover-tip-row span');
     if (span) span.textContent = title || '';
+    const em = tip.querySelector('.mine-map-hover-tip-greeting em');
+    if (em) em.textContent = '"' + String(greeting == null ? '' : greeting) + '"';
     tip.hidden = false;
     moveMineMapHoverTip(e);
   }
@@ -1280,11 +1501,23 @@
     const type = typeKeyOf(mine, null);
     const icon = ICONS[type] || ICONS.rock;
     overlay.addListener('mouseover', function (e) {
+      if (mineMapEditMine) return;
       const title = mineTitle(mine, null) || String(mine.id || '');
-      showMineMapHoverTip(icon, title, e);
+      showMineMapHoverTip(icon, title, greetingOf(mine), e);
     });
     overlay.addListener('mousemove', function (e) { moveMineMapHoverTip(e); });
     overlay.addListener('mouseout', function () { hideMineMapHoverTip(); });
+    overlay.addListener('click', function (e) {
+      if (typeof bulkRenameMode !== 'undefined' && bulkRenameMode) return;
+      try { if (e && typeof e.stop === 'function') e.stop(); } catch (err) {}
+      const dom = e && e.domEvent;
+      if (dom) {
+        try { dom.preventDefault(); } catch (err) {}
+        try { dom.stopPropagation(); } catch (err) {}
+      }
+      hideMineMapHoverTip();
+      openMineMapEdit(mine);
+    });
   }
   function clearMineMapAreaOverlays() {
     for (let i = 0; i < mineMapAreaOverlays.length; i++) {
@@ -1780,6 +2013,7 @@
     openBulkRenameDialog(selected);
   }
   function startBulkRenameDrawMode() {
+    closeMineMapEdit();
     if (!mineMapInstance) {
       showMineMapMsg('Map is not ready yet.', true);
       return;
@@ -1803,6 +2037,11 @@
     startBulkRenameDrawMode();
   }
   function handleMineMapEscape() {
+    const editDlg = $('mine-map-edit');
+    if (editDlg && !editDlg.hidden) {
+      closeMineMapEdit();
+      return true;
+    }
     const dlg = $('mine-map-bulk-rename');
     if (dlg && !dlg.hidden) {
       exitBulkRenameMode();
@@ -1923,6 +2162,7 @@
   function closeMineMap() {
     const overlay = $('mine-map-overlay');
     if (!overlay || overlay.hidden) return;
+    closeMineMapEdit();
     exitBulkRenameMode();
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
