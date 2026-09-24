@@ -32,6 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="portal.css" />
+  <link rel="stylesheet" href="portal-top-nav.css" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
        ads here was a likely contributor to AdSense's "Low value content"
@@ -85,7 +86,7 @@
   
   <nav class="top-nav">
     <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
-    <div class="nav-links">
+    <div class="nav-links" id="portal-nav-links">
       <a href="/portal.html" class="active">Dashboard</a>
       <a href="/mines.html">Mines</a>
       <a href="/inventory.html">Inventory</a>
@@ -103,6 +104,11 @@
           <button type="button" class="nav-signout" id="btn-signout">Sign out</button>
         </div>
       </div>
+      <button type="button" class="nav-menu-toggle" id="portal-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="portal-nav-links">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="nav-balances">
       <div class="nav-pill nav-pill-usd" data-tip="Current USD Earning / Balance">
         <span class="nav-pill-icon nav-pill-usd-icon" aria-hidden="true">$</span>
         <span class="nav-pill-value" id="sb-usd">—</span>
@@ -1621,5 +1627,6 @@
   })();
 
 </script>
+  <script src="portal-nav.js" defer></script>
 </body>
 </html>

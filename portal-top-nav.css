@@ -1,0 +1,273 @@
+/* Shared portal top nav (portal shell — not public site-nav) */
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 5px 20px;
+  height: 80px;
+  box-sizing: border-box;
+  background: rgba(13,27,42,0.97);
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.07));
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.top-nav .nav-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  line-height: 0;
+}
+.top-nav .nav-logo img {
+  display: block;
+  height: 60px;
+  width: auto;
+}
+
+.top-nav .nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.top-nav .nav-links::-webkit-scrollbar { display: none; }
+.top-nav .nav-links a {
+  font-size: 18px;
+  font-weight: 500;
+  color: #8899AA;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+.top-nav .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.top-nav .nav-links a.active {
+  color: var(--cyan, #4FC3F7);
+  background: rgba(79,195,247,0.12);
+}
+
+/* Wide: Account then balances on the right (after centered links) */
+.top-nav .nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.top-nav .nav-balances {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.top-nav .nav-account {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.top-nav .nav-account-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  padding: 4px 6px 4px 4px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.top-nav .nav-account-link:hover { background: rgba(255,255,255,0.06); }
+.top-nav .nav-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--navy3, #16263A);
+  border: 1px solid var(--border, rgba(255,255,255,0.07));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cyan, #4FC3F7);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.top-nav .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.top-nav .nav-nickname {
+  font-size: 18px;
+  color: #8899AA;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top-nav .nav-account-toggle {
+  background: none;
+  border: none;
+  color: #8899AA;
+  cursor: pointer;
+  padding: 6px 4px;
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.top-nav .nav-account-toggle:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.top-nav .nav-account-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: #111F30;
+  border: 1px solid var(--border, rgba(255,255,255,0.07));
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 200;
+}
+.top-nav .nav-account-dropdown[hidden] { display: none !important; }
+.top-nav .nav-signout {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 18px;
+  color: #8899AA;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.top-nav .nav-signout:hover { color: #fff; background: rgba(255,255,255,0.06); }
+
+.top-nav .nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 12px 0 8px;
+  background: #0D1B2A;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.top-nav .nav-pill-icon {
+  width: auto;
+  height: 40px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.top-nav .nav-pill-usd-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.18);
+  color: #22C55E;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.top-nav .nav-pill-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #EEF1F4;
+  font-variant-numeric: tabular-nums;
+}
+.top-nav .nav-pill-usd .nav-pill-value { color: #22C55E; }
+.top-nav .nav-pill-tb .nav-pill-value { color: #FACC15; }
+
+.top-nav .nav-menu-toggle {
+  display: none;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(79,195,247,0.4);
+  background: rgba(15,22,32,0.9);
+  color: #EEF1F4;
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.top-nav .nav-menu-toggle span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  position: absolute;
+}
+.top-nav .nav-menu-toggle span:nth-child(1) { transform: translateY(-5px); }
+.top-nav .nav-menu-toggle span:nth-child(2) { transform: translateY(0); }
+.top-nav .nav-menu-toggle span:nth-child(3) { transform: translateY(5px); }
+
+/* ≤1300px: [Logo] … [USD][TB centered] … [Account][☰] */
+@media (max-width: 1300px) {
+  .top-nav {
+    gap: 10px;
+  }
+  .top-nav .nav-balances {
+    order: 2;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+  .top-nav .nav-right {
+    order: 3;
+  }
+  .top-nav .nav-menu-toggle { display: inline-flex; }
+
+  .top-nav .nav-links {
+    display: none;
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: calc(100% + 8px);
+    z-index: 220;
+    flex: none;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 12px;
+    background: rgba(13,27,42,0.98);
+    border: 1px solid var(--border, rgba(255,255,255,0.07));
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.4);
+    overflow: hidden;
+    order: 10;
+  }
+  .top-nav .nav-links a {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .top-nav.nav-open .nav-links { display: flex; }
+}
+
+@media (max-width: 900px) {
+  .top-nav .nav-nickname { display: none; }
+  .top-nav .nav-links a { padding: 8px 12px; font-size: 15px; }
+}
+
+@media (max-width: 700px) {
+  .top-nav { padding: 0 12px; gap: 8px; }
+  .top-nav .nav-pill { padding: 0 8px 0 6px; height: 44px; }
+  .top-nav .nav-pill-icon,
+  .top-nav .nav-pill-usd-icon { width: 32px; height: 32px; font-size: 18px; }
+  .top-nav .nav-pill-value { font-size: 15px; }
+  .top-nav .nav-logo img { height: 48px; }
+}
