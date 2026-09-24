@@ -3217,7 +3217,7 @@
     if (!mineId) return;
     const mineName = badge.getAttribute('data-mine-name')
       || ((badge.querySelector('span') || {}).textContent || '').trim();
-    let url = '/portal/mines?mineId=' + encodeURIComponent(mineId);
+    let url = '/mines.html?mineId=' + encodeURIComponent(mineId);
     if (mineName) url += '&mineName=' + encodeURIComponent(mineName);
     window.location.href = url;
   }
