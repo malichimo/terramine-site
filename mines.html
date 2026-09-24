@@ -3259,7 +3259,7 @@
     return null;
   }
   function daysLeftOf(mine, now) {
-    const ms = activityMs(mine && mine.lastDailyReset);
+    const ms = activityMs(mine && mine.lastUpdated);
     if (ms == null) return null;
     const wholeDaysSince = Math.floor((now - ms) / MAINT_DAY_MS);
     let daysLeft = MAINT_WINDOW_DAYS - wholeDaysSince;
@@ -3283,14 +3283,14 @@
       tone: tone
     };
   }
-  function mineLastDailyResetValue(item) {
+  function mineLastUpdatedValue(item) {
     if (!item || typeof item !== 'object') return null;
-    if (item.lastDailyReset != null && item.lastDailyReset !== '') return item.lastDailyReset;
-    const d = item._details && item._details.lastDailyReset;
+    if (item.lastUpdated != null && item.lastUpdated !== '') return item.lastUpdated;
+    const d = item._details && item._details.lastUpdated;
     if (d != null && d !== '') return d;
     return null;
   }
-  function userMineLastDailyReset(minesField, id) {
+  function userMineLastUpdated(minesField, id) {
     if (minesField == null || id == null) return null;
     const sid = String(id);
     if (Array.isArray(minesField)) {
@@ -3299,23 +3299,23 @@
         if (!item || typeof item !== 'object') continue;
         const iid = item.id != null ? item.id : (item.propertyId != null ? item.propertyId : item.mineId);
         if (iid != null && String(iid) === sid) {
-          const v = mineLastDailyResetValue(item);
+          const v = mineLastUpdatedValue(item);
           if (v != null) return v;
         }
       }
       return null;
     }
     if (typeof minesField === 'object') {
-      return mineLastDailyResetValue(minesField[sid]);
+      return mineLastUpdatedValue(minesField[sid]);
     }
     return null;
   }
   function applyMineActivity(mine, userMines) {
-    if (mine.lastDailyReset != null && mine.lastDailyReset !== '') return;
-    const fromDetails = mine._details && mine._details.lastDailyReset;
-    if (fromDetails != null && fromDetails !== '') { mine.lastDailyReset = fromDetails; return; }
-    const fromUser = userMineLastDailyReset(userMines, mine.id);
-    if (fromUser != null && fromUser !== '') mine.lastDailyReset = fromUser;
+    if (mine.lastUpdated != null && mine.lastUpdated !== '') return;
+    const fromDetails = mine._details && mine._details.lastUpdated;
+    if (fromDetails != null && fromDetails !== '') { mine.lastUpdated = fromDetails; return; }
+    const fromUser = userMineLastUpdated(userMines, mine.id);
+    if (fromUser != null && fromUser !== '') mine.lastUpdated = fromUser;
   }
   function userMineDailyActivities(minesField, id) {
     if (minesField == null || id == null) return null;
@@ -5596,7 +5596,7 @@ function updateSortButtons() {
     const mLabel = document.createElement('small');
     mLabel.textContent = 'Mine Maintenance';
     const dot = document.createElement('span');
-    // Red = lastDailyReset within 24h (just maintained). Green = older / not recent.
+    // Red = lastUpdated within 24h (just maintained). Green = older / not recent.
     // (Was wrongly tied to dailyActivitiesRemaining, which is unrelated to the 180-day clock.)
     const recentMaint = !st.missing && !!st.recent;
     if (st.missing) {
