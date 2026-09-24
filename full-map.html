@@ -173,12 +173,13 @@
       background:rgba(19,54,101,.92); color:#fff; border-radius:8px;
       padding:8px 12px; font-size:12px; font-weight:600; pointer-events:none;
       box-shadow:0 8px 20px rgba(6,10,16,.4);
-    }
-    .mine-map-msg {
-      top:12px; bottom:auto; text-align:center;
+      text-align:center;
       opacity:1; transition:opacity .4s ease;
     }
-    .mine-map-msg.is-fading { opacity:0; }
+    .mine-map-msg {
+      top:12px; bottom:auto;
+    }
+    .mine-map-tip.is-fading, .mine-map-msg.is-fading { opacity:0; }
     .mine-map-hover-tip {
       position:absolute; z-index:3; left:0; top:0; max-width:280px;
       display:flex; flex-direction:column; align-items:stretch; gap:4px;
@@ -1440,7 +1441,7 @@
     const msg = $('mine-map-msg');
     if (mineMapMsgFadeTimer) { clearTimeout(mineMapMsgFadeTimer); mineMapMsgFadeTimer = null; }
     if (mineMapMsgHideTimer) { clearTimeout(mineMapMsgHideTimer); mineMapMsgHideTimer = null; }
-    if (tip) { tip.hidden = true; tip.textContent = ''; }
+    if (tip) { tip.classList.remove('is-fading'); tip.hidden = true; tip.textContent = ''; }
     if (msg) {
       msg.classList.remove('is-fading');
       msg.hidden = true;
@@ -1451,20 +1452,18 @@
     if (!el) return;
     el.textContent = text;
     el.hidden = false;
-    if (!isTip && msg) {
-      mineMapMsgFadeTimer = setTimeout(() => {
-        mineMapMsgFadeTimer = null;
-        if (!msg.isConnected || msg.hidden || msg.textContent !== text) return;
-        msg.classList.add('is-fading');
-        mineMapMsgHideTimer = setTimeout(() => {
-          mineMapMsgHideTimer = null;
-          if (!msg.isConnected || msg.textContent !== text) return;
-          msg.hidden = true;
-          msg.textContent = '';
-          msg.classList.remove('is-fading');
-        }, 400);
-      }, 3000);
-    }
+    mineMapMsgFadeTimer = setTimeout(() => {
+      mineMapMsgFadeTimer = null;
+      if (!el.isConnected || el.hidden || el.textContent !== text) return;
+      el.classList.add('is-fading');
+      mineMapMsgHideTimer = setTimeout(() => {
+        mineMapMsgHideTimer = null;
+        if (!el.isConnected || el.textContent !== text) return;
+        el.hidden = true;
+        el.textContent = '';
+        el.classList.remove('is-fading');
+      }, 400);
+    }, 3000);
   }
 
   function clampMineMapZoom(z) {
