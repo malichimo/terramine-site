@@ -944,15 +944,14 @@
     if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
   }
 
-  // Reach: dissolve outer boundary of all loaded parcels (edge-cancellation union).
-  // Parcels are typically NW/NE/SE/SW quads; shared edges cancel so remaining
-  // directed edges form true outer ring(s) / holes of the union. Scales to ~15k
-  // plots without turf.js. Disconnected clusters become multiple outer rings.
+  // Reach: single convex hull wrapping ALL loaded parcel corners as one area.
+  // Thick money-green border + light fill. Toggle + tip unchanged.
   const MINE_MAP_REACH_STROKE = '#85bb65';
   const MINE_MAP_REACH_FILL = '#85bb65';
   const MINE_MAP_REACH_FILL_OPACITY = 0.15;
+  const MINE_MAP_REACH_STROKE_WEIGHT = 7; // thick border (was thin ~2–3 on dissolve rings)
   const MINE_MAP_REACH_TIP = 'Show the overall area ALL of my mines cover';
-  const MINE_MAP_REACH_Q = 1e7; // ~1.1cm lat precision for vertex matching
+  const MINE_MAP_REACH_Q = 1e7; // ~1.1cm lat precision for vertex dedupe
   const MINE_MAP_REACH_Z = 50; // above parcel fills (2) + inset strokes (3)
 
   function updateMineMapReachBtn() {
@@ -975,194 +974,21 @@
   function reachPointKey(lat, lng) {
     return reachQuantize(lat) + ',' + reachQuantize(lng);
   }
-  function reachParseKey(key) {
-    const parts = key.split(',');
-    return { lat: Number(parts[0]), lng: Number(parts[1]) };
-  }
-  function reachRingSignedArea(ring) {
-    let a = 0;
-    const n = ring.length;
-    if (n < 3) return 0;
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      a += ring[j].lng * ring[i].lat - ring[i].lng * ring[j].lat;
-    }
-    return a / 2;
-  }
-  function reachEnsureWinding(ring, wantCCW) {
-    const a = reachRingSignedArea(ring);
-    const isCCW = a > 0;
-    if ((wantCCW && !isCCW) || (!wantCCW && isCCW)) return ring.slice().reverse();
-    return ring;
-  }
-  function reachPointInRing(pt, ring) {
-    let inside = false;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const yi = ring[i].lat, xi = ring[i].lng;
-      const yj = ring[j].lat, xj = ring[j].lng;
-      if (((yi > pt.lat) !== (yj > pt.lat)) &&
-          (pt.lng < (xj - xi) * (pt.lat - yi) / ((yj - yi) || 1e-15) + xi)) {
-        inside = !inside;
-      }
-    }
-    return inside;
-  }
-  function reachNormalizePath(path) {
-    if (!path || path.length < 3) return null;
-    const out = [];
-    for (let i = 0; i < path.length; i++) {
-      const p = path[i];
-      if (!p) continue;
-      const lat = reachQuantize(p.lat);
-      const lng = reachQuantize(p.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      const prev = out.length ? out[out.length - 1] : null;
-      if (prev && prev.lat === lat && prev.lng === lng) continue;
-      out.push({ lat: lat, lng: lng });
-    }
-    if (out.length >= 2) {
-      const a = out[0], b = out[out.length - 1];
-      if (a.lat === b.lat && a.lng === b.lng) out.pop();
-    }
-    return out.length >= 3 ? out : null;
-  }
-  function reachOrientCCW(path) {
-    return reachEnsureWinding(path, true);
-  }
-  /** Dissolve parcel rings via shared-edge cancellation; return MultiPolygon-like groups. */
-  function dissolveReachOuterGroups(rawPaths) {
-    const directed = new Map(); // "a>b" -> count
-    function addEdge(aKey, bKey) {
-      if (aKey === bKey) return;
-      const fwd = aKey + '>' + bKey;
-      const rev = bKey + '>' + aKey;
-      const revCount = directed.get(rev) || 0;
-      if (revCount > 0) {
-        if (revCount === 1) directed.delete(rev);
-        else directed.set(rev, revCount - 1);
-      } else {
-        directed.set(fwd, (directed.get(fwd) || 0) + 1);
-      }
-    }
-    for (let i = 0; i < rawPaths.length; i++) {
-      const norm = reachNormalizePath(rawPaths[i]);
-      if (!norm) continue;
-      const oriented = reachOrientCCW(norm);
-      const n = oriented.length;
-      for (let k = 0; k < n; k++) {
-        const a = oriented[k];
-        const b = oriented[(k + 1) % n];
-        addEdge(reachPointKey(a.lat, a.lng), reachPointKey(b.lat, b.lng));
-      }
-    }
-    // Adjacency for walking
-    const outs = new Map(); // fromKey -> [toKey, ...]
-    directed.forEach(function (count, key) {
-      const idx = key.indexOf('>');
-      const a = key.slice(0, idx);
-      const b = key.slice(idx + 1);
-      let list = outs.get(a);
-      if (!list) { list = []; outs.set(a, list); }
-      for (let c = 0; c < count; c++) list.push(b);
-    });
-    function takeNext(from) {
-      const list = outs.get(from);
-      if (!list || !list.length) return null;
-      return list.pop();
-    }
-    const rings = [];
-    outs.forEach(function (_list, start) {
-      while (outs.get(start) && outs.get(start).length) {
-        const ringKeys = [start];
-        let cur = start;
-        let guard = 0;
-        while (guard++ < 200000) {
-          const next = takeNext(cur);
-          if (next == null) break;
-          if (next === start) {
-            if (ringKeys.length >= 3) {
-              rings.push(ringKeys.map(reachParseKey));
-            }
-            break;
-          }
-          ringKeys.push(next);
-          cur = next;
-        }
-      }
-    });
-    if (!rings.length) return [];
-    // Classify exterior vs holes by nesting depth (even = exterior).
-    const areas = rings.map(function (r) { return Math.abs(reachRingSignedArea(r)); });
-    const depths = rings.map(function () { return 0; });
-    for (let i = 0; i < rings.length; i++) {
-      const sample = rings[i][0];
-      for (let j = 0; j < rings.length; j++) {
-        if (i === j) continue;
-        if (areas[j] <= areas[i]) continue;
-        if (reachPointInRing(sample, rings[j])) depths[i]++;
-      }
-    }
-    const groups = []; // { outer, holes: [] }
-    const exteriorIdx = [];
-    for (let i = 0; i < rings.length; i++) {
-      if (depths[i] % 2 === 0) {
-        exteriorIdx.push(i);
-        groups.push({
-          outer: reachEnsureWinding(rings[i], true),
-          holes: [],
-          _area: areas[i]
-        });
-      }
-    }
-    for (let i = 0; i < rings.length; i++) {
-      if (depths[i] % 2 === 0) continue;
-      // Assign hole to smallest containing exterior
-      let best = -1, bestArea = Infinity;
-      const sample = rings[i][0];
-      for (let g = 0; g < groups.length; g++) {
-        const ei = exteriorIdx[g];
-        if (areas[ei] <= areas[i]) continue;
-        if (!reachPointInRing(sample, rings[ei])) continue;
-        if (areas[ei] < bestArea) { bestArea = areas[ei]; best = g; }
-      }
-      if (best >= 0) {
-        groups[best].holes.push(reachEnsureWinding(rings[i], false));
-      } else {
-        // Orphan odd ring — treat as its own exterior
-        groups.push({
-          outer: reachEnsureWinding(rings[i], true),
-          holes: [],
-          _area: areas[i]
-        });
-      }
-    }
-    return groups;
-  }
-  function collectReachParcelPaths() {
-    const paths = [];
+  function collectReachParcelPoints() {
+    const pts = [];
     const mines = allMines || [];
     for (let i = 0; i < mines.length; i++) {
       const corners = findCorners(mines[i]);
-      if (corners && corners.path && corners.path.length >= 3) {
-        paths.push(corners.path);
+      if (!corners || !corners.path || !corners.path.length) continue;
+      const path = corners.path;
+      for (let j = 0; j < path.length; j++) {
+        const p = path[j];
+        if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) pts.push(p);
       }
     }
-    return paths;
+    return pts;
   }
-  function reachAddPolygon(polyPaths) {
-    const poly = new google.maps.Polygon({
-      paths: polyPaths,
-      strokeColor: MINE_MAP_REACH_STROKE,
-      strokeOpacity: 0.95,
-      strokeWeight: 3,
-      fillColor: MINE_MAP_REACH_FILL,
-      fillOpacity: MINE_MAP_REACH_FILL_OPACITY,
-      map: mineMapInstance,
-      clickable: false,
-      zIndex: MINE_MAP_REACH_Z
-    });
-    mineMapReachOverlays.push(poly);
-  }
-  /** Convex hull of {lat,lng} points (Andrew's monotone chain). Fallback when dissolve is empty. */
+  /** Convex hull of {lat,lng} points (Andrew's monotone chain). Null if < 3 unique pts. */
   function reachConvexHull(points) {
     const uniq = [];
     const seen = new Set();
@@ -1203,34 +1029,22 @@
   function drawMineMapReach() {
     clearMineMapReachLayer();
     if (!mineMapReachOn || !mineMapInstance || !mineMapReachReady) return;
-    const paths = collectReachParcelPaths();
-    if (!paths.length) return;
-    let groups = dissolveReachOuterGroups(paths);
-    if (!groups.length) {
-      // Dissolve produced nothing (e.g. matching failure) — still show visible feedback.
-      const pts = [];
-      for (let i = 0; i < paths.length; i++) {
-        const path = paths[i];
-        for (let j = 0; j < path.length; j++) pts.push(path[j]);
-      }
-      const hull = reachConvexHull(pts);
-      if (hull) {
-        groups = [{ outer: reachEnsureWinding(hull, true), holes: [] }];
-      } else {
-        for (let i = 0; i < paths.length; i++) {
-          const norm = reachNormalizePath(paths[i]);
-          if (norm) groups.push({ outer: reachOrientCCW(norm), holes: [] });
-        }
-      }
-    }
-    if (!groups.length) {
-      try { console.warn('[Reach] no boundary rings from', paths.length, 'parcels'); } catch (e) {}
-      return;
-    }
-    for (let i = 0; i < groups.length; i++) {
-      const g = groups[i];
-      reachAddPolygon([g.outer].concat(g.holes || []));
-    }
+    const pts = collectReachParcelPoints();
+    if (!pts.length) return;
+    const hull = reachConvexHull(pts);
+    if (!hull) return; // fewer than 3 unique corners — skip gracefully
+    const poly = new google.maps.Polygon({
+      paths: hull,
+      strokeColor: MINE_MAP_REACH_STROKE,
+      strokeOpacity: 0.95,
+      strokeWeight: MINE_MAP_REACH_STROKE_WEIGHT,
+      fillColor: MINE_MAP_REACH_FILL,
+      fillOpacity: MINE_MAP_REACH_FILL_OPACITY,
+      map: mineMapInstance,
+      clickable: false,
+      zIndex: MINE_MAP_REACH_Z
+    });
+    mineMapReachOverlays.push(poly);
   }
   function setMineMapReach(on) {
     mineMapReachOn = !!on;
