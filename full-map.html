@@ -953,6 +953,7 @@
   const MINE_MAP_REACH_FILL_OPACITY = 0.15;
   const MINE_MAP_REACH_TIP = 'Show the overall area ALL of my mines cover';
   const MINE_MAP_REACH_Q = 1e7; // ~1.1cm lat precision for vertex matching
+  const MINE_MAP_REACH_Z = 50; // above parcel fills (2) + inset strokes (3)
 
   function updateMineMapReachBtn() {
     const btn = $('mine-map-reach');
@@ -1147,27 +1148,88 @@
     }
     return paths;
   }
+  function reachAddPolygon(polyPaths) {
+    const poly = new google.maps.Polygon({
+      paths: polyPaths,
+      strokeColor: MINE_MAP_REACH_STROKE,
+      strokeOpacity: 0.95,
+      strokeWeight: 3,
+      fillColor: MINE_MAP_REACH_FILL,
+      fillOpacity: MINE_MAP_REACH_FILL_OPACITY,
+      map: mineMapInstance,
+      clickable: false,
+      zIndex: MINE_MAP_REACH_Z
+    });
+    mineMapReachOverlays.push(poly);
+  }
+  /** Convex hull of {lat,lng} points (Andrew's monotone chain). Fallback when dissolve is empty. */
+  function reachConvexHull(points) {
+    const uniq = [];
+    const seen = new Set();
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+      const key = reachPointKey(p.lat, p.lng);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      uniq.push({ lat: reachQuantize(p.lat), lng: reachQuantize(p.lng) });
+    }
+    if (uniq.length < 3) return null;
+    uniq.sort(function (a, b) {
+      return a.lng === b.lng ? a.lat - b.lat : a.lng - b.lng;
+    });
+    function cross(o, a, b) {
+      return (a.lng - o.lng) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lng - o.lng);
+    }
+    const lower = [];
+    for (let i = 0; i < uniq.length; i++) {
+      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], uniq[i]) <= 0) {
+        lower.pop();
+      }
+      lower.push(uniq[i]);
+    }
+    const upper = [];
+    for (let i = uniq.length - 1; i >= 0; i--) {
+      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], uniq[i]) <= 0) {
+        upper.pop();
+      }
+      upper.push(uniq[i]);
+    }
+    lower.pop();
+    upper.pop();
+    const hull = lower.concat(upper);
+    return hull.length >= 3 ? hull : null;
+  }
   function drawMineMapReach() {
     clearMineMapReachLayer();
     if (!mineMapReachOn || !mineMapInstance || !mineMapReachReady) return;
     const paths = collectReachParcelPaths();
     if (!paths.length) return;
-    const groups = dissolveReachOuterGroups(paths);
+    let groups = dissolveReachOuterGroups(paths);
+    if (!groups.length) {
+      // Dissolve produced nothing (e.g. matching failure) — still show visible feedback.
+      const pts = [];
+      for (let i = 0; i < paths.length; i++) {
+        const path = paths[i];
+        for (let j = 0; j < path.length; j++) pts.push(path[j]);
+      }
+      const hull = reachConvexHull(pts);
+      if (hull) {
+        groups = [{ outer: reachEnsureWinding(hull, true), holes: [] }];
+      } else {
+        for (let i = 0; i < paths.length; i++) {
+          const norm = reachNormalizePath(paths[i]);
+          if (norm) groups.push({ outer: reachOrientCCW(norm), holes: [] });
+        }
+      }
+    }
+    if (!groups.length) {
+      try { console.warn('[Reach] no boundary rings from', paths.length, 'parcels'); } catch (e) {}
+      return;
+    }
     for (let i = 0; i < groups.length; i++) {
       const g = groups[i];
-      const polyPaths = [g.outer].concat(g.holes || []);
-      const poly = new google.maps.Polygon({
-        paths: polyPaths,
-        strokeColor: MINE_MAP_REACH_STROKE,
-        strokeOpacity: 0.95,
-        strokeWeight: 3,
-        fillColor: MINE_MAP_REACH_FILL,
-        fillOpacity: MINE_MAP_REACH_FILL_OPACITY,
-        map: mineMapInstance,
-        clickable: false,
-        zIndex: 0
-      });
-      mineMapReachOverlays.push(poly);
+      reachAddPolygon([g.outer].concat(g.holes || []));
     }
   }
   function setMineMapReach(on) {
