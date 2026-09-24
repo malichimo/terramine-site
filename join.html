@@ -57,11 +57,15 @@
     }
 
     .logo {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 32px;
-      letter-spacing: 3px;
-      color: var(--cyan);
       margin-bottom: 8px;
+      display: flex;
+      justify-content: center;
+    }
+    .logo img {
+      display: block;
+      height: 72px;
+      width: auto;
+      max-width: 100%;
     }
 
     .invite-badge {
@@ -222,7 +226,7 @@
 <body>
 
   <div class="card">
-    <div class="logo">⛏ TerraMine</div>
+    <div class="logo"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></div>
     <div class="invite-badge">You're Invited</div>
 
     <h1>Join the<br/>Mining Rush</h1>
