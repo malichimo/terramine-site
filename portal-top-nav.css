@@ -271,3 +271,34 @@
   .top-nav .nav-pill-value { font-size: 15px; }
   .top-nav .nav-logo img { height: 48px; }
 }
+
+/* ≤640px: two-row header — logo centered full-width on top;
+   bottom row: balances flex-start | account + ☰ flex-end.
+   Does not change 641–1300px single-row hamburger layout. */
+@media (max-width: 640px) {
+  .top-nav {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 80px;
+    align-content: center;
+    row-gap: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .top-nav .nav-logo {
+    order: 1;
+    flex: 0 0 100%;
+    width: 100%;
+    justify-content: center;
+  }
+  .top-nav .nav-balances {
+    order: 2;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+  .top-nav .nav-right {
+    order: 3;
+    margin-left: auto;
+  }
+}
