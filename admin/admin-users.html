@@ -892,6 +892,11 @@
       if (!results.length && /^TM-/i.test(raw)) {
         const snap = await getDocs(query(collection(db, 'users'), where('referralCode', '==', raw.toUpperCase()), limit(25)));
         results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Sept 26, 2026: also match vanity referral codes (e.g. TM-GOLDRUSH).
+        if (!results.length) {
+          const vsnap = await getDocs(query(collection(db, 'users'), where('vanityCode', '==', raw.toUpperCase()), limit(25)));
+          results = vsnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
       }
 
       if (!results.length && raw.includes('@')) {
@@ -1123,7 +1128,7 @@
         </div>
         <div style="margin-top:10px;font-size:10px;color:var(--text-muted);">
           UID: ${uid} &nbsp;·&nbsp; Joined: ${shortDate(user.createdAt)} &nbsp;·&nbsp;
-          Referral Code: ${user.referralCode||'—'} &nbsp;·&nbsp;
+          Referral Code: ${user.referralCode||'—'}${user.vanityCode ? ' / ' + user.vanityCode : ''} &nbsp;·&nbsp;
           Referred By: ${user.referredByCode||'none'}
         </div>
       </div>
