@@ -197,6 +197,7 @@
   .badge-green { background: rgba(76,175,110,0.15); color: var(--green); }
   .badge-amber { background: rgba(224,123,32,0.15); color: var(--amber); }
   .badge-blue { background: rgba(74,159,212,0.15); color: var(--blue); }
+  .badge-gold { background: rgba(200,146,42,0.15); color: var(--gold); }
   .badge-muted { background: rgba(138,117,96,0.1); color: var(--text-muted); }
 
   /* Skeleton */
@@ -366,6 +367,52 @@
   .ban-btn.do-ban:hover { background: #c03030; }
   .ban-btn.do-unban { background: var(--green); color: var(--bg); }
   .ban-btn.do-unban:hover { background: #3a9a5a; }
+
+  /* Pioneer Club toggle (Sept 26, 2026) — same row/button layout as the ban
+     toggle above (.ban-row/.ban-btn), just with its own neutral/gold accent
+     instead of the alarm-red ban uses, since granting/revoking a paid
+     membership isn't a moderation action. */
+  .pioneer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(200,146,42,0.06);
+    border: 1px solid rgba(200,146,42,0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    gap: 16px;
+  }
+  .pioneer-info { flex: 1; }
+  .pioneer-title { font-size: 13px; font-weight: 600; color: var(--gold); margin-bottom: 4px; }
+  .pioneer-desc { font-size: 11px; color: var(--text-muted); }
+  .pioneer-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .pioneer-notes-input {
+    width: 100%;
+    margin-top: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    resize: vertical;
+  }
+  .pioneer-btn {
+    border: none;
+    padding: 9px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .pioneer-btn.do-grant { background: var(--gold); color: var(--bg); }
+  .pioneer-btn.do-grant:hover { background: #b07f24; }
+  .pioneer-btn.do-revoke { background: rgba(138,117,96,0.2); color: var(--text); }
+  .pioneer-btn.do-revoke:hover { background: rgba(138,117,96,0.35); }
   .ban-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Send in-app notification (Aug 23, 2026) */
@@ -623,6 +670,7 @@
     <button class="filter-btn" onclick="runSearch()">🔍 Search</button>
     <button class="filter-btn" data-f="banned" onclick="runFilter('banned',this)">🚫 Banned</button>
     <button class="filter-btn" data-f="active" onclick="runFilter('active',this)">✅ Active 7d</button>
+    <button class="filter-btn" data-f="pioneers" onclick="runFilter('pioneers',this)">⭐ Pioneers</button>
     <span class="user-count-label" id="userCountLabel">Search for a user above</span>
   </div>
 
@@ -897,6 +945,8 @@
       } else if (kind === 'active') {
         const day7 = new Date(Date.now() - 7 * 86400000).toISOString();
         q = query(collection(db, 'users'), where('lastActiveAt', '>=', day7), orderBy('lastActiveAt', 'desc'), limit(50));
+      } else if (kind === 'pioneers') {
+        q = query(collection(db, 'users'), where('isPioneerMember', '==', true), limit(50));
       }
       const snap = await getDocs(q);
       const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -947,7 +997,12 @@
         ? `<span class="badge badge-red"${u.bannedReason ? ` title="${escHtml(u.bannedReason)}"` : ''}>BANNED</span>`
         : '';
       const adult = u.isAdult ? '' : '<span class="badge badge-blue">MINOR</span>';
-      const statusBadge = banned || adult || '<span class="badge badge-muted">OK</span>';
+      const pioneer = u.isPioneerMember ? '<span class="badge badge-gold">⭐ PIONEER</span>' : '';
+      // Show every applicable badge together (e.g. a banned Pioneer should
+      // still show PIONEER, not just BANNED) rather than picking one --
+      // pre-Pioneer this only ever had one condition true at a time so a
+      // single-slot badge was fine, but that stops being true here.
+      const statusBadge = [banned, adult, pioneer].filter(Boolean).join(' ') || '<span class="badge badge-muted">OK</span>';
       const tb = u.tbBalance ?? 0;
       const ci = u.totalCheckIns ?? 0;
       return `<tr onclick="openUser('${u.id}')">
@@ -964,6 +1019,23 @@
     }).join('');
   }
 
+  // ── Modal badge row (Sept 26, 2026: pulled out into a shared helper) ────
+  // Previously built inline in openUser(), then toggleBan() rebuilt its OWN
+  // badges array from scratch on every ban/unban -- which only ever
+  // included the BANNED badge, so toggling ban silently wiped out MINOR /
+  // HAS PROPERTY / (now) PIONEER from the badge row until the next full
+  // re-open. One shared function driven off the current merged user record
+  // means every toggle (ban, pioneer, future ones) re-renders the full,
+  // correct set instead of a partial one.
+  function renderBadges(user) {
+    const badges = [];
+    if (user.isBanned) badges.push('<span class="badge badge-red">🚫 BANNED</span>');
+    if (!user.isAdult) badges.push('<span class="badge badge-blue">MINOR</span>');
+    if (user.milestone_firstPurchase) badges.push('<span class="badge badge-green">HAS PROPERTY</span>');
+    if (user.isPioneerMember) badges.push('<span class="badge badge-gold">⭐ PIONEER</span>');
+    return badges.join(' ');
+  }
+
   // ── Open user modal ───────────────────────────────────────────
   window.openUser = async (uid) => {
     currentUserId = uid;
@@ -973,11 +1045,7 @@
     document.getElementById('modalNickname').textContent = user.nickname || '(no nickname)';
     document.getElementById('modalEmail').textContent = user.email || uid;
 
-    const badges = [];
-    if (user.isBanned) badges.push('<span class="badge badge-red">🚫 BANNED</span>');
-    if (!user.isAdult) badges.push('<span class="badge badge-blue">MINOR</span>');
-    if (user.milestone_firstPurchase) badges.push('<span class="badge badge-green">HAS PROPERTY</span>');
-    document.getElementById('modalBadges').innerHTML = badges.join(' ');
+    document.getElementById('modalBadges').innerHTML = renderBadges(user);
 
     document.getElementById('userModal').style.display = 'flex';
     document.getElementById('modalBody').innerHTML = '<div class="modal-loading">⏳ Loading user data...</div>';
@@ -1163,6 +1231,12 @@
         ${renderBanRow(user)}
       </div>
 
+      <!-- Pioneer Club membership (Sept 26, 2026) -->
+      <div class="modal-section">
+        <div class="modal-section-title">Pioneer Club</div>
+        ${renderPioneerRow(user)}
+      </div>
+
       <!-- Send in-app notification (Aug 23, 2026) -->
       <div class="modal-section">
         <div class="modal-section-title">Send In-App Notification</div>
@@ -1281,6 +1355,46 @@
             placeholder="Reason for ban (required — e.g. harassment, spam, fraud)..."></textarea>
         </div>
         <button class="ban-btn do-ban" onclick="toggleBan('${user.id}', true)">🚫 Ban User</button>
+      </div>`;
+  }
+
+  // ── Pioneer Club row markup (Sept 26, 2026) ──────────────────────
+  // Shared by the initial modal render and togglePioneer's re-render, same
+  // pattern as renderBanRow above. Membership is granted/revoked entirely
+  // by hand right now: there is no PayPal webhook yet, and no in-app or
+  // website signup button either (deliberately held off per Scott -- people
+  // reach the PayPal link some other way for now). Scott confirms a payment
+  // himself and clicks Grant here; isPioneerMember is the ONLY field
+  // anything else should ever check for membership. pioneerNotes exists so
+  // the PayPal transaction id / email / whatever he used to confirm the
+  // payment is attached to the account for later reference (renewal
+  // disputes, support questions, etc.) -- optional, never required.
+  function renderPioneerRow(user) {
+    if (user.isPioneerMember) {
+      const metaParts = [];
+      if (user.pioneerMemberSince) metaParts.push('Member since ' + shortDate(user.pioneerMemberSince));
+      if (user.pioneerGrantedBy) metaParts.push('granted by ' + escHtml(user.pioneerGrantedBy));
+      const notesHtml = user.pioneerNotes ? escHtml(user.pioneerNotes) : '';
+      return `
+        <div class="pioneer-row" id="pioneerRow">
+          <div class="pioneer-info">
+            <div class="pioneer-title">⭐ This account is a Pioneer Club member</div>
+            <div class="pioneer-desc">Manually granted -- no automated PayPal renewal check yet, so revoke by hand if membership lapses.</div>
+            ${notesHtml ? `<div class="pioneer-meta">Notes: ${notesHtml}</div>` : ''}
+            ${metaParts.length ? `<div class="pioneer-meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>` : ''}
+          </div>
+          <button class="pioneer-btn do-revoke" onclick="togglePioneer('${user.id}', false)">Revoke Membership</button>
+        </div>`;
+    }
+    return `
+      <div class="pioneer-row" id="pioneerRow">
+        <div class="pioneer-info">
+          <div class="pioneer-title">Not a Pioneer Club member</div>
+          <div class="pioneer-desc">Grant after confirming payment on PayPal ($9.99/mo). Notes are optional -- e.g. the PayPal email or transaction id.</div>
+          <textarea class="pioneer-notes-input" id="pioneer-notes-input" rows="2"
+            placeholder="Notes (optional) -- PayPal email / transaction id..."></textarea>
+        </div>
+        <button class="pioneer-btn do-grant" onclick="togglePioneer('${user.id}', true)">⭐ Grant Membership</button>
       </div>`;
   }
 
@@ -1530,13 +1644,63 @@
       // reason/timestamp immediately without a re-fetch.
       document.getElementById('banRow').outerHTML = renderBanRow(u || { id: uid, ...payload });
 
-      // Update badges
-      const badges = [];
-      if (payload.isBanned) badges.push('<span class="badge badge-red">🚫 BANNED</span>');
-      document.getElementById('modalBadges').innerHTML = badges.join(' ');
+      // Sept 26, 2026: use the shared renderBadges() helper (see openUser)
+      // instead of rebuilding a badges array from scratch here -- doing it
+      // inline only ever included BANNED, so toggling ban used to silently
+      // drop MINOR / HAS PROPERTY / PIONEER from the row until the modal
+      // was fully re-opened.
+      document.getElementById('modalBadges').innerHTML = renderBadges(u || { id: uid, ...payload });
     } catch(e) {
       console.error('toggleBan failed:', e);
       alert('Failed to update ban status — see console');
+    }
+  };
+
+  // ── Grant / revoke Pioneer Club membership (Sept 26, 2026) ───────
+  // Deliberately a plain client-side setDoc, same as toggleBan above --
+  // firestore.rules' users/{userId} update rule already ends in
+  // `|| isAdmin()`, an unconditional bypass for the two ADMIN_UIDS, so no
+  // rules change or Cloud Function was needed for this. Notes are read from
+  // the textarea only when granting (nothing to enter when revoking).
+  window.togglePioneer = async (uid, grant) => {
+    const u = currentResults.find(u => u.id === uid);
+
+    let notes = '';
+    if (grant) {
+      const notesInput = document.getElementById('pioneer-notes-input');
+      notes = (notesInput && notesInput.value || '').trim();
+    }
+
+    const confirmed = confirm(grant
+      ? 'Grant Pioneer Club membership to this user?'
+      : 'Revoke Pioneer Club membership? They will lose Pioneer perks immediately (once those are wired up).');
+    if (!confirmed) return;
+
+    const nowIso = new Date().toISOString();
+    const adminEmailVal = auth.currentUser ? auth.currentUser.email : null;
+    // Keep the original pioneerMemberSince if this account was a Pioneer
+    // before (e.g. revoked and re-granted later) rather than overwriting
+    // it -- mirrors createUser()'s "don't clobber a real existing value"
+    // pattern used everywhere else in this codebase.
+    const payload = grant
+      ? {
+          isPioneerMember: true,
+          pioneerMemberSince: (u && u.pioneerMemberSince) || nowIso,
+          pioneerGrantedBy: adminEmailVal,
+          pioneerGrantedAt: nowIso,
+          ...(notes ? { pioneerNotes: notes } : {}),
+        }
+      : { isPioneerMember: false, pioneerRevokedAt: nowIso, pioneerRevokedBy: adminEmailVal };
+
+    try {
+      await setDoc(doc(db, 'users', uid), payload, { merge: true });
+      if (u) Object.assign(u, payload);
+
+      document.getElementById('pioneerRow').outerHTML = renderPioneerRow(u || { id: uid, ...payload });
+      document.getElementById('modalBadges').innerHTML = renderBadges(u || { id: uid, ...payload });
+    } catch(e) {
+      console.error('togglePioneer failed:', e);
+      alert('Failed to update Pioneer status — see console');
     }
   };
 
