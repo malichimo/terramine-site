@@ -76,6 +76,23 @@
       cursor: not-allowed;
     }
     .price-fine { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+    .code-label { display: block; text-align: left; font-size: 13px; font-weight: 500; color: var(--white); margin-bottom: 8px; }
+    .code-input {
+      width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04); color: var(--white); font-size: 17px; letter-spacing: 1.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-transform: uppercase;
+    }
+    .code-input:focus { outline: none; border-color: var(--gold); }
+    .code-input.invalid { border-color: #E5655B; }
+    .code-help { text-align: left; font-size: 12px; color: var(--muted); line-height: 1.5; margin: 8px 0 4px; }
+    .code-error { text-align: left; font-size: 13px; color: #E5655B; min-height: 18px; margin-bottom: 10px; }
+    #paypal-button-container-P-8CC962547K512510DNK4ZCQQ { position: relative; z-index: 1; }
+    .pp-success { text-align: center; padding: 8px 0 4px; }
+    .pp-success-icon { font-size: 36px; margin-bottom: 8px; }
+    .pp-success h3 { font-family: 'Syne', sans-serif; font-size: 22px; color: var(--gold); margin-bottom: 10px; }
+    .pp-success p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .pp-success strong { color: var(--white); }
+    .pp-success-id { margin-top: 12px; font-size: 12px !important; word-break: break-all; }
 
     /* SECTIONS */
     section.block { padding: 56px 0; }
@@ -182,11 +199,20 @@
         <span class="badge">⭐ Pioneer Pass</span>
         <div class="price">$9.99<small>/month</small></div>
         <p class="price-note">Cancel anytime.</p>
-        <!-- PayPal subscribe link goes here when sign-ups open.
-             Replace this <button> with:
-             <a class="btn-soon" style="cursor:pointer;border-style:solid;" href="PAYPAL_LINK" target="_blank" rel="noopener">Join with PayPal</a> -->
-        <button class="btn-soon" type="button" disabled>Coming soon</button>
-        <p class="price-fine">Sign-ups open soon. Follow along on <a href="https://discord.gg/QTSJuT2GgP" target="_blank" rel="noopener" style="color:var(--cyan);">Discord</a> to hear first.</p>
+        <div id="pp-signup">
+          <label class="code-label" for="pp-ref-code">Your TerraMine referral code</label>
+          <input id="pp-ref-code" class="code-input" type="text" inputmode="text" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false" maxlength="13" placeholder="TM-XXXXX" />
+          <p class="code-help">Find it in the app under Refer Friends. We use it to add the pass to your account.</p>
+          <p class="code-error" id="pp-code-error" role="alert"></p>
+          <div id="paypal-button-container-P-8CC962547K512510DNK4ZCQQ"></div>
+        </div>
+        <div id="pp-success" class="pp-success" hidden>
+          <div class="pp-success-icon">⭐</div>
+          <h3>Welcome, Pioneer!</h3>
+          <p>Your subscription is confirmed for <strong id="pp-success-code"></strong>. We'll activate your pass on that account, and your perks will show up the next time you open TerraMine.</p>
+          <p class="pp-success-id">PayPal subscription ID: <span id="pp-success-id"></span></p>
+        </div>
       </div>
     </section>
 
@@ -263,7 +289,7 @@
         <div class="step">
           <div class="step-num">02</div>
           <h3>Subscribe here</h3>
-          <p>Join on this page with PayPal and include your referral code with your payment.</p>
+          <p>Enter your referral code above the PayPal button, then subscribe with PayPal.</p>
         </div>
         <div class="step">
           <div class="step-num">03</div>
@@ -321,5 +347,65 @@
 </footer>
 
 <script src="home-page/site-nav.js" defer></script>
+<script src="https://www.paypal.com/sdk/js?client-id=AfdNLRnjikLhxwPaT7OSiniiZWlJ_hGgVZdNO-A7qUr5nSm8KdQ4IX3KtPPRhqynahxlPh1c64pEItXi&vault=true&intent=subscription"
+        data-sdk-integration-source="button-factory"></script>
+<script>
+  (function () {
+    var PLAN_ID = 'P-8CC962547K512510DNK4ZCQQ';
+    var input = document.getElementById('pp-ref-code');
+    var errorEl = document.getElementById('pp-code-error');
+
+    // TM- plus 4-10 letters/numbers: covers both auto-generated codes
+    // (TM-XXXXX) and vanity codes (TM-GOLDRUSH).
+    function normalizedCode() {
+      var v = (input.value || '').trim().toUpperCase().replace(/\s+/g, '');
+      if (v && v.indexOf('TM-') !== 0) v = 'TM-' + v.replace(/^TM/, '');
+      return v;
+    }
+    function isValid(code) { return /^TM-[A-Z0-9]{4,10}$/.test(code); }
+    function showError(msg, notInputProblem) {
+      errorEl.textContent = msg || '';
+      input.classList.toggle('invalid', !!msg && !notInputProblem);
+    }
+    input.addEventListener('input', function () { showError(''); });
+
+    if (typeof paypal === 'undefined') {
+      showError('PayPal couldn\'t load. Please refresh the page or try another browser.', true);
+      return;
+    }
+
+    paypal.Buttons({
+      style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
+      onClick: function (data, actions) {
+        var code = normalizedCode();
+        if (!isValid(code)) {
+          showError('Please enter your referral code (like TM-AB3X9) so we can add the pass to your account.');
+          input.focus();
+          return actions.reject();
+        }
+        input.value = code;
+        showError('');
+        return actions.resolve();
+      },
+      createSubscription: function (data, actions) {
+        return actions.subscription.create({
+          plan_id: PLAN_ID,
+          // Shows up on the subscription in PayPal so the pass can be
+          // matched to the right TerraMine account.
+          custom_id: normalizedCode()
+        });
+      },
+      onApprove: function (data) {
+        document.getElementById('pp-signup').hidden = true;
+        document.getElementById('pp-success-code').textContent = normalizedCode();
+        document.getElementById('pp-success-id').textContent = data.subscriptionID || '';
+        document.getElementById('pp-success').hidden = false;
+      },
+      onError: function () {
+        showError('Something went wrong with PayPal. You have not been charged. Please try again.', true);
+      }
+    }).render('#paypal-button-container-' + PLAN_ID);
+  })();
+</script>
 </body>
 </html>
