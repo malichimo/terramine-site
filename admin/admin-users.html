@@ -761,6 +761,10 @@
   // verified state live on the Firebase Auth user record, which only the
   // Admin SDK can change for someone other than the signed-in user.
   const adminUpdateUserEmail = httpsCallable(functions, 'adminUpdateUserEmail');
+  // Sept 27, 2026: Pioneer grant/revoke goes through a Cloud Function so
+  // partners linked to the account (TerraMine Calculator) get a
+  // player.pioneer_status_changed webhook. See functions/src/calculatorApi.ts.
+  const adminSetPioneerMembership = httpsCallable(functions, 'adminSetPioneerMembership');
 
   // ── Auth ──────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
@@ -1681,24 +1685,11 @@
       : 'Revoke Pioneer Club membership? They will lose Pioneer perks immediately (once those are wired up).');
     if (!confirmed) return;
 
-    const nowIso = new Date().toISOString();
-    const adminEmailVal = auth.currentUser ? auth.currentUser.email : null;
-    // Keep the original pioneerMemberSince if this account was a Pioneer
-    // before (e.g. revoked and re-granted later) rather than overwriting
-    // it -- mirrors createUser()'s "don't clobber a real existing value"
-    // pattern used everywhere else in this codebase.
-    const payload = grant
-      ? {
-          isPioneerMember: true,
-          pioneerMemberSince: (u && u.pioneerMemberSince) || nowIso,
-          pioneerGrantedBy: adminEmailVal,
-          pioneerGrantedAt: nowIso,
-          ...(notes ? { pioneerNotes: notes } : {}),
-        }
-      : { isPioneerMember: false, pioneerRevokedAt: nowIso, pioneerRevokedBy: adminEmailVal };
-
     try {
-      await setDoc(doc(db, 'users', uid), payload, { merge: true });
+      // The function writes the same fields this page used to write directly
+      // (keeping pioneerMemberSince on a re-grant) and returns them.
+      const res = await adminSetPioneerMembership({ uid, grant, notes });
+      const payload = res.data.payload;
       if (u) Object.assign(u, payload);
 
       document.getElementById('pioneerRow').outerHTML = renderPioneerRow(u || { id: uid, ...payload });
