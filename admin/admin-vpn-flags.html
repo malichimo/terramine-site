@@ -103,7 +103,14 @@
     justify-content:space-between;
   }
   .table-count { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; font-weight:400; }
-  .table-scroll { overflow-x:auto; }
+  /* ✅ Sept 27, 2026: the horizontal scrollbar used to live at the bottom
+     edge of the (very tall, 69+ row) table, off-screen unless you scrolled
+     the whole page all the way down first -- scroll back up even slightly
+     and it vanished. Giving table-scroll its own bounded height + overflow-y
+     keeps both scrollbars anchored to this panel, always visible/reachable
+     no matter where the page itself is scrolled. thead is made sticky
+     (within this panel, not the page) so column headers don't scroll away. */
+  .table-scroll { overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 320px); min-height:240px; }
   table { width:100%; border-collapse:collapse; font-size:12px; }
   thead th {
     padding:10px 16px;
@@ -117,6 +124,9 @@
     cursor:pointer;
     user-select:none;
     white-space:nowrap;
+    position:sticky;
+    top:0;
+    z-index:5;
   }
   thead th.no-sort { cursor:default; }
   thead th:hover:not(.no-sort) { color:var(--gold-light); }
@@ -258,6 +268,7 @@
         <thead>
           <tr>
             <th onclick="sortBy('nickname')">Username ↕</th>
+            <th onclick="sortBy('email')">Email ↕</th>
             <th class="no-sort">IP / ISP</th>
             <th class="no-sort">Location</th>
             <th onclick="sortBy('risk')">Risk Score ↕</th>
@@ -268,7 +279,7 @@
           </tr>
         </thead>
         <tbody id="flagTableBody">
-          <tr class="empty-row"><td colspan="8">Loading…</td></tr>
+          <tr class="empty-row"><td colspan="9">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -383,17 +394,18 @@
         const d = uSnap.exists() ? uSnap.data() : {};
         userCache.set(uid, {
           nickname: d.nickname || uid.substring(0, 8),
+          email: d.email || null,
           isBanned: d.isBanned === true,
           accountOnHold: d.accountOnHold === true,
           vpnWarned: d.vpnWarned === true,
           vpnWarnedAt: d.vpnWarnedAt || null,
         });
       } catch (e) {
-        userCache.set(uid, { nickname: uid.substring(0, 8), isBanned: false, accountOnHold: false, vpnWarned: false, vpnWarnedAt: null });
+        userCache.set(uid, { nickname: uid.substring(0, 8), email: null, isBanned: false, accountOnHold: false, vpnWarned: false, vpnWarnedAt: null });
       }
     }));
 
-    allFlags = raw.map(r => ({ ...r, ...(userCache.get(r.userId) || { nickname: '—', isBanned: false, accountOnHold: false, vpnWarned: false, vpnWarnedAt: null }) }));
+    allFlags = raw.map(r => ({ ...r, ...(userCache.get(r.userId) || { nickname: '—', email: null, isBanned: false, accountOnHold: false, vpnWarned: false, vpnWarnedAt: null }) }));
 
     updateTabCounts();
     render();
@@ -446,7 +458,7 @@
 
     const body = document.getElementById('flagTableBody');
     if (!sorted.length) {
-      body.innerHTML = '<tr class="empty-row"><td colspan="8">No flags in this view.</td></tr>';
+      body.innerHTML = '<tr class="empty-row"><td colspan="9">No flags in this view.</td></tr>';
       return;
     }
 
@@ -461,6 +473,12 @@
             <div class="copy-cell">
               <span>${escHtml(r.nickname)}</span>
               ${r.userId ? `<button class="copy-id-btn" title="Copy UID" onclick="copyToClipboard('${escAttr(r.userId)}', this)">📋</button>` : ''}
+            </div>
+          </td>
+          <td class="td-muted">
+            <div class="copy-cell">
+              <span>${escHtml(r.email || '—')}</span>
+              ${r.email ? `<button class="copy-id-btn" title="Copy email" onclick="copyToClipboard('${escAttr(r.email)}', this)">📋</button>` : ''}
             </div>
           </td>
           <td>
