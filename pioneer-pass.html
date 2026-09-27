@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pioneer Pass — TerraMine</title>
+  <meta name="description" content="Pioneer Pass is TerraMine's membership: a wider check-in range, 12-hour boosts, a free custom referral code, premium Calculator access, merch discounts and more. $9.99/month." />
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="home-page/site-nav.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080C10; --surface: #0F1620; --border: rgba(255,255,255,0.07);
+      --gold: #F5C542; --gold2: #E89B1A; --cyan: #5BE5D0;
+      --white: #EEF2F8; --muted: #6B7C93;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--white);
+      font-family: 'DM Sans', sans-serif; font-size: 17px;
+      -webkit-font-smoothing: antialiased; overflow-x: hidden;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(91,229,208,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,229,208,0.03) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+    main { position: relative; z-index: 1; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 clamp(16px, 4.5vw, 56px); }
+
+    /* HERO */
+    .pp-hero { padding: 140px 0 64px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: center; }
+    .eyebrow { font-size: 12px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin-bottom: 14px; }
+    .pp-hero h1 {
+      font-family: 'Syne', sans-serif; font-weight: 800; letter-spacing: -1.5px; line-height: 1.05;
+      font-size: clamp(40px, 6vw, 64px); margin-bottom: 20px;
+    }
+    .pp-hero h1 em { font-style: normal; color: var(--gold); }
+    .pp-hero p.lead { color: var(--muted); font-size: 17px; line-height: 1.7; max-width: 480px; }
+
+    .price-card {
+      position: relative; overflow: hidden;
+      background: var(--surface); border: 1px solid rgba(245,197,66,0.3); border-radius: 16px;
+      padding: 32px 28px; text-align: center;
+    }
+    .price-card::before {
+      content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,197,66,0.10) 0%, transparent 70%);
+      top: -160px; left: 50%; transform: translateX(-50%); pointer-events: none;
+    }
+    .badge { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--gold); border: 1px solid rgba(245,197,66,0.35); border-radius: 999px; padding: 5px 12px; margin-bottom: 16px; }
+    .price { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 52px; letter-spacing: -2px; color: var(--gold); line-height: 1; }
+    .price small { font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+    .price-note { color: var(--muted); font-size: 14px; margin: 10px 0 22px; }
+    .btn-soon {
+      display: block; width: 100%; padding: 15px 20px; border-radius: 10px; border: 1px dashed rgba(245,197,66,0.45);
+      background: rgba(245,197,66,0.08); color: var(--gold); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px;
+      cursor: not-allowed;
+    }
+    .price-fine { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+
+    /* SECTIONS */
+    section.block { padding: 56px 0; }
+    .section-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: clamp(30px, 4.5vw, 44px);
+      letter-spacing: -1px; line-height: 1.1; margin-bottom: 36px; max-width: 560px; }
+
+    /* PERKS */
+    .perks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2px;
+      border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .perk { background: var(--surface); padding: 30px 26px; transition: background 0.2s; }
+    .perk:hover { background: rgba(255,255,255,0.035); }
+    .perk-icon { font-size: 28px; display: block; margin-bottom: 14px; }
+    .perk h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.3px; margin-bottom: 8px; }
+    .perk p { font-size: 15px; color: var(--muted); line-height: 1.65; }
+    .perk .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--cyan); margin-top: 12px; }
+
+    /* COMPARE */
+    .compare { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden; font-size: 15px; }
+    .compare th, .compare td { padding: 16px 18px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .compare tr:last-child td { border-bottom: none; }
+    .compare th { font-family: 'Syne', sans-serif; font-size: 14px; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; }
+    .compare th.pp, .compare td.pp { color: var(--gold); }
+    .compare td:first-child { color: var(--white); font-weight: 500; }
+    .compare td { color: var(--muted); }
+    .table-scroll { overflow-x: auto; border-radius: 14px; }
+
+    /* STEPS */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .step { border: 1px solid var(--border); border-radius: 14px; padding: 26px 22px; background: var(--surface); }
+    .step-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 3px; color: var(--gold); opacity: 0.7; margin-bottom: 12px; }
+    .step h3 { font-family: 'Syne', sans-serif; font-size: 16px; margin-bottom: 8px; }
+    .step p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+    /* FAQ */
+    .faq details { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); margin-bottom: 10px; }
+    .faq summary { cursor: pointer; list-style: none; padding: 18px 22px; font-weight: 500; font-size: 16px; position: relative; padding-right: 48px; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: '+'; position: absolute; right: 22px; top: 50%; transform: translateY(-50%); color: var(--gold); font-size: 22px; }
+    .faq details[open] summary::after { content: '–'; }
+    .faq details p { padding: 0 22px 18px; color: var(--muted); font-size: 15px; line-height: 1.7; }
+    .faq a { color: var(--cyan); }
+
+    /* FOOTER */
+    footer { position: relative; z-index: 1; border-top: 1px solid var(--border); max-width: 920px; margin: 40px auto 0;
+      padding: 40px clamp(16px, 4.5vw, 56px) 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+    .footer-logo img { display: block; height: 60px; width: auto; }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 13px; color: var(--muted); }
+
+    @media (max-width: 820px) {
+      .pp-hero { grid-template-columns: 1fr; padding-top: 110px; }
+    }
+    @media (max-width: 768px) {
+      .pp-hero { padding-top: 40px; }
+    }
+  </style>
+</head>
+<body class="has-site-nav">
+
+<nav class="site-nav">
+  <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" /></a>
+  <div class="nav-links" id="nav-links-menu">
+      <a href="/pioneer-pass.html" class="is-active">Pioneer Pass</a>
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch Shop</a>
+      <a href="/heatmap.html">World Map</a>
+      <a href="/guide.html">Player's Guide</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+  </div>
+  <div class="nav-actions">
+    <a href="/portal.html" class="nav-login">My Portal</a>
+    <a href="/index.html#download" class="nav-cta">Download</a>
+    <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links-menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+
+    <!-- HERO -->
+    <section class="pp-hero">
+      <div>
+        <p class="eyebrow">Membership</p>
+        <h1>Pioneer <em>Pass</em></h1>
+        <p class="lead">For players who want to go further. Check in from farther away, boost your earnings for 12 hours at a time, claim a custom referral code, and unlock member-only extras.</p>
+      </div>
+      <div class="price-card">
+        <span class="badge">⭐ Pioneer Pass</span>
+        <div class="price">$9.99<small>/month</small></div>
+        <p class="price-note">Cancel anytime.</p>
+        <!-- PayPal subscribe link goes here when sign-ups open.
+             Replace this <button> with:
+             <a class="btn-soon" style="cursor:pointer;border-style:solid;" href="PAYPAL_LINK" target="_blank" rel="noopener">Join with PayPal</a> -->
+        <button class="btn-soon" type="button" disabled>Coming soon</button>
+        <p class="price-fine">Sign-ups open soon. Follow along on <a href="https://discord.gg/QTSJuT2GgP" target="_blank" rel="noopener" style="color:var(--cyan);">Discord</a> to hear first.</p>
+      </div>
+    </section>
+
+    <!-- PERKS -->
+    <section class="block" id="perks">
+      <p class="eyebrow">What You Get</p>
+      <h2 class="section-title">Member perks</h2>
+      <div class="perks">
+        <div class="perk">
+          <span class="perk-icon">📍</span>
+          <h3>Wider Check-In Range</h3>
+          <p>Check in to mines from a 7×7 grid around you instead of the standard 5×5. Reach more mines without crossing the street.</p>
+        </div>
+        <div class="perk">
+          <span class="perk-icon">⚡</span>
+          <h3>12-Hour Pioneer Boost</h3>
+          <p>Watch one ad and get 12 hours of 20× passive earnings. Use it twice a day, on top of the regular free and ad boosts.</p>
+        </div>
+        <div class="perk">
+          <span class="perk-icon">🏷</span>
+          <h3>Free Custom Referral Code</h3>
+          <p>Claim a vanity code like <strong style="color:var(--white);">TM-GOLDRUSH</strong> and change it once a month for free. Your regular code keeps working too.</p>
+        </div>
+        <div class="perk">
+          <span class="perk-icon">🧮</span>
+          <h3>Premium Calculator Access</h3>
+          <p>Unlock the premium tier of the TerraMine Calculator to plan your mines and track your earnings.</p>
+        </div>
+        <div class="perk">
+          <span class="perk-icon">👕</span>
+          <h3>Merch Discounts</h3>
+          <p>Member-only pricing in the TerraMine merch shop.</p>
+        </div>
+        <div class="perk">
+          <span class="perk-icon">✨</span>
+          <h3>And More</h3>
+          <p>We're adding new perks for Pioneers as TerraMine grows. Members get them automatically.</p>
+          <span class="tag">More coming</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPARE -->
+    <section class="block" id="compare">
+      <p class="eyebrow">Compare</p>
+      <h2 class="section-title">Free vs. Pioneer</h2>
+      <div class="table-scroll">
+        <table class="compare">
+          <thead>
+            <tr><th></th><th>Free</th><th class="pp">⭐ Pioneer Pass</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Check-in range</td><td>5×5 grid</td><td class="pp">7×7 grid</td></tr>
+            <tr><td>Boosts</td><td>30-min free &amp; ad boosts, up to 8 hours</td><td class="pp">Everything free players get, plus two 12-hour Pioneer Boosts a day</td></tr>
+            <tr><td>Custom referral code</td><td>5,000 TB to claim or change</td><td class="pp">Free, change once a month</td></tr>
+            <tr><td>TerraMine Calculator</td><td>—</td><td class="pp">Premium access</td></tr>
+            <tr><td>Merch shop</td><td>Regular pricing</td><td class="pp">Member discounts</td></tr>
+            <tr><td>Property purchases, mines, games</td><td>Included</td><td class="pp">Included</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="block" id="how">
+      <p class="eyebrow">How It Works</p>
+      <h2 class="section-title">Joining is simple</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <h3>Find your referral code</h3>
+          <p>Open TerraMine and go to Refer Friends. Your code looks like TM-XXXXX. We use it to find your account.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <h3>Subscribe here</h3>
+          <p>Join on this page with PayPal and include your referral code with your payment.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <h3>Start playing</h3>
+          <p>Once your pass is active, your perks show up the next time you open the app.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="block faq" id="faq">
+      <p class="eyebrow">Questions</p>
+      <h2 class="section-title">Pioneer Pass FAQ</h2>
+      <details>
+        <summary>How much does it cost?</summary>
+        <p>$9.99 a month, billed through PayPal.</p>
+      </details>
+      <details>
+        <summary>Can I cancel?</summary>
+        <p>Yes, anytime from your PayPal account. Your perks stay on until the end of the month you've paid for.</p>
+      </details>
+      <details>
+        <summary>What happens to my custom referral code if I cancel?</summary>
+        <p>You keep it. Changing it later works the same as for any player (5,000 TB, once a month).</p>
+      </details>
+      <details>
+        <summary>Can I buy Pioneer Pass inside the app?</summary>
+        <p>No. Pioneer Pass is only available here on terramine.app.</p>
+      </details>
+      <details>
+        <summary>Do I need the latest version of the app?</summary>
+        <p>Yes. Make sure TerraMine is up to date from the <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a> or <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a> to see every perk.</p>
+      </details>
+      <details>
+        <summary>I paid but don't see my perks.</summary>
+        <p>Close and reopen the app. If they're still missing, email <a href="mailto:scott@terramine.app">scott@terramine.app</a> with your referral code and we'll sort it out.</p>
+      </details>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <a class="footer-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" /></a>
+  <div class="footer-links">
+    <a href="/pioneer-pass.html">Pioneer Pass</a>
+    <a href="/guide.html">Player's Guide</a>
+    <a href="/faq.html">FAQ</a>
+    <a href="/heatmap.html">World Map</a>
+    <a href="/privacy.html">Privacy Policy</a>
+    <a href="/terms.html">Terms of Service</a>
+    <a href="/portal.html">My Portal</a>
+  </div>
+  <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+</footer>
+
+<script src="home-page/site-nav.js" defer></script>
+</body>
+</html>
