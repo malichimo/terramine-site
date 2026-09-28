@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pioneer Pass — TerraMine</title>
-  <meta name="description" content="Pioneer Pass is TerraMine's membership: a wider check-in range, 12-hour boosts, a free custom referral code, premium Calculator access, merch discounts and more. $9.99/month." />
+  <meta name="description" content="Pioneer Pass is TerraMine's membership: a wider check-in range, 12-hour boosts, a free custom referral code, premium Calculator access, merch discounts and more. $9.99/month or $100/year. Coming soon." />
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <meta property="og:title" content="TerraMine Pioneer Pass" />
   <meta property="og:description" content="A wider check-in range, 12-hour boosts, a free custom referral code, premium Calculator access, merch discounts and more." />
@@ -86,7 +86,19 @@
     .code-input.invalid { border-color: #E5655B; }
     .code-help { text-align: left; font-size: 12px; color: var(--muted); line-height: 1.5; margin: 8px 0 4px; }
     .code-error { text-align: left; font-size: 13px; color: #E5655B; min-height: 18px; margin-bottom: 10px; }
-    #paypal-button-container-P-8CC962547K512510DNK4ZCQQ { position: relative; z-index: 1; }
+    .pp-buttons { position: relative; z-index: 1; }
+    .plan-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; position: relative; z-index: 1; }
+    .plan-opt {
+      position: relative; padding: 12px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.03); color: var(--muted); cursor: pointer; font: inherit; text-align: center;
+    }
+    .plan-opt strong { display: block; font-family: 'Syne', sans-serif; font-size: 16px; color: var(--white); }
+    .plan-opt span { font-size: 12px; }
+    .plan-opt[aria-pressed="true"] { border-color: var(--gold); background: rgba(245,197,66,0.10); }
+    .plan-opt[aria-pressed="true"] strong { color: var(--gold); }
+    .plan-save { position: absolute; top: -9px; right: 8px; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; background: var(--gold); color: #1a1a1a; border-radius: 999px; padding: 2px 7px; }
+    .soon-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 12px; }
     .pp-success { text-align: center; padding: 8px 0 4px; }
     .pp-success-icon { font-size: 36px; margin-bottom: 8px; }
     .pp-success h3 { font-family: 'Syne', sans-serif; font-size: 22px; color: var(--gold); margin-bottom: 10px; }
@@ -197,15 +209,24 @@
       </div>
       <div class="price-card">
         <span class="badge">⭐ Pioneer Pass</span>
-        <div class="price">$9.99<small>/month</small></div>
-        <p class="price-note">Cancel anytime.</p>
-        <div id="pp-signup">
+        <div class="plan-toggle" role="group" aria-label="Choose a plan">
+          <button type="button" class="plan-opt" data-plan="monthly" aria-pressed="true"><strong>Monthly</strong><span>$9.99 / month</span></button>
+          <button type="button" class="plan-opt" data-plan="yearly" aria-pressed="false"><span class="plan-save">Save 17%</span><strong>Yearly</strong><span>$100 / year</span></button>
+        </div>
+        <div class="price" id="pp-price">$9.99<small>/month</small></div>
+        <p class="price-note" id="pp-price-note">Cancel anytime.</p>
+        <div id="pp-soon">
+          <button type="button" class="btn-soon" disabled>Coming Soon</button>
+          <p class="soon-note">Pioneer Pass launches with the next TerraMine app update. Check back soon!</p>
+        </div>
+        <div id="pp-signup" hidden>
           <label class="code-label" for="pp-ref-code">Your TerraMine referral code</label>
           <input id="pp-ref-code" class="code-input" type="text" inputmode="text" autocomplete="off"
                  autocapitalize="characters" spellcheck="false" maxlength="13" placeholder="TM-XXXXX" />
           <p class="code-help">Find it in the app under Refer Friends. We use it to add the pass to your account.</p>
           <p class="code-error" id="pp-code-error" role="alert"></p>
-          <div id="paypal-button-container-P-8CC962547K512510DNK4ZCQQ"></div>
+          <div class="pp-buttons" id="paypal-button-container-P-8CC962547K512510DNK4ZCQQ"></div>
+          <div class="pp-buttons" id="paypal-button-container-P-0KJ68511CF260272HNK5LPKY" hidden></div>
         </div>
         <div id="pp-success" class="pp-success" hidden>
           <div class="pp-success-icon">⭐</div>
@@ -289,7 +310,7 @@
         <div class="step">
           <div class="step-num">02</div>
           <h3>Subscribe here</h3>
-          <p>Enter your referral code above the PayPal button, then subscribe with PayPal.</p>
+          <p>Pick monthly or yearly, enter your referral code above the PayPal button, then subscribe with PayPal.</p>
         </div>
         <div class="step">
           <div class="step-num">03</div>
@@ -305,11 +326,15 @@
       <h2 class="section-title">Pioneer Pass FAQ</h2>
       <details>
         <summary>How much does it cost?</summary>
-        <p>$9.99 a month, billed through PayPal.</p>
+        <p>$9.99 a month, or $100 a year (about 17% less than paying monthly). Both are billed through PayPal.</p>
+      </details>
+      <details>
+        <summary>When can I sign up?</summary>
+        <p>Pioneer Pass is coming soon. It launches with the next TerraMine app update, which is waiting on App Store approval. Check back here soon.</p>
       </details>
       <details>
         <summary>Can I cancel?</summary>
-        <p>Yes, anytime from your PayPal account. Your perks stay on until the end of the month you've paid for.</p>
+        <p>Yes, anytime from your PayPal account. Your perks stay on until the end of the month or year you've paid for.</p>
       </details>
       <details>
         <summary>What happens to my custom referral code if I cancel?</summary>
@@ -347,13 +372,46 @@
 </footer>
 
 <script src="home-page/site-nav.js" defer></script>
-<script src="https://www.paypal.com/sdk/js?client-id=AfdNLRnjikLhxwPaT7OSiniiZWlJ_hGgVZdNO-A7qUr5nSm8KdQ4IX3KtPPRhqynahxlPh1c64pEItXi&vault=true&intent=subscription"
-        data-sdk-integration-source="button-factory"></script>
 <script>
   (function () {
-    var PLAN_ID = 'P-8CC962547K512510DNK4ZCQQ';
+    // ── LAUNCH SWITCH ──────────────────────────────────────────────────
+    // false = "Coming Soon" (no PayPal loaded, no way to subscribe).
+    // Flip to true once the app update with Pioneer perks is live on both stores.
+    var PIONEER_LIVE = false;
+
+    var CLIENT_ID = 'AfdNLRnjikLhxwPaT7OSiniiZWlJ_hGgVZdNO-A7qUr5nSm8KdQ4IX3KtPPRhqynahxlPh1c64pEItXi';
+    var PLANS = {
+      monthly: { id: 'P-8CC962547K512510DNK4ZCQQ', price: '$9.99<small>/month</small>', note: 'Cancel anytime.' },
+      yearly:  { id: 'P-0KJ68511CF260272HNK5LPKY', price: '$100<small>/year</small>',   note: 'One payment a year. Cancel anytime.' }
+    };
+    var current = 'monthly';
+
     var input = document.getElementById('pp-ref-code');
     var errorEl = document.getElementById('pp-code-error');
+    var priceEl = document.getElementById('pp-price');
+    var noteEl = document.getElementById('pp-price-note');
+
+    function selectPlan(key) {
+      current = key;
+      document.querySelectorAll('.plan-opt').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-plan') === key ? 'true' : 'false');
+      });
+      priceEl.innerHTML = PLANS[key].price;
+      noteEl.textContent = PIONEER_LIVE ? PLANS[key].note : 'Coming soon.';
+      Object.keys(PLANS).forEach(function (k) {
+        var el = document.getElementById('paypal-button-container-' + PLANS[k].id);
+        if (el) el.hidden = (k !== key);
+      });
+    }
+    document.querySelectorAll('.plan-opt').forEach(function (b) {
+      b.addEventListener('click', function () { selectPlan(b.getAttribute('data-plan')); });
+    });
+    selectPlan('monthly');
+
+    if (!PIONEER_LIVE) return;
+
+    document.getElementById('pp-soon').hidden = true;
+    document.getElementById('pp-signup').hidden = false;
 
     // TM- plus 4-10 letters/numbers: covers both auto-generated codes
     // (TM-XXXXX) and vanity codes (TM-GOLDRUSH).
@@ -369,42 +427,50 @@
     }
     input.addEventListener('input', function () { showError(''); });
 
-    if (typeof paypal === 'undefined') {
-      showError('PayPal couldn\'t load. Please refresh the page or try another browser.', true);
-      return;
+    function renderButtons() {
+      Object.keys(PLANS).forEach(function (key) {
+        var planId = PLANS[key].id;
+        paypal.Buttons({
+          style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
+          onClick: function (data, actions) {
+            var code = normalizedCode();
+            if (!isValid(code)) {
+              showError('Please enter your referral code (like TM-AB3X9) so we can add the pass to your account.');
+              input.focus();
+              return actions.reject();
+            }
+            input.value = code;
+            showError('');
+            return actions.resolve();
+          },
+          createSubscription: function (data, actions) {
+            return actions.subscription.create({
+              plan_id: planId,
+              // Shows up on the subscription in PayPal so the pass can be
+              // matched to the right TerraMine account.
+              custom_id: normalizedCode()
+            });
+          },
+          onApprove: function (data) {
+            document.getElementById('pp-signup').hidden = true;
+            document.querySelector('.plan-toggle').hidden = true;
+            document.getElementById('pp-success-code').textContent = normalizedCode();
+            document.getElementById('pp-success-id').textContent = data.subscriptionID || '';
+            document.getElementById('pp-success').hidden = false;
+          },
+          onError: function () {
+            showError('Something went wrong with PayPal. You have not been charged. Please try again.', true);
+          }
+        }).render('#paypal-button-container-' + planId);
+      });
     }
 
-    paypal.Buttons({
-      style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
-      onClick: function (data, actions) {
-        var code = normalizedCode();
-        if (!isValid(code)) {
-          showError('Please enter your referral code (like TM-AB3X9) so we can add the pass to your account.');
-          input.focus();
-          return actions.reject();
-        }
-        input.value = code;
-        showError('');
-        return actions.resolve();
-      },
-      createSubscription: function (data, actions) {
-        return actions.subscription.create({
-          plan_id: PLAN_ID,
-          // Shows up on the subscription in PayPal so the pass can be
-          // matched to the right TerraMine account.
-          custom_id: normalizedCode()
-        });
-      },
-      onApprove: function (data) {
-        document.getElementById('pp-signup').hidden = true;
-        document.getElementById('pp-success-code').textContent = normalizedCode();
-        document.getElementById('pp-success-id').textContent = data.subscriptionID || '';
-        document.getElementById('pp-success').hidden = false;
-      },
-      onError: function () {
-        showError('Something went wrong with PayPal. You have not been charged. Please try again.', true);
-      }
-    }).render('#paypal-button-container-' + PLAN_ID);
+    var sdk = document.createElement('script');
+    sdk.src = 'https://www.paypal.com/sdk/js?client-id=' + CLIENT_ID + '&vault=true&intent=subscription';
+    sdk.setAttribute('data-sdk-integration-source', 'button-factory');
+    sdk.onload = renderButtons;
+    sdk.onerror = function () { showError('PayPal couldn\'t load. Please refresh the page or try another browser.', true); };
+    document.head.appendChild(sdk);
   })();
 </script>
 </body>
