@@ -1304,7 +1304,31 @@
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
     try {
-      const userData = options.preview ? PREVIEW_USER_DATA : (await db.collection('users').doc(user.uid).get()).data() || {};
+      const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
+      const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
+
+      // Debug: log the logged-in user's Auth basics + Firestore profile doc.
+      // Plain object only (no raw User / ID or refresh tokens).
+      try {
+        console.group('[TerraMine] Logged-in user');
+        console.log('Auth user:', {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          emailVerified: user.emailVerified,
+          providerData: (user.providerData || []).map(p => ({
+            providerId: p.providerId, uid: p.uid, email: p.email,
+            displayName: p.displayName, photoURL: p.photoURL, phoneNumber: p.phoneNumber
+          })),
+          metadata: {
+            creationTime: user.metadata && user.metadata.creationTime,
+            lastSignInTime: user.metadata && user.metadata.lastSignInTime
+          }
+        });
+        console.log('Firestore users doc id:', userSnap ? userSnap.id : '(preview)');
+        console.log('Firestore users doc data:', userSnap ? userSnap.data() : PREVIEW_USER_DATA);
+        console.groupEnd();
+      } catch (logErr) { try { console.groupEnd(); } catch (e) {} }
 
       const nickname = userData.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
       $('nav-nickname').textContent = nickname;
