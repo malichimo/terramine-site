@@ -196,5 +196,11 @@ body.has-site-nav {
 body.has-site-nav.home-page {
   padding-top: 0;
 }
+@media (max-width: 1330px) {
+  /* Nav is position: relative here, so no fixed-nav clearance needed */
+  body.has-site-nav {
+    padding-top: 0;
+  }
+}
 
 .nav-links a.is-active { color: var(--sn-white); }
