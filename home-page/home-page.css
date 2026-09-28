@@ -626,7 +626,7 @@ img.mine-icon { font-size: 0; }
 
 /* ── REFERRAL CALLOUT ── */
 .referral-band {
-  position: center;
+  position: relative;
   z-index: 1;
   margin: 3em auto;
   border-radius: 16px;

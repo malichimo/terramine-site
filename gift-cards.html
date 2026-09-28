@@ -135,6 +135,10 @@
     .card-table tbody td { padding: 11px 18px; font-size: 14px; border-bottom: 1px solid var(--border); }
     .card-table tbody tr:last-child td { border-bottom: none; }
     .card-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    @media (max-width: 500px) {
+      .card-table thead th, .card-table tbody td { padding-left: 8px; padding-right: 8px; }
+      .card-table thead th { letter-spacing: 0.5px; }
+    }
     .denom-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
     .status-badge {
       display: inline-flex; align-items: center; gap: 6px;
