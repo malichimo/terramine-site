@@ -422,6 +422,14 @@ nav {
   }
 }
 
+/* ≤1330px: nav is position: relative (in flow), so drop the 80px fixed-nav clearance from the hero top */
+@media (max-width: 1330px) {
+  .hero { padding-top: clamp(48px, calc(14vh - 80px), 76px); }
+}
+@media (min-width: 1200px) and (max-width: 1330px) and (max-height: 850px) {
+  .hero { padding-top: 24px; }
+}
+
 @media (min-width: 820px) and (max-width: 1100px) {
   .hero {
     padding-left: clamp(56px, 7vw, 96px);
@@ -626,7 +634,7 @@ img.mine-icon { font-size: 0; }
 
 /* ── REFERRAL CALLOUT ── */
 .referral-band {
-  position: center;
+  position: relative;
   z-index: 1;
   margin: 3em auto;
   border-radius: 16px;
@@ -1143,4 +1151,24 @@ footer {
   .community-copy { font-size: 15px; margin-bottom: 18px; }
   footer { flex-direction: column; align-items: flex-start; padding: 32px 16px 24px; }
   .scroll-top-btn { right: 16px; bottom: 16px; width: 44px; height: 44px; font-size: 20px; }
+}
+/* ≤500px: logo centered on its own row; buttons left, menu toggle right below it */
+@media (max-width: 500px) {
+  nav {
+    flex-wrap: wrap;
+    height: auto;
+    justify-content: center;
+    row-gap: 10px;
+  }
+  nav .nav-logo {
+    flex: 0 0 100%;
+    justify-content: center;
+    max-width: none;
+  }
+  nav .nav-actions {
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+  nav .nav-menu-toggle { margin-left: auto; }
 }

@@ -196,5 +196,32 @@ body.has-site-nav {
 body.has-site-nav.home-page {
   padding-top: 0;
 }
+@media (max-width: 1330px) {
+  /* Nav is position: relative here, so no fixed-nav clearance needed */
+  body.has-site-nav {
+    padding-top: 0;
+  }
+}
 
 .nav-links a.is-active { color: var(--sn-white); }
+
+/* ≤500px: logo centered on its own row; buttons left, menu toggle right below it */
+@media (max-width: 500px) {
+  nav.site-nav {
+    flex-wrap: wrap;
+    height: auto;
+    justify-content: center;
+    row-gap: 10px;
+  }
+  nav.site-nav .nav-logo {
+    flex: 0 0 100%;
+    justify-content: center;
+    max-width: none;
+  }
+  nav.site-nav .nav-actions {
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+  nav.site-nav .nav-menu-toggle { margin-left: auto; }
+}

@@ -302,3 +302,23 @@
     margin-left: auto;
   }
 }
+
+/* ≤420px: logo centered on top; USD + TB balances centered below it;
+   bottom row: account flex-start, ☰ flex-end. */
+@media (max-width: 420px) {
+  .top-nav .nav-balances {
+    flex: 0 0 100%;
+    width: 100%;
+    justify-content: center;
+  }
+  .top-nav .nav-right {
+    flex: 0 0 100%;
+    width: 100%;
+    margin-left: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .top-nav .nav-right .nav-account { margin-right: auto; }
+  .top-nav .nav-right .nav-menu-toggle { margin-left: auto; }
+}
