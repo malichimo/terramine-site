@@ -1144,3 +1144,23 @@ footer {
   footer { flex-direction: column; align-items: flex-start; padding: 32px 16px 24px; }
   .scroll-top-btn { right: 16px; bottom: 16px; width: 44px; height: 44px; font-size: 20px; }
 }
+/* ≤500px: logo centered on its own row; buttons left, menu toggle right below it */
+@media (max-width: 500px) {
+  nav {
+    flex-wrap: wrap;
+    height: auto;
+    justify-content: center;
+    row-gap: 10px;
+  }
+  nav .nav-logo {
+    flex: 0 0 100%;
+    justify-content: center;
+    max-width: none;
+  }
+  nav .nav-actions {
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+  nav .nav-menu-toggle { margin-left: auto; }
+}
