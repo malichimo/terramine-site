@@ -304,7 +304,7 @@
 }
 
 /* ≤420px: logo centered on top; USD + TB balances centered below it;
-   bottom row: account centered, ☰ flex-end. */
+   bottom row: account flex-start, ☰ flex-end. */
 @media (max-width: 420px) {
   .top-nav .nav-balances {
     flex: 0 0 100%;
@@ -315,16 +315,10 @@
     flex: 0 0 100%;
     width: 100%;
     margin-left: 0;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
   }
-  .top-nav .nav-right .nav-account {
-    grid-column: 2;
-    justify-self: center;
-  }
-  .top-nav .nav-right .nav-menu-toggle {
-    grid-column: 3;
-    justify-self: end;
-  }
+  .top-nav .nav-right .nav-account { margin-right: auto; }
+  .top-nav .nav-right .nav-menu-toggle { margin-left: auto; }
 }
