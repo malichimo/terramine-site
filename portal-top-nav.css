@@ -215,8 +215,11 @@
 .top-nav .nav-menu-toggle span:nth-child(2) { transform: translateY(0); }
 .top-nav .nav-menu-toggle span:nth-child(3) { transform: translateY(5px); }
 
-/* ≤1300px: [Logo] … [USD][TB centered] … [Account][☰] */
-@media (max-width: 1300px) {
+/* ≤1480px: [Logo] … [USD][TB centered] … [Account][☰]
+   (was 1300px; raised Sep 29, 2026 when the Pioneer Pass logo became the first
+   link — below ~1478px the 7-link row no longer fits beside long balances +
+   nickname and .nav-links would clip, hiding e.g. "Map") */
+@media (max-width: 1480px) {
   .top-nav {
     gap: 10px;
   }
@@ -274,7 +277,7 @@
 
 /* ≤640px: two-row header — logo centered full-width on top;
    bottom row: balances flex-start | account + ☰ flex-end.
-   Does not change 641–1300px single-row hamburger layout. */
+   Does not change 641–1480px single-row hamburger layout. */
 @media (max-width: 640px) {
   .top-nav {
     flex-wrap: wrap;
@@ -321,4 +324,41 @@
   }
   .top-nav .nav-right .nav-account { margin-right: auto; }
   .top-nav .nav-right .nav-menu-toggle { margin-left: auto; }
+}
+
+/* ── Pioneer Pass item (Sep 29, 2026) — first link in the portal nav ──
+   Desktop: wooden-sign logo, 44px tall, centered with the text links.
+   Hamburger menu: plain text "Pioneer Pass" (logo hidden). Only one of the
+   two is ever displayed, so screen readers get a single "Pioneer Pass". */
+.top-nav .nav-pp-text { display: none; }
+.top-nav .nav-pp-pic { display: block; line-height: 0; }
+.top-nav .nav-pp-logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  transition: filter 0.2s ease;
+}
+.top-nav .nav-links a.nav-pp:hover .nav-pp-logo,
+.top-nav .nav-links a.nav-pp:focus-visible .nav-pp-logo {
+  filter: brightness(1.15) contrast(1.15);
+}
+.top-nav .nav-links a.nav-pp:focus-visible {
+  outline: 2px solid var(--cyan, #4FC3F7);
+  outline-offset: 2px;
+}
+@media (min-width: 1481px) {
+  /* room above/below the 44px sign so the focus ring isn't clipped by
+     .nav-links' overflow-x:auto (row stays inside the 80px bar) */
+  .top-nav .nav-links { padding-top: 6px; padding-bottom: 6px; }
+  .top-nav .nav-links a.nav-pp {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    background: none;
+  }
+  .top-nav .nav-links a.nav-pp:hover { background: none; }
+}
+@media (max-width: 1480px) {
+  .top-nav .nav-pp-pic { display: none; }
+  .top-nav .nav-pp-text { display: inline; }
 }
