@@ -364,6 +364,13 @@
       font:600 13px/1.3 'DM Sans',sans-serif; color:rgba(255,255,255,.92);
       letter-spacing:.2px; min-height:1.3em;
     }
+    .mine-map-bulk-rename-preview {
+      font:500 12px/1.4 'DM Sans',sans-serif; color:rgba(255,255,255,.72);
+      overflow-wrap:anywhere; word-break:break-word; min-width:0;
+    }
+    .mine-map-bulk-rename-preview:empty { display:none; }
+    .mine-map-bulk-rename-preview b { color:#fff; font-weight:700; }
+    .mine-map-bulk-rename-preview.is-error { color:#ffab91; font-weight:600; }
     /* ── Bulk Greeting (reuses the Bulk Rename box-select + dialog shell) ── */
     .mine-map-bulk-greet-btn { display:inline-flex; align-items:center; gap:5px; }
     .mine-map-bulk-greet-btn svg { width:15px; height:15px; flex-shrink:0; display:block; margin:-2px 0; }
@@ -584,7 +591,7 @@
             <div class="mine-map-bulk-rename-list" id="mine-map-bulk-rename-list"></div>
             <div class="mine-map-bulk-rename-form">
               <label class="bulk-name-label" for="mine-map-bulk-rename-input">New name
-                <input type="text" id="mine-map-bulk-rename-input" autocomplete="off" spellcheck="false">
+                <input type="text" id="mine-map-bulk-rename-input" autocomplete="off" spellcheck="false" placeholder="Optional if appending type or number" aria-describedby="mine-map-bulk-rename-preview">
               </label>
               <label class="bulk-seq-label">
                 <input type="checkbox" id="mine-map-bulk-rename-append-type">
@@ -602,6 +609,7 @@
                 <input type="checkbox" id="mine-map-bulk-rename-bydate" disabled>
                 <span>Number in order of purchase date</span>
               </label>
+              <div class="mine-map-bulk-rename-preview" id="mine-map-bulk-rename-preview" aria-live="polite"></div>
               <div class="mine-map-bulk-rename-apply-wrap">
                 <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-rename-apply">Apply</button>
                 <div class="mine-map-bulk-rename-progress" id="mine-map-bulk-rename-progress" hidden aria-live="polite"></div>
@@ -1717,6 +1725,7 @@
     const progress = $('mine-map-bulk-rename-progress');
     if (progress) { progress.hidden = true; progress.textContent = ''; }
     bulkRenameSelected = [];
+    updateBulkRenamePreview(false);
   }
   function stopBulkRenameDrawLayer() {
     const layer = $('mine-map-select-layer');
@@ -1905,6 +1914,7 @@
     }
     const apply = $('mine-map-bulk-rename-apply');
     if (apply) apply.disabled = bulkRenameSelected.length === 0;
+    updateBulkRenamePreview(false);
   }
   function openBulkRenameDialog(mines) {
     bulkRenameSelected = mines.slice();
@@ -1918,6 +1928,9 @@
       input.value = '';
       setTimeout(function () { try { input.focus(); } catch (e) {} }, 0);
     }
+    const preview = $('mine-map-bulk-rename-preview');
+    if (preview) preview.classList.remove('is-error');
+    updateBulkRenamePreview(false);
   }
   function finishBulkRenameSelection(bounds) {
     stopBulkRenameDrawLayer();
@@ -2009,24 +2022,96 @@
       await detailsRef.set(payload, { merge: true });
     }
   }
-  async function applyBulkRename() {
+  // Bulk Rename name builder. The title may be blank only when "Append mine type" and/or
+  // "Append sequential numbering" is on; the result is then just those parts ("Gold 01", "01",
+  // "Gold"). Blank title + no append option is blocked (never saves an empty name).
+  const BULK_RENAME_NEED_NAME_MSG = 'Enter a new name, or check \u201cAppend the Mine Type Name\u201d or \u201cAppend sequential numbering\u201d to name mines by type/number only.';
+  function bulkRenameBaseValue() {
     const input = $('mine-map-bulk-rename-input');
+    return input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
+  }
+  function bulkRenameNameOpts(total) {
     const seq = $('mine-map-bulk-rename-seq');
     const appendTypeEl = $('mine-map-bulk-rename-append-type');
     const padEl = $('mine-map-bulk-rename-pad');
+    const useSeq = !!(seq && seq.checked);
+    return {
+      useSeq: useSeq,
+      useType: !!(appendTypeEl && appendTypeEl.checked),
+      usePad: !!(useSeq && padEl && padEl.checked),
+      padWidth: Math.max(2, String(total || 0).length)
+    };
+  }
+  function bulkRenameComposeName(base, mine, i, o) {
+    const parts = [];
+    if (base) parts.push(base);
+    if (o.useType) {
+      const tk = typeKey(mine || {});
+      parts.push((TYPE_LABEL && TYPE_LABEL[tk]) ? TYPE_LABEL[tk] : (tk || 'Rock'));
+    }
+    if (o.useSeq) {
+      const n = i + 1;
+      parts.push(o.usePad ? String(n).padStart(o.padWidth, '0') : String(n));
+    }
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+  function bulkRenameNameIsValid(base, o) {
+    return !!(base || o.useType || o.useSeq);
+  }
+  // Live preview line: first (and last) resulting name in apply order, or the inline
+  // "need a name" message. showError=true (Apply attempt) switches the message to error style.
+  function updateBulkRenamePreview(showError) {
+    const el = $('mine-map-bulk-rename-preview');
+    if (!el) return;
+    const dlg = $('mine-map-bulk-rename');
+    if (!bulkRenameSelected.length || (dlg && dlg.hidden)) {
+      el.textContent = '';
+      el.classList.remove('is-error');
+      el.removeAttribute('role');
+      return;
+    }
+    const base = bulkRenameBaseValue();
+    const mines = bulkRenameOrderedMines(bulkRenameUsesPurchaseOrder());
+    const o = bulkRenameNameOpts(mines.length);
+    if (!bulkRenameNameIsValid(base, o)) {
+      const wasErr = el.classList.contains('is-error');
+      el.textContent = BULK_RENAME_NEED_NAME_MSG;
+      el.classList.toggle('is-error', !!showError || wasErr);
+      if (showError || wasErr) el.setAttribute('role', 'alert'); else el.removeAttribute('role');
+      return;
+    }
+    el.classList.remove('is-error');
+    el.removeAttribute('role');
+    el.textContent = '';
+    const first = bulkRenameComposeName(base, mines[0], 0, o);
+    const lastIdx = mines.length - 1;
+    const last = lastIdx > 0 ? bulkRenameComposeName(base, mines[lastIdx], lastIdx, o) : '';
+    el.appendChild(document.createTextNode('Preview: '));
+    const b1 = document.createElement('b');
+    b1.textContent = first;
+    el.appendChild(b1);
+    if (last && last !== first) {
+      el.appendChild(document.createTextNode(lastIdx > 1 ? ' \u2026 ' : ', '));
+      const b2 = document.createElement('b');
+      b2.textContent = last;
+      el.appendChild(b2);
+    } else if (lastIdx > 0) {
+      el.appendChild(document.createTextNode(' (all ' + mines.length + ')'));
+    }
+  }
+  async function applyBulkRename() {
+    const input = $('mine-map-bulk-rename-input');
     const applyBtn = $('mine-map-bulk-rename-apply');
-    const base = input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
-    if (!base) {
-      flashShowcaseNote('Enter a new name.');
+    const base = bulkRenameBaseValue();
+    const mines = bulkRenameOrderedMines(bulkRenameUsesPurchaseOrder());
+    const total = mines.length;
+    const nameOpts = bulkRenameNameOpts(total);
+    if (!bulkRenameNameIsValid(base, nameOpts)) {
+      updateBulkRenamePreview(true);
       if (input) input.focus();
       return;
     }
-    const mines = bulkRenameOrderedMines(bulkRenameUsesPurchaseOrder());
-    const useSeq = !!(seq && seq.checked);
-    const useType = !!(appendTypeEl && appendTypeEl.checked);
-    const usePad = !!(useSeq && padEl && padEl.checked);
-    const total = mines.length;
-    const padWidth = Math.max(2, String(total).length);
+    if (!total) return;
     if (applyBtn) applyBtn.disabled = true;
     const progress = $('mine-map-bulk-rename-progress');
     if (progress) {
@@ -2035,16 +2120,8 @@
     }
     let ok = 0, fail = 0;
     for (let i = 0; i < mines.length; i++) {
-      const parts = [base];
-      if (useType) {
-        const tk = typeKey(mines[i] || {});
-        parts.push((TYPE_LABEL && TYPE_LABEL[tk]) ? TYPE_LABEL[tk] : (tk || 'Rock'));
-      }
-      if (useSeq) {
-        const n = i + 1;
-        parts.push(usePad ? String(n).padStart(padWidth, '0') : String(n));
-      }
-      const name = parts.join(' ');
+      const name = bulkRenameComposeName(base, mines[i], i, nameOpts);
+      if (!name) { fail++; continue; }
       const id = mines[i].id;
       try {
         await safeUpdatePropertyDetails(id, { customName: name }, null);
@@ -2442,6 +2519,10 @@
     }
     const bulkRenameByDate = $('mine-map-bulk-rename-bydate');
     if (bulkRenameByDate) bulkRenameByDate.addEventListener('change', function () { renderBulkRenameList(); });
+    ['mine-map-bulk-rename-input', 'mine-map-bulk-rename-append-type', 'mine-map-bulk-rename-pad'].forEach(function (bid) {
+      const el = $(bid);
+      if (el) el.addEventListener(bid === 'mine-map-bulk-rename-input' ? 'input' : 'change', function () { updateBulkRenamePreview(false); });
+    });
     const bulkRenameInput = $('mine-map-bulk-rename-input');
     if (bulkRenameInput) {
       bulkRenameInput.addEventListener('keydown', e => {
