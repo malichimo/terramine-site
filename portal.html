@@ -217,14 +217,24 @@
             </div>
           </div>
         </div>
-          </div>
-          <div class="dash-breakdown-col dash-breakdown-col-pie">
             <div class="stat-card dash-pie-card">
               <div class="stat-card-label">Mines by Type</div>
               <div class="dash-pie-wrap">
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
-</div>
+            </div>
+          </div>
+          <div class="dash-breakdown-col dash-breakdown-col-dominance">
+            <section class="dash-dominance-card" id="dash-dominance-card" aria-labelledby="dash-dominance-title">
+              <div class="dash-dominance-head">
+                <h2 class="dash-dominance-title" id="dash-dominance-title">Mine Dominance</h2>
+                <div class="dash-dominance-area" id="dash-dominance-area" aria-live="polite" title="Area covered by your Reach outline">&mdash;</div>
+              </div>
+              <div class="dash-dominance-body">
+                <div class="dash-dominance-map" id="dash-dominance-map" aria-label="Map of the overall area your mines cover"></div>
+                <div class="dash-dominance-msg" id="dash-dominance-msg" role="status">Loading map&hellip;</div>
+              </div>
+            </section>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-slot">
             <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
@@ -315,6 +325,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/vendor/delaunator-5.1.0.min.js?v=5.1.0"></script>
+<script src="js/reach-hull.js?v=20260929-2"></script>
+<script src="js/mine-dominance.js?v=20260929-1"></script>
 
 <script>
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -1361,6 +1374,13 @@
         await fetchPropertyDetailsForProps(props);
       }
       allMines = props;
+      // Column 2: Mine Dominance (Reach outline map). Not awaited — Maps load
+      // must never hold up the rest of the dashboard.
+      if (window.TerraMineDominance) {
+        window.TerraMineDominance.render(props, { preview: !!options.preview }).catch(function (err) {
+          console.warn('Mine Dominance failed:', err);
+        });
+      }
       applyTypeOrderLayout();
       refreshGroupTotals();
 

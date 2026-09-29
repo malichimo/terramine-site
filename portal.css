@@ -530,6 +530,90 @@ body.auth-pending #portal {
 }
 .dash-pie-legend { display: none !important; }
 
+/* Column 1: "Mines by Type" sits below the stat stack (Sep 29, 2026).
+   The pie canvas sizes itself to .dash-pie-wrap's width, so cap the wrap
+   to keep the donut about the size it was in its own column. */
+.dash-breakdown-col-stats { gap: 12px; }
+.dash-breakdown-col-stats .stat-stack { flex: 0 0 auto; }
+.dash-breakdown-col-stats .dash-pie-card { flex: 1 0 auto; }
+.dash-breakdown-col-stats .dash-pie-wrap {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* ── Column 2: Mine Dominance (Reach outline map) ──
+   Browns from the :root "Brown app palette": --brown title bar + border,
+   --brown-dark text shadow, --bg (light tan) title text. */
+.dash-dominance-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 2px solid var(--brown);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.85);
+}
+.dash-dominance-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 9px 14px 8px;
+  background: var(--brown);
+  border-bottom: 2px solid var(--brown-dark);
+  color: var(--bg);
+}
+.dash-dominance-title {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  color: #fff8ec;
+  text-shadow: 0 1px 0 var(--brown-dark);
+  white-space: nowrap;
+}
+.dash-dominance-area {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--bg);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-dominance-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 320px;
+  background: #e6e6e6; /* matches the muted map base while tiles load */
+}
+.dash-dominance-map {
+  position: absolute;
+  inset: 0;
+}
+.dash-dominance-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-mid);
+  background: rgba(230, 230, 230, 0.92);
+  pointer-events: none;
+  z-index: 2;
+}
+.dash-dominance-msg[hidden] { display: none; }
+.dash-dominance-msg.is-error { color: #8a2c1c; }
+
 .dash-slot-placeholder {
   flex: 1;
   display: flex;
@@ -646,6 +730,13 @@ body.auth-pending #portal {
 @media (max-width: 720px) {
   .dash-breakdown-row { grid-template-columns: 1fr; }
   .dash-breakdown-col-slot { grid-column: auto; }
+  /* stacked: map gets a fixed, phone-friendly height */
+  .dash-dominance-body { flex: 0 0 auto; height: 340px; min-height: 0; }
+}
+@media (max-width: 400px) {
+  .dash-dominance-head { padding: 8px 12px 7px; }
+  .dash-dominance-area { font-size: 12px; }
+  .dash-dominance-body { height: 300px; }
 }
 
 .stat-stack {
