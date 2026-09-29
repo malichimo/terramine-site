@@ -84,16 +84,10 @@
     a { color: var(--cyan); }
     a:hover { text-decoration: underline; }
 
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 32px 24px;
-      text-align: center;
-    }
-    footer footer nav a { color: var(--gray); text-decoration: none; font-size: 14px; margin: 0 12px; }
-    footer p { font-size: 13px; color: var(--gray); }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="home-page/site-nav.css" />
+  <link rel="stylesheet" href="home-page/site-footer.css" />
 </head>
 <body class="has-site-nav">
 
@@ -379,14 +373,21 @@
 
   </div>
 
-  <footer>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="privacy.html">Privacy Policy</a>
-      <a href="terms.html">Terms of Service</a>
-    </nav>
-    <p>&copy; 2026 TerraMine. All rights reserved.</p>
-  </footer>
+<!-- ── SITE FOOTER (shared; keep identical on all public pages · styles: home-page/site-footer.css) ── -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <a class="site-footer-logo" href="/" aria-label="TerraMine home"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" width="673" height="200" loading="lazy" decoding="async" /></a>
+    <div class="site-footer-links" role="navigation" aria-label="Footer">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/portal.html">Portal</a>
+      <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch</a>
+    </div>
+    <p class="site-footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+  </div>
+</footer>
 
   <script src="home-page/site-nav.js" defer></script>
 </body>

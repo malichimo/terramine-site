@@ -232,16 +232,6 @@
       line-height: 1.6;
     }
 
-    footer {
-      position: relative;
-      z-index: 1;
-      border-top: 1px solid rgba(255,255,255,0.07);
-      padding: 32px 24px;
-      text-align: center;
-    }
-    footer a { color: var(--gray); text-decoration: none; font-size: 13px; margin: 0 12px; }
-    footer a:hover { color: var(--white); }
-    footer p { font-size: 12px; color: var(--gray); margin-top: 10px; }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(16px); }
@@ -253,6 +243,7 @@
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="home-page/site-nav.css" />
+  <link rel="stylesheet" href="home-page/site-footer.css" />
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
 </head>
 <body class="has-site-nav">
@@ -344,13 +335,21 @@
     </div>
   </div>
 
-  <footer>
-    <a href="index.html">Home</a>
-    <a href="download-android.html">Android</a>
-    <a href="privacy.html">Privacy</a>
-    <a href="terms.html">Terms</a>
-    <p>&copy; 2026 TerraMine. All rights reserved.</p>
-  </footer>
+<!-- ── SITE FOOTER (shared; keep identical on all public pages · styles: home-page/site-footer.css) ── -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <a class="site-footer-logo" href="/" aria-label="TerraMine home"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" width="673" height="200" loading="lazy" decoding="async" /></a>
+    <div class="site-footer-links" role="navigation" aria-label="Footer">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/portal.html">Portal</a>
+      <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch</a>
+    </div>
+    <p class="site-footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+  </div>
+</footer>
 
   <script src="home-page/site-nav.js" defer></script>
 </body>

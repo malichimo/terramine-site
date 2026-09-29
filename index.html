@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="home-page/home-page.css" />
+  <link rel="stylesheet" href="home-page/site-footer.css" />
 </head>
 <body>
 
@@ -443,21 +444,21 @@
   </section>
 
   <!-- ── FOOTER ── -->
-  <footer>
-    <a class="footer-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
-    <div class="footer-links">
-      <a href="/pioneer-pass.html">Pioneer Pass</a>
-      <a href="/guide.html">Player's Guide</a>
-      <a href="/faq.html">FAQ</a>
-      <a href="/heatmap.html">World Map</a>
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-      <a href="/portal.html">My Portal</a>
+<!-- ── SITE FOOTER (shared; keep identical on all public pages · styles: home-page/site-footer.css) ── -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <a class="site-footer-logo" href="/" aria-label="TerraMine home"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" width="673" height="200" loading="lazy" decoding="async" /></a>
+    <div class="site-footer-links" role="navigation" aria-label="Footer">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/portal.html">Portal</a>
       <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
       <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch</a>
     </div>
-    <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
-  </footer>
+    <p class="site-footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+  </div>
+</footer>
 
   <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()" style="position: fixed; right: 28px; bottom: 28px; width: 48px; height: 48px; border-radius: 999px; border: 1px solid rgba(91,229,208,0.35); background: rgba(15,22,32,0.92); color: #5BE5D0; display: none; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; z-index: 80; box-shadow: 0 12px 32px rgba(0,0,0,0.32); transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;">↑</button>
 

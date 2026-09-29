@@ -1,0 +1,134 @@
+/* Shared public-site footer (Sep 29, 2026).
+   One markup block, pasted identically on the 12 public pages:
+   index, pioneer-pass, download-android, download-ios, exchange-rates, faq,
+   gift-cards, guide, heatmap, merch, terms, privacy.
+   Desktop: one row (logo left · links center · copyright right).
+   ≤960px: logo + copyright on row 1, links centered on row 2.
+   ≤600px: stacked + centered (logo, wrapped links, copyright).
+   Selectors are footer.site-footer-scoped so page-level `a`, `p`, `img`
+   rules can't leak in. */
+footer.site-footer {
+  --sf-bg: #080C10;
+  --sf-border: rgba(255,255,255,0.07);
+  --sf-muted: #6B7C93;
+  --sf-white: #EEF2F8;
+  position: relative;
+  z-index: 1;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: var(--sf-bg);
+  border: 0;
+  border-top: 1px solid var(--sf-border);
+  color: var(--sf-muted);
+  font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+}
+footer.site-footer *,
+footer.site-footer *::before,
+footer.site-footer *::after { box-sizing: border-box; }
+footer.site-footer .site-footer-inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "logo links copy";
+  align-items: center;
+  gap: 16px 32px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 28px clamp(16px, 4vw, 48px);
+}
+footer.site-footer .site-footer-logo {
+  grid-area: logo;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  text-decoration: none;
+}
+footer.site-footer .site-footer-logo img {
+  display: block;
+  height: 44px;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+}
+footer.site-footer .site-footer-links {
+  grid-area: links;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 28px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+footer.site-footer .site-footer-links a {
+  margin: 0;
+  padding: 0;
+  color: var(--sf-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.18s;
+}
+footer.site-footer .site-footer-links a:hover,
+footer.site-footer .site-footer-links a:focus-visible {
+  color: var(--sf-white);
+  text-decoration: none;
+}
+footer.site-footer .site-footer-copy {
+  grid-area: copy;
+  justify-self: end;
+  margin: 0;
+  padding: 0;
+  color: var(--sf-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Tablet: logo + copyright share row 1; links get their own centered row */
+@media (max-width: 960px) {
+  footer.site-footer .site-footer-inner {
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      "logo copy"
+      "links links";
+    justify-content: space-between;
+    row-gap: 18px;
+  }
+}
+
+/* Phone: stack everything, centered */
+@media (max-width: 600px) {
+  footer.site-footer .site-footer-inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "logo"
+      "links"
+      "copy";
+    justify-items: center;
+    row-gap: 16px;
+    padding: 24px 16px 28px;
+    text-align: center;
+  }
+  footer.site-footer .site-footer-logo { justify-self: center; }
+  footer.site-footer .site-footer-links { gap: 10px 20px; }
+  footer.site-footer .site-footer-copy {
+    justify-self: center;
+    text-align: center;
+    white-space: normal;
+  }
+}
