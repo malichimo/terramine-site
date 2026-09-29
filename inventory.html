@@ -316,7 +316,7 @@
   const RARITY_RANK = { common: 0, uncommon: 1, rare: 2, epic: 3 };
   /** Static display names for mine resource rarities (mine key → rarity → label). */
   const RESOURCE_DISPLAY_NAMES = {
-    rock: { common: 'Gravel', uncommon: 'Slate', rare: 'Granit', epic: 'Marble' },
+    rock: { common: 'Gravel', uncommon: 'Slate', rare: 'Granite', epic: 'Marble' },
     coal: { common: 'Coal Dust', uncommon: 'Lignite', rare: 'Anthracite', epic: 'Diamond Coal' },
     gold: { common: 'Gold Flakes', uncommon: 'Gold Nugget', rare: 'Gold Bar', epic: 'Gold Ingot' },
     diamond: { common: 'Diamond Chip', uncommon: 'Raw Diamond', rare: 'Cut Diamond', epic: 'Flawless Diamond' }
@@ -345,11 +345,12 @@
     for (const n of names) {
       const sl = itemSlug(n);
       if (!sl) continue;
+      // any name containing "goggle" (Safety Goggles, Miner's Goggles, NightGoggles…)
+      if (sl.indexOf('goggle') >= 0) return 'goggles';
       if (ITEM_IMAGE_IDS.has(sl)) return sl;
       if (ITEM_IMAGE_ALIASES[sl]) return ITEM_IMAGE_ALIASES[sl];
       const sing = sl.replace(/s$/, '');
       if (ITEM_IMAGE_IDS.has(sing)) return sing;
-      if (/(^|-)goggles?(-|$)/.test(sl)) return 'goggles';
     }
     return '';
   }
