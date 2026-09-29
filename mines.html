@@ -1240,6 +1240,15 @@
             </svg>
           </button>
         </div>
+        <div class="type-filter" id="filter-unnamed" role="group" aria-label="Unnamed mine filter">
+          <button type="button" class="type-filter-btn" id="filter-unnamed-btn" aria-label="Show only unnamed mines" aria-pressed="false" data-tip="Show only unnamed mines" disabled>
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M2.5 7.5A1.5 1.5 0 0 1 4 6h10.5l6 6-6 6H4a1.5 1.5 0 0 1-1.5-1.5z" stroke-width="1.8" stroke-linejoin="round"></path>
+              <circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none"></circle>
+              <path d="M4 4l16 16" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+          </button>
+        </div>
         <button type="button" class="sort-btn" id="sort-name" data-sort="name" disabled>Mine Name</button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search mine name" autocomplete="off" disabled />
         <span class="mine-count" id="mine-count"></span>
@@ -1508,6 +1517,13 @@
   const FILTER_TYPES_KEY = 'terramine.mines.filterTypes';
   const FILTER_SHOWCASE_KEY = 'terramine.mines.filterShowcase';
   const SHOWCASE_FILTER_VALUES = ['has', 'none'];
+  const FILTER_UNNAMED_KEY = 'terramine.mines.filterUnnamed';
+  function loadUnnamedOnly() {
+    try { return sessionStorage.getItem(FILTER_UNNAMED_KEY) === '1'; } catch (e) { return false; }
+  }
+  function saveUnnamedOnly() {
+    try { sessionStorage.setItem(FILTER_UNNAMED_KEY, unnamedOnly ? '1' : '0'); } catch (e) {}
+  }
   function loadSelectedTypes() {
     try {
       const raw = sessionStorage.getItem(FILTER_TYPES_KEY);
@@ -1545,6 +1561,8 @@
   let selectedTypes = loadSelectedTypes();
   // Exclusive pair (has | none). Empty = all mines (with visitor sort).
   let selectedShowcase = loadSelectedShowcase();
+  // "Unnamed" toggle: show only mines still on a default name (see isUnnamedMine).
+  let unnamedOnly = loadUnnamedOnly();
   let focusMineId = null; // exact property id focus from ?mineId= deep-link
   let allMines = [];
   let loadedUid = null;
@@ -1598,6 +1616,32 @@
     if (name) return name;
     if (p.id) return String(p.id);
     return 'Unnamed Mine';
+  }
+  // Default-name detection for the "Unnamed" filter. With no customName the page
+  // shows the raw mine id (e.g. 422096_-858905) or 'Unnamed Mine', so a name equal to
+  // the id is still a default name. Compare trimmed + case-insensitive, and also after
+  // folding light formatting variants: optional leading "#" / "Mine" / "TerraAcre"
+  // prefix, trailing " Mine", and runs of space/_/,/;/:/slash/pipe/brackets
+  // treated as one separator ("422096, -858905", "Mine #422096_-858905").
+  function defaultNameKey(s) {
+    return String(s == null ? '' : s).trim().toLowerCase()
+      .replace(/^(?:(?:terra\s*acre|mine)\s*)?#?\s*/, '')
+      .replace(/\s+mine$/, '')
+      .replace(/[\s_,;:\/|()\[\]{}]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+  function isUnnamedMine(p) {
+    if (!p) return false;
+    const d = p._details || {};
+    const name = typeof d.customName === 'string' ? d.customName.trim() : '';
+    if (!name) return true;
+    const lower = name.toLowerCase();
+    if (lower === 'unnamed mine' || lower === 'unnamed') return true;
+    if (p.id == null || p.id === '') return false;
+    const id = String(p.id).trim().toLowerCase();
+    if (lower === id) return true;
+    const k = defaultNameKey(name);
+    return !!k && k === defaultNameKey(id);
   }
   function photoUrl(p) {
     const u = p._details && p._details.profilePhotoURL;
@@ -4437,6 +4481,8 @@
     saveSelectedTypes();
     selectedShowcase = new Set();
     saveSelectedShowcase();
+    unnamedOnly = false;
+    saveUnnamedOnly();
     const search = $('filter-search');
     if (search) search.value = focus.name || focus.id;
   }
@@ -4460,10 +4506,12 @@
         // Exact id wins; name in the search box is display-only while focused.
         if (typeFilterOn && !selectedTypes.has(typeKey(p))) return false;
         if (!passesShowcaseFilter(p)) return false;
+        if (unnamedOnly && !isUnnamedMine(p)) return false;
         return true;
       }
       if (typeFilterOn && !selectedTypes.has(typeKey(p))) return false;
       if (!passesShowcaseFilter(p)) return false;
+      if (unnamedOnly && !isUnnamedMine(p)) return false;
       if (q && titleOf(p).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
@@ -4568,6 +4616,22 @@
       btn.classList.toggle('active', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+  }
+  function updateUnnamedFilterButton() {
+    const btn = $('filter-unnamed-btn');
+    if (!btn) return;
+    btn.classList.toggle('active', unnamedOnly);
+    btn.setAttribute('aria-pressed', unnamedOnly ? 'true' : 'false');
+  }
+  // A rename can move a mine in/out of the Unnamed list; re-filter once renames settle.
+  let unnamedRefreshTimer = null;
+  function scheduleUnnamedFilterRefresh() {
+    if (!unnamedOnly || !loadedUid) return;
+    if (unnamedRefreshTimer) clearTimeout(unnamedRefreshTimer);
+    unnamedRefreshTimer = setTimeout(() => {
+      unnamedRefreshTimer = null;
+      if (unnamedOnly && loadedUid) renderFromFilters();
+    }, 250);
   }
   
   function syncShowcaseFilterVisibility() {
@@ -5669,6 +5733,7 @@ function updateSortButtons() {
     if (mapTitle && !mapTitle.classList.contains('is-editing') && mineMapCurrentMine && String(mineMapCurrentMine.id) === id) {
       mapTitle.textContent = display || 'Mine map';
     }
+    scheduleUnnamedFilterRefresh();
   }
   async function persistMineCustomName(mineId, nextName, titleEl, previousText) {
     const trimmed = (nextName || '').replace(/\s+/g, ' ').trim();
@@ -7025,7 +7090,11 @@ function updateSortButtons() {
       const empty = document.createElement('div');
       empty.className = 'mine-empty';
       const stillCounting = visitorSortSettling || (sortKey === 'visitors' && filteredMinesMissingVisitorCounts().length > 0);
-      empty.textContent = stillCounting ? 'Counting visitors…' : 'No mines match that filter.';
+      const onlyUnnamedFilter = unnamedOnly && !focusMineId && !selectedTypes.size && selectedShowcase.size !== 1
+        && !(($('filter-search').value || '').trim()) && !minesMatchingFilters().length;
+      empty.textContent = stillCounting ? 'Counting visitors…'
+        : (onlyUnnamedFilter ? 'No unnamed mines. Every mine has a custom name.'
+          : (unnamedOnly ? 'No unnamed mines match that filter.' : 'No mines match that filter.'));
       board.appendChild(empty);
       $('mine-sentinel').hidden = true;
       if (sortKey === 'visitors' && !visitorSortSettling) queueMissingVisitorCountsForSort();
@@ -7264,6 +7333,8 @@ function updateSortButtons() {
       }
       if (loadId !== minesDetailsLoadId) return;
       console.info('[mines] details complete', mines.length);
+      // Names for mines past the first paint only arrive now; re-apply the Unnamed filter.
+      if (unnamedOnly) renderFromFilters();
       refreshProdValues();
       refreshGroupTotals();
       setStatus('');
@@ -7367,6 +7438,7 @@ function updateSortButtons() {
   applyMineFocusFromUrl();
   updateTypeFilterButtons();
   updateShowcaseFilterButtons();
+  updateUnnamedFilterButton();
     const flipTypeOrderBtn = $('flip-type-order');
   if (flipTypeOrderBtn) {
     flipTypeOrderBtn.addEventListener('click', function () {
@@ -7401,6 +7473,15 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
       if (loadedUid) renderFromFilters();
     });
   });
+  const unnamedFilterBtn = $('filter-unnamed-btn');
+  if (unnamedFilterBtn) {
+    unnamedFilterBtn.addEventListener('click', () => {
+      unnamedOnly = !unnamedOnly;
+      saveUnnamedOnly();
+      updateUnnamedFilterButton();
+      if (loadedUid) renderFromFilters();
+    });
+  }
   $('filter-search').addEventListener('input', () => {
     // Editing/clearing search exits exact mineId focus so the user is not stuck.
     if (focusMineId) clearMineFocus();
@@ -7467,7 +7548,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
       showcaseFollowTipX = e.clientX;
       showcaseFollowTipY = e.clientY;
       const tip = ensureShowcaseFollowTip();
-      tip.textContent = SHOWCASE_TIPS[btn.dataset.showcase] || '';
+      tip.textContent = SHOWCASE_TIPS[btn.dataset.showcase] || (btn.getAttribute('data-tip') || '').trim();
       tip.style.display = 'none';
       showcaseFollowTipTimer = setTimeout(() => {
         showcaseFollowTipTimer = null;
@@ -7488,6 +7569,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     });
   }
   document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(bindShowcaseFollowTip);
+  bindShowcaseFollowTip($('filter-unnamed-btn'));
   bindMineTitleInteractionsOnce();
   bindMineMapTitleInteractionsOnce();
 
