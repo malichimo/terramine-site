@@ -455,22 +455,23 @@
     .mine-greet-btn {
       position:absolute; z-index:3; bottom:12px;
       left:calc((100% - 14px - min(280px, 80% - 26px)) / 2); transform:translateX(-50%);
-      width:30px; height:30px; padding:0; margin:0; box-sizing:border-box;
-      display:flex; align-items:center; justify-content:center;
-      border-radius:50%; border:1px solid rgba(255,215,0,.55);
-      background:rgba(10,16,26,.62); color:var(--gold, #FFD700);
+      width:45px; height:45px; padding:0; margin:0; box-sizing:border-box;
+      display:flex; justify-content:space-around; align-items:center;
+      border-radius:50%; border:2px solid rgba(255,215,0,.55);
+      background:rgba(10,16,26,.65); color:var(--gold, #FFD700);
       box-shadow:0 2px 8px rgba(6,10,16,.45);
       cursor:pointer; appearance:none; -webkit-appearance:none;
       -webkit-tap-highlight-color:transparent;
-      transition:background .15s ease, border-color .15s ease, opacity .15s ease, transform .15s ease;
+      transition:background .15s ease, border-color .15s ease;
     }
-    .mine-greet-btn svg { width:17px; height:17px; display:block; pointer-events:none; }
+    .mine-greet-btn svg { width:26px; height:26px; display:block; flex:0 0 auto; pointer-events:none; transition:opacity .15s ease; }
     .mine-greet-btn:hover, .mine-greet-btn:focus-visible {
-      background:rgba(10,16,26,.82); border-color:var(--gold, #FFD700); outline:none;
-      transform:translateX(-50%) scale(1.08);
+      background:rgba(10,16,26,.9); border-color:var(--gold, #FFD700); outline:none;
     }
-    .mine-greet-btn.is-empty { opacity:.55; color:#fff; border-color:rgba(255,255,255,.45); }
-    .mine-greet-btn.is-empty:hover, .mine-greet-btn.is-empty:focus-visible { opacity:.85; }
+    .mine-greet-btn.is-empty { color:#fff; border-color:rgba(255,255,255,.45); }
+    .mine-greet-btn.is-empty svg { opacity:.55; }
+    .mine-greet-btn.is-empty:hover svg, .mine-greet-btn.is-empty:focus-visible svg { opacity:.85; }
+    .mine-greet-btn.is-empty:hover, .mine-greet-btn.is-empty:focus-visible { border-color:rgba(255,255,255,.8); }
     .mine-greet-tip {
       position:fixed; left:0; top:0; z-index:600; pointer-events:none; display:none;
       background:#0f172a; color:#f8fafc; border:1px solid rgba(255,215,0,.35);
