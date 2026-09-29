@@ -531,31 +531,33 @@ body.auth-pending #portal {
 }
 .dash-pie-legend { display: none !important; }
 
-/* Column 1: "Mines by Type" sits below the stat stack (Sep 29, 2026).
+/* Sep 29, 2026 layout: column 1 = stat stack + Mine Dominance map below it;
+   column 2 = "Mines by Type"; column 3 = TerraBucks. Stacked (<=720) follows
+   the DOM: stats, dominance, pie, TerraBucks.
    The donut canvas is square: min(580px, the wrap's width) — see
    renderMineTypePie(); it redraws when the wrap's width changes. */
 .dash-breakdown-col-stats { gap: 12px; }
 .dash-breakdown-col-stats .stat-stack { flex: 0 0 auto; }
-.dash-breakdown-col-stats .dash-pie-card { flex: 0 0 auto; height: auto; min-height: 600px; }
+.dash-breakdown-col-pie .dash-pie-card { flex: 0 0 auto; height: auto; min-height: 600px; }
 /* donut centered in the card; a 580px donut + label is taller than 600, so the
    card grows to fit (min 600) */
-.dash-breakdown-col-stats .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 4px 0; min-width: 0; }
+.dash-breakdown-col-pie .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 4px 0; min-width: 0; }
 /* cards in a column no longer grow to fill a stretched column */
 .dash-breakdown-col > .dash-slot-card,
 .dash-breakdown-col > .dash-dominance-card { flex: 0 0 auto; }
-.dash-breakdown-col-stats .dash-pie-wrap {
+.dash-breakdown-col-pie .dash-pie-wrap {
   width: 100%;
   max-width: none;
   margin: 0 auto;
 }
-.dash-breakdown-col-stats .dash-pie-wrap canvas {
+.dash-breakdown-col-pie .dash-pie-wrap canvas {
   flex: 0 0 auto;
   max-width: 100%;
   height: auto;          /* square via the canvas's own aspect ratio */
   aspect-ratio: 1 / 1;
 }
 
-/* ── Column 2: Mine Dominance (Reach outline map) ──
+/* ── Column 1 (below the stats): Mine Dominance (Reach outline map) ──
    Browns from the :root "Brown app palette": --brown title bar + border,
    --brown-dark text shadow, --bg (light tan) title text. */
 .dash-dominance-card {
