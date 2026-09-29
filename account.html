@@ -172,6 +172,15 @@
     .btn-save:hover { background:var(--brown-dark); }
     .btn-save:disabled { background:var(--brown-mid); cursor:not-allowed; }
 
+    .link-code-box { display:none; margin-top:14px; padding:16px; border:2px dashed var(--brown-mid); border-radius:10px; background:var(--off-white); text-align:center; }
+    .link-code-value { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:30px; font-weight:700; letter-spacing:5px; color:var(--brown-dark); }
+    .link-code-meta { font-size:12px; color:var(--text-mid); margin-top:6px; }
+    .linked-app { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--brown-light); }
+    .linked-app:first-child { border-top:none; }
+    .linked-app-name { font-weight:700; color:var(--text-dark); font-size:14px; }
+    .linked-app-meta { font-size:12px; color:var(--text-light); }
+    .btn-unlink { background:white; border:2px solid #C0392B; color:#C0392B; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .btn-unlink:disabled { opacity:0.5; cursor:not-allowed; }
     .save-row { display:flex; align-items:center; gap:12px; margin-top:18px; }
     .save-status { font-size:12px; }
     .save-status.success { color:var(--green); }
@@ -351,6 +360,28 @@
           </div>
         </div>
 
+        <!-- Linked apps (Calculator partner API, Sept 27, 2026) -->
+        <div class="app-card" id="linked-apps-card">
+          <div class="app-card-header">
+            <span class="app-card-title">🔗 Linked Apps</span>
+          </div>
+          <div class="app-card-body">
+            <div class="field-hint" style="font-size:13px; margin-top:0;">
+              Connect your account to the TerraMine Calculator. It can see your profile, mines, check-in counts and earnings.
+              It can never see your email, phone number or password, and you can unlink it anytime.
+            </div>
+            <div class="save-row">
+              <button class="btn-save" id="link-code-btn" onclick="generateLinkCode()">Get a link code</button>
+              <span class="save-status" id="link-code-status"></span>
+            </div>
+            <div class="link-code-box" id="link-code-box">
+              <div class="link-code-value" id="link-code-value"></div>
+              <div class="link-code-meta">Enter this code in the Calculator. It works once and expires in <span id="link-code-timer">10:00</span>.</div>
+            </div>
+            <div id="linked-apps-list" style="margin-top:16px;"></div>
+          </div>
+        </div>
+
         <!-- Password card — only shown for email/password accounts -->
         <div class="app-card" id="password-card" style="display:none;">
           <div class="app-card-header pw-card-header">
@@ -388,6 +419,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 
 <script>
   firebase.initializeApp({
@@ -486,6 +518,7 @@
 
 
   async function loadAccountPage(user) {
+    loadLinkedApps();
     const uSnap = await db.collection('users').doc(user.uid).get();
     const ud = uSnap.data() || {};
     const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
@@ -718,6 +751,75 @@
       bindPill(document.querySelector('.nav-pill-tb'));
     });
   })();
+
+  // ── Linked apps (Calculator partner API) ─────────────────────────
+  const fns = firebase.functions();
+  let linkTimer = null;
+
+  window.generateLinkCode = async function () {
+    const btn = $('link-code-btn');
+    btn.disabled = true;
+    $('link-code-status').textContent = '';
+    try {
+      const r = await fns.httpsCallable('createApiLinkCode')();
+      const code = r.data.code;
+      $('link-code-value').textContent = code.slice(0, 4) + ' ' + code.slice(4);
+      $('link-code-box').style.display = 'block';
+      const expires = Date.parse(r.data.expiresAt);
+      clearInterval(linkTimer);
+      const tick = () => {
+        const left = Math.max(0, expires - Date.now());
+        const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+        $('link-code-timer').textContent = m + ':' + String(s).padStart(2, '0');
+        if (left <= 0) {
+          clearInterval(linkTimer);
+          $('link-code-box').style.display = 'none';
+          $('link-code-status').textContent = 'Code expired. Get a new one when you are ready.';
+          loadLinkedApps();
+        }
+      };
+      tick();
+      linkTimer = setInterval(tick, 1000);
+      // Refresh the list a few times so a new link shows up without a reload.
+      [20000, 60000, 180000].forEach(ms => setTimeout(loadLinkedApps, ms));
+    } catch (e) {
+      $('link-code-status').textContent = e.message || 'Could not create a code.';
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  async function loadLinkedApps() {
+    const list = $('linked-apps-list');
+    try {
+      const r = await fns.httpsCallable('listApiLinks')();
+      const links = r.data.links || [];
+      if (!links.length) { list.innerHTML = '<div class="field-hint">No apps linked yet.</div>'; return; }
+      list.innerHTML = '';
+      links.forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'linked-app';
+        const info = document.createElement('div');
+        const name = document.createElement('div'); name.className = 'linked-app-name'; name.textContent = l.appName;
+        const meta = document.createElement('div'); meta.className = 'linked-app-meta';
+        meta.textContent = 'Linked ' + (l.linkedAt ? new Date(l.linkedAt).toLocaleDateString() : '') +
+          (l.lastUsedAt ? ' · last used ' + new Date(l.lastUsedAt).toLocaleDateString() : '');
+        info.appendChild(name); info.appendChild(meta);
+        const btn = document.createElement('button');
+        btn.className = 'btn-unlink'; btn.textContent = 'Unlink';
+        btn.onclick = async () => {
+          if (!confirm('Unlink ' + l.appName + '? It will immediately lose access to your TerraMine data.')) return;
+          btn.disabled = true;
+          try { await fns.httpsCallable('revokeApiLink')({ linkId: l.linkId }); showToast('Unlinked ' + l.appName); loadLinkedApps(); }
+          catch (e) { btn.disabled = false; showToast(e.message || 'Could not unlink', 'error'); }
+        };
+        row.appendChild(info); row.appendChild(btn);
+        list.appendChild(row);
+      });
+    } catch (e) {
+      list.innerHTML = '<div class="field-hint">Could not load linked apps.</div>';
+    }
+  }
 
 </script>
   <script src="portal-nav.js" defer></script>
