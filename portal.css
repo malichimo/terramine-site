@@ -142,6 +142,35 @@ body.auth-pending #portal {
   max-width:min(280px, calc(100vw - 16px));
 }
 
+/* Dashboard "Mines by Type" graph: mine-type odds popup that follows the mouse */
+.dash-odds-tip {
+  position:fixed; left:0; top:0; z-index:600; pointer-events:none; display:none;
+  background:rgba(15,23,42,.94); color:#f8fafc; border:1px solid rgba(255,215,0,.35);
+  border-radius:8px; padding:8px 10px 9px; box-shadow:0 12px 28px rgba(6,10,16,.45);
+  font:500 13px/1.35 'DM Sans',sans-serif; text-align:left;
+  width:240px; max-width:calc(100vw - 16px); box-sizing:border-box;
+}
+.dash-odds-tip-title {
+  font-weight:700; font-size:12.5px; color:#fde68a; letter-spacing:.01em;
+  padding-bottom:6px; margin-bottom:6px; border-bottom:1px solid rgba(255,255,255,.12);
+  white-space:normal; overflow-wrap:anywhere;
+}
+.dash-odds-tip-rows { display:flex; flex-direction:column; gap:5px; }
+.dash-odds-row {
+  display:grid; grid-template-columns:18px 54px minmax(0,1fr) 34px;
+  align-items:center; column-gap:6px;
+}
+.dash-odds-row img { width:18px; height:18px; display:block; }
+.dash-odds-name { font-size:12px; color:#e2e8f0; white-space:nowrap; }
+.dash-odds-track {
+  height:9px; border-radius:5px; background:rgba(255,255,255,.08); overflow:hidden; min-width:0;
+}
+.dash-odds-bar {
+  height:100%; min-width:4px; border-radius:5px; box-sizing:border-box;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);
+}
+.dash-odds-pct { font-size:12px; font-weight:700; text-align:right; white-space:nowrap; }
+
 
 .layout {
   display: block;

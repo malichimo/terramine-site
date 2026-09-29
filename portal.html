@@ -1576,6 +1576,119 @@
   initPageSettings();
   bindMineTotalsFollowTips();
 
+  // Dashboard "Mines by Type" pie: hover popup with the % chance to get each
+  // mine type. Follows the mouse (fixed, 14px right/below, clamped to the
+  // viewport). The pie canvas has no tooltip of its own, so this binds to the
+  // graph container (.dash-pie-wrap). Touch/pen: tap toggles, tap elsewhere hides.
+  const MINE_TYPE_ODDS = { rock: 60, coal: 30, gold: 9, diamond: 1 };
+  (function bindMineTypeOddsTip() {
+    var wrap = document.querySelector('.dash-pie-card .dash-pie-wrap');
+    if (!wrap || wrap.dataset.oddsTipBound === '1') return;
+    wrap.dataset.oddsTipBound = '1';
+    var tip = null, lastX = 0, lastY = 0, touchOpen = false, lastPointer = 'mouse';
+    function ensureTip() {
+      if (tip) return tip;
+      tip = document.createElement('div');
+      tip.className = 'dash-odds-tip';
+      tip.id = 'dash-odds-tip';
+      tip.setAttribute('role', 'tooltip');
+      var title = document.createElement('div');
+      title.className = 'dash-odds-tip-title';
+      title.textContent = '% chance to get each mine type';
+      tip.appendChild(title);
+      var rows = document.createElement('div');
+      rows.className = 'dash-odds-tip-rows';
+      KNOWN_MINE_TYPES.forEach(function (type) {
+        var pct = MINE_TYPE_ODDS[type] || 0;
+        var grad = MINE_TYPE_PIE_GRADIENTS[type];
+        var color = MINE_TYPE_PIE_COLORS[type] || '#94a3b8';
+        var row = document.createElement('div');
+        row.className = 'dash-odds-row';
+        row.dataset.type = type;
+        var img = document.createElement('img');
+        img.src = MINE_TYPE_PIE_ICONS[type];
+        img.alt = '';
+        img.width = 18; img.height = 18;
+        var name = document.createElement('span');
+        name.className = 'dash-odds-name';
+        name.textContent = MINE_TYPE_PIE_LABELS[type] || type;
+        var track = document.createElement('span');
+        track.className = 'dash-odds-track';
+        var bar = document.createElement('span');
+        bar.className = 'dash-odds-bar';
+        bar.style.display = 'block';
+        bar.style.width = pct + '%';
+        bar.style.background = grad
+          ? 'linear-gradient(90deg, ' + grad.inner + ', ' + color + ')'
+          : color;
+        track.appendChild(bar);
+        var val = document.createElement('span');
+        val.className = 'dash-odds-pct';
+        val.textContent = pct + '%';
+        row.appendChild(img); row.appendChild(name); row.appendChild(track); row.appendChild(val);
+        rows.appendChild(row);
+      });
+      tip.appendChild(rows);
+      document.body.appendChild(tip);
+      wrap.setAttribute('aria-describedby', tip.id);
+      return tip;
+    }
+    function place(x, y) {
+      var t = ensureTip();
+      var gap = 14, edge = 8;
+      t.style.visibility = 'hidden';
+      t.style.display = 'block';
+      var w = t.offsetWidth, h = t.offsetHeight;
+      var vw = document.documentElement.clientWidth || window.innerWidth;
+      var vh = document.documentElement.clientHeight || window.innerHeight;
+      var left = x + gap, top = y + gap;
+      if (left + w > vw - edge) left = x - gap - w;
+      if (top + h > vh - edge) top = y - gap - h;
+      left = Math.max(edge, Math.min(left, vw - edge - w));
+      top = Math.max(edge, Math.min(top, vh - edge - h));
+      t.style.left = Math.round(left) + 'px';
+      t.style.top = Math.round(top) + 'px';
+      t.style.visibility = 'visible';
+    }
+    function hide() {
+      touchOpen = false;
+      if (tip) tip.style.display = 'none';
+    }
+    function isShown() { return !!tip && tip.style.display === 'block'; }
+    wrap.addEventListener('pointerdown', function (e) { lastPointer = e.pointerType || 'mouse'; });
+    wrap.addEventListener('pointerenter', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      lastX = e.clientX; lastY = e.clientY;
+      place(lastX, lastY);
+    });
+    wrap.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      lastX = e.clientX; lastY = e.clientY;
+      place(lastX, lastY);
+    });
+    wrap.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      hide();
+    });
+    // Touch / pen (no hover): tap the graph to toggle the popup.
+    wrap.addEventListener('click', function (e) {
+      var noHover = window.matchMedia && window.matchMedia('(hover: none)').matches;
+      if (lastPointer === 'mouse' && !noHover) return;
+      if (touchOpen && isShown()) { hide(); return; }
+      touchOpen = true;
+      place(e.clientX, e.clientY);
+    });
+    // Tap anywhere else hides it.
+    document.addEventListener('pointerdown', function (e) {
+      if (!isShown()) return;
+      if (wrap.contains(e.target)) return;
+      hide();
+    }, true);
+    window.addEventListener('scroll', function () { if (touchOpen) hide(); }, { passive: true });
+    window.addEventListener('resize', function () { if (isShown()) hide(); });
+    window.addEventListener('blur', hide);
+  })();
+
   (function bindNavPillFollowTips() {
     var DELAY = 320;
     var tipEl = null, tipTimer = null, tipTarget = null, tipX = 0, tipY = 0;
