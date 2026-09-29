@@ -532,19 +532,27 @@ body.auth-pending #portal {
 .dash-pie-legend { display: none !important; }
 
 /* Column 1: "Mines by Type" sits below the stat stack (Sep 29, 2026).
-   The pie canvas sizes itself to .dash-pie-wrap's width, so cap the wrap
-   to keep the donut about the size it was in its own column. */
+   The donut canvas is square: min(580px, the wrap's width) — see
+   renderMineTypePie(); it redraws when the wrap's width changes. */
 .dash-breakdown-col-stats { gap: 12px; }
 .dash-breakdown-col-stats .stat-stack { flex: 0 0 auto; }
-.dash-breakdown-col-stats .dash-pie-card { flex: 0 0 auto; height: 600px; min-height: 0; }
-/* donut centered in the remaining height of the fixed 600px card */
-.dash-breakdown-col-stats .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 8px 0 12px; }
+.dash-breakdown-col-stats .dash-pie-card { flex: 0 0 auto; height: auto; min-height: 600px; }
+/* donut centered in the card; a 580px donut + label is taller than 600, so the
+   card grows to fit (min 600) */
+.dash-breakdown-col-stats .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 4px 0; min-width: 0; }
 /* cards in a column no longer grow to fill a stretched column */
 .dash-breakdown-col > .dash-slot-card,
 .dash-breakdown-col > .dash-dominance-card { flex: 0 0 auto; }
 .dash-breakdown-col-stats .dash-pie-wrap {
-  max-width: 320px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
+}
+.dash-breakdown-col-stats .dash-pie-wrap canvas {
+  flex: 0 0 auto;
+  max-width: 100%;
+  height: auto;          /* square via the canvas's own aspect ratio */
+  aspect-ratio: 1 / 1;
 }
 
 /* ── Column 2: Mine Dominance (Reach outline map) ──
