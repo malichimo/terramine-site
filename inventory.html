@@ -167,6 +167,33 @@
     .mine-photo img { width:100%; height:100%; object-fit:cover; display:block; }
     .mine-photo.has-img { border-style:solid; border-color:#d0d5dc; background:#fff; }
     .inv-card-meta { font-size:13px; font-weight:700; color:#334155; text-align:center; font-variant-numeric:tabular-nums; }
+    /* Item art (Sep 29, 2026): square item image fills the white card body
+       edge-to-edge (uncropped, object-fit:contain); quantity overlaid at the
+       bottom on a 50% white frosted pill. Items without art keep .mine-photo. */
+    .inv-card-body.has-art { padding:0 0 12px; gap:8px; }
+    .inv-card-body.has-art .inv-card-meta { padding:0 10px; }
+    .inv-art { position:relative; width:100%; aspect-ratio:1 / 1; background:#fff; overflow:hidden; }
+    .inv-art picture { display:block; width:100%; height:100%; }
+    .inv-art img { display:block; width:100%; height:100%; object-fit:contain; }
+    .inv-qty {
+      position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
+      max-width:calc(100% - 16px); box-sizing:border-box;
+      padding:3px 14px; border-radius:999px;
+      background:rgba(255,255,255,.5);
+      -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+      border:1px solid rgba(255,255,255,.65);
+      box-shadow:0 1px 4px rgba(13,27,42,.18);
+      font:800 18px/1.25 'DM Sans', sans-serif; color:#0D1B2A;
+      font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      text-shadow:0 1px 0 rgba(255,255,255,.7);
+      pointer-events:none;
+    }
+    @media (max-width: 480px) {
+      /* two cards per row on phones */
+      .inv-grid { gap:12px; }
+      .inv-card { width:calc(50% - 6px); }
+      .inv-qty { font-size:16px; padding:2px 12px; bottom:6px; }
+    }
     .inv-card-meta .muted { color:#64748b; font-weight:600; font-size:11px; }
     .inv-empty { padding:28px 12px; text-align:center; color:#64748b; font-size:14px; }
     .inv-loading { padding:24px; }
@@ -294,6 +321,38 @@
     gold: { common: 'Gold Flakes', uncommon: 'Gold Nugget', rare: 'Gold Bar', epic: 'Gold Ingot' },
     diamond: { common: 'Diamond Chip', uncommon: 'Raw Diamond', rare: 'Cut Diamond', epic: 'Flawless Diamond' }
   };
+
+  /** Item art (images/items/<id>[-240].webp|png), keyed like RESOURCE_DISPLAY_NAMES. */
+  const RESOURCE_IMAGE_IDS = {
+    rock: { common: 'gravel', uncommon: 'slate', rare: 'granite', epic: 'marble' },
+    coal: { common: 'coal-dust', uncommon: 'lignite', rare: 'anthracite', epic: 'diamond-coal' },
+    gold: { common: 'gold-flakes', uncommon: 'gold-nugget', rare: 'gold-bar', epic: 'gold-ingot' },
+    diamond: { common: 'diamond-chip', uncommon: 'raw-diamond', rare: 'cut-diamond', epic: 'flawless-diamond' }
+  };
+  const ITEM_IMAGE_IDS = new Set(['goggles']);
+  Object.keys(RESOURCE_IMAGE_IDS).forEach(k => Object.values(RESOURCE_IMAGE_IDS[k]).forEach(id => ITEM_IMAGE_IDS.add(id)));
+  const ITEM_IMAGE_ALIASES = { granit: 'granite', 'mining-goggles': 'goggles', goggle: 'goggles' };
+  function itemSlug(s) {
+    return String(s == null ? '' : s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  /** Local art id for an item: resources by mine + rarity, otherwise by name. '' = none. */
+  function itemImageId(item, mineKey) {
+    const byMine = RESOURCE_IMAGE_IDS[mineKey];
+    const rk = normalizeRarity(item && item.rarity);
+    if (byMine && rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
+    const names = [item && item.name, item && item._raw && typeof item._raw === 'object' ? (item._raw.id || item._raw.key) : ''];
+    for (const n of names) {
+      const sl = itemSlug(n);
+      if (!sl) continue;
+      if (ITEM_IMAGE_IDS.has(sl)) return sl;
+      if (ITEM_IMAGE_ALIASES[sl]) return ITEM_IMAGE_ALIASES[sl];
+      const sing = sl.replace(/s$/, '');
+      if (ITEM_IMAGE_IDS.has(sing)) return sing;
+      if (/(^|-)goggles?(-|$)/.test(sl)) return 'goggles';
+    }
+    return '';
+  }
 
   function resourceDisplayName(mineKey, rarity, fallback) {
     const byMine = RESOURCE_DISPLAY_NAMES[mineKey];
@@ -505,6 +564,78 @@
 
     const body = document.createElement('div');
     body.className = 'inv-card-body';
+    const artId = itemImageId(item, opts.mineKey);
+    if (artId) {
+      renderArtBody(body, item, artId, mappedName);
+      art.append(title, body);
+      return art;
+    }
+    renderLegacyBody(body, item);
+    art.append(title, body);
+    return art;
+  }
+
+  /** Full-width item art + quantity overlay. Falls back to the item's own
+   *  image URL, then to the legacy 72px icon body, if the art fails to load. */
+  function renderArtBody(body, item, artId, label) {
+    body.classList.add('has-art');
+    const wrap = document.createElement('div');
+    wrap.className = 'inv-art';
+    wrap.dataset.art = artId;
+    const pic = document.createElement('picture');
+    const sizes = '(max-width: 480px) 50vw, 200px';
+    const src = document.createElement('source');
+    src.type = 'image/webp';
+    src.srcset = 'images/items/' + artId + '-240.webp 240w, images/items/' + artId + '.webp 480w';
+    src.sizes = sizes;
+    const img = document.createElement('img');
+    img.alt = label || '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.width = 240;
+    img.height = 240;
+    img.sizes = sizes;
+    img.srcset = 'images/items/' + artId + '-240.png 240w, images/items/' + artId + '.png 480w';
+    img.src = 'images/items/' + artId + '-240.png';
+    let triedOwn = false;
+    img.addEventListener('error', () => {
+      if (!triedOwn && item.image) {
+        triedOwn = true;
+        wrap.dataset.art = 'own';
+        if (src.parentNode) src.remove();
+        img.removeAttribute('srcset');
+        img.removeAttribute('sizes');
+        img.src = item.image;
+        return;
+      }
+      body.classList.remove('has-art');
+      body.innerHTML = '';
+      renderLegacyBody(body, Object.assign({}, item, { image: '' }));
+    });
+    pic.append(src, img);
+    wrap.appendChild(pic);
+    if (item.count != null) {
+      const q = document.createElement('div');
+      q.className = 'inv-qty';
+      q.textContent = fmtNum(item.count);
+      q.setAttribute('aria-label', 'Quantity ' + fmtNum(item.count));
+      wrap.appendChild(q);
+    }
+    body.appendChild(wrap);
+    // Other info (value) stays below the art; the count now lives in the overlay.
+    let line = '';
+    if (item.count == null) line = metaLine(item) || '—';
+    else if (item.value != null) line = 'value ' + fmtNum(item.value);
+    if (line) {
+      const meta = document.createElement('div');
+      meta.className = 'inv-card-meta';
+      meta.textContent = line;
+      body.appendChild(meta);
+    }
+  }
+
+  /** Previous card body: 72px icon (item image URL or "No image") + meta line. */
+  function renderLegacyBody(body, item) {
     const photo = document.createElement('div');
     photo.className = 'mine-photo';
     if (item.image) {
@@ -526,8 +657,6 @@
     const line = metaLine(item);
     meta.textContent = line || '—';
     body.append(photo, meta);
-    art.append(title, body);
-    return art;
   }
 
   function renderFromFilters() {
