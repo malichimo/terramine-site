@@ -22,6 +22,9 @@
  *   (siteCount = number of mines; sqrt(area/n) = average mine spacing if the
  *   mines were spread evenly over the hull). A gap has to be wider than both
  *   ~LAMBDA of the whole spread AND ~K_SPACING typical spacings to get cut.
+ *   Defaults LAMBDA 0.26, K_SPACING 3.5: only big empty wedges/gaps get cut
+ *   (tuned so results sit ~60% of the way from the original tight chi-shape
+ *   back to the convex hull, by area, on SW-Michigan-like test data).
  *   `tightness` (default 1) divides L: >1 = tighter, <1 = looser.
  *
  * Accounts with < 40 mines use a larger LAMBDA (ramping to 0.6 at 8 mines)
@@ -41,8 +44,10 @@
 }(typeof self !== 'undefined' ? self : this, function (getDelaunator) {
   'use strict';
 
-  var LAMBDA = 0.035;     // fraction of bbox diagonal
-  var K_SPACING = 2.2;    // multiples of average mine spacing
+  // Sep 29, 2026 (v2): loosened ~60% of the way back toward the convex hull
+  // (was LAMBDA 0.035 / K_SPACING 2.2 — user found that too tight on real mines).
+  var LAMBDA = 0.26;      // fraction of bbox diagonal
+  var K_SPACING = 3.5;    // multiples of average mine spacing
   var SMALL_MIN = 8;      // fewer mines than this -> convex hull
   var SMALL_RAMP = 40;    // below this many mines, LAMBDA ramps up toward LAMBDA_SMALL
   var LAMBDA_SMALL = 0.6;
@@ -177,6 +182,7 @@
    *   points: [{lat,lng}] (all parcel corners)
    *   opts.siteCount: number of mines (defaults to points/4)
    *   opts.tightness: 1 = default; >1 tighter, <1 looser; <=0 = convex hull
+   *   opts.lambda / opts.kSpacing: override LAMBDA / K_SPACING (tuning)
    */
   function compute(points, opts) {
     opts = opts || {};
@@ -211,8 +217,10 @@
     // small accounts: carving a handful of mines just looks random, so only
     // cut really big gaps (lambda ramps LAMBDA_SMALL -> LAMBDA over SMALL_MIN..SMALL_RAMP)
     var ramp = Math.max(0, Math.min(1, (SMALL_RAMP - siteCount) / (SMALL_RAMP - SMALL_MIN)));
-    var lambda = LAMBDA + (LAMBDA_SMALL - LAMBDA) * ramp;
-    var L = Math.max(lambda * diag, K_SPACING * spacing) / tightness;
+    var baseLambda = opts.lambda > 0 ? Number(opts.lambda) : LAMBDA;
+    var kSpacing = opts.kSpacing > 0 ? Number(opts.kSpacing) : K_SPACING;
+    var lambda = baseLambda + Math.max(0, LAMBDA_SMALL - baseLambda) * ramp;
+    var L = Math.max(lambda * diag, kSpacing * spacing) / tightness;
 
     function next(e) { return (e % 3 === 2) ? e - 2 : e + 1; }
     function elen(e) {
