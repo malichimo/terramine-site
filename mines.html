@@ -401,6 +401,22 @@
       border-radius:8px; padding:7px; box-shadow:0 12px 28px rgba(6,10,16,.55);
       font-size:15px; line-height:1.2; max-width:calc(100vw - 16px);
     }
+    /* Mine Maintenance follow-the-mouse popup (one shared element, delegated on #mine-board) */
+    .maint-tip {
+      position:fixed; left:0; top:0; z-index:200; pointer-events:none; display:none;
+      background:#1b2430; color:#fff; border:1px solid rgba(255,255,255,.22);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.55);
+      font-size:13px; line-height:1.35; font-weight:500; text-align:left;
+      max-width:min(280px, calc(100vw - 16px)); box-sizing:border-box; overflow-wrap:anywhere;
+    }
+    .maint-tip-head { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--cyan); margin-bottom:3px; }
+    .maint-tip-line { white-space:normal; }
+    .maint-tip-days { font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
+    .maint-tip-days.is-green { color:#7ee787; }
+    .maint-tip-days.is-yellow { color:#f0c56e; }
+    .maint-tip-days.is-red { color:#ff8a80; }
+    .maint-tip-note { font-size:11px; color:#8e9aab; margin-top:3px; }
+    .maint-tip-note:empty { display:none; }
     .game-tip-row { display:flex; gap:7px; align-items:stretch; justify-content:center; }
     .game-tip-box {
       min-width:5.6em; border:1px solid rgba(255,255,255,.7); border-radius:10px; overflow:hidden;
@@ -7050,10 +7066,8 @@ function updateSortButtons() {
     const recentMaint = !st.missing && !!st.recent;
     if (st.missing) {
       dot.className = 'maint-dot';
-      dot.title = st.pending ? 'Loading maintenance date\u2026' : 'No maintenance date';
     } else {
       dot.className = 'maint-dot ' + (recentMaint ? 'is-red' : 'is-green');
-      dot.title = recentMaint ? 'Maintained in the last 24 hours' : 'Last maintenance more than 24 hours ago';
     }
     const num = document.createElement('b');
     if (st.missing) { num.textContent = '\u2014'; num.className = 'is-missing'; }
@@ -7069,9 +7083,165 @@ function updateSortButtons() {
     mTrack.appendChild(mFill);
     maint.replaceChildren(mLabel, dot, num, sub, mTrack);
     maint.dataset.maintSource = st.source || (st.pending ? 'pending' : 'none');
-    if (st.missing) maint.removeAttribute('title');
-    else maint.title = (st.source === 'purchasedAt' ? 'No activity recorded \u2014 purchased ' : 'Last activity ')
-      + fmtMaintDate(st.ms);
+    maint.removeAttribute('title'); // custom follow-the-mouse popup instead of the native tooltip
+    bindMaintTipOnce();
+    if (maintTipTarget === maint && maintTip && maintTip.style.display === 'block') showMaintTip(maint);
+  }
+  // ---- Mine Maintenance popup: one shared element, event delegation on #mine-board ----
+  const MAINT_TIP_DELAY_MS = 250;
+  const MAINT_TIP_TOUCH_MS = 3000;
+  let maintTip = null;
+  let maintTipTimer = null;
+  let maintTipTouchTimer = null;
+  let maintTipTarget = null;
+  let maintTipX = 0;
+  let maintTipY = 0;
+  let maintTipBound = false;
+  let maintTipTouchSuppressUntil = 0;
+  function ensureMaintTip() {
+    if (maintTip) return maintTip;
+    const tip = document.createElement('div');
+    tip.className = 'maint-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    maintTip = tip;
+    return tip;
+  }
+  function dismissMaintTip() {
+    if (maintTipTimer) { clearTimeout(maintTipTimer); maintTipTimer = null; }
+    if (maintTipTouchTimer) { clearTimeout(maintTipTouchTimer); maintTipTouchTimer = null; }
+    maintTipTarget = null;
+    if (maintTip) maintTip.style.display = 'none';
+  }
+  function placeMaintTip(x, y) {
+    const tip = maintTip;
+    if (!tip) return;
+    const gap = 14, edge = 8;
+    tip.style.visibility = 'hidden';
+    tip.style.display = 'block';
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let left = x + gap, top = y + gap;
+    if (left + w > window.innerWidth - edge) left = x - gap - w;
+    if (top + h > window.innerHeight - edge) top = y - gap - h;
+    if (left < edge) left = edge;
+    if (top < edge) top = edge;
+    if (x >= left && x <= left + w && y >= top && y <= top + h) {
+      const leftSide = x - gap - w;
+      if (leftSide >= edge) left = leftSide;
+      else { const above = y - gap - h; if (above >= edge) top = above; }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function maintMineForBox(box) {
+    const id = box && box.dataset ? box.dataset.mineId : '';
+    if (!id) return null;
+    const list = allMines || [];
+    for (let i = 0; i < list.length; i++) if (list[i] && String(list[i].id) === id) return list[i];
+    return null;
+  }
+  function fillMaintTip(tip, mine) {
+    const st = maintenanceView(mine, Date.now());
+    const head = document.createElement('div');
+    head.className = 'maint-tip-head';
+    head.textContent = 'Mine Maintenance';
+    const line = document.createElement('div');
+    line.className = 'maint-tip-line';
+    const days = document.createElement('div');
+    days.className = 'maint-tip-days';
+    const note = document.createElement('div');
+    note.className = 'maint-tip-note';
+    if (st.pending) {
+      line.textContent = 'Loading activity\u2026';
+    } else if (st.missing) {
+      line.textContent = 'No activity or purchase date recorded';
+    } else {
+      line.textContent = st.source === 'purchasedAt'
+        ? ('No activity recorded \u2014 purchased ' + fmtMaintDate(st.ms))
+        : ('Last activity ' + fmtMaintDate(st.ms));
+      days.textContent = st.daysLeft + (st.daysLeft === 1 ? ' day' : ' days') + ' left of ' + MAINT_WINDOW_DAYS;
+      if (st.tone) days.classList.add(st.tone);
+      note.textContent = st.recent ? 'Maintained in the last 24 hours' : '';
+    }
+    tip.replaceChildren(head, line);
+    if (days.textContent) tip.appendChild(days);
+    tip.appendChild(note);
+  }
+  function showMaintTip(box) {
+    if (maintTipTarget !== box || !box.isConnected) return;
+    const tip = ensureMaintTip();
+    fillMaintTip(tip, maintMineForBox(box));
+    placeMaintTip(maintTipX, maintTipY);
+  }
+  function beginMaintTipFor(box, e) {
+    if (maintTipTimer) { clearTimeout(maintTipTimer); maintTipTimer = null; }
+    maintTipTarget = box;
+    maintTipX = e.clientX;
+    maintTipY = e.clientY;
+    if (maintTip) maintTip.style.display = 'none';
+    maintTipTimer = setTimeout(() => { maintTipTimer = null; showMaintTip(box); }, MAINT_TIP_DELAY_MS);
+  }
+  function bindMaintTipOnce() {
+    if (maintTipBound) return;
+    const board = $('mine-board');
+    if (!board) return;
+    maintTipBound = true;
+    const boxOf = t => (t && t.nodeType === 1) ? t.closest('.maint-box[data-mine-id]') : null;
+    board.addEventListener('mouseover', e => {
+      if (Date.now() < maintTipTouchSuppressUntil) return; // emulated mouse after a tap
+      const box = boxOf(e.target);
+      if (!box || !board.contains(box) || maintTipTarget === box) return;
+      beginMaintTipFor(box, e);
+    });
+    board.addEventListener('mousemove', e => {
+      if (Date.now() < maintTipTouchSuppressUntil) return;
+      const box = boxOf(e.target);
+      if (!box) return;
+      if (maintTipTarget !== box) { beginMaintTipFor(box, e); return; } // e.g. re-hover after scroll hid it
+      maintTipX = e.clientX;
+      maintTipY = e.clientY;
+      if (maintTip && maintTip.style.display === 'block' && !maintTipTimer) placeMaintTip(maintTipX, maintTipY);
+    });
+    board.addEventListener('mouseout', e => {
+      const box = maintTipTarget;
+      if (!box || maintTipTouchTimer) return;
+      const rel = e.relatedTarget;
+      if (rel && rel.nodeType === 1 && box.contains(rel)) return;
+      if (boxOf(e.target) !== box) return;
+      dismissMaintTip();
+    });
+    // Touch: tap toggles, auto-hides after 3s or on scroll.
+    board.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'touch') return;
+      maintTipTouchSuppressUntil = Date.now() + 900;
+      const box = boxOf(e.target);
+      const wasOpen = !!box && maintTipTarget === box && maintTip && maintTip.style.display === 'block';
+      dismissMaintTip();
+      if (!box || !board.contains(box) || wasOpen) return;
+      maintTipTarget = box;
+      maintTipX = e.clientX;
+      maintTipY = e.clientY;
+      showMaintTip(box);
+      maintTipTouchTimer = setTimeout(() => {
+        maintTipTouchTimer = null;
+        if (maintTipTarget === box) dismissMaintTip();
+      }, MAINT_TIP_TOUCH_MS);
+    });
+    // Scroll: touch popups always close; a hover popup stays only if the cursor is still over its box
+    // (layout shifts from background loading can fire scroll events without the user scrolling).
+    window.addEventListener('scroll', () => {
+      const box = maintTipTarget;
+      if (!box) return;
+      if (!maintTipTouchTimer && box.isConnected) {
+        const under = document.elementFromPoint(maintTipX, maintTipY);
+        if (under && box.contains(under)) {
+          if (maintTip && maintTip.style.display === 'block' && !maintTipTimer) placeMaintTip(maintTipX, maintTipY);
+          return;
+        }
+      }
+      dismissMaintTip();
+    }, { passive: true, capture: true });
   }
   function refreshMaintBoxes(ids) {
     const only = ids ? new Set(ids.map(String)) : null;
@@ -7095,7 +7265,7 @@ function updateSortButtons() {
     currentGrid = null;
     const board = $('mine-board');
     board.innerHTML = '';
-    dismissProdTip(); dismissGameTip(); dismissVoImgTip(); dismissMineTitleFollowTip(); closeVoDetail();
+    dismissProdTip(); dismissGameTip(); dismissMaintTip(); dismissVoImgTip(); dismissMineTitleFollowTip(); closeVoDetail();
     const owned = allMines.length;
     // During settle, matchCount reflects the eventual visitor-sorted set (zeros
     // hidden); show filtered total until counts are ready so the toolbar is stable.
