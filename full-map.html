@@ -344,6 +344,11 @@
     .mine-map-bulk-rename-form label.bulk-seq-pad-label[hidden] {
       display:none !important;
     }
+    .mine-map-bulk-rename-item .mine-map-bulk-rename-item-num {
+      flex:0 0 auto; min-width:1.5em; text-align:right;
+      font:700 12px/1.3 'DM Sans',sans-serif; color:rgba(255,255,255,.65);
+      font-variant-numeric:tabular-nums;
+    }
     .mine-map-bulk-rename-apply-wrap {
       align-self:flex-start; margin-top:4px;
       display:flex; flex-direction:column; align-items:flex-start; gap:8px;
@@ -592,6 +597,10 @@
               <label class="bulk-seq-label bulk-seq-pad-label" id="mine-map-bulk-rename-pad-wrap" hidden>
                 <input type="checkbox" id="mine-map-bulk-rename-pad">
                 <span>Left-pad the count with zeros</span>
+              </label>
+              <label class="bulk-seq-label bulk-seq-pad-label" id="mine-map-bulk-rename-bydate-wrap" hidden>
+                <input type="checkbox" id="mine-map-bulk-rename-bydate" disabled>
+                <span>Number in order of purchase date</span>
               </label>
               <div class="mine-map-bulk-rename-apply-wrap">
                 <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-rename-apply">Apply</button>
@@ -1702,6 +1711,7 @@
     if (pad) pad.checked = false;
     const padWrap = $('mine-map-bulk-rename-pad-wrap');
     if (padWrap) padWrap.hidden = true;
+    syncBulkRenameByDateUi();
     const apply = $('mine-map-bulk-rename-apply');
     if (apply) apply.disabled = false;
     const progress = $('mine-map-bulk-rename-progress');
@@ -1752,15 +1762,111 @@
     bounds.extend(pxToLatLng(right, bottom));
     return bounds;
   }
+  // Bulk Rename "Number in order of purchase date". Purchase date mirrors full-map's newest-mine
+  // logic: purchasedAt on the properties doc, then _details.purchasedAt, then createdAt.
+  function bulkRenameTsMs(value) {
+    if (value == null || value === '') return null;
+    if (value instanceof Date) {
+      const t = value.getTime();
+      return Number.isFinite(t) ? t : null;
+    }
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return null;
+      return Math.abs(value) < 1e12 ? value * 1000 : value;
+    }
+    if (typeof value === 'string') {
+      const t = value.trim();
+      if (!t) return null;
+      if (/^[+-]?\d+(\.\d+)?$/.test(t)) {
+        const n = Number(t);
+        if (!Number.isFinite(n)) return null;
+        return Math.abs(n) < 1e12 ? n * 1000 : n;
+      }
+      const parsed = Date.parse(t);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (typeof value === 'object') {
+      if (typeof value.toMillis === 'function') {
+        try {
+          const ms = value.toMillis();
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      if (typeof value.toDate === 'function') {
+        try {
+          const d = value.toDate();
+          const ms = d && typeof d.getTime === 'function' ? d.getTime() : NaN;
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      const sec = typeof value.seconds === 'number' ? value.seconds
+        : (typeof value._seconds === 'number' ? value._seconds : null);
+      if (sec != null && Number.isFinite(sec)) {
+        const ns = typeof value.nanoseconds === 'number' ? value.nanoseconds
+          : (typeof value._nanoseconds === 'number' ? value._nanoseconds : 0);
+        return sec * 1000 + (Number.isFinite(ns) ? Math.floor(ns / 1e6) : 0);
+      }
+    }
+    return null;
+  }
+  function bulkRenamePurchaseMs(mine) {
+    if (!mine) return null;
+    const raw = (mine._raw && typeof mine._raw === 'object') ? mine._raw : {};
+    const d = mine._details || {};
+    const tries = [mine.purchasedAt, raw.purchasedAt, d.purchasedAt, d.createdAt, mine.createdAt, raw.createdAt];
+    for (let i = 0; i < tries.length; i++) {
+      const ms = bulkRenameTsMs(tries[i]);
+      if (ms != null) return ms;
+    }
+    return null;
+  }
+  function bulkRenameTitleCompare(a, b) {
+    const na = String(titleOf(a) || '').localeCompare(String(titleOf(b) || ''), undefined, { sensitivity: 'base', numeric: true });
+    if (na) return na;
+    return String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true });
+  }
+  function bulkRenameUsesPurchaseOrder() {
+    const seq = $('mine-map-bulk-rename-seq');
+    const byDate = $('mine-map-bulk-rename-bydate');
+    return !!(seq && seq.checked && byDate && byDate.checked && !byDate.disabled);
+  }
+  // Apply order: by name (existing behavior); with purchase order on, oldest purchase first,
+  // mines without a date last in their name order.
+  function bulkRenameOrderedMines(byDate) {
+    const titled = bulkRenameSelected.slice().sort(bulkRenameTitleCompare);
+    if (!byDate) return titled;
+    return titled.map(function (m, i) { return { m: m, i: i, ms: bulkRenamePurchaseMs(m) }; })
+      .sort(function (a, b) {
+        const ha = a.ms != null, hb = b.ms != null;
+        if (ha && hb && a.ms !== b.ms) return a.ms - b.ms;
+        if (ha !== hb) return ha ? -1 : 1;
+        return a.i - b.i;
+      })
+      .map(function (x) { return x.m; });
+  }
+  function syncBulkRenameByDateUi() {
+    const seq = $('mine-map-bulk-rename-seq');
+    const wrap = $('mine-map-bulk-rename-bydate-wrap');
+    const byDate = $('mine-map-bulk-rename-bydate');
+    const on = !!(seq && seq.checked);
+    if (wrap) wrap.hidden = !on;
+    if (byDate) {
+      byDate.disabled = !on;
+      if (!on) byDate.checked = false;
+    }
+  }
   function renderBulkRenameList() {
     const list = $('mine-map-bulk-rename-list');
     if (!list) return;
     list.innerHTML = '';
-    for (let i = 0; i < bulkRenameSelected.length; i++) {
-      const m = bulkRenameSelected[i];
+    const byDate = bulkRenameUsesPurchaseOrder();
+    const rows = byDate ? bulkRenameOrderedMines(true) : bulkRenameSelected;
+    for (let i = 0; i < rows.length; i++) {
+      const m = rows[i];
       const type = typeKey(m || {});
       const row = document.createElement('div');
       row.className = 'mine-map-bulk-rename-item';
+      row.dataset.mineId = String(m && m.id != null ? m.id : '');
       const img = document.createElement('img');
       img.src = ICONS[type] || ICONS.rock;
       img.alt = '';
@@ -1784,6 +1890,14 @@
         }
         renderBulkRenameList();
       });
+      if (byDate) {
+        const num = document.createElement('b');
+        num.className = 'mine-map-bulk-rename-item-num';
+        num.textContent = String(i + 1);
+        row.appendChild(num);
+        const ms = bulkRenamePurchaseMs(m);
+        row.title = ms != null ? ('Purchased ' + new Date(ms).toLocaleDateString()) : 'No purchase date (numbered last)';
+      }
       row.appendChild(img);
       row.appendChild(span);
       row.appendChild(remove);
@@ -1907,11 +2021,7 @@
       if (input) input.focus();
       return;
     }
-    const mines = bulkRenameSelected.slice().sort((a, b) => {
-      const na = String(titleOf(a) || '').localeCompare(String(titleOf(b) || ''), undefined, { sensitivity: 'base', numeric: true });
-      if (na) return na;
-      return String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true });
-    });
+    const mines = bulkRenameOrderedMines(bulkRenameUsesPurchaseOrder());
     const useSeq = !!(seq && seq.checked);
     const useType = !!(appendTypeEl && appendTypeEl.checked);
     const usePad = !!(useSeq && padEl && padEl.checked);
@@ -2325,8 +2435,13 @@
         const pad = $('mine-map-bulk-rename-pad');
         if (padWrap) padWrap.hidden = !bulkRenameSeq.checked;
         if (!bulkRenameSeq.checked && pad) pad.checked = false;
+        syncBulkRenameByDateUi();
+        const dlg = $('mine-map-bulk-rename');
+        if (dlg && !dlg.hidden) renderBulkRenameList();
       });
     }
+    const bulkRenameByDate = $('mine-map-bulk-rename-bydate');
+    if (bulkRenameByDate) bulkRenameByDate.addEventListener('change', function () { renderBulkRenameList(); });
     const bulkRenameInput = $('mine-map-bulk-rename-input');
     if (bulkRenameInput) {
       bulkRenameInput.addEventListener('keydown', e => {
