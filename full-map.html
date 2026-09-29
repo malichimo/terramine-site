@@ -677,6 +677,8 @@
 </div>
 
 <script src="js/random-mine-names.js"></script>
+<script src="js/vendor/delaunator-5.1.0.min.js"></script>
+<script src="js/reach-hull.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -760,6 +762,7 @@
   let mineMapReachOn = false;
   let mineMapReachReady = false;
   let mineMapReachOverlays = [];
+  let mineMapReachLast = null; // last TerraMineReachHull.compute() result (method, ratio, vertices…)
   let mineMapBound = false;
   let mineMapLoading = null;
   let mineMapResizeBound = false;
@@ -1157,7 +1160,10 @@
     if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
   }
 
-  // Reach: single convex hull wrapping ALL loaded parcel corners as one area.
+  // Reach: ONE outline wrapping ALL loaded parcel corners as one area.
+  // Sep 29, 2026: concave hull (chi-shape over a Delaunay triangulation,
+  // js/reach-hull.js) so the outline hugs mine clusters and cuts into empty
+  // areas; falls back to the convex hull (< 8 mines, collinear, any failure).
   // Thick money-green border + light fill. Toggle + tip unchanged.
   const MINE_MAP_REACH_STROKE = '#85bb65';
   const MINE_MAP_REACH_FILL = '#85bb65';
@@ -1244,7 +1250,31 @@
     if (!mineMapReachOn || !mineMapInstance || !mineMapReachReady) return;
     const pts = collectReachParcelPoints();
     if (!pts.length) return;
-    const hull = reachConvexHull(pts);
+    let hull = null;
+    try {
+      if (window.TerraMineReachHull) {
+        // distinct mines (dedupe by parcel centroid) drive the spacing-based threshold
+        const sites = new Set();
+        const mines = allMines || [];
+        for (let i = 0; i < mines.length; i++) {
+          const c = findCorners(mines[i]);
+          if (!c || !c.path || !c.path.length) continue;
+          let la = 0, ln = 0, k = 0;
+          for (let j = 0; j < c.path.length; j++) {
+            const q = c.path[j];
+            if (q && Number.isFinite(q.lat) && Number.isFinite(q.lng)) { la += q.lat; ln += q.lng; k++; }
+          }
+          if (k) sites.add(reachPointKey(la / k, ln / k));
+        }
+        const res = window.TerraMineReachHull.compute(pts, { siteCount: sites.size });
+        mineMapReachLast = res;
+        if (res && res.path && res.path.length >= 3) hull = res.path;
+      }
+    } catch (e) {
+      console.warn('Reach concave hull failed; using convex hull', e);
+      hull = null;
+    }
+    if (!hull) hull = reachConvexHull(pts);
     if (!hull) return; // fewer than 3 unique corners — skip gracefully
     const poly = new google.maps.Polygon({
       paths: hull,
