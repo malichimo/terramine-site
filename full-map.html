@@ -252,7 +252,7 @@
     }
     .mine-map-select-layer {
       position:absolute; inset:0; z-index:8; cursor:crosshair;
-      background:transparent;
+      background:transparent; touch-action:none;
     }
     .mine-map-select-layer[hidden] { display:none !important; }
     .mine-map-select-rect {
@@ -358,6 +358,52 @@
     .mine-map-bulk-rename-progress {
       font:600 13px/1.3 'DM Sans',sans-serif; color:rgba(255,255,255,.92);
       letter-spacing:.2px; min-height:1.3em;
+    }
+    /* ── Bulk Greeting (reuses the Bulk Rename box-select + dialog shell) ── */
+    .mine-map-bulk-greet-btn { display:inline-flex; align-items:center; gap:5px; }
+    .mine-map-bulk-greet-btn svg { width:15px; height:15px; flex-shrink:0; display:block; margin:-2px 0; }
+    .mine-map-bulk-greet-item { align-items:flex-start; }
+    .mine-map-bulk-greet-item img { margin-top:1px; }
+    .mine-map-bulk-greet-item .mine-map-bulk-rename-item-remove { margin-top:-1px; }
+    .mine-map-bulk-greet-item .mine-map-bulk-greet-text {
+      flex:1; min-width:0; white-space:normal; overflow:hidden; overflow-wrap:anywhere;
+      display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3;
+    }
+    .mine-map-bulk-greet-current {
+      font-style:italic; font-weight:500; color:rgba(255,255,255,.62);
+    }
+    .mine-map-bulk-greet-current.is-empty { color:rgba(255,255,255,.45); }
+    .mine-map-bulk-rename-form textarea.mine-map-bulk-greet-input {
+      width:100%; box-sizing:border-box; min-height:84px; resize:vertical;
+      border:1px solid rgba(255,255,255,.35); border-radius:8px;
+      background:rgba(15,23,42,.45); color:#fff;
+      padding:10px 12px; font:500 14px/1.4 'DM Sans',sans-serif; letter-spacing:0;
+      outline:none;
+    }
+    .mine-map-bulk-rename-form textarea.mine-map-bulk-greet-input:focus { border-color:#4FC3F7; }
+    .mine-map-bulk-rename-form textarea.mine-map-bulk-greet-input:disabled { opacity:.7; }
+    .mine-map-bulk-greet-meta {
+      display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:-6px;
+      font:500 11px/1.2 'DM Sans',sans-serif; color:rgba(255,255,255,.7);
+    }
+    .mine-map-bulk-greet-count.is-max { color:#ffcc80; }
+    .mine-map-bulk-greet .mine-map-bulk-rename-progress.is-error { color:#ffab91; }
+    .mine-map-bulk-greet .mine-map-bulk-rename-item-remove:disabled,
+    .mine-map-bulk-greet .mine-map-bulk-rename-x:disabled { opacity:.45; cursor:not-allowed; }
+    @media (max-width:600px) {
+      /* Phones: let the map tool buttons wrap instead of running off the right edge. */
+      .mine-map-head { flex-wrap:wrap; row-gap:8px; }
+      .mine-map-head .mine-map-title { flex:1 1 calc(100% - 40px); }
+      .mine-map-bulk-greet { left:8px; right:8px; top:8px; max-height:calc(100% - 16px); }
+      .mine-map-bulk-greet .mine-map-bulk-rename-inner {
+        flex-direction:column; max-height:none; overflow-y:auto; overflow-x:hidden;
+        padding:44px 12px 12px 12px;
+      }
+      .mine-map-bulk-greet .mine-map-bulk-rename-list {
+        flex:0 0 auto; max-height:34vh; padding-right:0; padding-bottom:10px;
+        border-right:0; border-bottom:1px solid rgba(255,255,255,.18);
+      }
+      .mine-map-bulk-greet .mine-map-bulk-rename-form { padding-left:0; padding-top:12px; }
     }
 
     /* Full-map page layout (not a popup) */
@@ -487,6 +533,7 @@
     <div class="mine-map-panel" aria-label="Full mine map">
       <div class="mine-map-head">
         <div class="mine-map-title" id="mine-map-title">Map</div>
+        <button type="button" class="mine-map-labels mine-map-bulk-greet-btn" id="mine-map-bulk-greet-btn" data-tip="Bulk Greeting: draw a rectangle to select mines on the map, then set one greeting on all of them." aria-label="Bulk Greeting: draw a rectangle to select mines on the map, then set one greeting on all of them." aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.14 4.18 2.95 5.55L5.2 20.5l4.3-2.2c.8.18 1.64.28 2.5.28 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8" cy="11" r="1.3" fill="currentColor"/><circle cx="12" cy="11" r="1.3" fill="currentColor"/><circle cx="16" cy="11" r="1.3" fill="currentColor"/></svg><span>Bulk Greeting</span></button>
         <button type="button" class="mine-map-labels" id="mine-map-bulk-rename-btn" data-tip="Draw a rectangle to select mines on the map, then rename them." aria-label="Draw a rectangle to select mines on the map, then rename them." aria-pressed="false">Bulk Rename</button>
         <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
         <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
@@ -547,6 +594,25 @@
               <div class="mine-map-bulk-rename-apply-wrap">
                 <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-rename-apply">Apply</button>
                 <div class="mine-map-bulk-rename-progress" id="mine-map-bulk-rename-progress" hidden aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mine-map-bulk-rename mine-map-bulk-greet" id="mine-map-bulk-greet" hidden aria-hidden="true" role="dialog" aria-label="Bulk greeting for mines">
+          <button type="button" class="mine-map-bulk-rename-x" id="mine-map-bulk-greet-x" aria-label="Cancel bulk greeting">×</button>
+          <div class="mine-map-bulk-rename-inner">
+            <div class="mine-map-bulk-rename-list" id="mine-map-bulk-greet-list"></div>
+            <div class="mine-map-bulk-rename-form">
+              <label class="bulk-name-label" for="mine-map-bulk-greet-input">New greeting
+                <textarea class="mine-map-bulk-greet-input" id="mine-map-bulk-greet-input" maxlength="100" rows="3" placeholder="Greeting for visitors…"></textarea>
+              </label>
+              <div class="mine-map-bulk-greet-meta">
+                <span class="mine-map-bulk-greet-scope" id="mine-map-bulk-greet-scope"></span>
+                <span class="mine-map-bulk-greet-count" id="mine-map-bulk-greet-count">0/100</span>
+              </div>
+              <div class="mine-map-bulk-rename-apply-wrap">
+                <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-greet-apply">Apply</button>
+                <div class="mine-map-bulk-rename-progress" id="mine-map-bulk-greet-progress" hidden aria-live="polite"></div>
               </div>
             </div>
           </div>
@@ -651,6 +717,9 @@
   let bulkRenameStartY = 0;
   let bulkRenameSelected = [];
   let bulkRenameLayerBound = false;
+  let bulkToolKind = 'rename'; // which tool owns the shared box-select: 'rename' | 'greet'
+  let bulkGreetSelected = [];
+  let bulkGreetSaving = false;
   let newestMine = null;
   let newestMineMs = null;
   let didInitialCenter = false;
@@ -1585,10 +1654,19 @@
     return null;
   }
   function updateBulkRenameBtn() {
+    // One shared box-select mode; bulkToolKind says which tool button is active.
+    const renameOn = !!bulkRenameMode && bulkToolKind !== 'greet';
+    const greetOn = !!bulkRenameMode && bulkToolKind === 'greet';
     const btn = $('mine-map-bulk-rename-btn');
-    if (!btn) return;
-    btn.setAttribute('aria-pressed', bulkRenameMode ? 'true' : 'false');
-    btn.classList.toggle('is-bulk-rename-active', !!bulkRenameMode);
+    if (btn) {
+      btn.setAttribute('aria-pressed', renameOn ? 'true' : 'false');
+      btn.classList.toggle('is-bulk-rename-active', renameOn);
+    }
+    const greetBtn = $('mine-map-bulk-greet-btn');
+    if (greetBtn) {
+      greetBtn.setAttribute('aria-pressed', greetOn ? 'true' : 'false');
+      greetBtn.classList.toggle('is-bulk-rename-active', greetOn);
+    }
   }
   function clearBulkRenameSelectRect() {
     const rect = $('mine-map-select-rect');
@@ -1635,6 +1713,7 @@
     bulkRenameDragging = false;
     stopBulkRenameDrawLayer();
     hideBulkRenameDialog();
+    hideBulkGreetDialog();
     updateBulkRenameBtn();
   }
   function latLngBoundsFromSelectPixels(layer, x1, y1, x2, y2) {
@@ -1744,15 +1823,18 @@
     }
     bulkRenameMode = true;
     updateBulkRenameBtn();
-    openBulkRenameDialog(selected);
+    if (bulkToolKind === 'greet') openBulkGreetDialog(selected);
+    else openBulkRenameDialog(selected);
   }
-  function startBulkRenameDrawMode() {
+  function startBulkRenameDrawMode(kind) {
+    bulkToolKind = (kind === 'greet') ? 'greet' : 'rename';
     closeMineMapEdit();
     if (!mineMapInstance) {
       showMineMapMsg('Map is not ready yet.', true);
       return;
     }
     hideBulkRenameDialog();
+    hideBulkGreetDialog();
     bulkRenameMode = true;
     bulkRenameDragging = false;
     updateBulkRenameBtn();
@@ -1762,13 +1844,18 @@
     clearBulkRenameSelectRect();
     showMineMapMsg('Draw a rectangle to select mines. Esc cancels.', true);
   }
-  function toggleBulkRenameFromButton() {
+  function toggleBulkRenameFromButton(kind) {
+    const k = (kind === 'greet') ? 'greet' : 'rename';
+    if (bulkGreetSaving) return;
     if (bulkRenameMode) {
+      const same = bulkToolKind === k;
       exitBulkRenameMode();
-      showMineMapMsg('', true);
-      return;
+      if (same) {
+        showMineMapMsg('', true);
+        return;
+      }
     }
-    startBulkRenameDrawMode();
+    startBulkRenameDrawMode(k);
   }
   function flashShowcaseNote(text) {
     showMineMapMsg(text || '', true);
@@ -1858,6 +1945,197 @@
     if (fail) showMineMapMsg('Renamed ' + ok + ', failed ' + fail + '.', false);
     else showMineMapMsg('Renamed ' + ok + ' mine' + (ok === 1 ? '' : 's') + '.', false);
   }
+  // ── Bulk Greeting ──
+  // Shares the Bulk Rename box-select (bulkRenameMode, select layer, finishBulkRenameSelection);
+  // bulkToolKind decides which dialog opens. Saves propertyDetails/{id}.greeting through
+  // safeUpdatePropertyDetails (merge), same normalization as the single-mine greeting editor.
+  const BULK_GREET_MAX = 100;
+  function bulkGreetIdOf(m) { return String(m && m.id != null ? m.id : ''); }
+  function setBulkGreetBusy(busy) {
+    bulkGreetSaving = !!busy;
+    const dlg = $('mine-map-bulk-greet');
+    if (dlg) dlg.classList.toggle('is-saving', !!busy);
+    const ta = $('mine-map-bulk-greet-input');
+    if (ta) ta.disabled = !!busy;
+    const x = $('mine-map-bulk-greet-x');
+    if (x) x.disabled = !!busy;
+    const list = $('mine-map-bulk-greet-list');
+    if (list) list.querySelectorAll('.mine-map-bulk-rename-item-remove').forEach(function (b) { b.disabled = !!busy; });
+    const apply = $('mine-map-bulk-greet-apply');
+    if (apply) {
+      apply.disabled = !!busy || bulkGreetSelected.length === 0;
+      apply.textContent = busy ? 'Saving\u2026' : 'Apply';
+    }
+  }
+  function updateBulkGreetCount() {
+    const ta = $('mine-map-bulk-greet-input');
+    const count = $('mine-map-bulk-greet-count');
+    if (ta && count) {
+      const n = String(ta.value || '').length;
+      count.textContent = n + '/' + BULK_GREET_MAX;
+      count.classList.toggle('is-max', n >= BULK_GREET_MAX);
+    }
+    const scope = $('mine-map-bulk-greet-scope');
+    if (scope) {
+      const k = bulkGreetSelected.length;
+      scope.textContent = 'Applies to ' + k + ' mine' + (k === 1 ? '' : 's');
+    }
+  }
+  function setBulkGreetProgress(text, isError) {
+    const progress = $('mine-map-bulk-greet-progress');
+    if (!progress) return;
+    progress.hidden = !text;
+    progress.textContent = text || '';
+    progress.classList.toggle('is-error', !!isError);
+  }
+  function hideBulkGreetDialog() {
+    const dlg = $('mine-map-bulk-greet');
+    if (dlg) {
+      dlg.hidden = true;
+      dlg.setAttribute('aria-hidden', 'true');
+    }
+    const list = $('mine-map-bulk-greet-list');
+    if (list) list.innerHTML = '';
+    const ta = $('mine-map-bulk-greet-input');
+    if (ta) ta.value = '';
+    bulkGreetSelected = [];
+    setBulkGreetBusy(false);
+    setBulkGreetProgress('', false);
+    updateBulkGreetCount();
+  }
+  function renderBulkGreetList() {
+    const list = $('mine-map-bulk-greet-list');
+    if (!list) return;
+    list.innerHTML = '';
+    for (let i = 0; i < bulkGreetSelected.length; i++) {
+      const m = bulkGreetSelected[i];
+      const type = typeKey(m || {});
+      const title = titleOf(m) || bulkGreetIdOf(m);
+      const greeting = String(greetingOf(m) || '').trim();
+      const row = document.createElement('div');
+      row.className = 'mine-map-bulk-rename-item mine-map-bulk-greet-item';
+      row.dataset.mineId = bulkGreetIdOf(m);
+      const img = document.createElement('img');
+      img.src = ICONS[type] || ICONS.rock;
+      img.alt = '';
+      const text = document.createElement('span');
+      text.className = 'mine-map-bulk-greet-text';
+      const t = document.createElement('span');
+      t.className = 'mine-map-bulk-greet-title';
+      t.textContent = title;
+      const g = document.createElement('em');
+      g.className = 'mine-map-bulk-greet-current' + (greeting ? '' : ' is-empty');
+      g.textContent = greeting ? ('\u201c' + greeting + '\u201d') : '(no greeting)';
+      text.appendChild(t);
+      text.appendChild(document.createTextNode(' '));
+      text.appendChild(g);
+      text.title = greeting ? (title + ' \u2014 ' + greeting) : (title + ' \u2014 no greeting');
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'mine-map-bulk-rename-item-remove';
+      remove.setAttribute('aria-label', 'Remove from greeting list');
+      remove.textContent = '\u00d7';
+      remove.disabled = !!bulkGreetSaving;
+      remove.addEventListener('click', function (ev) {
+        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        if (bulkGreetSaving) return;
+        const id = bulkGreetIdOf(m);
+        bulkGreetSelected = bulkGreetSelected.filter(function (x) { return bulkGreetIdOf(x) !== id; });
+        if (!bulkGreetSelected.length) {
+          exitBulkRenameMode();
+          showMineMapMsg('No mines left to update.', true);
+          return;
+        }
+        renderBulkGreetList();
+      });
+      row.appendChild(img);
+      row.appendChild(text);
+      row.appendChild(remove);
+      list.appendChild(row);
+    }
+    const apply = $('mine-map-bulk-greet-apply');
+    if (apply) apply.disabled = !!bulkGreetSaving || bulkGreetSelected.length === 0;
+    updateBulkGreetCount();
+  }
+  // Read-only: some mines' details may still be loading; never show "(no greeting)" over a real one.
+  function refreshBulkGreetFromDb(list) {
+    if (typeof db === 'undefined' || !db || typeof db.collection !== 'function') return;
+    const missing = (list || []).filter(function (m) { return m && m.id != null && !m._details; }).slice(0, 200);
+    missing.forEach(function (m) {
+      try {
+        db.collection('propertyDetails').doc(String(m.id)).get().then(function (snap) {
+          if (m._details) return;
+          m._details = (snap && snap.exists) ? (snap.data() || {}) : {};
+          const dlg = $('mine-map-bulk-greet');
+          if (!dlg || dlg.hidden || bulkGreetSaving) return;
+          const id = bulkGreetIdOf(m);
+          if (bulkGreetSelected.some(function (x) { return bulkGreetIdOf(x) === id; })) renderBulkGreetList();
+        }).catch(function () {});
+      } catch (err) {}
+    });
+  }
+  function openBulkGreetDialog(list) {
+    const dlg = $('mine-map-bulk-greet');
+    if (!dlg) return;
+    bulkGreetSelected = (list || []).slice();
+    setBulkGreetBusy(false);
+    setBulkGreetProgress('', false);
+    const ta = $('mine-map-bulk-greet-input');
+    if (ta) ta.value = '';
+    renderBulkGreetList();
+    dlg.hidden = false;
+    dlg.setAttribute('aria-hidden', 'false');
+    if (ta) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
+    refreshBulkGreetFromDb(bulkGreetSelected);
+  }
+  async function applyBulkGreet() {
+    if (bulkGreetSaving) return;
+    const ta = $('mine-map-bulk-greet-input');
+    // Same normalization as applyMineMapEdit / applyMineGreetModal: trim, cap at 100 (newlines kept).
+    let next = ta ? String(ta.value || '').trim() : '';
+    if (next.length > BULK_GREET_MAX) next = next.slice(0, BULK_GREET_MAX);
+    const list = bulkGreetSelected.slice();
+    const total = list.length;
+    if (!total) return;
+    if (!next) {
+      const sure = window.confirm('The greeting box is empty. Clear the greeting on ' + total + ' mine' + (total === 1 ? '' : 's') + '?');
+      if (!sure) {
+        if (ta) { try { ta.focus(); } catch (e) {} }
+        return;
+      }
+    }
+    setBulkGreetBusy(true);
+    setBulkGreetProgress('0 of ' + total + ' done', false);
+    let ok = 0;
+    const failed = [];
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      const id = m.id;
+      try {
+        await safeUpdatePropertyDetails(id, { greeting: next }, null);
+        syncLocalMineGreeting(id, next);
+        if (!m._details) m._details = {};
+        m._details.greeting = next;
+        ok++;
+      } catch (err) {
+        failed.push(m);
+        console.warn('[full-map] bulk greeting failed', id, err);
+      }
+      setBulkGreetProgress((i + 1) + ' of ' + total + ' done', false);
+    }
+    const verb = next ? 'updated' : 'cleared';
+    if (!failed.length) {
+      exitBulkRenameMode();
+      showMineMapMsg('Greeting ' + verb + ' on ' + ok + ' mine' + (ok === 1 ? '' : 's') + '.', false);
+      return;
+    }
+    // Keep the dialog (and the typed greeting) open with only the mines that failed, so Apply retries them.
+    bulkGreetSelected = failed;
+    setBulkGreetBusy(false);
+    renderBulkGreetList();
+    setBulkGreetProgress((ok ? ('Greeting ' + verb + ' on ' + ok + ' mine' + (ok === 1 ? '' : 's') + '. ') : '')
+      + failed.length + ' failed \u2014 still listed; Apply to retry.', true);
+  }
   function bindBulkRenameLayerOnce() {
     if (bulkRenameLayerBound) return;
     bulkRenameLayerBound = true;
@@ -1911,7 +2189,7 @@
           closeMineMapEdit();
           return;
         }
-        if (bulkRenameMode) {
+        if (bulkRenameMode && !bulkGreetSaving) {
           exitBulkRenameMode();
           showMineMapMsg('', true);
         }
@@ -2004,6 +2282,30 @@
         toggleBulkRenameFromButton();
       });
       bindFollowTip(bulkRenameBtn);
+    }
+    const bulkGreetBtn = $('mine-map-bulk-greet-btn');
+    if (bulkGreetBtn) {
+      bulkGreetBtn.addEventListener('click', e => {
+        e.preventDefault();
+        toggleBulkRenameFromButton('greet');
+      });
+      bindFollowTip(bulkGreetBtn);
+    }
+    const bulkGreetX = $('mine-map-bulk-greet-x');
+    if (bulkGreetX) bulkGreetX.addEventListener('click', e => { e.preventDefault(); if (!bulkGreetSaving) exitBulkRenameMode(); });
+    const bulkGreetApply = $('mine-map-bulk-greet-apply');
+    if (bulkGreetApply) bulkGreetApply.addEventListener('click', e => { e.preventDefault(); applyBulkGreet(); });
+    const bulkGreetInput = $('mine-map-bulk-greet-input');
+    if (bulkGreetInput) {
+      bulkGreetInput.addEventListener('input', updateBulkGreetCount);
+      bulkGreetInput.addEventListener('keydown', e => {
+        // Enter = newline (like the single editor); Ctrl/Cmd+Enter applies.
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          applyBulkGreet();
+        }
+      });
     }
     bindBulkRenameLayerOnce();
     const bulkRenameX = $('mine-map-bulk-rename-x');
