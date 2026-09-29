@@ -249,6 +249,18 @@
         }, 120);
       });
       state.ro.observe(el);
+    } else {
+      // no ResizeObserver: fall back to window resize / rotation
+      var onWin = function () {
+        clearTimeout(state.roTimer);
+        state.roTimer = setTimeout(function () {
+          if (el.clientWidth === state.fitW && el.clientHeight === state.fitH) return;
+          try { google.maps.event.trigger(map, 'resize'); } catch (e) {}
+          fitToPath();
+        }, 150);
+      };
+      window.addEventListener('resize', onWin);
+      window.addEventListener('orientationchange', onWin);
     }
     return map;
   }

@@ -536,8 +536,8 @@ body.auth-pending #portal {
    to keep the donut about the size it was in its own column. */
 .dash-breakdown-col-stats { gap: 12px; }
 .dash-breakdown-col-stats .stat-stack { flex: 0 0 auto; }
-.dash-breakdown-col-stats .dash-pie-card { flex: 0 0 auto; min-height: 500px; }
-/* donut centered in the remaining height of the 500px-min card */
+.dash-breakdown-col-stats .dash-pie-card { flex: 0 0 auto; height: 600px; min-height: 0; }
+/* donut centered in the remaining height of the fixed 600px card */
 .dash-breakdown-col-stats .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 8px 0 12px; }
 /* cards in a column no longer grow to fill a stretched column */
 .dash-breakdown-col > .dash-slot-card,
@@ -553,6 +553,11 @@ body.auth-pending #portal {
 .dash-dominance-card {
   flex: 0 0 auto;
   height: 500px; /* fixed: title bar + map, all widths (border-box) */
+  /* always the full width of its grid column — never capped or clipped */
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -596,12 +601,16 @@ body.auth-pending #portal {
 .dash-dominance-body {
   position: relative;
   flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
   background: #e6e6e6; /* matches the muted map base while tiles load */
 }
 .dash-dominance-map {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
 }
 .dash-dominance-msg {
   position: absolute;
@@ -730,12 +739,13 @@ body.auth-pending #portal {
 }
 @media (max-width: 1100px) {
   .dash-breakdown-row {
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0,…) so min-content (pie canvas, TB table) can't blow a column out */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .dash-breakdown-col-slot { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
-  .dash-breakdown-row { grid-template-columns: 1fr; }
+  .dash-breakdown-row { grid-template-columns: minmax(0, 1fr); }
   .dash-breakdown-col-slot { grid-column: auto; }
 }
 @media (max-width: 400px) {
