@@ -910,7 +910,6 @@
   const GPS_NESTS = ['location', 'coordinates', 'gps', 'position', 'center', 'geo', 'latLng'];
   const VISIT_PAGE = 200; // page size only; keep paging until Firestore has no more
   const DETAILS_FETCH = 40;
-  const VISITOR_AVATAR_CONCURRENCY = 8;
 
   let loadedUid = null;
   let allVisits = [];
@@ -938,9 +937,6 @@
   let mineMap = {}; // propertyId -> { id, mineType, customName, _raw, _details }
   let sortKey = 'date';
   let sortDir = 1; // 1 = newest / high / A→Z depending on key
-  let visitorUserCache = new Map();
-  let visitorUserInflight = new Map();
-  let visitorUserDocAvatarBlockedNoted = false;
   let voImgTip = null;
   let voImgTipTimer = null;
   let voImgTipTarget = null;
@@ -3340,8 +3336,14 @@
     if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
     return (typeof id === 'string' && id) ? id : null;
   }
+  function checkInVisitorNick(v) {
+    const n = v && (v.visitorNickname || v.nickname);
+    return (typeof n === 'string' && n.trim()) ? n.trim().replace(/^@+/, '') : '';
+  }
   function visitorName(v) {
-    return v.visitorNickname || v.nickname || v.userId || 'Anonymous Miner';
+    const prof = cachedPublicProfile(visitorUid(v));
+    if (prof && prof.nickname) return prof.nickname;
+    return checkInVisitorNick(v) || 'Anonymous Miner';
   }
   function checkInAvatarUrl(v) {
     const candidates = [
@@ -3356,23 +3358,9 @@
     }
     return null;
   }
-  function pickUserDocAvatarUrl(ud) {
-    if (!ud || typeof ud !== 'object') return null;
-    const candidates = [ud.avatarUrl, ud.avatarURL, ud.photoURL, ud.photoUrl, ud.profilePhotoURL];
-    for (const u of candidates) {
-      if (typeof u === 'string') {
-        const t = u.trim();
-        if (t.startsWith('https://')) return t;
-      }
-    }
-    return null;
-  }
   function visitorAvatarUrl(v) {
-    const uid = visitorUid(v);
-    if (uid && visitorUserCache.has(uid)) {
-      const cached = visitorUserCache.get(uid);
-      if (typeof cached === 'string' && cached.startsWith('https://')) return cached;
-    }
+    const prof = cachedPublicProfile(visitorUid(v));
+    if (prof && prof.avatarUrl) return prof.avatarUrl;
     return checkInAvatarUrl(v);
   }
   function visitorCheckInPhoto(v) {
@@ -3694,78 +3682,127 @@
     return String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' }) * dir;
   }
 
-  function applyVisitorAvatarToDom(uid) {
-    const url = visitorUserCache.get(uid);
-    if (typeof url !== 'string' || !url.startsWith('https://')) return;
-    document.querySelectorAll('.vo-avatar[data-uid]').forEach(el => {
-      if (el.getAttribute('data-uid') !== uid) return;
+  // ---- publicProfiles/{uid} (read-only) ----
+  // Other players' users/{uid} docs are private; publicProfiles/{uid} is the readable subset:
+  // { nickname, avatarUrl, propertyCount }. Deduped per uid, cached in a Map, fetched in
+  // parallel chunks with Promise.all. Missing docs / denied reads cache null (fallbacks apply).
+  const PUBLIC_PROFILE_FETCH = 40;
+  const publicProfileCache = new Map(); // uid -> { nickname, avatarUrl, propertyCount } | null
+  const publicProfileInflight = new Map(); // uid -> Promise
+  let publicProfileDeniedNoted = false;
+  function normalizePublicProfile(p) {
+    if (!p || typeof p !== 'object') return null;
+    const nick = (typeof p.nickname === 'string') ? p.nickname.trim().replace(/^@+/, '') : '';
+    const url = (typeof p.avatarUrl === 'string') ? p.avatarUrl.trim() : '';
+    const cnt = Number(p.propertyCount);
+    return {
+      nickname: nick,
+      avatarUrl: url.startsWith('https://') ? url : '',
+      propertyCount: (p.propertyCount != null && Number.isFinite(cnt) && cnt >= 0) ? Math.round(cnt) : null
+    };
+  }
+  function cachedPublicProfile(uid) {
+    return uid ? (publicProfileCache.get(uid) || null) : null;
+  }
+  function isFirestorePermissionError(err) {
+    const code = err && err.code ? String(err.code) : '';
+    const msg = String(err && err.message ? err.message : err);
+    return code === 'permission-denied' || /insufficient permissions|permission-denied|Missing or insufficient/i.test(msg);
+  }
+  function fetchPublicProfile(uid) {
+    if (!uid) return Promise.resolve(null);
+    if (publicProfileCache.has(uid)) return Promise.resolve(publicProfileCache.get(uid));
+    if (publicProfileInflight.has(uid)) return publicProfileInflight.get(uid);
+    const p = db.collection('publicProfiles').doc(uid).get().then(snap => {
+      const prof = (snap && snap.exists) ? normalizePublicProfile(snap.data() || {}) : null;
+      publicProfileCache.set(uid, prof);
+      return prof;
+    }).catch(err => {
+      if (isFirestorePermissionError(err)) {
+        if (!publicProfileDeniedNoted) {
+          publicProfileDeniedNoted = true;
+          console.warn('[visitors] publicProfiles/{uid} read denied by Firestore rules (' + ((err && err.code) || 'permission-denied')
+            + '); showing check-in names / initials instead. First denied uid:', uid);
+        }
+      } else {
+        console.warn('[visitors] publicProfiles read failed', uid, err);
+      }
+      publicProfileCache.set(uid, null);
+      return null;
+    }).finally(() => { publicProfileInflight.delete(uid); });
+    publicProfileInflight.set(uid, p);
+    return p;
+  }
+  /** Fetch uncached profiles for uids (deduped); onLoaded(uid, profile|null) per uid. Resolves to # fetched. */
+  async function ensurePublicProfiles(uids, onLoaded) {
+    const todo = [];
+    const seen = new Set();
+    (uids || []).forEach(uid => {
+      if (!uid || typeof uid !== 'string' || seen.has(uid) || publicProfileCache.has(uid)) return;
+      seen.add(uid);
+      todo.push(uid);
+    });
+    for (let i = 0; i < todo.length; i += PUBLIC_PROFILE_FETCH) {
+      const slice = todo.slice(i, i + PUBLIC_PROFILE_FETCH);
+      await Promise.all(slice.map(uid => fetchPublicProfile(uid).then(prof => {
+        if (onLoaded) { try { onLoaded(uid, prof); } catch (e) { console.warn('[visitors] profile apply failed', uid, e); } }
+      })));
+    }
+    return todo.length;
+  }
+  function uidSelectorValue(uid) {
+    return (window.CSS && CSS.escape) ? CSS.escape(uid) : String(uid).replace(/["\\]/g, '\\$&');
+  }
+  /** Put avatar img (or initials) into an avatar box; img errors fall back to data-initials. */
+  function setAvatarBox(el, url, init) {
+    if (!el) return;
+    if (init) el.setAttribute('data-initials', init);
+    if (url) {
       const existing = el.querySelector('img');
       if (existing && existing.getAttribute('src') === url) return;
       const img = document.createElement('img');
       img.alt = '';
       img.loading = 'lazy';
-      img.src = url;
+      img.decoding = 'async';
       img.addEventListener('error', () => {
         el.textContent = el.getAttribute('data-initials') || '?';
-      });
+      }, { once: true });
+      img.src = url;
       el.replaceChildren(img);
-    });
+    } else if (!el.querySelector('img')) {
+      el.textContent = el.getAttribute('data-initials') || '?';
+    }
   }
-  function noteVisitorUserDocAvatarBlocked() {
-    if (visitorUserDocAvatarBlockedNoted) return;
-    visitorUserDocAvatarBlockedNoted = true;
-    console.info('[visitors] visitor user-doc avatars blocked by Firestore rules; using check-in fields or initials');
+  function fmtMineCount(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '';
+    const v = Math.round(Number(n));
+    return v.toLocaleString('en-US') + (v === 1 ? ' mine' : ' mines');
   }
-  function fetchUserAvatarUrl(uid) {
-    if (visitorUserCache.has(uid)) return Promise.resolve(visitorUserCache.get(uid));
-    if (visitorUserInflight.has(uid)) return visitorUserInflight.get(uid);
-    const p = db.collection('users').doc(uid).get().then(snap => {
-      const ud = snap.exists ? (snap.data() || {}) : {};
-      const url = pickUserDocAvatarUrl(ud);
-      visitorUserCache.set(uid, url);
-      visitorUserInflight.delete(uid);
-      return url;
-    }).catch(err => {
-      const msg = String(err && err.message ? err.message : err);
-      if (/insufficient permissions|permission-denied|Missing or insufficient/i.test(msg)) {
-        noteVisitorUserDocAvatarBlocked();
-      } else {
-        console.warn('[visitors] user avatar failed', uid, err);
-      }
-      visitorUserCache.set(uid, null);
-      visitorUserInflight.delete(uid);
-      return null;
+
+  /** Refresh every rendered avatar + name for this visitor uid once their publicProfile loads. */
+  function applyVisitorProfileToDom(uid, prof) {
+    if (!uid || !prof) return;
+    const sel = '[data-uid="' + uidSelectorValue(uid) + '"]';
+    const nick = prof.nickname || '';
+    document.querySelectorAll('.vo-name' + sel).forEach(el => {
+      if (!nick) return;
+      el.textContent = nick;
+      el.title = nick;
     });
-    visitorUserInflight.set(uid, p);
-    return p;
+    document.querySelectorAll('.vo-avatar' + sel).forEach(el => {
+      const init = nick ? initials(nick) : (el.getAttribute('data-initials') || '?');
+      setAvatarBox(el, prof.avatarUrl || '', init);
+      if (nick) el.setAttribute('title', nick);
+    });
   }
   function ensureVisitorAvatars(list) {
     if (!list || !list.length) return Promise.resolve();
-    const uids = [];
-    const seen = new Set();
-    for (const v of list) {
-      const uid = visitorUid(v);
-      if (!uid || seen.has(uid) || visitorUserCache.has(uid)) continue;
-      seen.add(uid);
-      uids.push(uid);
-    }
-    if (!uids.length) {
-      for (const v of list) {
-        const uid = visitorUid(v);
-        if (uid && visitorUserCache.has(uid)) applyVisitorAvatarToDom(uid);
-      }
-      return Promise.resolve();
-    }
-    let idx = 0;
-    async function worker() {
-      while (idx < uids.length) {
-        const uid = uids[idx++];
-        await fetchUserAvatarUrl(uid);
-        applyVisitorAvatarToDom(uid);
-      }
-    }
-    const n = Math.min(VISITOR_AVATAR_CONCURRENCY, uids.length);
-    return Promise.all(Array.from({ length: n }, () => worker()));
+    const uids = list.map(v => visitorUid(v));
+    return ensurePublicProfiles(uids, applyVisitorProfileToDom).then(fetched => {
+      // Names changed under an active visitor sort / search: re-run filters once (all cached now).
+      const q = (($('filter-search') || {}).value || '').trim();
+      if (fetched && (sortKey === 'visitor' || q)) renderFromFilters();
+    });
   }
 
   function hasRealHttpImgSrc(img) {
@@ -3873,7 +3910,7 @@
     detail.setAttribute('aria-hidden', 'false');
     syncVoDetailBounds();
     const uid = visitorUid(v);
-    if (uid) fetchUserAvatarUrl(uid).then(() => applyVisitorAvatarToDom(uid));
+    if (uid) fetchPublicProfile(uid).then(prof => applyVisitorProfileToDom(uid, prof));
   }
   function bindVoDetailOnce() {
     if (voDetailBound) return;
@@ -4119,7 +4156,7 @@
     return '<article class="vo-card">'
       + '<div class="vo-card-header">'
       + '<div class="vo-avatar"' + avatarAttrs + '>' + avatarInner + '</div>'
-      + '<div class="vo-info"><div class="vo-name" title="' + safeName + '">' + safeName + '</div>'
+      + '<div class="vo-info"><div class="vo-name"' + (uid ? ' data-uid="' + escapeHtml(uid) + '"' : '') + ' title="' + safeName + '">' + safeName + '</div>'
       + '<div class="vo-time" title="' + escapeHtml(visitorFullDate(v.timestamp)) + '">' + escapeHtml(visitorTimeAgo(v.timestamp)) + '</div></div>'
       + '<div class="vo-mine-meta">'
       + tbEarnedHtml

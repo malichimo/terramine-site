@@ -228,6 +228,22 @@
       font-size:13px; line-height:1.35; font-weight:500; text-align:left;
       max-width:min(280px, calc(100vw - 16px));
     }
+    .vo-mine-tip.is-owner { padding:8px 10px; width:max-content; min-width:180px; }
+    .vo-owner-tip-mine { display:flex; align-items:center; gap:6px; min-width:0; font-size:12px; font-weight:700; padding-bottom:6px; margin-bottom:7px; border-bottom:1px solid rgba(255,255,255,.14); }
+    .vo-owner-tip-mine img { width:18px; height:18px; object-fit:contain; flex-shrink:0; display:block; }
+    .vo-owner-tip-mine span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+    .vo-owner-tip-row { display:flex; align-items:center; gap:10px; min-width:0; }
+    .vo-owner-tip-avatar {
+      width:44px; height:44px; border-radius:8px; background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.4); display:flex; align-items:center; justify-content:center;
+      font-size:15px; font-weight:700; color:#c5ced8; flex-shrink:0; overflow:hidden;
+    }
+    .vo-owner-tip-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+    .vo-owner-tip-text { min-width:0; display:flex; flex-direction:column; gap:1px; }
+    .vo-owner-tip-label { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--cyan); }
+    .vo-owner-tip-nick { font-size:14px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .vo-owner-tip-count { font-size:12px; color:rgba(255,255,255,.8); }
+    .vo-owner-tip-count:empty { display:none; }
     .vo-showcase-flash {
       position:fixed; z-index:350; pointer-events:none; display:none;
       left:50%; transform:translateX(-50%);
@@ -3894,6 +3910,181 @@
       closeVoDetail();
     });
   }
+  // ---- publicProfiles/{uid} (read-only) ----
+  // Other players' users/{uid} docs are private; publicProfiles/{uid} is the readable subset:
+  // { nickname, avatarUrl, propertyCount }. Deduped per uid, cached in a Map, fetched in
+  // parallel chunks with Promise.all. Missing docs / denied reads cache null (fallbacks apply).
+  const PUBLIC_PROFILE_FETCH = 40;
+  const publicProfileCache = new Map(); // uid -> { nickname, avatarUrl, propertyCount } | null
+  const publicProfileInflight = new Map(); // uid -> Promise
+  let publicProfileDeniedNoted = false;
+  function normalizePublicProfile(p) {
+    if (!p || typeof p !== 'object') return null;
+    const nick = (typeof p.nickname === 'string') ? p.nickname.trim().replace(/^@+/, '') : '';
+    const url = (typeof p.avatarUrl === 'string') ? p.avatarUrl.trim() : '';
+    const cnt = Number(p.propertyCount);
+    return {
+      nickname: nick,
+      avatarUrl: url.startsWith('https://') ? url : '',
+      propertyCount: (p.propertyCount != null && Number.isFinite(cnt) && cnt >= 0) ? Math.round(cnt) : null
+    };
+  }
+  function cachedPublicProfile(uid) {
+    return uid ? (publicProfileCache.get(uid) || null) : null;
+  }
+  function isFirestorePermissionError(err) {
+    const code = err && err.code ? String(err.code) : '';
+    const msg = String(err && err.message ? err.message : err);
+    return code === 'permission-denied' || /insufficient permissions|permission-denied|Missing or insufficient/i.test(msg);
+  }
+  function fetchPublicProfile(uid) {
+    if (!uid) return Promise.resolve(null);
+    if (publicProfileCache.has(uid)) return Promise.resolve(publicProfileCache.get(uid));
+    if (publicProfileInflight.has(uid)) return publicProfileInflight.get(uid);
+    const p = db.collection('publicProfiles').doc(uid).get().then(snap => {
+      const prof = (snap && snap.exists) ? normalizePublicProfile(snap.data() || {}) : null;
+      publicProfileCache.set(uid, prof);
+      return prof;
+    }).catch(err => {
+      if (isFirestorePermissionError(err)) {
+        if (!publicProfileDeniedNoted) {
+          publicProfileDeniedNoted = true;
+          console.warn('[activity] publicProfiles/{uid} read denied by Firestore rules (' + ((err && err.code) || 'permission-denied')
+            + '); showing check-in names / initials instead. First denied uid:', uid);
+        }
+      } else {
+        console.warn('[activity] publicProfiles read failed', uid, err);
+      }
+      publicProfileCache.set(uid, null);
+      return null;
+    }).finally(() => { publicProfileInflight.delete(uid); });
+    publicProfileInflight.set(uid, p);
+    return p;
+  }
+  /** Fetch uncached profiles for uids (deduped); onLoaded(uid, profile|null) per uid. Resolves to # fetched. */
+  async function ensurePublicProfiles(uids, onLoaded) {
+    const todo = [];
+    const seen = new Set();
+    (uids || []).forEach(uid => {
+      if (!uid || typeof uid !== 'string' || seen.has(uid) || publicProfileCache.has(uid)) return;
+      seen.add(uid);
+      todo.push(uid);
+    });
+    for (let i = 0; i < todo.length; i += PUBLIC_PROFILE_FETCH) {
+      const slice = todo.slice(i, i + PUBLIC_PROFILE_FETCH);
+      await Promise.all(slice.map(uid => fetchPublicProfile(uid).then(prof => {
+        if (onLoaded) { try { onLoaded(uid, prof); } catch (e) { console.warn('[activity] profile apply failed', uid, e); } }
+      })));
+    }
+    return todo.length;
+  }
+  function uidSelectorValue(uid) {
+    return (window.CSS && CSS.escape) ? CSS.escape(uid) : String(uid).replace(/["\\]/g, '\\$&');
+  }
+  /** Put avatar img (or initials) into an avatar box; img errors fall back to data-initials. */
+  function setAvatarBox(el, url, init) {
+    if (!el) return;
+    if (init) el.setAttribute('data-initials', init);
+    if (url) {
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === url) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', () => {
+        el.textContent = el.getAttribute('data-initials') || '?';
+      }, { once: true });
+      img.src = url;
+      el.replaceChildren(img);
+    } else if (!el.querySelector('img')) {
+      el.textContent = el.getAttribute('data-initials') || '?';
+    }
+  }
+  function fmtMineCount(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '';
+    const v = Math.round(Number(n));
+    return v.toLocaleString('en-US') + (v === 1 ? ' mine' : ' mines');
+  }
+
+  /** Mine owners (checkIns.propertyOwnerId) -> publicProfiles; refresh reply labels + open popup. */
+  function ensureOwnerProfiles(list) {
+    if (!list || !list.length) return Promise.resolve(0);
+    const uids = list.map(v => ownerIdOf(mineMap[v.propertyId] || null, v));
+    return ensurePublicProfiles(uids, applyOwnerProfileToDom);
+  }
+  function applyOwnerProfileToDom(uid, prof) {
+    if (!uid) return;
+    const sel = '[data-owner-id="' + uidSelectorValue(uid) + '"]';
+    const nick = (prof && prof.nickname) || '';
+    if (nick) {
+      document.querySelectorAll('.vo-mine-badge' + sel).forEach(b => {
+        if (!b.getAttribute('data-owner-nick')) b.setAttribute('data-owner-nick', nick);
+      });
+      document.querySelectorAll('.vo-owner-reply' + sel).forEach(r => {
+        if (r.getAttribute('data-owner-nick')) return;
+        r.setAttribute('data-owner-nick', nick);
+        const span = r.querySelector('.vo-owner-reply-label span');
+        const dateStr = r.getAttribute('data-reply-date') || '';
+        if (span) span.textContent = '@' + nick + ' reply' + (dateStr ? ' (' + dateStr + ')' : '');
+      });
+    }
+    if (mineTipTarget && mineTip && mineTip.style.display === 'block'
+      && mineTipTarget.getAttribute('data-owner-id') === uid) {
+      showMineTip(mineTipTarget);
+    }
+  }
+  const OWNER_TIP_DELAY_MS = 250;
+  const OWNER_TIP_TOUCH_MS = 3000;
+  let ownerTipTouchTimer = null;
+  let ownerTipTouchSuppressUntil = 0;
+  /** Owner popup body for a .vo-mine-badge: mine title, owner avatar, nickname, propertyCount. */
+  function renderOwnerTip(tip, badge) {
+    const ownerId = badge.getAttribute('data-owner-id') || '';
+    const mineName = mineBadgeTipText(badge);
+    const icon = badge.querySelector('img.vo-type-icon');
+    const loaded = ownerId && publicProfileCache.has(ownerId);
+    const prof = loaded ? publicProfileCache.get(ownerId) : null;
+    const nick = (prof && prof.nickname) || (badge.getAttribute('data-owner-nick') || '').trim()
+      || (loaded || !ownerId ? 'Unknown owner' : 'Loading owner\u2026');
+    const init = (prof && prof.nickname) || badge.getAttribute('data-owner-nick') ? initials(nick) : '?';
+    tip.className = 'vo-mine-tip is-owner';
+    tip.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'vo-owner-tip-mine';
+    if (icon && icon.getAttribute('src')) {
+      const im = document.createElement('img');
+      im.alt = '';
+      im.src = icon.getAttribute('src');
+      head.appendChild(im);
+    }
+    const hs = document.createElement('span');
+    hs.textContent = mineName;
+    head.appendChild(hs);
+    tip.appendChild(head);
+    const row = document.createElement('div');
+    row.className = 'vo-owner-tip-row';
+    const av = document.createElement('div');
+    av.className = 'vo-owner-tip-avatar';
+    setAvatarBox(av, (prof && prof.avatarUrl) || '', init);
+    const txt = document.createElement('div');
+    txt.className = 'vo-owner-tip-text';
+    const lab = document.createElement('div');
+    lab.className = 'vo-owner-tip-label';
+    lab.textContent = 'Owner';
+    const nk = document.createElement('div');
+    nk.className = 'vo-owner-tip-nick';
+    nk.textContent = nick;
+    const ct = document.createElement('div');
+    ct.className = 'vo-owner-tip-count';
+    ct.textContent = prof ? fmtMineCount(prof.propertyCount) : '';
+    txt.append(lab, nk, ct);
+    row.append(av, txt);
+    tip.appendChild(row);
+    if (ownerId && !loaded) {
+      fetchPublicProfile(ownerId).then(p => applyOwnerProfileToDom(ownerId, p));
+    }
+  }
   let mineBadgeClickBound = false;
   let mineTip = null;
   let mineTipTimer = null;
@@ -3902,6 +4093,7 @@
   let mineTipY = 0;
   function dismissMineTip() {
     if (mineTipTimer) { clearTimeout(mineTipTimer); mineTipTimer = null; }
+    if (ownerTipTouchTimer) { clearTimeout(ownerTipTouchTimer); ownerTipTouchTimer = null; }
     mineTipTarget = null;
     if (mineTip) mineTip.style.display = 'none';
   }
@@ -3953,9 +4145,15 @@
   }
   function showMineTip(badge) {
     if (mineTipTarget !== badge || !badge.isConnected) return;
+    const tip = ensureMineTip();
+    if (badge.classList.contains('vo-mine-badge') && badge.getAttribute('data-owner-id')) {
+      renderOwnerTip(tip, badge);
+      placeMineTip(mineTipX, mineTipY);
+      return;
+    }
     const text = mineBadgeTipText(badge);
     if (!text) return;
-    const tip = ensureMineTip();
+    tip.className = 'vo-mine-tip';
     tip.textContent = text;
     placeMineTip(mineTipX, mineTipY);
   }
@@ -3968,10 +4166,11 @@
     mineTipX = e.clientX;
     mineTipY = e.clientY;
     if (mineTip) mineTip.style.display = 'none';
+    const isOwnerBadge = badge.classList.contains('vo-mine-badge') && !!badge.getAttribute('data-owner-id');
     mineTipTimer = setTimeout(() => {
       mineTipTimer = null;
       showMineTip(badge);
-    }, 1000);
+    }, isOwnerBadge ? OWNER_TIP_DELAY_MS : 1000);
   }
   function navigateToMineFromBadge(badge) {
     if (!badge) return;
@@ -4012,10 +4211,37 @@
       navigateToMineFromBadge(badge);
     });
     // mouseover/mouseout bubble — works for badges appended later (scroll/filter)
+    // Touch: tap a mine title toggles the owner popup briefly (no hover on phones).
+    board.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'touch') return;
+      const badge = e.target.closest('.vo-mine-badge');
+      ownerTipTouchSuppressUntil = Date.now() + 900;
+      if (!badge || !board.contains(badge) || !badge.getAttribute('data-owner-id')) {
+        if (mineTip && mineTip.style.display === 'block') dismissMineTip();
+        return;
+      }
+      const wasOpen = mineTipTarget === badge && mineTip && mineTip.style.display === 'block';
+      dismissMineTip();
+      if (wasOpen) return;
+      dismissShowcaseTip();
+      dismissVoImgTip();
+      mineTipTarget = badge;
+      mineTipX = e.clientX;
+      mineTipY = e.clientY;
+      showMineTip(badge);
+      ownerTipTouchTimer = setTimeout(() => {
+        ownerTipTouchTimer = null;
+        if (mineTipTarget === badge) dismissMineTip();
+      }, OWNER_TIP_TOUCH_MS);
+    });
+    window.addEventListener('scroll', () => {
+      if (ownerTipTouchTimer && mineTip && mineTip.style.display === 'block') dismissMineTip();
+    }, { passive: true, capture: true });
     board.addEventListener('mouseover', e => {
       const badge = e.target.closest('.vo-mine-badge, .vo-tb-earned');
       if (!badge || !board.contains(badge)) return;
       if (mineTipTarget === badge) return;
+      if (Date.now() < ownerTipTouchSuppressUntil) return; // emulated mouse after a tap
       beginMineTipFor(badge, e);
     });
     board.addEventListener('mousemove', e => {
@@ -4070,7 +4296,10 @@
     return '';
   }
   function ownerLabelOf(mine, v) {
-    return ownerNickFromVisit(v);
+    const fromVisit = ownerNickFromVisit(v);
+    if (fromVisit) return fromVisit;
+    const prof = cachedPublicProfile(ownerIdOf(mine, v));
+    return (prof && prof.nickname) ? prof.nickname : '';
   }
   function mineOwnedByTip(mine, v) {
     return mineTitle(mine, v) || 'Mine';
@@ -4269,6 +4498,7 @@
     }
     board.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitCard(v, mineMap[v.propertyId] || null)).join('') + '</div>';
     ensureVisitorAvatars(list);
+    ensureOwnerProfiles(list);
     bindVisitorPhotoTips();
     bindShowcasePinTips(board);
     bindShowcasePinClicksOnce();
