@@ -28,6 +28,7 @@
        site for "Low value content"; see claude/AdSense_LowValueContent_Fix_2026-09-07.md). -->
   <meta name="robots" content="noindex, nofollow" />
   <title>My Account — TerraMine</title>
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
@@ -194,6 +195,24 @@
     .badge-google { background:#e8f0fe; color:#1967d2; border-radius:10px; padding:2px 10px; font-size:11px; font-weight:700; }
     .badge-email { background:#fff3e0; color:#e65100; border-radius:10px; padding:2px 10px; font-size:11px; font-weight:700; }
 
+    /* ── Pioneer Pass card (no titlebar: logo left, 2-line status right) ── */
+    .pp-card-body { display:flex; align-items:center; gap:18px; padding:16px; }
+    .pp-card-logo { flex:0 0 auto; display:block; line-height:0; }
+    .pp-card-logo img { display:block; height:72px; width:auto; max-width:100%; }
+    .pp-card-text { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:4px; }
+    .pp-card-status { font-size:15px; font-weight:700; color:var(--text-dark); overflow-wrap:anywhere; }
+    .pp-card-status-value { color:var(--text-mid); }
+    .pp-card.is-member .pp-card-status-value { color:#2E7D32; }
+    .pp-card-sub { font-size:13px; color:var(--text-mid); overflow-wrap:anywhere; }
+    .pp-card-link { color:var(--brown); font-weight:700; text-decoration:none; }
+    .pp-card-link:hover { text-decoration:underline; color:var(--brown-dark); }
+    @media (max-width:420px) {
+      .pp-card-body { gap:12px; padding:14px 12px; }
+      .pp-card-logo img { height:52px; }
+      .pp-card-status { font-size:14px; }
+      .pp-card-sub { font-size:12px; }
+    }
+
     /* ── Password card ── */
     .pw-card-header { background:var(--brown-mid); }
     .pw-card-header .app-card-title { color:white; }
@@ -357,6 +376,17 @@
             <div class="info-row">
               <span class="info-label">Account Created</span>
               <span class="info-value" id="info-created">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pioneer Pass status (users/{uid}.isPioneerMember / pioneerMemberSince) -->
+        <div class="app-card pp-card" id="pp-card">
+          <div class="app-card-body pp-card-body">
+            <a class="pp-card-logo" href="/pioneer-pass.html" aria-label="Pioneer Pass"><picture><source type="image/webp" srcset="/images/pioneer-pass-logo-88.webp 1x, /images/pioneer-pass-logo-176.webp 2x" /><img src="/images/pioneer-pass-logo-88.png" srcset="/images/pioneer-pass-logo-88.png 1x, /images/pioneer-pass-logo.png 2x" width="175" height="72" alt="Pioneer Pass" decoding="async" /></picture></a>
+            <div class="pp-card-text">
+              <div class="pp-card-status">Status: <span class="pp-card-status-value" id="pp-status">—</span></div>
+              <div class="pp-card-sub" id="pp-sub"></div>
             </div>
           </div>
         </div>
@@ -551,6 +581,45 @@
 
     // Show password card only for email/password accounts
     $('password-card').style.display = isGoogle ? 'none' : 'block';
+
+    // Pioneer Pass (same users/{uid} read as above — no extra Firestore read)
+    renderPioneerPass(ud);
+  }
+
+  /** Firestore Timestamp | {seconds} | ISO string | millis/seconds number -> Date or null */
+  function toDateLoose(val) {
+    if (val == null || val === '') return null;
+    let d = null;
+    try {
+      if (typeof val.toDate === 'function') d = val.toDate();
+      else if (val instanceof Date) d = val;
+      else if (typeof val === 'object' && val.seconds != null) d = new Date(Number(val.seconds) * 1000 + Math.floor(Number(val.nanoseconds || 0) / 1e6));
+      else if (typeof val === 'object' && val._seconds != null) d = new Date(Number(val._seconds) * 1000);
+      else if (typeof val === 'number') d = new Date(val < 1e12 ? val * 1000 : val);
+      else if (typeof val === 'string') {
+        const str = val.trim();
+        if (/^\d+$/.test(str)) { const n = Number(str); d = new Date(n < 1e12 ? n * 1000 : n); }
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(str)) { const p = str.split('-').map(Number); d = new Date(p[0], p[1] - 1, p[2]); }
+        else { const t = Date.parse(str); if (!isNaN(t)) d = new Date(t); }
+      }
+    } catch (e) { d = null; }
+    return (d && !isNaN(d.getTime())) ? d : null;
+  }
+  function renderPioneerPass(ud) {
+    const card = $('pp-card');
+    if (!card) return;
+    const isPioneer = !!ud && ud.isPioneerMember === true;
+    card.classList.toggle('is-member', isPioneer);
+    $('pp-status').textContent = isPioneer ? 'Active Member' : 'Not a member';
+    const sub = $('pp-sub');
+    if (isPioneer) {
+      const since = toDateLoose(ud.pioneerMemberSince);
+      sub.textContent = 'Member since ' + (since
+        ? since.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+        : '\u2014');
+    } else {
+      sub.innerHTML = '<a class="pp-card-link" href="/pioneer-pass.html">Get the Pioneer Pass \u2192</a>';
+    }
   }
 
   function setAvatarDisplay(url) {
