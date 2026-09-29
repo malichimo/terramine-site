@@ -467,6 +467,8 @@
     }
     .mine-map-title { cursor: default; }
     .mine-map-title.is-editing { cursor: text; }
+    .mine-map-title-name { cursor:pointer; border-radius:4px; transition:color .15s ease; }
+    .mine-map-title-name:hover, .mine-map-title-name:focus-visible { color:var(--gold, #FFD700); outline:none; }
 
   </style>
 </head>
@@ -823,13 +825,17 @@
     }
     return null;
   }
-  function mineCreatedAtMs(mine) {
+  // Newest mine = most recent purchasedAt (properties doc; details as backup).
+  // Falls back to createdAt only when a mine has no purchase date.
+  function mineNewestMs(mine) {
     if (!mine) return null;
     const d = mine._details || {};
+    const bought = activityMs(mine.purchasedAt != null && mine.purchasedAt !== '' ? mine.purchasedAt : d.purchasedAt);
+    if (bought != null) return bought;
     return activityMs(d.createdAt != null ? d.createdAt : mine.createdAt);
   }
   function considerNewestMine(mine) {
-    const ms = mineCreatedAtMs(mine);
+    const ms = mineNewestMs(mine);
     if (ms == null) return;
     if (newestMineMs == null || ms > newestMineMs) {
       newestMineMs = ms;
@@ -2436,7 +2442,25 @@
     if (newestMine) {
       centerOnMine(newestMine);
       const title = $('mine-map-title');
-      if (title) title.textContent = 'Map · newest: ' + (titleOf(newestMine) || newestMine.id);
+      if (title) {
+        title.textContent = 'Map · newest: ';
+        const nameEl = document.createElement('span');
+        nameEl.className = 'mine-map-title-name';
+        nameEl.textContent = titleOf(newestMine) || newestMine.id;
+        nameEl.title = 'Recenter the map on this mine';
+        nameEl.setAttribute('role', 'button');
+        nameEl.tabIndex = 0;
+        const target = newestMine;
+        const recenter = function (ev) {
+          if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+          centerOnMine(target);
+        };
+        nameEl.addEventListener('click', recenter);
+        nameEl.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') recenter(ev);
+        });
+        title.appendChild(nameEl);
+      }
     }
     updateLoadingOverlay(total, total);
     const loading = $('full-map-loading');
