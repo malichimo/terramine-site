@@ -450,6 +450,91 @@
     .mine-visitors svg { width:21px; height:21px; flex-shrink:0; }
     .mine-visitors .mine-visitors-n { font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.2px; }
     .is-missing { font-style:italic; font-weight:500; opacity:.8; }
+    /* Greeting icon: centered at the bottom of the card's left (illustration) area.
+       Left area = card width minus the stats column (inner max 280px + 12px/14px padding). */
+    .mine-greet-btn {
+      position:absolute; z-index:3; bottom:12px;
+      left:calc((100% - 14px - min(280px, 80% - 26px)) / 2); transform:translateX(-50%);
+      width:30px; height:30px; padding:0; margin:0; box-sizing:border-box;
+      display:flex; align-items:center; justify-content:center;
+      border-radius:50%; border:1px solid rgba(255,215,0,.55);
+      background:rgba(10,16,26,.62); color:var(--gold, #FFD700);
+      box-shadow:0 2px 8px rgba(6,10,16,.45);
+      cursor:pointer; appearance:none; -webkit-appearance:none;
+      -webkit-tap-highlight-color:transparent;
+      transition:background .15s ease, border-color .15s ease, opacity .15s ease, transform .15s ease;
+    }
+    .mine-greet-btn svg { width:17px; height:17px; display:block; pointer-events:none; }
+    .mine-greet-btn:hover, .mine-greet-btn:focus-visible {
+      background:rgba(10,16,26,.82); border-color:var(--gold, #FFD700); outline:none;
+      transform:translateX(-50%) scale(1.08);
+    }
+    .mine-greet-btn.is-empty { opacity:.55; color:#fff; border-color:rgba(255,255,255,.45); }
+    .mine-greet-btn.is-empty:hover, .mine-greet-btn.is-empty:focus-visible { opacity:.85; }
+    .mine-greet-tip {
+      position:fixed; left:0; top:0; z-index:600; pointer-events:none; display:none;
+      background:#0f172a; color:#f8fafc; border:1px solid rgba(255,215,0,.35);
+      border-radius:8px; padding:8px 10px; box-shadow:0 12px 28px rgba(6,10,16,.45);
+      font:500 13px/1.35 'DM Sans',sans-serif; text-align:left;
+      max-width:min(280px, calc(100vw - 16px)); box-sizing:border-box;
+      white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word;
+    }
+    .mine-greet-tip.is-empty { font-style:italic; color:#94a3b8; }
+    .greet-modal-backdrop {
+      position:fixed; inset:0; z-index:700;
+      display:flex; align-items:center; justify-content:center;
+      padding:12px; box-sizing:border-box;
+      background:rgba(6,10,16,.6);
+      overflow-y:auto; overflow-x:hidden;
+    }
+    .greet-modal-backdrop[hidden] { display:none !important; }
+    .greet-modal {
+      position:relative; width:min(400px, 100%); max-width:100%; min-width:0; box-sizing:border-box;
+      margin:auto; padding:16px; color:#fff;
+      background:rgba(19,54,101,.98); border:1px solid rgba(255,255,255,.28); border-radius:12px;
+      box-shadow:0 16px 40px rgba(6,10,16,.55);
+      font-family:'DM Sans',sans-serif;
+    }
+    .greet-modal-x {
+      position:absolute; top:10px; right:10px; z-index:2;
+      width:32px; height:32px; padding:0; border:0; border-radius:999px;
+      background:rgba(255,255,255,0.12); color:#fff;
+      font:700 20px/1 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .greet-modal-x:hover, .greet-modal-x:focus-visible { background:rgba(255,255,255,0.22); outline:none; }
+    .greet-modal-head { display:flex; align-items:center; gap:10px; margin:0 40px 12px 0; min-width:0; }
+    .greet-modal-head svg { width:24px; height:24px; flex-shrink:0; color:var(--gold, #FFD700); }
+    .greet-modal-head-text { min-width:0; }
+    .greet-modal-title { margin:0; font:700 16px/1.2 'DM Sans',sans-serif; }
+    .greet-modal-mine {
+      margin-top:2px; font:600 12px/1.25 'DM Sans',sans-serif; color:var(--gold, #FFD700);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .greet-modal textarea {
+      display:block; width:100%; box-sizing:border-box; margin:0 0 10px;
+      border:1px solid rgba(255,255,255,.25); border-radius:8px;
+      background:rgba(0,0,0,.25); color:#fff;
+      font:500 14px/1.4 'DM Sans',sans-serif; padding:9px 10px;
+      outline:none; resize:vertical; min-height:84px;
+    }
+    .greet-modal textarea:focus { border-color:#4FC3F7; }
+    .greet-modal-err {
+      margin:0 0 10px; padding:7px 9px; border-radius:8px;
+      background:rgba(139,30,30,.85); border:1px solid rgba(255,255,255,.22);
+      font:600 12px/1.35 'DM Sans',sans-serif; overflow-wrap:anywhere;
+    }
+    .greet-modal-err[hidden] { display:none; }
+    .greet-modal-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .greet-modal-count { font:500 12px/1 'DM Sans',sans-serif; color:rgba(255,255,255,.7); font-variant-numeric:tabular-nums; }
+    .greet-modal-count.is-max { color:var(--gold, #FFD700); }
+    .greet-modal-apply {
+      border:1px solid rgba(255,255,255,.35); border-radius:8px;
+      background:rgba(79,195,247,.35); color:#fff;
+      font:700 14px/1 'DM Sans',sans-serif; padding:9px 18px; cursor:pointer;
+    }
+    .greet-modal-apply:hover { background:rgba(79,195,247,.5); }
+    .greet-modal-apply:disabled { opacity:.55; cursor:not-allowed; }
+    .vo-showcase-flash.is-ok { background:#1f6f43; }
     .mine-empty { padding:48px 16px; text-align:center; color:#64748b; font-size:14px; }
     .mine-sentinel { text-align:center; color:#889; font-size:12px; padding:14px; }
     /* Wide / default content: 3 cols at ≥1920px, 2 cols below, 1 col on small */
@@ -462,6 +547,7 @@
     @media (max-width:700px) {
       .mine-grid { grid-template-columns:1fr; }
       .mine-card-left { width:92%; max-width:none; }
+      .mine-greet-btn { left:calc((100% - 14px - min(280px, 92% - 26px)) / 2); }
     }
 
     /* ── Visitors overlay (mine-scoped check-ins) ── */
@@ -1921,6 +2007,7 @@
         if (ov && ov.__tmMine && String(ov.__tmMine.id) === id) apply(ov.__tmMine);
       }
     }
+    if (typeof refreshMineGreetButtons === 'function') refreshMineGreetButtons([id]);
   }
   function closeMineMapEdit() {
     const dlg = $('mine-map-edit');
@@ -4398,7 +4485,7 @@ function updateSortButtons() {
     if (!root) return;
     root.querySelectorAll('.vo-showcase-pin').forEach(bindShowcasePinTip);
   }
-  function flashShowcaseNote(msg) {
+  function flashShowcaseNote(msg, ok) {
     if (!showcaseFlashEl) {
       showcaseFlashEl = document.createElement('div');
       showcaseFlashEl.className = 'vo-showcase-flash';
@@ -4406,6 +4493,7 @@ function updateSortButtons() {
       document.body.appendChild(showcaseFlashEl);
     }
     showcaseFlashEl.textContent = msg || '';
+    showcaseFlashEl.classList.toggle('is-ok', !!ok);
     const overlay = $('visitors-overlay');
     const main = $('portal-main');
     const box = (overlay && !overlay.hidden) ? overlay : main;
@@ -4567,6 +4655,288 @@ function updateSortButtons() {
   }
   function findMineById(mineId) {
     return allMines.find(m => String(m.id) === String(mineId)) || null;
+  }
+
+  /* ── Mine card greeting icon: hover tooltip + click-to-edit popup ──
+     Saves the same field/path as the map editor (applyMineMapEdit):
+     propertyDetails/{mineId}.greeting via safeUpdatePropertyDetails, max 100 chars. */
+  const GREETING_MAX = 100;
+  const GREETING_EMPTY_TIP = 'No greeting set. Click to add one.';
+  let mineGreetTipEl = null;
+  let mineGreetModalEl = null;
+  let mineGreetModalMineId = null;
+  let mineGreetModalInitial = '';
+  let mineGreetModalSaving = false;
+  let mineGreetModalOpener = null;
+  let mineGreetBackdropDown = false;
+  function greetSvg() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    const bubble = document.createElementNS(ns, 'path');
+    bubble.setAttribute('d', 'M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.14 4.18 2.95 5.55L5.2 20.5l4.3-2.2c.8.18 1.64.28 2.5.28 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5z');
+    bubble.setAttribute('stroke', 'currentColor');
+    bubble.setAttribute('stroke-width', '1.8');
+    bubble.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(bubble);
+    [8, 12, 16].forEach(cx => {
+      const dot = document.createElementNS(ns, 'circle');
+      dot.setAttribute('cx', String(cx));
+      dot.setAttribute('cy', '11');
+      dot.setAttribute('r', '1.3');
+      dot.setAttribute('fill', 'currentColor');
+      svg.appendChild(dot);
+    });
+    return svg;
+  }
+  function mineGreetingById(mineId) {
+    const m = findMineById(mineId);
+    return m ? greetingOf(m) : '';
+  }
+  function applyGreetButtonState(btn, greeting) {
+    if (!btn) return;
+    const has = !!(typeof greeting === 'string' && greeting.trim());
+    btn.classList.toggle('is-empty', !has);
+    btn.setAttribute('aria-label', has ? 'Edit greeting message' : 'Add a greeting message');
+  }
+  /** Re-sync dimmed state of card greeting icons (all cards, or only the given mine ids). */
+  function refreshMineGreetButtons(ids) {
+    const only = ids ? new Set(ids.map(String)) : null;
+    document.querySelectorAll('article.mine-card .mine-greet-btn').forEach(btn => {
+      const id = btn.dataset.mineId;
+      if (!id || (only && !only.has(id))) return;
+      applyGreetButtonState(btn, mineGreetingById(id));
+    });
+  }
+  function ensureMineGreetTip() {
+    if (!mineGreetTipEl) {
+      mineGreetTipEl = document.createElement('div');
+      mineGreetTipEl.className = 'mine-greet-tip';
+      mineGreetTipEl.setAttribute('role', 'tooltip');
+    }
+    if (mineGreetTipEl.parentNode !== document.body) document.body.appendChild(mineGreetTipEl);
+    return mineGreetTipEl;
+  }
+  function placeMineGreetTip(x, y) {
+    const tip = mineGreetTipEl;
+    if (!tip || tip.style.display === 'none') return;
+    const gap = 14;
+    const edge = 8;
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    const vh = document.documentElement.clientHeight || window.innerHeight;
+    const w = tip.offsetWidth;
+    const h = tip.offsetHeight;
+    let left = x + gap;
+    let top = y + gap;
+    if (left + w > vw - edge) left = x - gap - w;   // flip to the left of the cursor
+    if (top + h > vh - edge) top = y - gap - h;      // flip above the cursor
+    left = Math.max(edge, Math.min(left, vw - edge - w));
+    top = Math.max(edge, Math.min(top, vh - edge - h));
+    tip.style.left = Math.round(left) + 'px';
+    tip.style.top = Math.round(top) + 'px';
+  }
+  function showMineGreetTip(mineId, x, y) {
+    const tip = ensureMineGreetTip();
+    const g = mineGreetingById(mineId).trim();
+    tip.classList.toggle('is-empty', !g);
+    tip.textContent = g || GREETING_EMPTY_TIP;   // textContent only: no HTML injection
+    tip.style.display = 'block';
+    placeMineGreetTip(x, y);
+  }
+  function hideMineGreetTip() {
+    if (mineGreetTipEl) mineGreetTipEl.style.display = 'none';
+  }
+  function bindMineGreetButton(btn, mineId) {
+    btn.addEventListener('pointerenter', e => {
+      if (e.pointerType === 'touch') return;  // no hover on touch: a tap opens the editor
+      if (typeof dismissMineTitleFollowTip === 'function') dismissMineTitleFollowTip();
+      showMineGreetTip(mineId, e.clientX, e.clientY);
+    });
+    btn.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch') return;
+      placeMineGreetTip(e.clientX, e.clientY);
+    });
+    btn.addEventListener('pointerleave', hideMineGreetTip);
+    btn.addEventListener('mouseleave', hideMineGreetTip);
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideMineGreetTip();
+      openMineGreetModal(mineId, btn);
+    });
+  }
+  function ensureMineGreetModal() {
+    if (mineGreetModalEl) return mineGreetModalEl;
+    const back = document.createElement('div');
+    back.className = 'greet-modal-backdrop';
+    back.id = 'greet-modal';
+    back.hidden = true;
+    const dlg = document.createElement('div');
+    dlg.className = 'greet-modal';
+    dlg.setAttribute('role', 'dialog');
+    dlg.setAttribute('aria-modal', 'true');
+    dlg.setAttribute('aria-labelledby', 'greet-modal-title');
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'greet-modal-x';
+    x.id = 'greet-modal-x';
+    x.setAttribute('aria-label', 'Close without saving');
+    x.textContent = '\u00d7';
+    const head = document.createElement('div');
+    head.className = 'greet-modal-head';
+    const headText = document.createElement('div');
+    headText.className = 'greet-modal-head-text';
+    const h = document.createElement('h2');
+    h.className = 'greet-modal-title';
+    h.id = 'greet-modal-title';
+    h.textContent = 'Greeting Message';
+    const sub = document.createElement('div');
+    sub.className = 'greet-modal-mine';
+    sub.id = 'greet-modal-mine';
+    headText.append(h, sub);
+    head.append(greetSvg(), headText);
+    const ta = document.createElement('textarea');
+    ta.id = 'greet-modal-text';
+    ta.maxLength = GREETING_MAX;
+    ta.rows = 3;
+    ta.placeholder = 'Greeting for visitors\u2026';
+    ta.setAttribute('aria-label', 'Greeting message');
+    const err = document.createElement('div');
+    err.className = 'greet-modal-err';
+    err.id = 'greet-modal-err';
+    err.setAttribute('role', 'alert');
+    err.hidden = true;
+    const foot = document.createElement('div');
+    foot.className = 'greet-modal-footer';
+    const count = document.createElement('span');
+    count.className = 'greet-modal-count';
+    count.id = 'greet-modal-count';
+    const apply = document.createElement('button');
+    apply.type = 'button';
+    apply.className = 'greet-modal-apply';
+    apply.id = 'greet-modal-apply';
+    apply.textContent = 'Apply';
+    foot.append(count, apply);
+    dlg.append(x, head, ta, err, foot);
+    back.appendChild(dlg);
+    document.body.appendChild(back);
+
+    x.addEventListener('click', e => { e.preventDefault(); closeMineGreetModal(); });
+    apply.addEventListener('click', e => { e.preventDefault(); applyMineGreetModal(); });
+    ta.addEventListener('input', updateMineGreetCount);
+    // Backdrop click cancels (only when the press started on the backdrop too,
+    // so a text-selection drag that ends outside the panel doesn't close it).
+    back.addEventListener('mousedown', e => { mineGreetBackdropDown = (e.target === back); });
+    back.addEventListener('click', e => {
+      if (e.target === back && mineGreetBackdropDown) closeMineGreetModal();
+      mineGreetBackdropDown = false;
+    });
+    // Esc cancels. Capture phase so other overlays' Esc handlers don't also fire.
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || !mineGreetModalEl || mineGreetModalEl.hidden) return;
+      e.preventDefault();
+      e.stopPropagation();
+      closeMineGreetModal();
+    }, true);
+    mineGreetModalEl = back;
+    return back;
+  }
+  function updateMineGreetCount() {
+    const ta = $('greet-modal-text');
+    const count = $('greet-modal-count');
+    if (!ta || !count) return;
+    const n = String(ta.value || '').length;
+    count.textContent = n + '/' + GREETING_MAX;
+    count.classList.toggle('is-max', n >= GREETING_MAX);
+  }
+  function setMineGreetError(msg) {
+    const err = $('greet-modal-err');
+    if (!err) return;
+    err.textContent = msg || '';
+    err.hidden = !msg;
+  }
+  function openMineGreetModal(mineId, opener) {
+    if (mineId == null) return;
+    const id = String(mineId);
+    const mine = findMineById(id);
+    const back = ensureMineGreetModal();
+    mineGreetModalMineId = id;
+    mineGreetModalOpener = opener || null;
+    mineGreetModalSaving = false;
+    const sub = $('greet-modal-mine');
+    if (sub) sub.textContent = mine ? titleOf(mine) : id;
+    const ta = $('greet-modal-text');
+    const initial = (mine ? greetingOf(mine) : '').slice(0, GREETING_MAX);
+    mineGreetModalInitial = initial;
+    if (ta) ta.value = initial;
+    setMineGreetError('');
+    const apply = $('greet-modal-apply');
+    if (apply) { apply.disabled = false; apply.textContent = 'Apply'; }
+    updateMineGreetCount();
+    back.hidden = false;
+    if (ta) {
+      try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } catch (err) {}
+    }
+    // Details for some mines load in the background; read the doc so we never
+    // prefill an empty box over an existing greeting. Only replaces untouched text.
+    try {
+      db.collection('propertyDetails').doc(id).get().then(snap => {
+        if (mineGreetModalMineId !== id || mineGreetModalSaving || !snap || !snap.exists) return;
+        const d = snap.data() || {};
+        const fresh = (typeof d.greeting === 'string') ? d.greeting : '';
+        const m = findMineById(id);
+        if (m) { if (!m._details) m._details = {}; m._details.greeting = fresh; }
+        refreshMineGreetButtons([id]);
+        const t = $('greet-modal-text');
+        if (t && t.value === mineGreetModalInitial && fresh !== mineGreetModalInitial) {
+          mineGreetModalInitial = fresh.slice(0, GREETING_MAX);
+          t.value = mineGreetModalInitial;
+          updateMineGreetCount();
+        }
+      }).catch(() => {});
+    } catch (err) {}
+  }
+  function closeMineGreetModal() {
+    if (!mineGreetModalEl) return;
+    mineGreetModalEl.hidden = true;
+    mineGreetModalMineId = null;
+    mineGreetModalSaving = false;
+    setMineGreetError('');
+    const opener = mineGreetModalOpener;
+    mineGreetModalOpener = null;
+    if (opener && opener.isConnected) {
+      try { opener.focus({ preventScroll: true }); } catch (err) {}
+    }
+  }
+  async function applyMineGreetModal() {
+    const id = mineGreetModalMineId;
+    if (id == null || mineGreetModalSaving) return;
+    const ta = $('greet-modal-text');
+    const apply = $('greet-modal-apply');
+    // Same normalization as the map editor (applyMineMapEdit): trim, cap at 100.
+    let next = ta ? String(ta.value || '').trim() : '';
+    if (next.length > GREETING_MAX) next = next.slice(0, GREETING_MAX);
+    if (next === String(mineGreetModalInitial || '').trim()) { closeMineGreetModal(); return; }
+    mineGreetModalSaving = true;
+    setMineGreetError('');
+    if (apply) { apply.disabled = true; apply.textContent = 'Saving\u2026'; }
+    try {
+      await safeUpdatePropertyDetails(id, { greeting: next }, null);
+      syncLocalMineGreeting(id, next);   // also refreshes card icon state
+      if (mineGreetModalMineId === id) closeMineGreetModal();
+      flashShowcaseNote(next ? 'Greeting updated' : 'Greeting cleared', true);
+    } catch (err) {
+      console.warn('[mines] greeting update failed', id, err);
+      mineGreetModalSaving = false;
+      if (apply) { apply.disabled = false; apply.textContent = 'Apply'; }
+      const msg = (err && err.code === 'permission-denied')
+        ? 'Could not update greeting (permission denied).'
+        : ('Could not update greeting' + (err && err.message ? ': ' + err.message : '.'));
+      setMineGreetError(msg);
+    }
   }
   const MINE_TITLE_RENAME_TIP = 'Click the title to rename this mine. Enter saves, Esc cancels.';
   let mineTitleFollowTip = null;
@@ -5922,6 +6292,16 @@ function updateSortButtons() {
     boxesInner.append(prod, lv, maint, visitBtn);
     left.append(photoInner, headInner, boxesInner);
     art.append(bg, scrim, left, pinEl);
+    if (mine.id != null) {
+      const greetBtn = document.createElement('button');
+      greetBtn.type = 'button';
+      greetBtn.className = 'mine-greet-btn';
+      greetBtn.dataset.mineId = String(mine.id);
+      greetBtn.appendChild(greetSvg());
+      applyGreetButtonState(greetBtn, greetingOf(mine));
+      bindMineGreetButton(greetBtn, String(mine.id));
+      art.appendChild(greetBtn);
+    }
     currentGrid.appendChild(art);
     if (cardObs) cardObs.observe(art);
   }
@@ -6211,6 +6591,7 @@ function updateSortButtons() {
         if (loadId !== minesDetailsLoadId) return;
         snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
         slice.forEach(m => { applyMineActivity(m, userMines); applyDailyActivities(m, userMines); });
+        refreshMineGreetButtons(slice.map(m => m.id));
         loaded = Math.min(i + DETAILS_FETCH, remaining.length);
         setStatus('Showing ' + first.length + ' mines — loading remaining details ' + loaded + ' / ' + remaining.length + '…');
         // Refresh totals as details arrive so production boxes climb toward final values.
