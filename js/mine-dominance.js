@@ -16,7 +16,8 @@
  *    sq mi = m² / 2,589,988.110336;  km² = m² / 1e6.
  *  - Map: loaded once (shared promise), disableDefaultUI + zoom buttons only,
  *    no markers/labels/mines. Initial fit: outline spans ~50% of the map box
- *    (fitBounds with 25% padding on each side, fractional zoom).
+ *    (fitBounds with 25% padding on each side, fractional zoom); re-fits
+ *    whenever the map container's size changes.
  *
  * Exposes window.TerraMineDominance { render, geodesicAreaM2, formatArea, collectPoints }.
  */
@@ -181,7 +182,7 @@
     return mapsPromise;
   }
 
-  var state = { map: null, poly: null, path: null, userMoved: false, fitting: false, ro: null, token: 0 };
+  var state = { map: null, poly: null, path: null, userMoved: false, fitting: false, ro: null, token: 0, fitW: 0, fitH: 0, roTimer: 0 };
 
   function setMsg(text, isError) {
     var el = $('dash-dominance-msg');
@@ -198,6 +199,7 @@
     if (!map || !path || !el) return;
     var w = el.clientWidth, h = el.clientHeight;
     if (!(w > 0 && h > 0)) return;
+    state.fitW = w; state.fitH = h;
     var b = new google.maps.LatLngBounds();
     path.forEach(function (p) { b.extend(p); });
     var pad = { top: Math.round(h * FIT_PAD_FRACTION), bottom: Math.round(h * FIT_PAD_FRACTION), left: Math.round(w * FIT_PAD_FRACTION), right: Math.round(w * FIT_PAD_FRACTION) };
@@ -235,8 +237,17 @@
     map.addListener('dragstart', function () { state.userMoved = true; });
     map.addListener('zoom_changed', function () { if (!state.fitting) state.userMoved = true; });
     state.map = map;
+    // Re-fit (outline back to ~50% of the box) whenever the map container's
+    // size actually changes — breakpoint changes, rotation, window resize.
     if (typeof ResizeObserver === 'function') {
-      state.ro = new ResizeObserver(function () { if (!state.userMoved) fitToPath(); });
+      state.ro = new ResizeObserver(function () {
+        if (el.clientWidth === state.fitW && el.clientHeight === state.fitH) return;
+        clearTimeout(state.roTimer);
+        state.roTimer = setTimeout(function () {
+          try { google.maps.event.trigger(map, 'resize'); } catch (e) {}
+          fitToPath();
+        }, 120);
+      });
       state.ro.observe(el);
     }
     return map;

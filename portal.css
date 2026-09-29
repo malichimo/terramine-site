@@ -497,7 +497,8 @@ body.auth-pending #portal {
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   margin-bottom: 28px;
-  align-items: stretch;
+  /* Sep 29, 2026: columns keep their natural height (no equal-height stretch) */
+  align-items: start;
 }
 .dash-breakdown-col {
   min-width: 0;
@@ -535,7 +536,12 @@ body.auth-pending #portal {
    to keep the donut about the size it was in its own column. */
 .dash-breakdown-col-stats { gap: 12px; }
 .dash-breakdown-col-stats .stat-stack { flex: 0 0 auto; }
-.dash-breakdown-col-stats .dash-pie-card { flex: 1 0 auto; }
+.dash-breakdown-col-stats .dash-pie-card { flex: 0 0 auto; min-height: 500px; }
+/* donut centered in the remaining height of the 500px-min card */
+.dash-breakdown-col-stats .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 8px 0 12px; }
+/* cards in a column no longer grow to fill a stretched column */
+.dash-breakdown-col > .dash-slot-card,
+.dash-breakdown-col > .dash-dominance-card { flex: 0 0 auto; }
 .dash-breakdown-col-stats .dash-pie-wrap {
   max-width: 320px;
   margin: 0 auto;
@@ -545,7 +551,8 @@ body.auth-pending #portal {
    Browns from the :root "Brown app palette": --brown title bar + border,
    --brown-dark text shadow, --bg (light tan) title text. */
 .dash-dominance-card {
-  flex: 1;
+  flex: 0 0 auto;
+  height: 500px; /* fixed: title bar + map, all widths (border-box) */
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -589,7 +596,7 @@ body.auth-pending #portal {
 .dash-dominance-body {
   position: relative;
   flex: 1 1 auto;
-  min-height: 320px;
+  min-height: 0;
   background: #e6e6e6; /* matches the muted map base while tiles load */
 }
 .dash-dominance-map {
@@ -730,13 +737,10 @@ body.auth-pending #portal {
 @media (max-width: 720px) {
   .dash-breakdown-row { grid-template-columns: 1fr; }
   .dash-breakdown-col-slot { grid-column: auto; }
-  /* stacked: map gets a fixed, phone-friendly height */
-  .dash-dominance-body { flex: 0 0 auto; height: 340px; min-height: 0; }
 }
 @media (max-width: 400px) {
   .dash-dominance-head { padding: 8px 12px 7px; }
   .dash-dominance-area { font-size: 12px; }
-  .dash-dominance-body { height: 300px; }
 }
 
 .stat-stack {
