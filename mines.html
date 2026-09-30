@@ -2222,9 +2222,11 @@
     if (iconEl) iconEl.src = icon;
     const titleInput = $('mine-map-edit-title');
     if (titleInput) titleInput.value = titleOf(mine) || String(mine.id || '');
+    if (titleInput) titleInput.dataset.initial = titleInput.value;
     const greetInput = $('mine-map-edit-greeting');
     if (greetInput) {
       greetInput.value = greetingOf(mine).slice(0, 100);
+      greetInput.dataset.initial = greetInput.value;
     }
     updateMineMapEditCount();
     dlg.hidden = false;
@@ -2252,7 +2254,13 @@
     }
     if (applyBtn) applyBtn.disabled = true;
     try {
-      await safeUpdatePropertyDetails(mine.id, { customName: nextTitle, greeting: nextGreeting }, null);
+      // Send only what changed (a greeting-only edit writes just { greeting }).
+      const initialTitle = titleInput ? String(titleInput.dataset.initial || '').replace(/\s+/g, ' ').trim() : '';
+      const initialGreeting = greetInput ? String(greetInput.dataset.initial || '').trim() : '';
+      const changes = {};
+      if (nextTitle !== initialTitle) changes.customName = nextTitle;
+      if (nextGreeting !== initialGreeting) changes.greeting = nextGreeting;
+      if (Object.keys(changes).length) await safeUpdatePropertyDetails(mine.id, changes, null);
       if (typeof syncLocalMineCustomName === 'function') syncLocalMineCustomName(mine.id, nextTitle);
       else {
         if (!mine._details) mine._details = {};
@@ -5253,37 +5261,32 @@ function updateSortButtons() {
       if (showcaseFlashEl) showcaseFlashEl.style.display = 'none';
     }, 3200);
   }
+  // Website edits (greeting, title, Bulk Greeting / Bulk Rename, showcase photo) write ONLY the
+  // fields being changed. Sept 30, 2026 bug fix: this used to add updatedAt + lastUpdated (= now) to
+  // every write, and create a full default doc (lastDailyReset/createdAt/lastUpdated = now) when missing.
+  // propertyDetails.lastUpdated is the mine-activity clock (180-day maintenance, app "At risk"), so a
+  // cosmetic edit must never touch it or any other date. update() never creates a doc: a mine with no
+  // details record fails with a clear error instead of getting a partial or dated doc (the app seeds
+  // details with its own defaults).
   async function safeUpdatePropertyDetails(mineId, updates, removeFields) {
     const detailsRef = db.collection('propertyDetails').doc(String(mineId));
-    const now = new Date().toISOString();
-    const existing = await detailsRef.get();
     const payload = Object.assign({}, updates || {});
     if (removeFields && removeFields.length) {
-      removeFields.forEach(k => {
-        payload[k] = firebase.firestore.FieldValue.delete();
-      });
+      removeFields.forEach(k => { payload[k] = firebase.firestore.FieldValue.delete(); });
     }
-    payload.updatedAt = now;
-    if (!existing.exists) {
-      if (removeFields && removeFields.length && (!updates || !Object.keys(updates).length)) {
-        return; // nothing to clear on a missing doc
+    if (!Object.keys(payload).length) return;
+    try {
+      await detailsRef.update(payload);
+    } catch (err) {
+      const code = err && err.code ? String(err.code) : '';
+      const msg = String(err && err.message ? err.message : err);
+      if (code === 'not-found' || /No document to update/i.test(msg)) {
+        if (!updates || !Object.keys(updates).length) return; // only clearing fields: nothing to clear
+        const e = new Error('This mine has no details record yet. Open it once in the TerraMine app, then try again.');
+        e.code = 'not-found';
+        throw e;
       }
-      await detailsRef.set(Object.assign({
-        propertyId: String(mineId),
-        productionLevel: 1,
-        gameLevel: 1,
-        gameXP: 0,
-        gamesPlayed: 0,
-        gamesWon: 0,
-        dailyActivitiesRemaining: 1,
-        doubleRewardAvailable: true,
-        lastDailyReset: now,
-        createdAt: now,
-        lastUpdated: now
-      }, payload));
-    } else {
-      payload.lastUpdated = now;
-      await detailsRef.set(payload, { merge: true });
+      throw err;
     }
   }
   function findMineCardEl(mineId) {
