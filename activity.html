@@ -1570,7 +1570,7 @@
       const changes = {};
       if (nextTitle !== initialTitle) changes.customName = nextTitle;
       if (nextGreeting !== initialGreeting) changes.greeting = nextGreeting;
-      if (Object.keys(changes).length) await safeUpdatePropertyDetails(mine.id, changes, null);
+      if (Object.keys(changes).length) await safeUpdatePropertyDetails(mine.id, changes, null, mine);
       if (typeof syncLocalMineCustomName === 'function') syncLocalMineCustomName(mine.id, nextTitle);
       else {
         if (!mine._details) mine._details = {};
@@ -2524,7 +2524,7 @@
       if (!name) { fail++; continue; }
       const id = mines[i].id;
       try {
-        await safeUpdatePropertyDetails(id, { customName: name }, null);
+        await safeUpdatePropertyDetails(id, { customName: name }, null, mines[i]);
         syncLocalMineCustomName(id, name);
         ok++;
       } catch (err) {
@@ -2659,6 +2659,7 @@
         db.collection('propertyDetails').doc(String(m.id)).get().then(function (snap) {
           if (m._details) return;
           m._details = (snap && snap.exists) ? (snap.data() || {}) : {};
+          if (snap) m._detailsExists = !!snap.exists;
           const dlg = $('mine-map-bulk-greet');
           if (!dlg || dlg.hidden || bulkGreetSaving) return;
           const id = bulkGreetIdOf(m);
@@ -2705,7 +2706,7 @@
       const m = list[i];
       const id = m.id;
       try {
-        await safeUpdatePropertyDetails(id, { greeting: next }, null);
+        await safeUpdatePropertyDetails(id, { greeting: next }, null, m);
         syncLocalMineGreeting(id, next);
         if (!m._details) m._details = {};
         m._details.greeting = next;
@@ -3550,33 +3551,128 @@
       if (showcaseFlashEl) showcaseFlashEl.style.display = 'none';
     }, 3200);
   }
-  // Website edits (greeting, title, Bulk Greeting / Bulk Rename, showcase photo) write ONLY the
-  // fields being changed. Sept 30, 2026 bug fix: this used to add updatedAt + lastUpdated (= now) to
-  // every write, and create a full default doc (lastDailyReset/createdAt/lastUpdated = now) when missing.
-  // propertyDetails.lastUpdated is the mine-activity clock (180-day maintenance, app "At risk"), so a
-  // cosmetic edit must never touch it or any other date. update() never creates a doc: a mine with no
-  // details record fails with a clear error instead of getting a partial or dated doc (the app seeds
-  // details with its own defaults).
-  async function safeUpdatePropertyDetails(mineId, updates, removeFields) {
-    const detailsRef = db.collection('propertyDetails').doc(String(mineId));
-    const payload = Object.assign({}, updates || {});
+  // Website edits (greeting, title, Bulk Greeting / Bulk Rename, map popup, showcase photo pin).
+  // Sept 30, 2026:
+  //  * Existing propertyDetails doc -> update() with ONLY the edited fields. No updatedAt / lastUpdated /
+  //    createdAt / lastDailyReset: lastUpdated is the mine-activity clock (180-day maintenance, "At risk").
+  //  * No doc yet (new mines) -> quietly create it with the same field set the original create path used
+  //    (rules accept that shape), but every date = the mine's purchasedAt (properties doc, then _raw), so
+  //    the maintenance clock is exactly what it was (the no-details fallback is purchasedAt too).
+  //    No purchasedAt -> now, with a console warning.
+  //  * Create runs in a transaction (get + set only if still missing), so an existing doc is never overwritten.
+  //  * update() failing with permission-denied / not-found (rules can't evaluate a missing doc) retries once as the create.
+  function detailsMineObjects(id, hint) {
+    const out = [];
+    const add = m => { if (m && typeof m === 'object' && m.id != null && String(m.id) === id && out.indexOf(m) === -1) out.push(m); };
+    add(hint);
+    try { if (typeof allMines !== 'undefined' && Array.isArray(allMines)) allMines.forEach(add); } catch (e) {}
+    try { if (typeof mineMap !== 'undefined' && mineMap) add(mineMap[id]); } catch (e) {}
+    try { if (typeof ownedMineMap !== 'undefined' && ownedMineMap) add(ownedMineMap[id]); } catch (e) {}
+    try { if (typeof mineMapCurrentMine !== 'undefined') add(mineMapCurrentMine); } catch (e) {}
+    try { if (typeof getMineMapDrawnMines === 'function') getMineMapDrawnMines().forEach(add); } catch (e) {}
+    return out;
+  }
+  function detailsIsoFromValue(v) {
+    const ms = bulkRenameTsMs(v);
+    if (ms == null || !Number.isFinite(ms)) return null;
+    try { return new Date(ms).toISOString(); } catch (e) { return null; }
+  }
+  async function purchasedAtIsoForDetails(id, objs) {
+    for (let i = 0; i < objs.length; i++) {
+      const m = objs[i];
+      const raw = (m._raw && typeof m._raw === 'object') ? m._raw : {};
+      const iso = detailsIsoFromValue(m.purchasedAt) || detailsIsoFromValue(raw.purchasedAt);
+      if (iso) return iso;
+    }
+    try { // read-only fallback: the owner's properties doc
+      const ps = await db.collection('properties').doc(id).get();
+      const iso = ps && ps.exists ? detailsIsoFromValue((ps.data() || {}).purchasedAt) : null;
+      if (iso) return iso;
+    } catch (e) {}
+    const now = new Date().toISOString();
+    console.warn('[propertyDetails] no purchasedAt for mine ' + id + '; new details doc dates use now (' + now + ')');
+    return now;
+  }
+  function markDetailsInMemory(objs, fullDoc, updates, removeFields) {
+    objs.forEach(m => {
+      if (fullDoc) m._details = Object.assign({}, m._details || {}, fullDoc);
+      else {
+        if (!m._details || typeof m._details !== 'object') m._details = {};
+        Object.assign(m._details, updates || {});
+        (removeFields || []).forEach(k => { delete m._details[k]; });
+      }
+      m._detailsLoaded = true;
+      m._detailsExists = true;
+    });
+  }
+  function isMissingOrDeniedWrite(err) {
+    const code = err && err.code ? String(err.code) : '';
+    const msg = String(err && err.message ? err.message : err);
+    return code === 'not-found' || code === 'permission-denied'
+      || /No document to update|Missing or insufficient permissions/i.test(msg);
+  }
+  async function safeUpdatePropertyDetails(mineId, updates, removeFields, mineHint) {
+    const id = String(mineId);
+    const detailsRef = db.collection('propertyDetails').doc(id);
+    const fields = Object.assign({}, updates || {});
+    const payload = Object.assign({}, fields);
     if (removeFields && removeFields.length) {
       removeFields.forEach(k => { payload[k] = firebase.firestore.FieldValue.delete(); });
     }
     if (!Object.keys(payload).length) return;
-    try {
-      await detailsRef.update(payload);
-    } catch (err) {
-      const code = err && err.code ? String(err.code) : '';
-      const msg = String(err && err.message ? err.message : err);
-      if (code === 'not-found' || /No document to update/i.test(msg)) {
-        if (!updates || !Object.keys(updates).length) return; // only clearing fields: nothing to clear
-        const e = new Error('This mine has no details record yet. Open it once in the TerraMine app, then try again.');
-        e.code = 'not-found';
-        throw e;
-      }
-      throw err;
+    const objs = detailsMineObjects(id, mineHint);
+    let createDoc = null;
+    // Transaction: existing doc -> update(only edited fields); missing -> create (dates = purchasedAt).
+    async function upsert() {
+      const purchasedIso = await purchasedAtIsoForDetails(id, objs);
+      return db.runTransaction(async tx => {
+        const snap = await tx.get(detailsRef);
+        if (snap.exists) { tx.update(detailsRef, payload); return 'updated'; }
+        if (!Object.keys(fields).length) return 'nothing'; // only clearing fields on a missing doc
+        createDoc = Object.assign({
+          propertyId: id,
+          productionLevel: 1,
+          gameLevel: 1,
+          gameXP: 0,
+          gamesPlayed: 0,
+          gamesWon: 0,
+          dailyActivitiesRemaining: 1,
+          doubleRewardAvailable: true,
+          lastDailyReset: purchasedIso,
+          createdAt: purchasedIso,
+          lastUpdated: purchasedIso
+        }, fields, { updatedAt: purchasedIso });
+        tx.set(detailsRef, createDoc);
+        return 'created';
+      });
     }
+    const knownExists = objs.some(m => m._detailsExists === true);
+    let result;
+    if (knownExists) {
+      try {
+        await detailsRef.update(payload);
+        result = 'updated';
+      } catch (err) {
+        if (!isMissingOrDeniedWrite(err)) throw err;
+        result = await upsert(); // retry once as the create
+      }
+    } else {
+      try {
+        result = await upsert();
+      } catch (err) {
+        // Transaction read not allowed? Fall back to a plain fields-only update once.
+        console.warn('[propertyDetails] details transaction failed for ' + id + '; trying update()', err);
+        await detailsRef.update(payload);
+        result = 'updated';
+      }
+    }
+    if (result === 'created') {
+      markDetailsInMemory(objs, createDoc, null, null);
+      console.info('[propertyDetails] created details doc for ' + id + ' (dates = purchasedAt ' + createDoc.createdAt + ')');
+    } else if (result === 'updated') {
+      markDetailsInMemory(objs, null, fields, removeFields);
+    }
+    try { if (typeof refreshMaintBoxes === 'function') refreshMaintBoxes([id]); } catch (e) {}
   }
   /** Update local cache + pin active styles for ONE mine only (never other mines). */
   function syncLocalShowcaseState(mineId, url) {
@@ -4548,6 +4644,7 @@
       ));
       snaps.forEach((s, j) => {
         applyDetailsToMineMap(slice[j], (s && s.exists) ? (s.data() || {}) : {});
+        if (s && mineMap[slice[j]]) mineMap[slice[j]]._detailsExists = !!s.exists;
       });
       if (onProgress) onProgress(Math.min(i + DETAILS_FETCH, list.length), list.length);
     }
