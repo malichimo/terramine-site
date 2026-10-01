@@ -890,6 +890,17 @@ body.auth-pending #portal {
 .dash-visits-tip-count { font-size: 12px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
 .dash-visits-tip-more { margin-top: 6px; font-size: 12px; color: #cbd5e1; font-style: italic; }
 .dash-visits-tip-empty { font-size: 12px; color: #cbd5e1; }
+/* Mines Purchased — Last 60 Days (same card shell, renderer and popup as
+   Visitors; sits under it in column 2). Popup rows: type icon, name, count. */
+.dash-buys-tip-row {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; column-gap: 8px;
+}
+.dash-buys-tip-icon { width: 24px; height: 24px; display: block; object-fit: contain; }
+.dash-buys-tip-name {
+  font-weight: 700; font-size: 13px; color: #f8fafc;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-buys-tip-count { font-size: 13px; font-weight: 700; color: #fde68a; font-variant-numeric: tabular-nums; text-align: right; }
 
 @media (max-width: 1100px) {
   .dash-breakdown-row {
@@ -967,18 +978,20 @@ body.auth-pending #portal {
   text-align: center;
 }
 /* Total TB Earned: money-bag icon (same image as the nav TB pill) left of
-   the orange number. Bebas Neue digits are 0.7em tall, so the icon is 0.7em
-   high; flex centers it on the line box and top:-0.07em lifts it onto the
-   digits' optical center (their ink sits ~0.07em above the box center). */
+   the orange number, 32px tall. The row keeps the number's 1em line box so
+   the four boxes' numbers/subtitles still line up; the taller icon overflows
+   it evenly, and top:-0.07em lifts it onto the digits' optical center
+   (Bebas Neue ink sits ~0.07em above the line-box center). */
 .stat-card-value-tb {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.2em;
   min-width: 0;
+  height: 1em;
 }
 .stat-card-value-tb .stat-tb-icon {
-  height: 0.7em;
+  height: 32px;
   width: auto;
   flex: 0 0 auto;
   display: block;

@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-4" />
+  <link rel="stylesheet" href="portal.css?v=20261001-5" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -251,6 +251,19 @@
                 <div class="dash-visits-wrap" id="dash-visits-wrap">
                   <canvas id="dash-visits-chart" role="img" aria-label="Bar graph of visitor check-ins to your mines per day for the last 60 days"></canvas>
                   <div class="dash-visits-msg" id="dash-visits-msg" role="status">Loading check-ins&hellip;</div>
+                </div>
+              </div>
+            </section>
+            <!-- Oct 1, 2026: your mines purchased per day (stacked by type), last 60 days -->
+            <section class="dash-visits-card dash-buys-card" id="dash-buys-card" aria-labelledby="dash-buys-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-buys-title">Mines Purchased &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-buys-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-buys-wrap">
+                  <canvas id="dash-buys-chart" role="img" aria-label="Stacked bar graph of mines you purchased per day for the last 60 days, by type"></canvas>
+                  <div class="dash-visits-msg" id="dash-buys-msg" role="status">Loading mines&hellip;</div>
                 </div>
               </div>
             </section>
@@ -1388,6 +1401,7 @@
 
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
+    setBuys60Loading();
     try {
       const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
       const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
@@ -1451,6 +1465,9 @@
         await fetchPropertyDetailsForProps(props);
       }
       allMines = props;
+      // Column 2: "Mines Purchased — Last 60 Days" from the mines loaded above
+      // (properties + propertyDetails); no extra Firestore query.
+      setBuys60(props, options);
       // Column 2: Mine Dominance (Reach outline map). Not awaited — Maps load
       // must never hold up the rest of the dashboard.
       if (window.TerraMineDominance) {
@@ -1468,6 +1485,7 @@
       await loadTbTodayEarned(user, options);
 
     } catch(e) {
+      if (_buys60.status === 'loading') setBuys60Error(e);
       console.error('Dashboard load error:', e);
       showToast('Error loading dashboard: ' + e.message, 'error');
     }
@@ -1761,7 +1779,7 @@
     return win.days;
   }
   /** Y axis: max ≥ 10 with a tick every 1 up to 10; above that a 1/2/5×10ⁿ step
-   *  with at most 10 ticks (23 → 0..25 by 5, 11 → 0..12 by 2, 140 → 0..150 by 50... ). */
+   *  with at most 10 ticks (23 → 0..25 by 5, 11 → 0..12 by 2, 140 → 0..140 by 20... ). */
   function vis60Axis(maxCount) {
     if (!(maxCount > 10)) return { max: 10, step: 1 };
     for (let mag = 1; mag < 1e9; mag *= 10) {
@@ -1906,24 +1924,26 @@
   function vis60AvailWidth(wrap) {
     return wrap ? wrap.clientWidth : 300;
   }
-  function bindVis60Resize(wrap) {
-    if (_vis60.ro || !wrap) return;
+  /** Resize / font-load / DPR redraw for a day-bar chart (shared by the
+   *  Visitors and Mines Purchased graphs; each passes its own state). */
+  function bindDayBarResize(st, wrap, render) {
+    if (st.ro || !wrap) return;
     const redraw = function (force) {
-      clearTimeout(_vis60.timer);
-      _vis60.timer = setTimeout(function () {
+      clearTimeout(st.timer);
+      st.timer = setTimeout(function () {
         const w = Math.round(vis60AvailWidth(wrap));
         const dpr = window.devicePixelRatio || 1;
-        const changed = w !== _vis60.w || dpr !== _vis60.dpr;
+        const changed = w !== st.w || dpr !== st.dpr;
         if (force !== true && !changed) return;
         if (changed) hideVis60Tip(); // geometry moved; a font-load redraw keeps the popup
-        renderVisitors60();
+        render();
       }, 80);
     };
     if (typeof ResizeObserver === 'function') {
-      _vis60.ro = new ResizeObserver(redraw);
-      _vis60.ro.observe(wrap);
+      st.ro = new ResizeObserver(redraw);
+      st.ro.observe(wrap);
     } else {
-      _vis60.ro = true;
+      st.ro = true;
     }
     window.addEventListener('resize', redraw);
     if (document.fonts) {
@@ -1945,16 +1965,20 @@
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  function renderVisitors60() {
-    const canvas = $('dash-visits-chart');
+  /** Shared 60-slot day bar chart (canvas at CSS size × devicePixelRatio).
+   *  st: { days, hover, w, dpr, axis, geom, ro, timer, status }.
+   *  opts.total(day) = bar height; opts.segments(day, i, hovered) = stacked
+   *  pieces bottom → top [{ key, v, color }]; opts.hoverOutline draws an amber
+   *  outline around the hovered stack; opts.aria(sum, max) = canvas label. */
+  function drawDayBars(canvas, st, opts) {
     if (!canvas || !canvas.getContext) return;
     const wrap = canvas.parentElement;
-    bindVis60Resize(wrap);
-    const days = _vis60.days || vis60BuildDays().days;
+    bindDayBarResize(st, wrap, opts.render);
+    const days = st.days || opts.emptyDays();
     const dpr = window.devicePixelRatio || 1;
     const cssW = Math.max(120, Math.round(vis60AvailWidth(wrap)) || 300);
     const cssH = Math.max(120, Math.round(wrap.clientHeight) || 220);
-    _vis60.w = Math.round(vis60AvailWidth(wrap)); _vis60.dpr = dpr;
+    st.w = Math.round(vis60AvailWidth(wrap)); st.dpr = dpr;
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
     canvas.style.width = cssW + 'px';
@@ -1965,9 +1989,9 @@
     const px = function (v) { return Math.round(v * dpr) / dpr; };         // snap to device pixels
     const hair = function (v) { return (Math.floor(v * dpr) + 0.5) / dpr; }; // crisp 1-device-px line
 
-    const maxCount = days.reduce(function (m, d) { return Math.max(m, d.count); }, 0);
+    const maxCount = days.reduce(function (m, d) { return Math.max(m, opts.total(d)); }, 0);
     const axis = vis60Axis(maxCount);
-    _vis60.axis = axis;
+    st.axis = axis;
     const tickFont = '500 10px DM Sans, sans-serif';
     ctx.font = tickFont;
     const yLabelW = Math.ceil(ctx.measureText(fmtNum(axis.max)).width);
@@ -1998,23 +2022,40 @@
       }
     }
 
-    // Bars (every day has a slot; zero days just show the baseline)
+    // Bars (every day has a slot; zero days just show the baseline).
+    // Stacked segments: each piece spans [sum below, sum below + v].
     const geom = [];
     days.forEach(function (d, i) {
       const sx = x0 + i * slotW;
       const bx = px(sx + (slotW - barW) / 2);
       const bw = Math.max(1 / dpr, px(sx + (slotW + barW) / 2) - bx);
-      const top = px(yOf(d.count));
-      geom.push({ i: i, x: sx, w: slotW, bx: bx, bw: bw, top: top });
-      if (i === _vis60.hover) {
+      const total = opts.total(d);
+      const top = px(yOf(total));
+      const g = { i: i, x: sx, w: slotW, bx: bx, bw: bw, top: top, segs: [] };
+      geom.push(g);
+      const hovered = i === st.hover;
+      if (hovered) {
         ctx.fillStyle = 'rgba(245,158,11,0.16)';
         ctx.fillRect(px(sx), y0, Math.max(1 / dpr, px(sx + slotW) - px(sx)), plotH);
       }
-      if (!d.count) return;
-      ctx.fillStyle = i === _vis60.hover ? '#F59E0B' : (i === days.length - 1 ? '#A0522D' : '#8B7355');
-      ctx.fillRect(bx, top, bw, px(yBase) - top);
+      if (!total) return;
+      let acc = 0;
+      opts.segments(d, i, hovered).forEach(function (seg) {
+        if (!(seg.v > 0)) return;
+        const segTop = px(yOf(acc + seg.v)), segBot = px(yOf(acc));
+        ctx.fillStyle = seg.color;
+        ctx.fillRect(bx, segTop, bw, segBot - segTop);
+        g.segs.push({ key: seg.key, v: seg.v, top: segTop, bottom: segBot });
+        acc += seg.v;
+      });
+      if (hovered && opts.hoverOutline) {
+        const lw = Math.max(1, Math.round(1.5 * dpr)) / dpr;   // drawn just outside the stack
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = lw;
+        ctx.strokeRect(bx - lw / 2, top - lw / 2, bw + lw, px(yBase) - top + lw / 2);
+      }
     });
-    _vis60.geom = { x0: x0, y0: y0, plotW: plotW, plotH: plotH, slotW: slotW, cssW: cssW, cssH: cssH, bars: geom };
+    st.geom = { x0: x0, y0: y0, plotW: plotW, plotH: plotH, slotW: slotW, cssW: cssW, cssH: cssH, yBase: yBase, bars: geom };
 
     // X labels: today, then every 10 days back; skip any that would overlap.
     ctx.font = tickFont;
@@ -2035,9 +2076,24 @@
       ctx.strokeStyle = 'rgba(92,51,23,0.55)'; ctx.lineWidth = 1 / dpr; ctx.stroke();
       leftLimit = lx;
     }
-    const sum = days.reduce(function (a, d) { return a + d.count; }, 0);
-    canvas.setAttribute('aria-label', 'Bar graph of visitor check-ins to your mines per day for the last 60 days: '
-      + (_vis60.status === 'loading' ? 'loading' : fmtNum(sum) + ' check-ins, busiest day ' + fmtNum(maxCount)));
+    const sum = days.reduce(function (a, d) { return a + opts.total(d); }, 0);
+    canvas.setAttribute('aria-label', opts.aria(sum, maxCount));
+  }
+
+  function renderVisitors60() {
+    const last = (_vis60.days ? _vis60.days.length : VIS60_DAYS) - 1;
+    drawDayBars($('dash-visits-chart'), _vis60, {
+      render: renderVisitors60,
+      emptyDays: function () { return vis60BuildDays().days; },
+      total: function (d) { return d.count; },
+      segments: function (d, i, hovered) {
+        return [{ key: 'checkIns', v: d.count, color: hovered ? '#F59E0B' : (i === last ? '#A0522D' : '#8B7355') }];
+      },
+      aria: function (sum, max) {
+        return 'Bar graph of visitor check-ins to your mines per day for the last 60 days: '
+          + (_vis60.status === 'loading' ? 'loading' : fmtNum(sum) + ' check-ins, busiest day ' + fmtNum(max));
+      }
+    });
   }
 
   // ── Popup ──
@@ -2130,7 +2186,11 @@
 
   let vis60Tip = null, vis60TipTimer = null, vis60TouchTimer = null;
   let tbAvTipUid = null; // uid whose TerraBucks-today icon popup is open (shares vis60Tip)
-  let vis60TipIdx = -1, vis60TipX = 0, vis60TipY = 0, vis60TouchOpen = false, vis60InChart = false;
+  let vis60TipIdx = -1, vis60TipX = 0, vis60TipY = 0, vis60TouchOpen = false;
+  // Day-bar charts sharing the popup: { canvasId, canvas, st, render, fill }.
+  const DAY_CHARTS = [];
+  let vis60TipChart = null;  // chart whose day popup is open (null: none / TerraBucks icon popup)
+  let vis60InChart = null;   // chart the mouse is currently over
   function ensureVis60Tip() {
     if (vis60Tip) return vis60Tip;
     vis60Tip = document.createElement('div');
@@ -2186,7 +2246,7 @@
       const need = shown.map(function (v) { return v.uid; }).filter(function (u) { return !vis60ProfileCache.has(u); });
       if (need.length) {
         vis60EnsureProfiles(need).then(function () {
-          if (vis60TipIdx === idx && vis60TipShown()) { fillVis60Tip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
+          if (vis60TipChart === VIS60_CHART && vis60TipIdx === idx && vis60TipShown()) { fillVis60Tip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
         });
       }
     }
@@ -2208,87 +2268,311 @@
     t.style.top = Math.round(top) + 'px';
     t.style.visibility = 'visible';
   }
-  function setVis60Hover(idx) {
-    if (_vis60.hover === idx) return;
-    _vis60.hover = idx;
-    renderVisitors60();
+  function dayChartSetHover(chart, idx) {
+    if (chart.st.hover === idx) return;
+    chart.st.hover = idx;
+    chart.render();
   }
   function hideVis60Tip() {
     if (vis60TipTimer) { clearTimeout(vis60TipTimer); vis60TipTimer = null; }
     if (vis60TouchTimer) { clearTimeout(vis60TouchTimer); vis60TouchTimer = null; }
     vis60TouchOpen = false;
     vis60TipIdx = -1;
+    vis60TipChart = null;
     tbAvTipUid = null;
     if (vis60Tip) vis60Tip.style.display = 'none';
-    if (_vis60.hover !== -1) setVis60Hover(-1);
+    DAY_CHARTS.forEach(function (c) { if (c.st.hover !== -1) dayChartSetHover(c, -1); });
   }
-  function vis60ShowAt(idx, x, y) {
-    vis60TipIdx = idx; vis60TipX = x; vis60TipY = y;
-    fillVis60Tip(idx);
+  function dayChartShowAt(chart, idx, x, y) {
+    vis60TipChart = chart; vis60TipIdx = idx; vis60TipX = x; vis60TipY = y;
+    chart.fill(idx);
     placeVis60Tip(x, y);
   }
   /** Day slot under a viewport point, or -1 outside the plot (x labels count). */
-  function vis60IndexAt(canvas, clientX, clientY) {
-    const g = _vis60.geom;
-    if (!g || !_vis60.days || _vis60.status === 'loading' || _vis60.status === 'error') return -1;
-    const r = canvas.getBoundingClientRect();
+  function dayChartIndexAt(chart, clientX, clientY) {
+    const st = chart.st, g = st.geom;
+    if (!g || !st.days || st.status === 'loading' || st.status === 'error') return -1;
+    const r = chart.canvas.getBoundingClientRect();
     const x = clientX - r.left, y = clientY - r.top;
     if (x < g.x0 || x >= g.x0 + g.plotW || y < g.y0 - 4 || y > g.cssH) return -1;
-    return Math.max(0, Math.min(_vis60.days.length - 1, Math.floor((x - g.x0) / g.slotW)));
+    return Math.max(0, Math.min(st.days.length - 1, Math.floor((x - g.x0) / g.slotW)));
   }
-  (function bindVisitors60Tip() {
-    const canvas = $('dash-visits-chart');
+  /** Follow-the-mouse popup (≈250ms after entering, 14px offset, flips at the
+   *  viewport edges); touch/pen tap toggles and auto-hides after 3s. */
+  function bindDayBarTip(chart) {
+    const canvas = $(chart.canvasId);
     if (!canvas) return;
+    chart.canvas = canvas;
+    DAY_CHARTS.push(chart);
     function onMouse(e) {
-      const idx = vis60IndexAt(canvas, e.clientX, e.clientY);
+      const idx = dayChartIndexAt(chart, e.clientX, e.clientY);
       vis60TipX = e.clientX; vis60TipY = e.clientY;
-      if (idx < 0) { if (vis60InChart) { vis60InChart = false; hideVis60Tip(); } return; }
-      setVis60Hover(idx);
-      if (!vis60InChart) {
+      if (idx < 0) { if (vis60InChart === chart) { vis60InChart = null; hideVis60Tip(); } return; }
+      if (vis60InChart !== chart) {
         // entering the graph: ~250ms before the popup appears
-        vis60InChart = true;
+        hideVis60Tip();
+        vis60InChart = chart;
+        dayChartSetHover(chart, idx);
         vis60TipIdx = idx;
-        if (vis60TipTimer) clearTimeout(vis60TipTimer);
         vis60TipTimer = setTimeout(function () {
           vis60TipTimer = null;
-          if (!vis60InChart) return;
-          vis60ShowAt(_vis60.hover, vis60TipX, vis60TipY);
+          if (vis60InChart !== chart) return;
+          dayChartShowAt(chart, chart.st.hover, vis60TipX, vis60TipY);
         }, VIS60_TIP_DELAY_MS);
         return;
       }
+      dayChartSetHover(chart, idx);
       if (vis60TipTimer) { vis60TipIdx = idx; return; } // still in the delay
-      if (idx !== vis60TipIdx) vis60ShowAt(idx, e.clientX, e.clientY);
+      if (idx !== vis60TipIdx || vis60TipChart !== chart) dayChartShowAt(chart, idx, e.clientX, e.clientY);
       else placeVis60Tip(e.clientX, e.clientY);
     }
     canvas.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse') onMouse(e); });
     canvas.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') onMouse(e); });
     canvas.addEventListener('pointerleave', function (e) {
       if (e.pointerType !== 'mouse') return;
-      vis60InChart = false;
+      if (vis60InChart === chart) vis60InChart = null;
       hideVis60Tip();
     });
     // Touch / pen: tap a bar toggles its popup; auto-hides after 3s or on scroll.
     canvas.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse') return;
-      const idx = vis60IndexAt(canvas, e.clientX, e.clientY);
+      const idx = dayChartIndexAt(chart, e.clientX, e.clientY);
       if (idx < 0) { hideVis60Tip(); return; }
-      const wasSame = vis60TouchOpen && vis60TipIdx === idx && vis60TipShown();
+      const wasSame = vis60TouchOpen && vis60TipChart === chart && vis60TipIdx === idx && vis60TipShown();
       hideVis60Tip();
       if (wasSame) return;
-      setVis60Hover(idx);
+      dayChartSetHover(chart, idx);
       vis60TouchOpen = true;
-      vis60ShowAt(idx, e.clientX, e.clientY);
+      dayChartShowAt(chart, idx, e.clientX, e.clientY);
       vis60TouchTimer = setTimeout(function () { vis60TouchTimer = null; if (vis60TouchOpen) hideVis60Tip(); }, VIS60_TIP_TOUCH_MS);
     });
+  }
+  (function bindDayBarTipGlobals() {
     document.addEventListener('pointerdown', function (e) {
-      if (!vis60TouchOpen || e.target === canvas) return;
+      if (!vis60TouchOpen) return;
+      if (DAY_CHARTS.some(function (c) { return e.target === c.canvas; })) return; // the chart's own handler decides
       if (e.target && e.target.closest && e.target.closest('.tb-today-av')) return;
       hideVis60Tip();
     }, true);
     window.addEventListener('scroll', function () { if (vis60TouchOpen) hideVis60Tip(); }, { passive: true, capture: true });
-    window.addEventListener('blur', function () { vis60InChart = false; hideVis60Tip(); });
+    window.addEventListener('blur', function () { vis60InChart = null; hideVis60Tip(); });
   })();
+  const VIS60_CHART = { canvasId: 'dash-visits-chart', st: _vis60, render: renderVisitors60, fill: fillVis60Tip };
+  bindDayBarTip(VIS60_CHART);
   renderVisitors60(); // empty 60-slot frame under the "Loading…" message
+
+  // ── Mines Purchased — Last 60 Days (column 2, under Visitors) ────────────
+  // Oct 1, 2026. Your own mines bought per browser-local day, stacked by type
+  // (Rock bottom → Coal → Gold → Diamond top; donut palette). Built from the
+  // mines loadDashboard already loaded (properties + propertyDetails), so no
+  // extra Firestore query. Same renderer, y axis and popup as Visitors.
+  const BUYS60_STACK = ['rock', 'coal', 'gold', 'diamond'];   // bottom → top
+  const BUYS60_TIP_ORDER = BUYS60_STACK.slice().reverse();     // popup rows top → bottom
+  const _buys60 = {
+    status: 'loading', days: null, axis: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, skipped: null
+  };
+  // Purchase date = Bulk Rename "number by purchase date" (mines.html
+  // bulkRenamePurchaseMs): purchasedAt (doc, then _raw), _details.purchasedAt,
+  // _details.createdAt, then createdAt (doc, then _raw). Same value parsing.
+  function purchaseTsMs(value) {
+    if (value == null || value === '') return null;
+    if (value instanceof Date) {
+      const t = value.getTime();
+      return Number.isFinite(t) ? t : null;
+    }
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return null;
+      return Math.abs(value) < 1e12 ? value * 1000 : value;
+    }
+    if (typeof value === 'string') {
+      const t = value.trim();
+      if (!t) return null;
+      if (/^[+-]?\d+(\.\d+)?$/.test(t)) {
+        const n = Number(t);
+        if (!Number.isFinite(n)) return null;
+        return Math.abs(n) < 1e12 ? n * 1000 : n;
+      }
+      const parsed = Date.parse(t);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (typeof value === 'object') {
+      if (typeof value.toMillis === 'function') {
+        try { const ms = value.toMillis(); if (Number.isFinite(ms)) return ms; } catch (e) {}
+      }
+      if (typeof value.toDate === 'function') {
+        try {
+          const d = value.toDate();
+          const ms = d && typeof d.getTime === 'function' ? d.getTime() : NaN;
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      const sec = typeof value.seconds === 'number' ? value.seconds
+        : (typeof value._seconds === 'number' ? value._seconds : null);
+      if (sec != null && Number.isFinite(sec)) {
+        const ns = typeof value.nanoseconds === 'number' ? value.nanoseconds
+          : (typeof value._nanoseconds === 'number' ? value._nanoseconds : 0);
+        return sec * 1000 + (Number.isFinite(ns) ? Math.floor(ns / 1e6) : 0);
+      }
+    }
+    return null;
+  }
+  function minePurchaseMs(mine) {
+    if (!mine) return null;
+    const raw = (mine._raw && typeof mine._raw === 'object') ? mine._raw : {};
+    const d = mine._details || {};
+    const tries = [mine.purchasedAt, raw.purchasedAt, d.purchasedAt, d.createdAt, mine.createdAt, raw.createdAt];
+    for (let i = 0; i < tries.length; i++) {
+      const ms = purchaseTsMs(tries[i]);
+      if (ms != null) return ms;
+    }
+    return null;
+  }
+  function buys60BuildDays() {
+    const win = vis60BuildDays();
+    win.days.forEach(function (d) { d.types = { rock: 0, coal: 0, gold: 0, diamond: 0 }; });
+    return win;
+  }
+  /** Bucket mines into the day slots by purchase date and type (mineType
+   *  normalized like the donut: blank → rock; unknown types are left out). */
+  function buys60Aggregate(mines, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    const skipped = { noDate: 0, otherType: 0 };
+    mines.forEach(function (m) {
+      const ms = minePurchaseMs(m);
+      if (ms == null) { skipped.noDate++; return; }
+      if (ms < win.startMs || ms >= win.endMs) return;
+      const day = byKey[vis60DayKey(new Date(ms))];
+      if (!day) return;
+      const type = bucketMineType(m.mineType);
+      if (!type) { skipped.otherType++; return; }
+      day.types[type]++;
+      day.count++;
+    });
+    return skipped;
+  }
+  function buys60PreviewMines(win) {
+    // Local preview only (no Firestore): deterministic sample purchases.
+    const out = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 2 : ((i * 3 + 1) % 4 === 0 ? (i * 7) % 5 : 0);
+      for (let k = 0; k < n; k++) {
+        out.push({ id: 'pv-buy-' + i + '-' + k, mineType: ['rock', 'rock', 'coal', 'gold', 'diamond'][(i + k * 3) % 5],
+          purchasedAt: new Date(d.date.getTime() + (10 + k) * 3600000).toISOString() });
+      }
+    });
+    return out;
+  }
+  function setBuys60Msg(text, cls) {
+    const msg = $('dash-buys-msg');
+    if (!msg) return;
+    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
+    msg.textContent = text || '';
+    msg.hidden = !text;
+  }
+  function setBuys60(mines, options) {
+    options = options || {};
+    const win = buys60BuildDays();
+    _buys60.preview = !!options.preview;
+    const list = options.preview ? buys60PreviewMines(win) : (mines || []);
+    _buys60.skipped = buys60Aggregate(list, win);
+    _buys60.days = win.days;
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    _buys60.status = sum ? 'ready' : 'empty';
+    const total = $('dash-buys-total');
+    if (total) total.textContent = fmtNum(sum) + (sum === 1 ? ' mine' : ' mines');
+    setBuys60Msg(sum ? '' : 'No mines purchased in the last 60 days', '');
+    if (_buys60.skipped.noDate || _buys60.skipped.otherType) {
+      console.info('[mines-purchased-60d] left out ' + _buys60.skipped.noDate + ' mine(s) with no purchase date and '
+        + _buys60.skipped.otherType + ' with an unknown mineType.');
+    }
+    if (vis60TipChart === BUYS60_CHART) hideVis60Tip();
+    renderBuys60();
+  }
+  function setBuys60Loading() {
+    _buys60.status = 'loading';
+    _buys60.days = buys60BuildDays().days; // empty slots while loading
+    const total = $('dash-buys-total'); if (total) total.textContent = '\u2014';
+    setBuys60Msg('Loading mines\u2026', 'is-loading');
+    if (vis60TipChart === BUYS60_CHART) hideVis60Tip();
+    renderBuys60();
+  }
+  function setBuys60Error(err) {
+    _buys60.status = 'error';
+    _buys60.days = buys60BuildDays().days;
+    const total = $('dash-buys-total'); if (total) total.textContent = '\u2014';
+    setBuys60Msg('Could not load mines.', 'is-error');
+    console.warn('[mines-purchased-60d] mines did not load:', err && (err.code || ''), err && err.message);
+    renderBuys60();
+  }
+  function renderBuys60() {
+    drawDayBars($('dash-buys-chart'), _buys60, {
+      render: renderBuys60,
+      emptyDays: function () { return buys60BuildDays().days; },
+      total: function (d) { return d.count; },
+      segments: function (d) {
+        return BUYS60_STACK.map(function (t) { return { key: t, v: d.types[t], color: MINE_TYPE_PIE_COLORS[t] }; });
+      },
+      hoverOutline: true,
+      aria: function (sum, max) {
+        return 'Stacked bar graph of mines you purchased per day for the last 60 days, by type: '
+          + (_buys60.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' mine' : ' mines') + ', most in one day ' + fmtNum(max));
+      }
+    });
+  }
+  function buys60TypeName(type, n) {
+    return (MINE_TYPE_PIE_LABELS[type] || type) + (n === 1 ? ' Mine' : ' Mines');
+  }
+  function fillBuys60Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _buys60.days && _buys60.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _buys60.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(day.count);
+    sum.append(b1, document.createTextNode(day.count === 1 ? ' mine purchased' : ' mines purchased'));
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No mines purchased this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    BUYS60_TIP_ORDER.forEach(function (t) {
+      const n = day.types[t];
+      if (!n) return;
+      const row = document.createElement('div');
+      row.className = 'dash-buys-tip-row';
+      row.dataset.type = t;
+      const ic = document.createElement('img');
+      ic.className = 'dash-buys-tip-icon';
+      ic.src = MINE_TYPE_PIE_ICONS[t];
+      ic.alt = '';
+      ic.width = 24; ic.height = 24;
+      const nm = document.createElement('span');
+      nm.className = 'dash-buys-tip-name';
+      nm.textContent = buys60TypeName(t, n);
+      const ct = document.createElement('span');
+      ct.className = 'dash-buys-tip-count';
+      ct.textContent = fmtNum(n);
+      row.append(ic, nm, ct);
+      rows.appendChild(row);
+    });
+    tip.appendChild(rows);
+  }
+  const BUYS60_CHART = { canvasId: 'dash-buys-chart', st: _buys60, render: renderBuys60, fill: fillBuys60Tip };
+  bindDayBarTip(BUYS60_CHART);
+  renderBuys60(); // empty 60-slot frame under the "Loading…" message
 
   // ── TerraBucks Today: one avatar icon per unique visitor today ───────────
   // Oct 1, 2026. Built from the same rows as the box's "Check-ins" number
