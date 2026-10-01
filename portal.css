@@ -1335,3 +1335,45 @@ body.auth-pending #portal {
 .dash-visits-tip .mg-table .mg-total-row th[scope="row"] { color: #fff; }
 .dash-visits-tip .mg-table .tb-today-tb-val img { width: 15px; height: 15px; }
 .dash-visits-tip .mg-summary { color: #cbd5e1; }
+
+/* Oct 1, 2026: Mini Games graph note when the gameResults page cap is hit */
+.dash-games-note {
+  margin: 4px 2px 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #8a5a1c;
+  font-style: italic;
+}
+.dash-games-note[hidden] { display: none; }
+
+/* Oct 1, 2026: shared loading indicator — Mines Purchased graph, Mini Games
+   graph, Mini games today box. Overlays only, so heights never change. */
+.dash-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-mid);
+}
+.dash-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid rgba(139, 115, 85, 0.25);
+  border-top-color: #8B4513;
+  animation: dash-spin 0.8s linear infinite;
+}
+@keyframes dash-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dash-spinner { animation-duration: 2.4s; } }
+.tb-today-games-table { position: relative; }
+.mg-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+}

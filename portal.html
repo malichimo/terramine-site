@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-7" />
+  <link rel="stylesheet" href="portal.css?v=20261001-8" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -263,7 +263,7 @@
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-buys-wrap">
                   <canvas id="dash-buys-chart" role="img" aria-label="Stacked bar graph of mines you purchased per day for the last 60 days, by type"></canvas>
-                  <div class="dash-visits-msg" id="dash-buys-msg" role="status">Loading mines&hellip;</div>
+                  <div class="dash-visits-msg is-loading" id="dash-buys-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
                 </div>
               </div>
             </section>
@@ -276,8 +276,9 @@
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-games-wrap">
                   <canvas id="dash-games-chart" role="img" aria-label="Bar graph of mini games you played per day for the last 30 days, by type, with TB earned"></canvas>
-                  <div class="dash-visits-msg" id="dash-games-msg" role="status">Loading mini games&hellip;</div>
+                  <div class="dash-visits-msg is-loading" id="dash-games-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
                 </div>
+                <div class="dash-games-note" id="dash-games-note" role="note" hidden></div>
               </div>
             </section>
           </div>
@@ -1348,11 +1349,18 @@
     host.querySelectorAll('.mine-group-total').forEach(bindTotalsFollowTip);
   }
 
-  async function fetchPropertyDetailsForProps(props, batchSize = 40) {
+  // after = { count, done }: done() runs once the first `count` props have
+  // their details (callers put the props they are waiting on first).
+  async function fetchPropertyDetailsForProps(props, batchSize = 40, after = null) {
+    let fired = !after;
     for (let i = 0; i < props.length; i += batchSize) {
       const slice = props.slice(i, i + batchSize);
       const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
       snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
+      if (!fired && i + batchSize >= after.count) {
+        fired = true;
+        try { after.done(); } catch (e) { console.warn('propertyDetails progress callback failed:', e); }
+      }
     }
     return props;
   }
@@ -1488,13 +1496,27 @@
             .get()).docs.map(d => ({ id: d.id, ...d.data(), _details: {} }));
       renderPropertyBreakdown(props);
 
+      // Column 2: "Mines Purchased — Last 60 Days", drawn right away from each
+      // property's own purchasedAt + mineType (no extra Firestore query). Only
+      // mines without their own purchasedAt wait for propertyDetails: their
+      // details are read first, then the graph redraws. The rest of the
+      // dashboard still waits for every mine's details, as before.
+      const buysWaiting = options.preview ? [] : props.filter(p => buysOwnPurchaseMs(p) == null);
+      setBuys60(props, { preview: options.preview, pending: buysWaiting.length > 0 });
       if (!options.preview) {
-        await fetchPropertyDetailsForProps(props);
+        const waitIds = new Set(buysWaiting.map(p => p.id));
+        const ordered = buysWaiting.length ? buysWaiting.concat(props.filter(p => !waitIds.has(p.id))) : props;
+        const t0 = performance.now();
+        await fetchPropertyDetailsForProps(ordered, 40, buysWaiting.length ? {
+          count: buysWaiting.length,
+          done: function () {
+            setBuys60(props, {});
+            console.info('[mines-purchased-60d] redrawn after the ' + fmtNum(buysWaiting.length) + ' undated mine(s) got their propertyDetails ('
+              + Math.round(performance.now() - t0) + ' ms); ' + fmtNum(props.length - buysWaiting.length) + ' more details still loading for the rest of the page.');
+          }
+        } : null);
       }
       allMines = props;
-      // Column 2: "Mines Purchased — Last 60 Days" from the mines loaded above
-      // (properties + propertyDetails); no extra Firestore query.
-      setBuys60(props, options);
       // Column 2: Mine Dominance (Reach outline map). Not awaited — Maps load
       // must never hold up the rest of the dashboard.
       if (window.TerraMineDominance) {
@@ -2495,6 +2517,14 @@
     }
     return null;
   }
+  /** The mine's own purchase date (doc purchasedAt, then _raw.purchasedAt):
+   *  known as soon as the properties query returns. */
+  function buysOwnPurchaseMs(mine) {
+    if (!mine) return null;
+    const raw = (mine._raw && typeof mine._raw === 'object') ? mine._raw : {};
+    const a = purchaseTsMs(mine.purchasedAt);
+    return a != null ? a : purchaseTsMs(raw.purchasedAt);
+  }
   function minePurchaseMs(mine) {
     if (!mine) return null;
     const raw = (mine._raw && typeof mine._raw === 'object') ? mine._raw : {};
@@ -2513,12 +2543,16 @@
   }
   /** Bucket mines into the day slots by purchase date and type (mineType
    *  normalized like the donut: blank → rock; unknown types are left out). */
-  function buys60Aggregate(mines, win) {
+  function buys60Aggregate(mines, win, pending) {
     const byKey = Object.create(null);
     win.days.forEach(function (d) { byKey[d.key] = d; });
-    const skipped = { noDate: 0, otherType: 0 };
+    const skipped = { noDate: 0, otherType: 0, waiting: 0 };
     mines.forEach(function (m) {
-      const ms = minePurchaseMs(m);
+      // pending = propertyDetails not loaded yet: a mine without its own
+      // purchasedAt waits (its details' dates outrank the doc's createdAt).
+      const own = pending ? buysOwnPurchaseMs(m) : null;
+      if (pending && own == null) { skipped.waiting++; return; }
+      const ms = pending ? own : minePurchaseMs(m);
       if (ms == null) { skipped.noDate++; return; }
       if (ms < win.startMs || ms >= win.endMs) return;
       const day = byKey[vis60DayKey(new Date(ms))];
@@ -2542,37 +2576,50 @@
     });
     return out;
   }
-  function setBuys60Msg(text, cls) {
-    const msg = $('dash-buys-msg');
+  /** Shared loading indicator (spinner + "Loading…") for the Mines Purchased
+   *  and Mini Games graphs and the Mini games today box. */
+  function dashLoadingHtml() {
+    return '<span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading\u2026</span>';
+  }
+  function setDashMsg(msg, text, cls) {
     if (!msg) return;
     msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
-    msg.textContent = text || '';
-    msg.hidden = !text;
+    if (cls === 'is-loading') msg.innerHTML = dashLoadingHtml(); else msg.textContent = text || '';
+    msg.hidden = !text && cls !== 'is-loading';
   }
+  function setBuys60Msg(text, cls) { setDashMsg($('dash-buys-msg'), text, cls); }
   function setBuys60(mines, options) {
     options = options || {};
     const win = buys60BuildDays();
     _buys60.preview = !!options.preview;
     const list = options.preview ? buys60PreviewMines(win) : (mines || []);
-    _buys60.skipped = buys60Aggregate(list, win);
+    const pending = !!options.pending && !options.preview;
+    _buys60.skipped = buys60Aggregate(list, win, pending);
     _buys60.days = win.days;
+    _buys60.waiting = _buys60.skipped.waiting;
     const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
-    _buys60.status = sum ? 'ready' : 'empty';
+    const waiting = _buys60.waiting > 0;
+    _buys60.status = sum ? (waiting ? 'partial' : 'ready') : (waiting ? 'loading' : 'empty');
     const total = $('dash-buys-total');
-    if (total) total.textContent = fmtNum(sum) + (sum === 1 ? ' mine' : ' mines');
-    setBuys60Msg(sum ? '' : 'No mines purchased in the last 60 days', '');
-    if (_buys60.skipped.noDate || _buys60.skipped.otherType) {
+    if (total) total.textContent = (waiting && !sum) ? '\u2014' : fmtNum(sum) + (sum === 1 && !waiting ? ' mine' : ' mines') + (waiting ? '\u2026' : '');
+    if (sum) setBuys60Msg('', '');
+    else if (waiting) setBuys60Msg('', 'is-loading');
+    else setBuys60Msg('No mines purchased in the last 60 days', '');
+    if (pending) {
+      console.info('[mines-purchased-60d] drawn from properties: ' + fmtNum(list.length - _buys60.waiting) + ' mine(s) by their own purchasedAt; '
+        + fmtNum(_buys60.waiting) + ' without one wait for propertyDetails.');
+    } else if (_buys60.skipped.noDate || _buys60.skipped.otherType) {
       console.info('[mines-purchased-60d] left out ' + _buys60.skipped.noDate + ' mine(s) with no purchase date and '
         + _buys60.skipped.otherType + ' with an unknown mineType.');
     }
-    if (vis60TipChart === BUYS60_CHART) hideVis60Tip();
     renderBuys60();
+    if (vis60TipChart === BUYS60_CHART && _buys60.hover >= 0) BUYS60_CHART.fill(_buys60.hover);   // keep an open popup current
   }
   function setBuys60Loading() {
     _buys60.status = 'loading';
     _buys60.days = buys60BuildDays().days; // empty slots while loading
     const total = $('dash-buys-total'); if (total) total.textContent = '\u2014';
-    setBuys60Msg('Loading mines\u2026', 'is-loading');
+    setBuys60Msg('', 'is-loading');
     if (vis60TipChart === BUYS60_CHART) hideVis60Tip();
     renderBuys60();
   }
@@ -2832,38 +2879,61 @@
       tb: Number.isFinite(tb) ? tb : 0, ms: ms, createdMs: purchaseTsMs(d.referredCreatedAt) };
   }
   // ── Shared windowed fetch (referrals, mini games) ─────────────────────
-  // spec: { tag, coll, field, uid, tsField, page, maxPages, fallbackMaxPages, days }.
+  // spec: { tag, coll, field, uid, tsField, page, maxPages, fallbackMaxPages, days, onPage? }.
   // Ordered: where(field == uid).orderBy(tsField desc), bounded to the window
   // with startAt/endAt cursors, one segment per stored type (Firestore orders
   // strings > timestamps > numbers, so a plain "stop once older" scan could
   // miss a lower-typed doc). limit(page) pages, startAfter(lastDoc), at most
   // maxPages in total. Needs a composite index (field asc, tsField desc).
+  // The newest page of every type is requested at once (round 1), so the
+  // newest days are complete after one round trip; older pages follow.
+  // spec.onPage(docs, { path, pages, completeFromMs }) runs after round 1 and
+  // after every later page: every doc with tsField >= completeFromMs has been
+  // read (window start = everything; Infinity = nothing guaranteed yet).
+  function fetchReport(spec, docs, info) {
+    if (!spec.onPage) return;
+    try { spec.onPage(docs, info); } catch (e) { console.warn(spec.tag + ' progress render failed:', e); }
+  }
   async function fetchWindowOrdered(spec, win) {
     const TS = firebase.firestore.Timestamp;
     const segments = [
       { type: 'string', hi: '\uf8ff', lo: new Date(win.startMs).toISOString() },
       { type: 'timestamp', hi: TS.fromMillis(253402300799999), lo: TS.fromMillis(win.startMs) }, // max Timestamp (9999-12-31)
       { type: 'number', hi: Number.MAX_SAFE_INTEGER, lo: win.startMs }
-    ];
+    ].map(function (seg) { seg.cursor = null; seg.done = false; seg.lastMs = Infinity; return seg; });
     const docs = [];
     let pages = 0, capped = false;
+    const runPage = function (seg) {
+      let q = db.collection(spec.coll)
+        .where(spec.field, '==', spec.uid)
+        .orderBy(spec.tsField, 'desc');
+      q = seg.cursor ? q.startAfter(seg.cursor) : q.startAt(seg.hi);
+      q = q.endAt(seg.lo).limit(spec.page);
+      pages++;
+      return q.get();
+    };
+    const absorb = function (seg, snap) {
+      snap.docs.forEach(function (doc) { docs.push(doc); });
+      if (snap.docs.length < spec.page) { seg.done = true; return; }
+      seg.cursor = snap.docs[snap.docs.length - 1];
+      const ms = purchaseTsMs((seg.cursor.data() || {})[spec.tsField]);
+      if (ms != null) seg.lastMs = ms;
+    };
+    // Everything newer than each unfinished segment's last doc has been read.
+    const completeFrom = function () {
+      return segments.reduce(function (m, seg) { return Math.max(m, seg.done ? win.startMs : seg.lastMs + 1); }, win.startMs);
+    };
+    const first = await Promise.all(segments.map(runPage));
+    first.forEach(function (snap, i) { absorb(segments[i], snap); });
+    fetchReport(spec, docs, { path: 'ordered', pages: pages, completeFromMs: completeFrom() });
     for (let s = 0; s < segments.length && !capped; s++) {
-      let cursor = null;
-      for (;;) {
-        let q = db.collection(spec.coll)
-          .where(spec.field, '==', spec.uid)
-          .orderBy(spec.tsField, 'desc');
-        q = cursor ? q.startAfter(cursor) : q.startAt(segments[s].hi);
-        q = q.endAt(segments[s].lo).limit(spec.page);
-        const snap = await q.get();
-        pages++;
-        snap.docs.forEach(function (doc) { docs.push(doc); });
-        if (snap.docs.length < spec.page) break;
+      while (!segments[s].done) {
         if (pages >= spec.maxPages) { capped = true; break; }
-        cursor = snap.docs[snap.docs.length - 1];
+        absorb(segments[s], await runPage(segments[s]));
+        fetchReport(spec, docs, { path: 'ordered', pages: pages, completeFromMs: completeFrom() });
       }
     }
-    return { docs: docs, pages: pages, capped: capped };
+    return { docs: docs, pages: pages, capped: capped, completeFromMs: completeFrom() };
   }
   // Fallback: the plain required shape where(field == uid).limit(page), paged
   // with startAfter on the last doc (document-id order) up to fallbackMaxPages;
@@ -2880,8 +2950,10 @@
       if (snap.docs.length < spec.page) break;
       if (pages >= spec.fallbackMaxPages) { capped = true; break; }
       cursor = snap.docs[snap.docs.length - 1];
+      fetchReport(spec, docs, { path: 'fallback', pages: pages, completeFromMs: Infinity });   // doc-id order: nothing final until done
     }
-    return { docs: docs, pages: pages, capped: capped };
+    // Uncapped: the whole history was scanned. Capped: no day is guaranteed.
+    return { docs: docs, pages: pages, capped: capped, completeFromMs: capped ? Infinity : -Infinity };
   }
   async function fetchWindowWithFallback(spec, win) {
     let res, path;
@@ -3169,18 +3241,21 @@
   // notes): userId, mineType (rock/coal/gold/diamond), won, perfectGame,
   // gameLevel, rewardsEarned.tb, timestamp (Timestamp, ISO string or millis).
   // Very old docs without mineType are ignored everywhere. Rules require the
-  // userId filter: where(userId == uid).orderBy(timestamp desc).limit(50)
-  // pages bounded to the 30-day window (cap 40 pages), else the plain
-  // filtered pages + client-side window filter (see fetchWindowWithFallback).
+  // userId filter: where(userId == uid).orderBy(timestamp desc).limit(500)
+  // pages bounded to the 30-day window (cap 30 pages = 15,000 docs), else the
+  // plain filtered pages + client-side window filter (fetchWindowWithFallback).
+  // Renders after every page: the newest page of each type comes first, so
+  // today is normally final after one round trip. If the cap is hit, totals
+  // and any day not fully read show "+", with a note in the graph card.
   const MG30_DAYS = 30;
-  const MG30_PAGE = 50;
-  const MG30_MAX_PAGES = 40;           // 2,000 games in 30 days
-  const MG30_FALLBACK_MAX_PAGES = 40;  // fallback scans at most 2,000 docs
+  const MG30_PAGE = 500;               // Firestore accepts this; 50 was too slow for heavy players
+  const MG30_MAX_PAGES = 30;           // 15,000 games in 30 days
+  const MG30_FALLBACK_MAX_PAGES = 30;  // fallback scans at most 15,000 docs
   const MG30_TB_COLOR = '#F59E0B';     // TB orange (the TB numbers' color)
   const MG_TYPES = ['rock', 'coal', 'gold', 'diamond'];   // table rows + stack bottom → top
   const _mg30 = {
     seq: 0, status: 'loading', days: null, axis: null, axis2: null, geom: null, hover: -1,
-    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', skipped: null
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', skipped: null, completeFromMs: -Infinity
   };
   function mgEmptyTypes() {
     const t = {};
@@ -3189,7 +3264,7 @@
   }
   function mg30BuildDays() {
     const win = vis60BuildDays(null, MG30_DAYS);
-    win.days.forEach(function (d) { d.types = mgEmptyTypes(); d.played = 0; d.tb = 0; d.won = 0; d.perfect = 0; });
+    win.days.forEach(function (d) { d.types = mgEmptyTypes(); d.played = 0; d.tb = 0; d.won = 0; d.perfect = 0; d.incomplete = false; });
     return win;
   }
   /** gameResults doc → { type, ms, tb, won, perfect }, or a skip reason. */
@@ -3203,20 +3278,18 @@
     const tb = Number(d.rewardsEarned && typeof d.rewardsEarned === 'object' ? d.rewardsEarned.tb : NaN);
     return { type: type, ms: ms, tb: Number.isFinite(tb) ? tb : 0, won: d.won === true, perfect: d.perfectGame === true };
   }
-  function mg30Aggregate(entries, win) {
-    const byKey = Object.create(null);
-    win.days.forEach(function (d) { byKey[d.key] = d; });
-    entries.forEach(function (e) {
-      if (e.ms < win.startMs || e.ms >= win.endMs) return;
-      const day = byKey[vis60DayKey(new Date(e.ms))];
-      if (!day) return;
-      const t = day.types[e.type];
-      t.played++; t.tb += e.tb; if (e.won) t.won++; if (e.perfect) t.perfect++;
-      day.played++; day.tb += e.tb; if (e.won) day.won++; if (e.perfect) day.perfect++;
-    });
+  function mg30Add(win, e) {
+    if (!win.byKey) { win.byKey = Object.create(null); win.days.forEach(function (d) { win.byKey[d.key] = d; }); }
+    if (e.ms < win.startMs || e.ms >= win.endMs) return;
+    const day = win.byKey[vis60DayKey(new Date(e.ms))];
+    if (!day) return;
+    const t = day.types[e.type];
+    t.played++; t.tb += e.tb; if (e.won) t.won++; if (e.perfect) t.perfect++;
+    day.played++; day.tb += e.tb; if (e.won) day.won++; if (e.perfect) day.perfect++;
   }
-  function mgTbHtml(n) {
-    return '<span class="tb-today-tb-val"><img src="images/mine-icons/terrabucks-small.png" alt="">' + fmtNum(n) + ' TB</span>';
+  function mg30Aggregate(entries, win) { entries.forEach(function (e) { mg30Add(win, e); }); }
+  function mgTbHtml(n, plus) {
+    return '<span class="tb-today-tb-val"><img src="images/mine-icons/terrabucks-small.png" alt="">' + fmtNum(n) + (plus ? '+' : '') + ' TB</span>';
   }
   /** The Mini games table for one day: Type / Played / TB earned rows for
    *  Rock, Coal, Gold, Diamond, a Total row and a won / perfect line.
@@ -3231,11 +3304,11 @@
     const thead = document.createElement('thead');
     thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Played</th><th scope="col">TB earned</th></tr>';
     const tbody = document.createElement('tbody');
-    const cell = function (td, v, isTb) {
+    const cell = function (td, v, isTb, plus) {
       if (v == null) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); return; }
-      if (isTb) td.innerHTML = mgTbHtml(v); else td.textContent = fmtNum(v);
+      if (isTb) td.innerHTML = mgTbHtml(v, plus); else td.textContent = fmtNum(v) + (plus ? '+' : '');
     };
-    const addRow = function (key, label, icon, played, tb, cls) {
+    const addRow = function (key, label, icon, played, tb, cls, plus) {
       const tr = document.createElement('tr');
       tr.dataset.game = key;
       if (cls) tr.className = cls;
@@ -3245,7 +3318,7 @@
       th.appendChild(document.createTextNode(label));
       const tdP = document.createElement('td'); tdP.dataset.col = 'played';
       const tdT = document.createElement('td'); tdT.dataset.col = 'tb';
-      cell(tdP, played, false); cell(tdT, tb, true);
+      cell(tdP, played, false, plus); cell(tdT, tb, true, plus);
       tr.append(th, tdP, tdT);
       tbody.appendChild(tr);
     };
@@ -3253,7 +3326,8 @@
       const v = dayData ? dayData.types[t] : null;
       addRow(t, MINE_TYPE_PIE_LABELS[t], '/images/mine-icons/' + t + '.svg', v ? v.played : null, v ? v.tb : null);
     });
-    addRow('total', 'Total', '', dayData ? dayData.played : null, dayData ? dayData.tb : null, 'mg-total-row');
+    // "+" = this day may be undercounted (page cap reached before all of it was read)
+    addRow('total', 'Total', '', dayData ? dayData.played : null, dayData ? dayData.tb : null, 'mg-total-row', !!(dayData && dayData.incomplete));
     table.append(thead, tbody);
     wrap.appendChild(table);
     const sum = document.createElement('div');   // always present, so loading → loaded doesn't shift the layout
@@ -3268,17 +3342,25 @@
     m.textContent = text || '';
     m.hidden = !text;
   }
-  function renderMgToday(dayData) {
+  /** loading: spinner overlay on top of the "—" table (same size, no shift). */
+  function renderMgToday(dayData, loading) {
     const host = $('tb-today-games-table');
-    if (host) host.replaceChildren(renderMiniGamesTable(dayData));
+    if (!host) return;
+    host.replaceChildren(renderMiniGamesTable(dayData));
+    if (loading) {
+      const ov = document.createElement('div');
+      ov.className = 'mg-loading';
+      ov.innerHTML = dashLoadingHtml();
+      host.appendChild(ov);
+    }
   }
-  function setMg30Msg(text, cls) {
-    const msg = $('dash-games-msg');
-    if (!msg) return;
-    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
-    msg.textContent = text || '';
-    msg.hidden = !text;
+  function setMg30Note(text) {
+    const n = $('dash-games-note');
+    if (!n) return;
+    n.textContent = text || '';
+    n.hidden = !text;
   }
+  function setMg30Msg(text, cls) { setDashMsg($('dash-games-msg'), text, cls); }
   /** Right (TB) axis: ticks on the left axis' gridlines (same count), step
    *  the smallest 1/2/5×10ⁿ that fits the busiest TB day. */
   function mg30AxisTb(maxTb, nTicks) {
@@ -3340,36 +3422,88 @@
     _mg30.status = 'loading';
     _mg30.days = (win || mg30BuildDays()).days;
     if (vis60TipChart === MG30_CHART) hideVis60Tip();
-    setMg30Msg('Loading mini games\u2026', 'is-loading');
+    setMg30Msg('', 'is-loading');
     const total = $('dash-games-total'); if (total) total.textContent = '\u2014';
-    renderMgToday(null);
+    setMg30Note('');
+    renderMgToday(null, true);
     setMgTodayMsg('');
     tbTodayKnown.games = null;
     updateKnownTbTotal();
     renderMiniGames30();
   }
+  /** Paint the graph, title-bar summary and today box from what has been
+   *  read so far. completeFromMs: every game at/after it has been read. */
+  function mg30Show(win, completeFromMs, final) {
+    const todayIdx = win.days.length - 1;
+    win.days.forEach(function (d) { d.incomplete = d.date.getTime() < completeFromMs; });
+    const games = win.days.reduce(function (a, d) { return a + d.played; }, 0);
+    const tb = win.days.reduce(function (a, d) { return a + d.tb; }, 0);
+    const partial = completeFromMs > win.startMs;      // some day may be missing games
+    _mg30.days = win.days;
+    _mg30.completeFromMs = completeFromMs;
+    _mg30.status = final ? (games ? 'ready' : 'empty') : (games ? 'partial' : 'loading');
+    const plus = partial && final ? '+' : '';
+    const total = $('dash-games-total');
+    if (total && (final || games)) {
+      total.textContent = fmtNum(games) + plus + (games === 1 && !plus ? ' game' : ' games') + ' \u00b7 ' + fmtNum(tb) + plus + ' TB' + (final ? '' : '\u2026');
+    }
+    if (final) setMg30Msg(games ? '' : 'No mini games played in the last 30 days', '');
+    else if (games) setMg30Msg('', '');
+    if (final && partial) {
+      const firstFull = win.days.findIndex(function (d) { return !d.incomplete; });
+      const before = firstFull > 0 ? ' (days before ' + vis60ShortDate(win.days[firstFull].date) + ')' : '';
+      setMg30Note('Older days may be incomplete: read limit of ' + fmtNum(MG30_PAGE * MG30_MAX_PAGES) + ' games reached' + before + '.');
+    } else setMg30Note('');
+    // Today box: as soon as today is fully read (normally after the first round).
+    const today = win.days[todayIdx];
+    if (final || !today.incomplete) {
+      if (!_mg30.todayShown || final) {
+        renderMgToday(today);
+        tbTodayKnown.games = today.tb;
+        updateKnownTbTotal();
+      }
+      if (!_mg30.todayShown && !final) console.info('[mini-games] today rendered after ' + (_mg30.pagesSoFar || 0) + ' page(s), before older pages finished.');
+      _mg30.todayShown = true;
+    }
+    renderMiniGames30();
+    if (vis60TipChart === MG30_CHART && _mg30.hover >= 0) fillMg30Tip(_mg30.hover);   // keep an open popup current
+  }
   async function loadMiniGames30(uid, options) {
     options = options || {};
     const seq = ++_mg30.seq;
-    const win = mg30BuildDays();
+    let win = mg30BuildDays();
     _mg30.preview = !!options.preview;
+    _mg30.todayShown = false;
+    _mg30.pagesSoFar = 0;
     mg30SetLoading(win);
-    let entries, res = null;
+    let res = null;
+    // Incremental: each progress call hands the growing docs array; only new
+    // docs are parsed. A new array (ordered → fallback) starts over.
+    let src = null, used = 0, seen = new Set(), skipped = { noType: 0, otherType: 0, noTime: 0 };
+    const consume = function (docs) {
+      if (docs !== src) { src = docs; used = 0; seen = new Set(); skipped = { noType: 0, otherType: 0, noTime: 0 }; win = mg30BuildDays(); }
+      for (; used < docs.length; used++) {
+        const doc = docs[used];
+        if (seen.has(doc.id)) continue;
+        seen.add(doc.id);
+        const e = mgEntry(doc.data() || {});
+        if (e.skip) { skipped[e.skip]++; continue; }
+        mg30Add(win, e);
+      }
+    };
     try {
       if (options.preview) {
-        entries = mg30PreviewDocs(win);
+        mg30Aggregate(mg30PreviewDocs(win), win);
       } else {
         res = await fetchWindowWithFallback({ tag: '[mini-games]', coll: 'gameResults', field: 'userId', uid: uid, tsField: 'timestamp',
-          page: MG30_PAGE, maxPages: MG30_MAX_PAGES, fallbackMaxPages: MG30_FALLBACK_MAX_PAGES, days: MG30_DAYS }, win);
-        const seen = new Set(), skipped = { noType: 0, otherType: 0, noTime: 0 };
-        entries = [];
-        res.docs.forEach(function (doc) {
-          if (seen.has(doc.id)) return;
-          seen.add(doc.id);
-          const e = mgEntry(doc.data() || {});
-          if (e.skip) { skipped[e.skip]++; return; }
-          entries.push(e);
-        });
+          page: MG30_PAGE, maxPages: MG30_MAX_PAGES, fallbackMaxPages: MG30_FALLBACK_MAX_PAGES, days: MG30_DAYS,
+          onPage: function (docs, info) {
+            if (seq !== _mg30.seq) return;
+            _mg30.pagesSoFar = info.pages;
+            consume(docs);
+            mg30Show(win, info.completeFromMs, false);
+          } }, win);
+        consume(res.docs);
         _mg30.skipped = skipped;
         if (skipped.noType || skipped.otherType || skipped.noTime) {
           console.info('[mini-games] ignored ' + skipped.noType + ' doc(s) with no mineType, ' + skipped.otherType
@@ -3380,7 +3514,13 @@
       if (seq !== _mg30.seq) return;
       console.warn('[mini-games] gameResults query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
       _mg30.status = 'error';
+      _mg30.days = mg30BuildDays().days;
+      setMg30Note('');
+      const total = $('dash-games-total'); if (total) total.textContent = '\u2014';
       setMg30Msg('Could not load mini games.', 'is-error');
+      renderMgToday(null);
+      tbTodayKnown.games = null;
+      updateKnownTbTotal();
       setMgTodayMsg('Could not load mini games; not included in Known TB today.');
       renderMiniGames30();
       return;
@@ -3388,22 +3528,17 @@
     if (seq !== _mg30.seq) return;
     _mg30.path = res ? res.path : 'preview';
     _mg30.capped = !!(res && res.capped);
-    mg30Aggregate(entries, win);
-    const games = win.days.reduce(function (a, d) { return a + d.played; }, 0);
-    const tb = win.days.reduce(function (a, d) { return a + d.tb; }, 0);
-    _mg30.status = games ? 'ready' : 'empty';
-    const total = $('dash-games-total');
-    if (total) total.textContent = fmtNum(games) + (_mg30.capped ? '+' : '') + (games === 1 ? ' game' : ' games') + ' \u00b7 ' + fmtNum(tb) + ' TB';
-    setMg30Msg(games ? '' : 'No mini games played in the last 30 days', '');
-    const today = win.days[win.days.length - 1];
-    renderMgToday(today);
-    tbTodayKnown.games = today.tb;
-    updateKnownTbTotal();
-    renderMiniGames30();
+    const completeFromMs = res ? Math.max(win.startMs, res.completeFromMs) : win.startMs;
+    if (_mg30.capped) {
+      console.warn('[mini-games] page cap reached: ' + res.pages + ' pages of ≤' + MG30_PAGE + ' (' + fmtNum(res.docs.length) + ' docs read, '
+        + _mg30.path + ' path); ' + (completeFromMs === Infinity ? 'any day' : 'days before ' + new Date(completeFromMs).toLocaleString())
+        + ' may be incomplete, so totals show "+".');
+    }
+    mg30Show(win, completeFromMs, true);
   }
   const MG30_CHART = { canvasId: 'dash-games-chart', st: _mg30, render: renderMiniGames30, fill: fillMg30Tip };
   bindDayBarTip(MG30_CHART);
-  renderMgToday(null);
+  renderMgToday(null, true);
   renderMiniGames30(); // empty 30-slot frame under the "Loading…" message
 
   applyTypeOrderLayout();
