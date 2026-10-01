@@ -1896,63 +1896,103 @@
   }
 
   // Total Check-ins: server-side count aggregation — never reads the docs.
-  // The compat SDK this page loads (9.23.0) has no Query.count(), so the
-  // modular 9.23.0 SDK (same CDN version) is imported on demand for
-  // getCountFromServer. It needs its own modular app + auth instance; that
-  // auth restores the same signed-in user from the shared IndexedDB
-  // persistence (same apiKey + "[DEFAULT]" app name as the compat app).
+  // The compat SDK this page loads (9.23.0) has no Query.count(), so this
+  // calls Firestore's REST runAggregationQuery (COUNT) with the signed-in
+  // compat user's ID token. Same security rules as the SDK; billed as an
+  // aggregation (1 read per up-to-1000 index entries), not per document.
   // Note: this counts EVERY checkIns doc with propertyOwnerId == uid,
   // including the owner's own check-ins at their own mines (a count query
   // can't exclude them), unlike the graph / Distinct Visitors.
-  const FB_MODULAR_BASE = 'https://www.gstatic.com/firebasejs/9.23.0/';
-  let _countApiPromise = null;
-  function loadModularCountApi() {
-    if (_countApiPromise) return _countApiPromise;
-    _countApiPromise = Promise.all([
-      import(FB_MODULAR_BASE + 'firebase-app.js'),
-      import(FB_MODULAR_BASE + 'firebase-auth.js'),
-      import(FB_MODULAR_BASE + 'firebase-firestore.js')
-    ]).then(function (mods) {
-      const appMod = mods[0], authMod = mods[1], fsMod = mods[2];
-      if (typeof fsMod.getCountFromServer !== 'function') throw new Error('getCountFromServer not in this SDK build');
-      const app = (appMod.getApps() || []).find(function (a) { return a.name === '[DEFAULT]'; })
-        || appMod.initializeApp(firebase.app().options);
-      return { authMod: authMod, fsMod: fsMod, auth: authMod.getAuth(app), fs: fsMod.getFirestore(app) };
-    });
-    _countApiPromise.catch(function () { _countApiPromise = null; });
-    return _countApiPromise;
-  }
-  function waitForModularUser(api, uid, timeoutMs) {
-    const cur = api.auth.currentUser;
+  // On any failure the box stays "—" (logged); it never falls back to reads.
+  let _ownerCountSeq = 0;
+  function waitForCompatUser(uid, timeoutMs) {
+    const cur = auth.currentUser;
     if (cur && cur.uid === uid) return Promise.resolve(cur);
     return new Promise(function (resolve, reject) {
       let done = false, unsub = null;
       const finish = function (fn, val) { if (done) return; done = true; clearTimeout(timer); if (unsub) unsub(); fn(val); };
-      const timer = setTimeout(function () { finish(reject, new Error('modular auth did not restore the signed-in user')); }, timeoutMs || 10000);
-      unsub = api.authMod.onAuthStateChanged(api.auth, function (u) { if (u && u.uid === uid) finish(resolve, u); });
+      const timer = setTimeout(function () { finish(reject, new Error('signed-in user not available after ' + Math.round((timeoutMs || 15000) / 1000) + 's')); }, timeoutMs || 15000);
+      unsub = auth.onAuthStateChanged(function (u) { if (u && u.uid === uid) finish(resolve, u); });
       if (done && unsub) unsub();
     });
+  }
+  function ownerCheckInCountRequest(uid) {
+    const projectId = (firebase.app().options || {}).projectId;
+    return {
+      url: 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(projectId) + '/databases/(default)/documents:runAggregationQuery',
+      body: {
+        structuredAggregationQuery: {
+          structuredQuery: {
+            from: [{ collectionId: 'checkIns' }],
+            where: { fieldFilter: { field: { fieldPath: 'propertyOwnerId' }, op: 'EQUAL', value: { stringValue: uid } } }
+          },
+          aggregations: [{ alias: 'count', count: {} }]
+        }
+      }
+    };
+  }
+  /** One REST call. Resolves the count; rejects with { status, message } (never the token). */
+  async function postOwnerCheckInCount(req, token) {
+    let res;
+    try {
+      res = await fetch(req.url, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+        cache: 'no-store'
+      });
+    } catch (netErr) {
+      throw { status: 0, message: 'network error: ' + ((netErr && netErr.message) || netErr) };
+    }
+    let data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+    if (!res.ok) {
+      const e = data && (Array.isArray(data) ? (data[0] && data[0].error) : data.error);
+      throw { status: res.status, message: (e && (e.status ? e.status + ': ' : '') + (e.message || '')) || res.statusText || 'HTTP error' };
+    }
+    const rows = Array.isArray(data) ? data : [data];
+    for (let i = 0; i < rows.length; i++) {
+      const f = rows[i] && rows[i].result && rows[i].result.aggregateFields && rows[i].result.aggregateFields.count;
+      if (f && f.integerValue != null) {
+        const n = Number(f.integerValue);
+        if (Number.isFinite(n) && n >= 0) return n;
+      }
+    }
+    throw { status: res.status, message: 'response had no count (' + JSON.stringify(data).slice(0, 200) + ')' };
   }
   async function loadOwnerCheckInCount(uid, options) {
     options = options || {};
     const el = $('stat-checkins');
     if (!el) return;
+    const seq = ++_ownerCountSeq;
     el.textContent = '\u2014';
     if (options.preview) {
       el.textContent = fmtNum(vis60PreviewRows(vis60BuildDays()).length);
       return;
     }
+    const req = ownerCheckInCountRequest(uid);
     try {
-      const api = await loadModularCountApi();
-      await waitForModularUser(api, uid);
-      const f = api.fsMod;
-      const q = f.query(f.collection(api.fs, 'checkIns'), f.where('propertyOwnerId', '==', uid));
-      const snap = await f.getCountFromServer(q);
-      const n = snap && snap.data ? snap.data().count : null;
-      el.textContent = (typeof n === 'number' && isFinite(n)) ? fmtNum(n) : '\u2014';
+      const user = await waitForCompatUser(uid);
+      let n;
+      try {
+        n = await postOwnerCheckInCount(req, await user.getIdToken());
+      } catch (e) {
+        if (!e || e.status !== 401) throw e;
+        n = await postOwnerCheckInCount(req, await user.getIdToken(true)); // expired token: refresh once
+      }
+      if (seq !== _ownerCountSeq) return;
+      el.textContent = fmtNum(n);
     } catch (err) {
-      console.warn('[stat-checkins] count aggregation failed; leaving "\u2014" (no full read):', err && (err.code || ''), err && err.message);
+      if (seq !== _ownerCountSeq) return;
       el.textContent = '\u2014';
+      const status = err && err.status != null ? err.status : '';
+      const msg = (err && err.message) || String(err);
+      if (status === 403) {
+        console.warn('[stat-checkins] count aggregation denied (HTTP 403 ' + msg + '). Firestore rules do not allow '
+          + 'this user to run a count on checkIns where propertyOwnerId == uid; leaving "\u2014" (no full read).');
+      } else {
+        console.warn('[stat-checkins] count aggregation failed (' + (status ? 'HTTP ' + status + ' ' : '') + msg + '); leaving "\u2014" (no full read).');
+      }
     }
   }
 
