@@ -3302,10 +3302,9 @@
   const MG30_PAGE = 500;               // Firestore accepts this; 50 was too slow for heavy players
   const MG30_MAX_PAGES = 30;           // 15,000 games in 30 days
   const MG30_FALLBACK_MAX_PAGES = 30;  // fallback scans at most 15,000 docs
-  // TB bars (right axis): green, each bar its own vertical gradient from a
-  // dark base to a bright top; right-axis labels / "TB" title in a readable green.
-  const MG30_TB_GRADIENT = ['#1B5E20', '#4CE04C'];  // [base, top]
-  const MG30_TB_COLOR = '#2E9E3A';                  // flat fallback (midpoint-ish)
+  // TB bars (right axis): solid bright green; right-axis labels / "TB" title
+  // in a darker green so the numbers stay readable on the light card.
+  const MG30_TB_COLOR = '#4CE04C';
   const MG30_TB_LABEL = '#2E7D32';
   const MG_TYPES = ['rock', 'coal', 'gold', 'diamond'];   // table rows + stack bottom → top
   const _mg30 = {
@@ -3437,7 +3436,7 @@
       segments: function (d) {
         return MG_TYPES.map(function (t) { return { key: t, v: d.types[t].played, color: MINE_TYPE_PIE_COLORS[t] }; });
       },
-      second: { total: function (d) { return d.tb; }, color: MG30_TB_COLOR, gradient: MG30_TB_GRADIENT, labelColor: MG30_TB_LABEL, axis: mg30AxisTb },
+      second: { total: function (d) { return d.tb; }, color: MG30_TB_COLOR, labelColor: MG30_TB_LABEL, axis: mg30AxisTb },
       titles: { left: 'Games', right: 'TB' },
       hoverOutline: true,
       hoverOutlineColor: '#5C3317',
