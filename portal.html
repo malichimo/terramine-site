@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-10" />
+  <link rel="stylesheet" href="portal.css?v=20261001-11" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -241,7 +241,7 @@
             </section>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-visits">
-            <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today (class names are grid slots: -visits = column 2, -slot = column 3) -->
+            <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today, then Inventory (class names are grid slots: -visits = column 2, -slot = column 3) -->
             <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
               <div class="stat-card-label">TerraBucks Earned Today</div>
               <div class="tb-today" id="tb-today">
@@ -308,6 +308,17 @@
                 <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
               </div>
             </div>
+            <!-- Oct 1, 2026: Inventory (same items, order and art as inventory.html; from the users doc already loaded) -->
+            <section class="dash-visits-card dash-inv-card" id="dash-inv-card" aria-labelledby="dash-inv-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-inv-title">Inventory</h2>
+                <div class="dash-visits-total" id="dash-inv-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body dash-inv-body">
+                <div class="dash-inv-grid" id="dash-inv-grid" role="list" aria-label="Inventory items and resources"></div>
+                <div class="dash-visits-msg dash-inv-msg is-loading" id="dash-inv-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+              </div>
+            </section>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-slot">
             <!-- column 3 = the bar graphs: Visitors, Mines Purchased, Mini Games, Referrals, My Check-ins -->
@@ -1442,6 +1453,7 @@
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
     setBuys60Loading();
+    setInventoryLoading();
     // Referrals: one shared referralLogs fetch feeds the TerraBucks Today
     // "Referral rewards paid today" box and the Referrals 60-day graph.
     // Needs only the uid, so it starts first and is not awaited.
@@ -1461,6 +1473,9 @@
     try {
       const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
       const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
+      // Inventory card: same users-doc fields as inventory.html, no extra read.
+      try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, options); }
+      catch (invErr) { setInventoryError(invErr); }
 
       // Debug: log the logged-in user's Auth basics + Firestore profile doc.
       // Plain object only (no raw User / ID or refresh tokens).
@@ -1556,6 +1571,7 @@
 
     } catch(e) {
       if (_buys60.status === 'loading') setBuys60Error(e);
+      if (_inv.status === 'loading') setInventoryError(e);
       console.error('Dashboard load error:', e);
       showToast('Error loading dashboard: ' + e.message, 'error');
     }
@@ -2306,6 +2322,7 @@
   let vis60Tip = null, vis60TipTimer = null, vis60TouchTimer = null;
   let tbAvTipUid = null; // uid whose TerraBucks-today icon popup is open (shares vis60Tip)
   let refAvTipKey = null; // referralLogs doc id whose "paid today" icon popup is open (shares vis60Tip)
+  let invTipKey = null;   // Inventory tile index whose item-card popup is open (shares vis60Tip)
   let vis60TipIdx = -1, vis60TipX = 0, vis60TipY = 0, vis60TouchOpen = false;
   // Day-bar charts sharing the popup: { canvasId, canvas, st, render, fill }.
   const DAY_CHARTS = [];
@@ -2373,6 +2390,7 @@
   }
   function placeVis60Tip(x, y) {
     const t = ensureVis60Tip();
+    t.classList.toggle('is-inv', invTipKey != null); // Inventory: the card itself, no dark frame
     const gap = 14, edge = 8;
     t.style.visibility = 'hidden';
     t.style.display = 'block';
@@ -2401,10 +2419,12 @@
     vis60TipChart = null;
     tbAvTipUid = null;
     refAvTipKey = null;
+    invTipKey = null;
     if (vis60Tip) vis60Tip.style.display = 'none';
     DAY_CHARTS.forEach(function (c) { if (c.st.hover !== -1) dayChartSetHover(c, -1); });
   }
   function dayChartShowAt(chart, idx, x, y) {
+    invTipKey = null;
     vis60TipChart = chart; vis60TipIdx = idx; vis60TipX = x; vis60TipY = y;
     chart.fill(idx);
     placeVis60Tip(x, y);
@@ -2472,7 +2492,7 @@
     document.addEventListener('pointerdown', function (e) {
       if (!vis60TouchOpen) return;
       if (DAY_CHARTS.some(function (c) { return e.target === c.canvas; })) return; // the chart's own handler decides
-      if (e.target && e.target.closest && e.target.closest('.tb-today-av')) return;
+      if (e.target && e.target.closest && e.target.closest('.tb-today-av, .dash-inv-tile')) return;
       hideVis60Tip();
     }, true);
     window.addEventListener('scroll', function () { if (vis60TouchOpen) hideVis60Tip(); }, { passive: true, capture: true });
@@ -2790,7 +2810,7 @@
     }
   }
   function showTbAvTip(uid, x, y) {
-    tbAvTipUid = uid; vis60TipX = x; vis60TipY = y;
+    tbAvTipUid = uid; invTipKey = null; vis60TipX = x; vis60TipY = y;
     fillTbAvTip(uid);
     placeVis60Tip(x, y);
   }
@@ -2800,7 +2820,8 @@
   function bindAvatarRowTip(host, api) {
     if (!host) return;
     let hoverEl = null;
-    const iconAt = function (e) { const el = e.target && e.target.closest ? e.target.closest('.tb-today-av') : null; return el && host.contains(el) ? el : null; };
+    const sel = api.selector || '.tb-today-av';
+    const iconAt = function (e) { const el = e.target && e.target.closest ? e.target.closest(sel) : null; return el && host.contains(el) ? el : null; };
     host.addEventListener('pointerover', function (e) {
       if (e.pointerType !== 'mouse') return;
       const el = iconAt(e);
@@ -2822,7 +2843,7 @@
     });
     host.addEventListener('pointerout', function (e) {
       if (e.pointerType !== 'mouse' || !hoverEl) return;
-      const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.tb-today-av') : null;
+      const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest(sel) : null;
       if (to === hoverEl) return;
       hoverEl = null;
       hideVis60Tip();
@@ -3129,7 +3150,7 @@
     tip.appendChild(rows);
   }
   function showRefAvTip(key, x, y) {
-    refAvTipKey = key; vis60TipX = x; vis60TipY = y;
+    refAvTipKey = key; invTipKey = null; vis60TipX = x; vis60TipY = y;
     fillRefAvTip(key);
     placeVis60Tip(x, y);
   }
@@ -3834,6 +3855,478 @@
   const MYCI_CHART = { canvasId: 'dash-myci-chart', st: _myci, render: renderMyCheckIns60, fill: fillMyciTip };
   bindDayBarTip(MYCI_CHART);
   renderMyCheckIns60(); // empty 60-slot frame under the spinner
+
+  // ── Inventory card (column 2, under TerraBucks Earned Today) ─────────────
+  // Oct 1, 2026. Read-only. One tile per item/resource exactly as the portal
+  // Inventory page (inventory.html) lists them: same source (the users/{uid}
+  // doc fields inventory, rockResources, coalResources, goldResources,
+  // diamondResources, which loadDashboard already reads, so no extra query),
+  // same parsing, order (Inventory items in stored order, then each mine's
+  // resources by rarity), names and art (images/items/<id>-240.webp|png).
+  // No group headings. Hover/tap popup = that page's item card, built by the
+  // same renderCard() code below (ported verbatim; CSS scoped to the popup).
+  const INV_PAGE = (function () {
+    'use strict';
+    // ---- begin: verbatim from inventory.html (Sep 29, 2026 item art) ----
+    const ICONS = {
+      rock: 'images/mine-icons/rock.svg',
+      coal: 'images/mine-icons/coal.svg',
+      gold: 'images/mine-icons/gold.svg',
+      diamond: 'images/mine-icons/diamond.svg',
+      inventory: 'images/mine-icons/backpack-transparent.png'
+    };
+    const GROUPS = [
+      { key: 'inventory', field: 'inventory', title: 'Inventory', icon: ICONS.inventory, sortByRarity: false },
+      { key: 'rock', field: 'rockResources', title: 'Rock Mine Resources', icon: ICONS.rock, sortByRarity: true },
+      { key: 'coal', field: 'coalResources', title: 'Coal Mine Resources', icon: ICONS.coal, sortByRarity: true },
+      { key: 'gold', field: 'goldResources', title: 'Gold Mine Resources', icon: ICONS.gold, sortByRarity: true },
+      { key: 'diamond', field: 'diamondResources', title: 'Diamond Mine Resources', icon: ICONS.diamond, sortByRarity: true }
+    ];
+    const RARITY_RANK = { common: 0, uncommon: 1, rare: 2, epic: 3 };
+    /** Static display names for mine resource rarities (mine key → rarity → label). */
+    const RESOURCE_DISPLAY_NAMES = {
+      rock: { common: 'Gravel', uncommon: 'Slate', rare: 'Granite', epic: 'Marble' },
+      coal: { common: 'Coal Dust', uncommon: 'Lignite', rare: 'Anthracite', epic: 'Diamond Coal' },
+      gold: { common: 'Gold Flakes', uncommon: 'Gold Nugget', rare: 'Gold Bar', epic: 'Gold Ingot' },
+      diamond: { common: 'Diamond Chip', uncommon: 'Raw Diamond', rare: 'Cut Diamond', epic: 'Flawless Diamond' }
+    };
+
+    /** Item art (images/items/<id>[-240].webp|png), keyed like RESOURCE_DISPLAY_NAMES. */
+    const RESOURCE_IMAGE_IDS = {
+      rock: { common: 'gravel', uncommon: 'slate', rare: 'granite', epic: 'marble' },
+      coal: { common: 'coal-dust', uncommon: 'lignite', rare: 'anthracite', epic: 'diamond-coal' },
+      gold: { common: 'gold-flakes', uncommon: 'gold-nugget', rare: 'gold-bar', epic: 'gold-ingot' },
+      diamond: { common: 'diamond-chip', uncommon: 'raw-diamond', rare: 'cut-diamond', epic: 'flawless-diamond' }
+    };
+    const ITEM_IMAGE_IDS = new Set(['goggles']);
+    Object.keys(RESOURCE_IMAGE_IDS).forEach(k => Object.values(RESOURCE_IMAGE_IDS[k]).forEach(id => ITEM_IMAGE_IDS.add(id)));
+    const ITEM_IMAGE_ALIASES = { granit: 'granite', 'mining-goggles': 'goggles', goggle: 'goggles' };
+    function itemSlug(s) {
+      return String(s == null ? '' : s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    }
+    /** Local art id for an item: resources by mine + rarity, otherwise by name. '' = none. */
+    function itemImageId(item, mineKey) {
+      const byMine = RESOURCE_IMAGE_IDS[mineKey];
+      const rk = normalizeRarity(item && item.rarity);
+      if (byMine && rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
+      const names = [item && item.name, item && item._raw && typeof item._raw === 'object' ? (item._raw.id || item._raw.key) : ''];
+      for (const n of names) {
+        const sl = itemSlug(n);
+        if (!sl) continue;
+        // any name containing "goggle" (Safety Goggles, Miner's Goggles, NightGoggles…)
+        if (sl.indexOf('goggle') >= 0) return 'goggles';
+        if (ITEM_IMAGE_IDS.has(sl)) return sl;
+        if (ITEM_IMAGE_ALIASES[sl]) return ITEM_IMAGE_ALIASES[sl];
+        const sing = sl.replace(/s$/, '');
+        if (ITEM_IMAGE_IDS.has(sing)) return sing;
+      }
+      return '';
+    }
+
+    function resourceDisplayName(mineKey, rarity, fallback) {
+      const byMine = RESOURCE_DISPLAY_NAMES[mineKey];
+      if (!byMine) return fallback;
+      const rk = normalizeRarity(rarity);
+      if (rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
+      return fallback;
+    }
+    function fmtNum(n) {
+      if (n === undefined || n === null || n === '') return '0';
+      const x = Number(n);
+      if (!Number.isFinite(x)) return '0';
+      return Math.round(x).toLocaleString('en-US');
+    }
+    function pickFirst(obj, keys) {
+      if (!obj || typeof obj !== 'object') return undefined;
+      for (const k of keys) {
+        if (obj[k] != null && obj[k] !== '') return obj[k];
+      }
+      return undefined;
+    }
+    function asString(v) {
+      if (v == null) return '';
+      if (typeof v === 'string') return v.trim();
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+      return '';
+    }
+    function asNum(v) {
+      if (v == null || v === '') return null;
+      if (typeof v === 'number' && isFinite(v)) return v;
+      if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+      return null;
+    }
+    function asUrl(v) {
+      const s = asString(v);
+      if (!s) return '';
+      if (/^https?:\/\//i.test(s) || s.startsWith('/') || s.startsWith('data:')) return s;
+      return '';
+    }
+    function normalizeRarity(v) {
+      const s = asString(v).toLowerCase();
+      if (!s) return '';
+      if (RARITY_RANK.hasOwnProperty(s)) return s;
+      if (s.indexOf('epic') >= 0) return 'epic';
+      if (s.indexOf('rare') >= 0) return 'rare';
+      if (s.indexOf('uncommon') >= 0) return 'uncommon';
+      if (s.indexOf('common') >= 0) return 'common';
+      return s;
+    }
+    function rarityRank(r) {
+      const k = normalizeRarity(r);
+      return RARITY_RANK.hasOwnProperty(k) ? RARITY_RANK[k] : 99;
+    }
+
+    /** Coerce Firestore field (array | map | nested) into a flat list of raw entries. */
+    function toRawList(raw) {
+      if (raw == null) return [];
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw !== 'object') return [raw];
+      if (Array.isArray(raw.items)) return raw.items;
+      if (Array.isArray(raw.list)) return raw.list;
+      if (Array.isArray(raw.resources)) return raw.resources;
+      if (Array.isArray(raw.entries)) return raw.entries;
+      return Object.keys(raw).map(k => {
+        const v = raw[k];
+        if (v != null && typeof v === 'object' && !Array.isArray(v)) {
+          return Object.assign({ id: k }, v);
+        }
+        return { id: k, name: k, count: v };
+      });
+    }
+
+    function parseItem(raw, idx) {
+      if (raw == null) return null;
+      if (typeof raw === 'string' || typeof raw === 'number') {
+        return { name: String(raw), rarity: '', image: '', value: null, count: null, _raw: raw };
+      }
+      if (typeof raw !== 'object') return null;
+      const name = asString(pickFirst(raw, [
+        'name', 'title', 'displayName', 'itemName', 'label', 'resourceName', 'resource', 'type', 'id'
+      ])) || ('Item ' + (idx + 1));
+      let rarity = normalizeRarity(pickFirst(raw, [
+        'rarity', 'tier', 'quality', 'grade', 'rarityTier', 'rarityLevel'
+      ]));
+      // Map form { common: N, ... }: keys are rarity tiers with no rarity field.
+      // Fall back to name / map key when it is itself a known rarity.
+      if (!rarity) {
+        const fromName = normalizeRarity(name);
+        if (RARITY_RANK.hasOwnProperty(fromName)) {
+          rarity = fromName;
+        } else {
+          const fromKey = normalizeRarity(asString(pickFirst(raw, ['id', 'key'])));
+          if (RARITY_RANK.hasOwnProperty(fromKey)) rarity = fromKey;
+        }
+      }
+      const image = asUrl(pickFirst(raw, [
+        'image', 'imageUrl', 'imageURL', 'img', 'photo', 'photoUrl', 'photoURL',
+        'icon', 'iconUrl', 'iconURL', 'url', 'thumbnail', 'thumb', 'assetUrl', 'assetURL'
+      ]));
+      const value = asNum(pickFirst(raw, [
+        'value', 'tbValue', 'tb', 'price', 'worth', 'sellValue', 'terraBucks'
+      ]));
+      const count = asNum(pickFirst(raw, [
+        'count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total'
+      ]));
+      return { name, rarity, image, value, count, _raw: raw };
+    }
+
+    function parseGroupField(raw) {
+      const list = toRawList(raw);
+      const out = [];
+      list.forEach((entry, i) => {
+        const item = parseItem(entry, i);
+        if (item && item.name) out.push(item);
+      });
+      return out;
+    }
+
+    function sortResourceItems(items) {
+      return items.slice().sort((a, b) => {
+        const ra = rarityRank(a.rarity);
+        const rb = rarityRank(b.rarity);
+        if (ra !== rb) return ra - rb;
+        return String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' });
+      });
+    }
+
+    function buildGroupsFromUser(ud) {
+      const result = {};
+      GROUPS.forEach(g => {
+        let items = parseGroupField(ud[g.field]);
+        if (g.sortByRarity) items = sortResourceItems(items);
+        // inventory: keep insertion / forEach order from parseGroupField
+        result[g.key] = items;
+      });
+      return result;
+    }
+    function metaLine(item) {
+      const parts = [];
+      if (item.count != null) parts.push(fmtNum(item.count));
+      if (item.value != null) {
+        parts.push(item.count != null
+          ? ('· value ' + fmtNum(item.value))
+          : fmtNum(item.value));
+      }
+      return parts.join(' ');
+    }
+
+    function renderCard(item, opts) {
+      opts = opts || {};
+      const art = document.createElement('article');
+      art.className = 'inv-card';
+      art.dataset.name = item.name || '';
+      if (opts.orderByRarity) {
+        const rk = normalizeRarity(item.rarity);
+        art.classList.add(RARITY_RANK.hasOwnProperty(rk) ? ('rarity-' + rk) : 'rarity-unknown');
+      }
+
+      const title = document.createElement('div');
+      title.className = 'inv-card-title';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'inv-card-name';
+      const fallbackName = item.name || 'Untitled';
+      // Resource groups: map mine type + rarity → display name; inventory unchanged.
+      const mappedName = (opts.mineKey && opts.mineKey !== 'inventory')
+        ? resourceDisplayName(opts.mineKey, item.rarity, fallbackName)
+        : fallbackName;
+      nameEl.textContent = mappedName;
+      title.appendChild(nameEl);
+      if (item.rarity) {
+        const r = document.createElement('span');
+        const rk = normalizeRarity(item.rarity);
+        r.className = 'inv-card-rarity' + (RARITY_RANK.hasOwnProperty(rk) ? (' r-' + rk) : '');
+        r.textContent = item.rarity;
+        title.appendChild(r);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'inv-card-body';
+      const artId = itemImageId(item, opts.mineKey);
+      if (artId) {
+        renderArtBody(body, item, artId, mappedName);
+        art.append(title, body);
+        return art;
+      }
+      renderLegacyBody(body, item);
+      art.append(title, body);
+      return art;
+    }
+
+    /** Full-width item art + quantity overlay. Falls back to the item's own
+     *  image URL, then to the legacy 72px icon body, if the art fails to load. */
+    function renderArtBody(body, item, artId, label) {
+      body.classList.add('has-art');
+      const wrap = document.createElement('div');
+      wrap.className = 'inv-art';
+      wrap.dataset.art = artId;
+      const pic = document.createElement('picture');
+      const sizes = '(max-width: 480px) 50vw, 200px';
+      const src = document.createElement('source');
+      src.type = 'image/webp';
+      src.srcset = 'images/items/' + artId + '-240.webp 240w, images/items/' + artId + '.webp 480w';
+      src.sizes = sizes;
+      const img = document.createElement('img');
+      img.alt = label || '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.width = 240;
+      img.height = 240;
+      img.sizes = sizes;
+      img.srcset = 'images/items/' + artId + '-240.png 240w, images/items/' + artId + '.png 480w';
+      img.src = 'images/items/' + artId + '-240.png';
+      let triedOwn = false;
+      img.addEventListener('error', () => {
+        if (!triedOwn && item.image) {
+          triedOwn = true;
+          wrap.dataset.art = 'own';
+          if (src.parentNode) src.remove();
+          img.removeAttribute('srcset');
+          img.removeAttribute('sizes');
+          img.src = item.image;
+          return;
+        }
+        body.classList.remove('has-art');
+        body.innerHTML = '';
+        renderLegacyBody(body, Object.assign({}, item, { image: '' }));
+      });
+      pic.append(src, img);
+      wrap.appendChild(pic);
+      if (item.count != null) {
+        const q = document.createElement('div');
+        q.className = 'inv-qty';
+        q.textContent = fmtNum(item.count);
+        q.setAttribute('aria-label', 'Quantity ' + fmtNum(item.count));
+        wrap.appendChild(q);
+      }
+      body.appendChild(wrap);
+      // Other info (value) stays below the art; the count now lives in the overlay.
+      let line = '';
+      if (item.count == null) line = metaLine(item) || '—';
+      else if (item.value != null) line = 'value ' + fmtNum(item.value);
+      if (line) {
+        const meta = document.createElement('div');
+        meta.className = 'inv-card-meta';
+        meta.textContent = line;
+        body.appendChild(meta);
+      }
+    }
+
+    /** Previous card body: 72px icon (item image URL or "No image") + meta line. */
+    function renderLegacyBody(body, item) {
+      const photo = document.createElement('div');
+      photo.className = 'mine-photo';
+      if (item.image) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        img.src = item.image;
+        img.addEventListener('error', () => {
+          photo.classList.remove('has-img');
+          photo.textContent = 'No image';
+        });
+        photo.classList.add('has-img');
+        photo.appendChild(img);
+      } else {
+        photo.textContent = 'No image';
+      }
+      const meta = document.createElement('div');
+      meta.className = 'inv-card-meta';
+      const line = metaLine(item);
+      meta.textContent = line || '—';
+      body.append(photo, meta);
+    }
+    // ---- end: verbatim from inventory.html ----
+    return { GROUPS: GROUPS, buildGroupsFromUser: buildGroupsFromUser, renderCard: renderCard,
+      itemImageId: itemImageId, resourceDisplayName: resourceDisplayName };
+  })();
+  const _inv = { status: 'loading', tiles: [], preview: false };
+  // Local preview only (no Firestore)
+  const INV_PREVIEW_USER = {
+    inventory: [{ name: 'nightVisionGoggles_1min', count: 3 }, { name: 'Lucky Pickaxe', count: 1 }],
+    rockResources: { common: 12, uncommon: 4, rare: 1, epic: 0 },
+    coalResources: { common: 7, uncommon: 2 },
+    goldResources: { common: 3 },
+    diamondResources: { common: 1, rare: 1 }
+  };
+  function setInvMsg(text, cls) { setDashMsg($('dash-inv-msg'), text, cls); }
+  function setInventoryLoading() {
+    _inv.status = 'loading';
+    _inv.tiles = [];
+    if (invTipKey != null) hideVis60Tip();
+    const grid = $('dash-inv-grid'); if (grid) { grid.replaceChildren(); grid.hidden = true; }
+    const total = $('dash-inv-total'); if (total) total.textContent = '\u2014';
+    setInvMsg('', 'is-loading');
+  }
+  function setInventoryError(err) {
+    console.warn('[inventory-card] could not load inventory:', err && (err.code || ''), err && err.message);
+    _inv.status = 'error';
+    _inv.tiles = [];
+    if (invTipKey != null) hideVis60Tip();
+    const grid = $('dash-inv-grid'); if (grid) { grid.replaceChildren(); grid.hidden = true; }
+    const total = $('dash-inv-total'); if (total) total.textContent = '\u2014';
+    setInvMsg('Could not load inventory.', 'is-error');
+  }
+  /** Tiles in inventory.html's order: GROUPS (Inventory, Rock … Diamond), items as that page sorts them. */
+  function invBuildTiles(ud) {
+    const groups = INV_PAGE.buildGroupsFromUser(ud || {});
+    const tiles = [];
+    INV_PAGE.GROUPS.forEach(function (g) {
+      (groups[g.key] || []).forEach(function (item) {
+        const fallback = item.name || 'Untitled';
+        tiles.push({
+          item: item, group: g, mineKey: g.key,
+          name: g.key !== 'inventory' ? INV_PAGE.resourceDisplayName(g.key, item.rarity, fallback) : fallback,
+          artId: INV_PAGE.itemImageId(item, g.key)
+        });
+      });
+    });
+    return tiles;
+  }
+  function invTileEl(t, i) {
+    const el = document.createElement('div');
+    el.className = 'dash-inv-tile';
+    el.dataset.key = String(i);
+    el.dataset.name = t.name;
+    el.setAttribute('role', 'listitem');
+    el.setAttribute('aria-label', t.name + (t.item.count != null ? ', ' + fmtNum(t.item.count) : ''));
+    const noPic = function () {
+      el.replaceChildren();
+      el.classList.add('no-pic');
+      el.dataset.art = '';
+      const tx = document.createElement('span');
+      tx.className = 'dash-inv-nopic';
+      tx.textContent = 'No picture';
+      el.appendChild(tx);
+    };
+    const own = t.item.image || '';
+    if (!t.artId && !own) { noPic(); return el; }
+    const img = document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    img.width = 50;
+    img.height = 50;
+    if (t.artId) {
+      el.dataset.art = t.artId;
+      const pic = document.createElement('picture');
+      const src = document.createElement('source');
+      src.type = 'image/webp';
+      src.srcset = 'images/items/' + t.artId + '-240.webp';
+      img.src = 'images/items/' + t.artId + '-240.png';
+      let triedOwn = false;
+      img.addEventListener('error', function () {      // same fallback chain as inventory.html
+        if (!triedOwn && own) { triedOwn = true; el.dataset.art = 'own'; src.remove(); img.src = own; return; }
+        noPic();
+      });
+      pic.append(src, img);
+      el.appendChild(pic);
+    } else {
+      el.dataset.art = 'own';
+      img.src = own;
+      img.addEventListener('error', noPic, { once: true });
+      el.appendChild(img);
+    }
+    return el;
+  }
+  function renderInventoryCard(ud, options) {
+    options = options || {};
+    _inv.preview = !!options.preview;
+    const tiles = invBuildTiles(ud);
+    _inv.tiles = tiles;
+    if (invTipKey != null) hideVis60Tip();
+    const grid = $('dash-inv-grid');
+    const total = $('dash-inv-total');
+    if (grid) { grid.replaceChildren.apply(grid, tiles.map(invTileEl)); grid.hidden = !tiles.length; }
+    if (total) total.textContent = fmtNum(tiles.length) + (tiles.length === 1 ? ' item' : ' items');
+    _inv.status = tiles.length ? 'ready' : 'empty';
+    setInvMsg(tiles.length ? '' : 'No inventory or mine resources found.', '');
+    if (!options.preview) {
+      const noPicN = tiles.filter(function (t) { return !t.artId && !t.item.image; }).length;
+      console.info('[inventory-card] ' + tiles.length + ' tile(s) from the users doc (same fields/order as inventory.html); '
+        + noPicN + ' without a picture.');
+    }
+  }
+  function fillInvTip(key) {
+    const tip = ensureVis60Tip();
+    tip.replaceChildren();
+    const t = _inv.tiles[Number(key)];
+    if (!t) return;
+    const card = INV_PAGE.renderCard(t.item, { orderByRarity: !!t.group.sortByRarity, mineKey: t.mineKey });
+    card.querySelectorAll('img').forEach(function (im) { im.loading = 'eager'; }); // shown right away
+    tip.appendChild(card);
+  }
+  function showInvTip(key, x, y) {
+    vis60TipChart = null; tbAvTipUid = null; refAvTipKey = null;
+    invTipKey = key; vis60TipX = x; vis60TipY = y;
+    fillInvTip(key);
+    placeVis60Tip(x, y);
+  }
+  bindAvatarRowTip($('dash-inv-grid'), {
+    selector: '.dash-inv-tile',
+    keyOf: function (el) { return el.dataset.key; },
+    isOpen: function (k) { return invTipKey != null && invTipKey === k; },
+    show: showInvTip
+  });
 
   applyTypeOrderLayout();
   initPageSettings();
