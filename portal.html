@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-1" />
+  <link rel="stylesheet" href="portal.css?v=20261001-2" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -243,6 +243,7 @@
               <div class="tb-today" id="tb-today">
                 <div class="tb-today-section">
                   <div class="tb-today-section-title">Visitor check-ins to your mines</div>
+                  <div class="tb-today-visitor-avatars" id="tb-today-visitor-avatars" aria-label="Today&rsquo;s visitors" hidden></div>
                   <table class="tb-today-table" aria-label="Visitor check-ins today">
                     <tbody>
                       <tr>
@@ -1535,6 +1536,11 @@
 
   function renderTbTodayPreview() {
     setTbTodayCell('tb-today-visitors-count', 3);
+    setTbTodayVisitors([ // local preview only (no Firestore): 3 check-ins from 2 visitors
+      { data: { userId: 'pv-ada', nickname: 'Ada Lovelace', timestamp: new Date().toISOString() } },
+      { data: { userId: 'pv-ada', nickname: 'Ada Lovelace', timestamp: new Date().toISOString() } },
+      { data: { userId: 'pv-bo', nickname: 'Bo', timestamp: new Date().toISOString() } }
+    ], { preview: true });
     setTbTodayCell('tb-today-visitors-tb', 6, { tb: true });
     setTbTodayCell('tb-today-yours-count', 2);
     setTbTodayCell('tb-today-yours-tb', null);
@@ -1611,6 +1617,7 @@
     });
 
     setTbTodayCell('tb-today-visitors-count', visitors.length);
+    setTbTodayVisitors(visitors);
     setTbTodayCell('tb-today-yours-count', yours.length);
 
     // Host reward is fixed at 2 TB per visitor check-in.
@@ -2031,7 +2038,53 @@
     });
   }
 
+  /** Visitor display: publicProfiles nickname → check-in nickname → "Anonymous Miner";
+   *  avatar = profile https avatarUrl → check-in https avatar → initials. */
+  function vis60VisitorIdentity(v) {
+    const prof = vis60ProfileCache.get(v.uid) || null;
+    const nick = (prof && prof.nickname) || v.nick || 'Anonymous Miner';
+    const url = (prof && prof.avatarUrl) || v.avatar || '';
+    return { nick: nick, url: (url && url.startsWith('https://')) ? url : '' };
+  }
+  /** Rounded-square avatar box (image, or initials when missing / it fails to load). */
+  function vis60AvatarEl(cls, id) {
+    const av = document.createElement('div');
+    av.className = cls;
+    const init = initials(id.nick);
+    if (id.url) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', function () { av.textContent = init; }, { once: true });
+      img.src = id.url;
+      av.appendChild(img);
+    } else {
+      av.textContent = init;
+    }
+    return av;
+  }
+  function vis60VisitorRow(v, countText) {
+    const id = vis60VisitorIdentity(v);
+    const row = document.createElement('div');
+    row.className = 'dash-visits-tip-row';
+    row.dataset.uid = v.uid;
+    const av = vis60AvatarEl('dash-visits-av', id);
+    const txt = document.createElement('div');
+    txt.className = 'dash-visits-tip-text';
+    const nk = document.createElement('div');
+    nk.className = 'dash-visits-tip-nick';
+    nk.textContent = id.nick;
+    const ct = document.createElement('div');
+    ct.className = 'dash-visits-tip-count';
+    ct.textContent = countText;
+    txt.append(nk, ct);
+    row.append(av, txt);
+    return row;
+  }
+
   let vis60Tip = null, vis60TipTimer = null, vis60TouchTimer = null;
+  let tbAvTipUid = null; // uid whose TerraBucks-today icon popup is open (shares vis60Tip)
   let vis60TipIdx = -1, vis60TipX = 0, vis60TipY = 0, vis60TouchOpen = false, vis60InChart = false;
   function ensureVis60Tip() {
     if (vis60Tip) return vis60Tip;
@@ -2073,37 +2126,7 @@
     const rows = document.createElement('div');
     rows.className = 'dash-visits-tip-rows';
     shown.forEach(function (v) {
-      const prof = vis60ProfileCache.get(v.uid) || null;
-      const nick = (prof && prof.nickname) || v.nick || 'Anonymous Miner';
-      const url = (prof && prof.avatarUrl) || v.avatar || '';
-      const row = document.createElement('div');
-      row.className = 'dash-visits-tip-row';
-      row.dataset.uid = v.uid;
-      const av = document.createElement('div');
-      av.className = 'dash-visits-av';
-      const init = initials(nick);
-      if (url && url.startsWith('https://')) {
-        const img = document.createElement('img');
-        img.alt = '';
-        img.decoding = 'async';
-        img.referrerPolicy = 'no-referrer';
-        img.addEventListener('error', function () { av.textContent = init; }, { once: true });
-        img.src = url;
-        av.appendChild(img);
-      } else {
-        av.textContent = init;
-      }
-      const txt = document.createElement('div');
-      txt.className = 'dash-visits-tip-text';
-      const nk = document.createElement('div');
-      nk.className = 'dash-visits-tip-nick';
-      nk.textContent = nick;
-      const ct = document.createElement('div');
-      ct.className = 'dash-visits-tip-count';
-      ct.textContent = '\u00d7' + fmtNum(v.count) + (v.count === 1 ? ' check-in' : ' check-ins');
-      txt.append(nk, ct);
-      row.append(av, txt);
-      rows.appendChild(row);
+      rows.appendChild(vis60VisitorRow(v, '\u00d7' + fmtNum(v.count) + (v.count === 1 ? ' check-in' : ' check-ins')));
     });
     tip.appendChild(rows);
     if (list.length > shown.length) {
@@ -2150,6 +2173,7 @@
     if (vis60TouchTimer) { clearTimeout(vis60TouchTimer); vis60TouchTimer = null; }
     vis60TouchOpen = false;
     vis60TipIdx = -1;
+    tbAvTipUid = null;
     if (vis60Tip) vis60Tip.style.display = 'none';
     if (_vis60.hover !== -1) setVis60Hover(-1);
   }
@@ -2213,12 +2237,133 @@
     });
     document.addEventListener('pointerdown', function (e) {
       if (!vis60TouchOpen || e.target === canvas) return;
+      if (e.target && e.target.closest && e.target.closest('.tb-today-av')) return;
       hideVis60Tip();
     }, true);
     window.addEventListener('scroll', function () { if (vis60TouchOpen) hideVis60Tip(); }, { passive: true, capture: true });
     window.addEventListener('blur', function () { vis60InChart = false; hideVis60Tip(); });
   })();
   renderVisitors60(); // empty 60-slot frame under the "Loading…" message
+
+  // ── TerraBucks Today: one avatar icon per unique visitor today ───────────
+  // Oct 1, 2026. Built from the same rows as the box's "Check-ins" number
+  // (visitor uid present, self check-ins skipped). Shares the graph popup
+  // element and the publicProfiles cache (one read per uid per page load).
+  let tbAvVisitors = [];       // [{ uid, count, nick, avatar, lastMs }] sorted count desc
+  let tbAvPreview = false;
+  function tbTodayVisitorList(rows) {
+    const map = new Map();
+    rows.forEach(function (row) {
+      const d = row.data || {};
+      const vUid = d.userId || d.uid || '';
+      if (!vUid) return;
+      const ms = checkInTsMillis(d.timestamp);
+      let e = map.get(vUid);
+      if (!e) { e = { uid: vUid, count: 0, nick: '', avatar: '', lastMs: 0 }; map.set(vUid, e); }
+      e.count++;
+      const n = vis60CheckInNick(d), a = vis60CheckInAvatar(d);
+      if (ms >= e.lastMs) { e.lastMs = ms; if (n) e.nick = n; if (a) e.avatar = a; }
+      else { if (!e.nick) e.nick = n; if (!e.avatar) e.avatar = a; }
+    });
+    return Array.from(map.values()).sort(function (a, b) {
+      return (b.count - a.count) || (b.lastMs - a.lastMs) || (a.uid < b.uid ? -1 : 1);
+    });
+  }
+  function tbAvCountText(v) {
+    return '\u00d7' + fmtNum(v.count) + (v.count === 1 ? ' check-in today' : ' check-ins today');
+  }
+  function renderTbTodayVisitorIcons() {
+    const host = $('tb-today-visitor-avatars');
+    if (!host) return;
+    host.replaceChildren();
+    host.hidden = !tbAvVisitors.length;
+    tbAvVisitors.forEach(function (v) {
+      const id = vis60VisitorIdentity(v);
+      const el = vis60AvatarEl('tb-today-av', id);
+      el.dataset.uid = v.uid;
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', id.nick + ', ' + tbAvCountText(v));
+      host.appendChild(el);
+    });
+  }
+  function setTbTodayVisitors(rows, opts) {
+    opts = opts || {};
+    tbAvPreview = !!opts.preview;
+    tbAvVisitors = tbTodayVisitorList(rows);
+    renderTbTodayVisitorIcons();
+    if (tbAvPreview || !tbAvVisitors.length) return;
+    const need = tbAvVisitors.map(function (v) { return v.uid; }).filter(function (u) { return !vis60ProfileCache.has(u); });
+    if (!need.length) return;
+    vis60EnsureProfiles(need).then(function () {
+      renderTbTodayVisitorIcons();
+      if (tbAvTipUid && vis60TipShown()) { fillTbAvTip(tbAvTipUid); placeVis60Tip(vis60TipX, vis60TipY); }
+    });
+  }
+  function fillTbAvTip(uid) {
+    const tip = ensureVis60Tip();
+    const v = tbAvVisitors.find(function (x) { return x.uid === uid; });
+    tip.replaceChildren();
+    if (!v) return;
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    rows.appendChild(vis60VisitorRow(v, tbAvCountText(v)));
+    tip.appendChild(rows);
+    if (!tbAvPreview && !vis60ProfileCache.has(uid)) {
+      vis60EnsureProfiles([uid]).then(function () {
+        if (tbAvTipUid === uid && vis60TipShown()) { fillTbAvTip(uid); placeVis60Tip(vis60TipX, vis60TipY); }
+      });
+    }
+  }
+  function showTbAvTip(uid, x, y) {
+    tbAvTipUid = uid; vis60TipX = x; vis60TipY = y;
+    fillTbAvTip(uid);
+    placeVis60Tip(x, y);
+  }
+  (function bindTbTodayVisitorIcons() {
+    const host = $('tb-today-visitor-avatars');
+    if (!host) return;
+    let hoverEl = null;
+    const iconAt = function (e) { const el = e.target && e.target.closest ? e.target.closest('.tb-today-av') : null; return el && host.contains(el) ? el : null; };
+    host.addEventListener('pointerover', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      const el = iconAt(e);
+      if (!el || el === hoverEl) return;
+      hideVis60Tip();
+      hoverEl = el;
+      vis60TipX = e.clientX; vis60TipY = e.clientY;
+      vis60TipTimer = setTimeout(function () {
+        vis60TipTimer = null;
+        if (hoverEl === el && el.isConnected) showTbAvTip(el.dataset.uid, vis60TipX, vis60TipY);
+      }, VIS60_TIP_DELAY_MS);
+    });
+    host.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      const el = iconAt(e);
+      if (!el || el !== hoverEl) return;
+      vis60TipX = e.clientX; vis60TipY = e.clientY;
+      if (tbAvTipUid && vis60TipShown() && !vis60TipTimer) placeVis60Tip(e.clientX, e.clientY);
+    });
+    host.addEventListener('pointerout', function (e) {
+      if (e.pointerType !== 'mouse' || !hoverEl) return;
+      const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.tb-today-av') : null;
+      if (to === hoverEl) return;
+      hoverEl = null;
+      hideVis60Tip();
+    });
+    // Touch / pen: tap toggles; auto-hides after 3s, on scroll, or a tap elsewhere.
+    host.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse') return;
+      const el = iconAt(e);
+      if (!el) return;
+      const uid = el.dataset.uid;
+      const wasSame = vis60TouchOpen && tbAvTipUid === uid && vis60TipShown();
+      hideVis60Tip();
+      if (wasSame) return;
+      vis60TouchOpen = true;
+      showTbAvTip(uid, e.clientX, e.clientY);
+      vis60TouchTimer = setTimeout(function () { vis60TouchTimer = null; if (vis60TouchOpen) hideVis60Tip(); }, VIS60_TIP_TOUCH_MS);
+    });
+  })();
 
 
   applyTypeOrderLayout();

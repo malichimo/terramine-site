@@ -675,6 +675,25 @@ body.auth-pending #portal {
   letter-spacing: 0.02em;
   margin-bottom: 4px;
 }
+/* Oct 1, 2026: one 30px rounded-square avatar per unique visitor today
+   (hover/tap popup = the Visitors graph popup). Hidden when nobody visited. */
+.tb-today-visitor-avatars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0 6px;
+  min-width: 0;
+}
+.tb-today-visitor-avatars[hidden] { display: none; }
+.tb-today-av {
+  width: 30px; height: 30px; flex: 0 0 30px; border-radius: 6px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brown-mid); color: #fff8ec;
+  font: 700 11px/1 'DM Sans', sans-serif; letter-spacing: .02em;
+  border: 1px solid rgba(92, 51, 23, 0.25); box-sizing: border-box;
+  cursor: default; user-select: none; -webkit-user-select: none;
+}
+.tb-today-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tb-today-table {
   width: 100%;
   border-collapse: collapse;
@@ -853,7 +872,7 @@ body.auth-pending #portal {
   display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; column-gap: 8px;
 }
 .dash-visits-av {
-  width: 40px; height: 40px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--brown-mid); color: #fff8ec;
   font: 700 14px/1 'DM Sans', sans-serif; letter-spacing: .02em;
