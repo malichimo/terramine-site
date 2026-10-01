@@ -966,6 +966,27 @@ body.auth-pending #portal {
 .stat-row-secondary .stat-card-sub {
   text-align: center;
 }
+/* Total TB Earned: money-bag icon (same image as the nav TB pill) left of
+   the orange number. Bebas Neue digits are 0.7em tall, so the icon is 0.7em
+   high; flex centers it on the line box and top:-0.07em lifts it onto the
+   digits' optical center (their ink sits ~0.07em above the box center). */
+.stat-card-value-tb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2em;
+  min-width: 0;
+}
+.stat-card-value-tb .stat-tb-icon {
+  height: 0.7em;
+  width: auto;
+  flex: 0 0 auto;
+  display: block;
+  object-fit: contain;
+  position: relative;
+  top: -0.07em;
+}
+.stat-card-value-tb #stat-tb-earned { min-width: 0; white-space: nowrap; }
 
 
 /* Properties card type breakdown — icons match Mines page SVGs. */

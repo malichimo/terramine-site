@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-3" />
+  <link rel="stylesheet" href="portal.css?v=20261001-4" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -202,19 +202,19 @@
           </div>
           <div class="stat-row-secondary">
             <div class="stat-card">
-              <div class="stat-card-label">Total Terra Bucks Earned</div>
-              <div class="stat-card-value amber" id="stat-tb-earned">—</div>
+              <div class="stat-card-label">Total TB Earned</div>
+              <div class="stat-card-value amber stat-card-value-tb"><img class="stat-tb-icon" src="images/mine-icons/terrabucks-small.png" alt="" aria-hidden="true" width="148" height="200" /><span id="stat-tb-earned">—</span></div>
               <div class="stat-card-sub">All-time</div>
             </div>
             <div class="stat-card">
-              <div class="stat-card-label">Mines Ready for Maintenance</div>
+              <div class="stat-card-label">Mine Maintenance</div>
               <div class="stat-card-value" id="stat-ready">—</div>
               <div class="stat-card-sub">Daily activity available</div>
             </div>
             <div class="stat-card">
               <div class="stat-card-label">Total Check-ins</div>
               <div class="stat-card-value" id="stat-checkins">—</div>
-              <div class="stat-card-sub">Visits to your mines</div>
+              <div class="stat-card-sub">Last 90 days</div>
             </div>
             <div class="stat-card">
               <div class="stat-card-label">Distinct Visitors</div>
@@ -1422,10 +1422,9 @@
       $('sb-tb').textContent = fmtTBBalance(userData.tbBalance || 0);
       $('sb-usd').textContent = fmtUSDBalance(userData.usdEarnings || 0);
       $('stat-tb-earned').textContent = fmtNum(userData.totalTBEarned || 0);
-      // Total Check-ins = check-ins to YOUR mines (server count aggregation);
-      // Distinct Visitors (90 days) + the 60-day graph share one paged fetch.
-      // Neither is awaited; both show "—" until they land.
-      loadOwnerCheckInCount(user.uid, options);
+      // Total Check-ins + Distinct Visitors (90 days) + the 60-day graph all
+      // come from one shared paged checkIns fetch (no extra query). Not
+      // awaited; the boxes show "—" until it lands.
       loadVisitors60(user.uid, options).catch(function (err) {
         console.warn('Visitors 60-day graph failed:', err);
       });
@@ -1801,7 +1800,7 @@
     }
     if (capped) {
       console.info('[visitors-60d] stopped at the ' + VIS60_MAX_PAGES + '-page cap (' + (VIS60_MAX_PAGES * VIS60_PAGE)
-        + ' check-ins) before reaching ' + VISIT_STATS_DAYS + ' days back; Distinct Visitors shows "+" and the oldest graph days may be undercounted.');
+        + ' check-ins) before reaching ' + VISIT_STATS_DAYS + ' days back; Total Check-ins / Distinct Visitors show "+" and the oldest graph days may be undercounted.');
     }
     return { rows: rows, pages: pages, capped: capped };
   }
@@ -1837,6 +1836,7 @@
     const win = vis60BuildDays();
     const fetchWin = { startMs: visitStatsStartMs(), endMs: win.endMs };
     setDistinctVisitors(undefined); // loading dash
+    setTotalCheckIns(undefined);
     _vis60.status = 'loading';
     _vis60.preview = !!options.preview;
     _vis60.days = win.days; // empty slots while loading
@@ -1851,13 +1851,16 @@
       if (seq !== _vis60.seq) return;
       console.warn('[visitors-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
       setDistinctVisitors(null);
+      setTotalCheckIns(null);
       _vis60.status = 'error';
       setVis60Msg('Could not load check-ins.', 'is-error');
       renderVisitors60();
       return;
     }
     if (seq !== _vis60.seq) return;
-    setDistinctVisitors(countDistinctVisitors(res.rows, uid, fetchWin), res.capped);
+    const stats90 = countVisitStats(res.rows, uid, fetchWin);
+    setTotalCheckIns(stats90.checkIns, res.capped);
+    setDistinctVisitors(stats90.distinct, res.capped);
     vis60Aggregate(res.rows, uid, win);
     _vis60.days = win.days;
     _vis60.pages = res.pages;
@@ -1869,132 +1872,36 @@
     renderVisitors60();
   }
 
-  // ── Stat boxes: Distinct Visitors (90 days) + Total Check-ins (count) ────
+  // ── Stat boxes: Total Check-ins + Distinct Visitors (last 90 days) ────
+  // Both come from the shared 90-day fetch (loadVisitors60); no extra query.
   function visitStatsStartMs() {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), n.getDate() - (VISIT_STATS_DAYS - 1)).getTime(); // local midnight
   }
-  /** Unique visitor uids in [startMs, endMs); same exclusions as the graph
-   *  (no uid, or the owner checking in at their own mine). */
-  function countDistinctVisitors(rows, ownerUid, w) {
+  /** Check-ins + unique visitor uids in [startMs, endMs); same exclusions as
+   *  the graph (no uid, or the owner checking in at their own mine). */
+  function countVisitStats(rows, ownerUid, w) {
     const seen = new Set();
+    let checkIns = 0;
     rows.forEach(function (v) {
       const ms = checkInTsMillis(v.timestamp);
       if (!ms || ms < w.startMs || ms >= w.endMs) return;
       const vUid = vis60VisitorUid(v);
       if (!vUid || vUid === ownerUid) return;
+      checkIns++;
       seen.add(vUid);
     });
-    return seen.size;
+    return { checkIns: checkIns, distinct: seen.size };
   }
   /** undefined = loading, null = failed (both "—"); capped adds "+". */
-  function setDistinctVisitors(n, capped) {
-    const el = $('stat-distinct');
+  function setStatCount(id, n, capped) {
+    const el = $(id);
     if (!el) return;
     el.textContent = (n == null) ? '\u2014' : fmtNum(n) + (capped ? '+' : '');
-    if (capped) el.setAttribute('aria-label', fmtNum(n) + ' or more'); else el.removeAttribute('aria-label');
+    if (n != null && capped) el.setAttribute('aria-label', fmtNum(n) + ' or more'); else el.removeAttribute('aria-label');
   }
-
-  // Total Check-ins: server-side count aggregation — never reads the docs.
-  // The compat SDK this page loads (9.23.0) has no Query.count(), so this
-  // calls Firestore's REST runAggregationQuery (COUNT) with the signed-in
-  // compat user's ID token. Same security rules as the SDK; billed as an
-  // aggregation (1 read per up-to-1000 index entries), not per document.
-  // Note: this counts EVERY checkIns doc with propertyOwnerId == uid,
-  // including the owner's own check-ins at their own mines (a count query
-  // can't exclude them), unlike the graph / Distinct Visitors.
-  // On any failure the box stays "—" (logged); it never falls back to reads.
-  let _ownerCountSeq = 0;
-  function waitForCompatUser(uid, timeoutMs) {
-    const cur = auth.currentUser;
-    if (cur && cur.uid === uid) return Promise.resolve(cur);
-    return new Promise(function (resolve, reject) {
-      let done = false, unsub = null;
-      const finish = function (fn, val) { if (done) return; done = true; clearTimeout(timer); if (unsub) unsub(); fn(val); };
-      const timer = setTimeout(function () { finish(reject, new Error('signed-in user not available after ' + Math.round((timeoutMs || 15000) / 1000) + 's')); }, timeoutMs || 15000);
-      unsub = auth.onAuthStateChanged(function (u) { if (u && u.uid === uid) finish(resolve, u); });
-      if (done && unsub) unsub();
-    });
-  }
-  function ownerCheckInCountRequest(uid) {
-    const projectId = (firebase.app().options || {}).projectId;
-    return {
-      url: 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(projectId) + '/databases/(default)/documents:runAggregationQuery',
-      body: {
-        structuredAggregationQuery: {
-          structuredQuery: {
-            from: [{ collectionId: 'checkIns' }],
-            where: { fieldFilter: { field: { fieldPath: 'propertyOwnerId' }, op: 'EQUAL', value: { stringValue: uid } } }
-          },
-          aggregations: [{ alias: 'count', count: {} }]
-        }
-      }
-    };
-  }
-  /** One REST call. Resolves the count; rejects with { status, message } (never the token). */
-  async function postOwnerCheckInCount(req, token) {
-    let res;
-    try {
-      res = await fetch(req.url, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body),
-        cache: 'no-store'
-      });
-    } catch (netErr) {
-      throw { status: 0, message: 'network error: ' + ((netErr && netErr.message) || netErr) };
-    }
-    let data = null;
-    try { data = await res.json(); } catch (e) { data = null; }
-    if (!res.ok) {
-      const e = data && (Array.isArray(data) ? (data[0] && data[0].error) : data.error);
-      throw { status: res.status, message: (e && (e.status ? e.status + ': ' : '') + (e.message || '')) || res.statusText || 'HTTP error' };
-    }
-    const rows = Array.isArray(data) ? data : [data];
-    for (let i = 0; i < rows.length; i++) {
-      const f = rows[i] && rows[i].result && rows[i].result.aggregateFields && rows[i].result.aggregateFields.count;
-      if (f && f.integerValue != null) {
-        const n = Number(f.integerValue);
-        if (Number.isFinite(n) && n >= 0) return n;
-      }
-    }
-    throw { status: res.status, message: 'response had no count (' + JSON.stringify(data).slice(0, 200) + ')' };
-  }
-  async function loadOwnerCheckInCount(uid, options) {
-    options = options || {};
-    const el = $('stat-checkins');
-    if (!el) return;
-    const seq = ++_ownerCountSeq;
-    el.textContent = '\u2014';
-    if (options.preview) {
-      el.textContent = fmtNum(vis60PreviewRows(vis60BuildDays()).length);
-      return;
-    }
-    const req = ownerCheckInCountRequest(uid);
-    try {
-      const user = await waitForCompatUser(uid);
-      let n;
-      try {
-        n = await postOwnerCheckInCount(req, await user.getIdToken());
-      } catch (e) {
-        if (!e || e.status !== 401) throw e;
-        n = await postOwnerCheckInCount(req, await user.getIdToken(true)); // expired token: refresh once
-      }
-      if (seq !== _ownerCountSeq) return;
-      el.textContent = fmtNum(n);
-    } catch (err) {
-      if (seq !== _ownerCountSeq) return;
-      el.textContent = '\u2014';
-      const status = err && err.status != null ? err.status : '';
-      const msg = (err && err.message) || String(err);
-      if (status === 403) {
-        console.warn('[stat-checkins] count aggregation denied (HTTP 403 ' + msg + '). Firestore rules do not allow '
-          + 'this user to run a count on checkIns where propertyOwnerId == uid; leaving "\u2014" (no full read).');
-      } else {
-        console.warn('[stat-checkins] count aggregation failed (' + (status ? 'HTTP ' + status + ' ' : '') + msg + '); leaving "\u2014" (no full read).');
-      }
-    }
-  }
+  function setDistinctVisitors(n, capped) { setStatCount('stat-distinct', n, capped); }
+  function setTotalCheckIns(n, capped) { setStatCount('stat-checkins', n, capped); }
 
   function vis60AvailWidth(wrap) {
     return wrap ? wrap.clientWidth : 300;
