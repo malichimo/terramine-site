@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-9" />
+  <link rel="stylesheet" href="portal.css?v=20261001-10" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -310,7 +310,7 @@
             </div>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-slot">
-            <!-- column 3 = the bar graphs: Visitors, Mines Purchased, Mini Games, Referrals -->
+            <!-- column 3 = the bar graphs: Visitors, Mines Purchased, Mini Games, Referrals, My Check-ins -->
             <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
             <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
               <div class="dash-visits-head">
@@ -361,6 +361,19 @@
                 <div class="dash-visits-wrap" id="dash-refs-wrap">
                   <canvas id="dash-refs-chart" role="img" aria-label="Bar graph of referral rewards paid to you per day for the last 60 days"></canvas>
                   <div class="dash-visits-msg" id="dash-refs-msg" role="status">Loading referrals&hellip;</div>
+                </div>
+              </div>
+            </section>
+            <!-- Oct 1, 2026: your own check-ins at other players' mines per day, last 60 days -->
+            <section class="dash-visits-card dash-myci-card" id="dash-myci-card" aria-labelledby="dash-myci-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-myci-title">My Check-ins &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-myci-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-myci-wrap">
+                  <canvas id="dash-myci-chart" role="img" aria-label="Bar graph of your check-ins at other players&rsquo; mines per day for the last 60 days"></canvas>
+                  <div class="dash-visits-msg is-loading" id="dash-myci-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
                 </div>
               </div>
             </section>
@@ -1440,6 +1453,11 @@
     loadMiniGames30(user.uid, options).catch(function (err) {
       console.warn('[mini-games] load failed:', err);
     });
+    // My Check-ins: one shared fetch of your own check-ins (60 days) feeds the
+    // My Check-ins graph and the TerraBucks "Your activity" box (today).
+    loadMyCheckIns60(user.uid, options).catch(function (err) {
+      console.warn('[my-checkins-60d] load failed:', err);
+    });
     try {
       const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
       const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
@@ -1676,7 +1694,7 @@
     try {
       var both = await Promise.all([
         queryTodayCheckIns('propertyOwnerId', uid, startISO),
-        queryTodayCheckIns('userId', uid, startISO)
+        myCheckInsToday(uid, startISO)
       ]);
       visitorRows = both[0];
       yoursRows = both[1];
@@ -3543,6 +3561,279 @@
   bindDayBarTip(MG30_CHART);
   renderMgToday(null, true);
   renderMiniGames30(); // empty 30-slot frame under the "Loading…" message
+
+  // ── My Check-ins — Last 60 Days (column 3, last) ──────────────────────────
+  // Oct 1, 2026. Read-only. Your own check-ins at other players' mines, per
+  // browser-local day. Same query as activity.html loadVisitsPage() (so the
+  // live composite index userId asc + timestamp desc already exists):
+  //   checkIns.where('userId','==',uid).orderBy('timestamp','desc')
+  //           .limit(500).startAfter(lastDoc)
+  // newest-first, stopping once a page reaches past the 60-day window (cap 40
+  // pages), like Visitors. If the ordered query fails (missing index / rules),
+  // falls back to where(userId == uid).limit(500) pages + a client-side window
+  // filter. Owner = the check-in's propertyOwnerId (same fallbacks as
+  // activity.html); self check-ins (your own mines) and docs with no owner are
+  // left out, exactly like the TerraBucks "Your activity" box, which reads its
+  // today rows from this same fetch (myCheckInsToday).
+  const MYCI_PAGE = 500;
+  const MYCI_MAX_PAGES = 40;           // 20,000 check-ins in 60 days — sanity cap
+  const MYCI_FALLBACK_MAX_PAGES = 40;
+  const MYCI_TIP_MAX_ROWS = 12;
+  const _myci = {
+    seq: 0, status: 'loading', days: null, axis: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, capped: false, pages: 0, path: '', preview: false, skipped: null
+  };
+  let myciToday = null;  // { uid, promise } → today's own check-in rows [{ id, data }]
+  function myciOwnerUid(v) {
+    const c = [v.propertyOwnerId, v.ownerId, v.ownerID, v.mineOwnerId, v.propertyOwnerUid, v.ownerUid, v.ownerUID];
+    for (let i = 0; i < c.length; i++) {
+      let id = c[i];
+      if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
+      if (typeof id === 'string' && id.trim()) return id.trim();
+    }
+    return null;
+  }
+  function myciOwnerNick(v) {
+    const n = v && (v.propertyOwnerNickname || v.ownerNickname || v.ownerName || v.propertyOwnerName);
+    return (typeof n === 'string' && n.trim()) ? n.trim().replace(/^@+/, '') : '';
+  }
+  function myciBuildDays() {
+    const win = vis60BuildDays();
+    win.days.forEach(function (d) { d.owners = new Map(); });
+    return win;
+  }
+  /** rows [{ id, data }] → day.count (check-ins) + day.owners (ownerId → mines). */
+  function myciAggregate(rows, uid, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    const skipped = { self: 0, noOwner: 0 };
+    rows.forEach(function (r) {
+      const v = r.data || {};
+      const ms = checkInTsMillis(v.timestamp);
+      if (!ms || ms < win.startMs || ms >= win.endMs) return;
+      const owner = myciOwnerUid(v);
+      if (!owner) { skipped.noOwner++; return; }
+      if (owner === uid) { skipped.self++; return; }
+      const day = byKey[vis60DayKey(new Date(ms))];
+      if (!day) return;
+      day.count++;
+      let e = day.owners.get(owner);
+      if (!e) { e = { uid: owner, count: 0, checkIns: 0, mines: new Set(), nick: '', avatar: '', lastMs: 0 }; day.owners.set(owner, e); }
+      e.checkIns++;
+      e.mines.add(String(v.propertyId || v.mineId || r.id));
+      e.count = e.mines.size;                       // that owner's mines checked into this day
+      if (ms >= e.lastMs) e.lastMs = ms;
+      if (!e.nick) e.nick = myciOwnerNick(v);
+    });
+    return skipped;
+  }
+  async function myciFetchOrdered(uid, win, report) {
+    const rows = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection('checkIns')
+        .where('userId', '==', uid)
+        .orderBy('timestamp', 'desc')
+        .limit(MYCI_PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      const docs = (snap && snap.docs) || [];
+      let lastMs = 0;
+      docs.forEach(function (d) {
+        const data = d.data() || {};
+        lastMs = checkInTsMillis(data.timestamp);
+        if (lastMs >= win.startMs) rows.push({ id: d.id, data: data });
+      });
+      report(rows, docs.length < MYCI_PAGE || (lastMs && lastMs < win.todayMs));   // today complete?
+      if (docs.length < MYCI_PAGE) break;                // no more check-ins
+      if (lastMs && lastMs < win.startMs) break;         // page reached past the window
+      if (pages >= MYCI_MAX_PAGES) { capped = true; break; }
+      cursor = docs[docs.length - 1];
+    }
+    return { rows: rows, pages: pages, capped: capped };
+  }
+  async function myciFetchFallback(uid, win) {
+    const rows = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection('checkIns').where('userId', '==', uid).limit(MYCI_PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      const docs = (snap && snap.docs) || [];
+      docs.forEach(function (d) {
+        const data = d.data() || {};
+        if (checkInTsMillis(data.timestamp) >= win.startMs) rows.push({ id: d.id, data: data });
+      });
+      if (docs.length < MYCI_PAGE) break;
+      if (pages >= MYCI_FALLBACK_MAX_PAGES) { capped = true; break; }
+      cursor = docs[docs.length - 1];
+    }
+    return { rows: rows, pages: pages, capped: capped };
+  }
+  /** onToday(rows) fires once today's own check-ins are fully read (normally
+   *  after the first page), for the TerraBucks "Your activity" box. */
+  async function myciFetch(uid, win, onToday) {
+    let sent = false;
+    const todayRows = function (rows) { return rows.filter(function (r) { return checkInTsMillis(r.data.timestamp) >= win.todayMs; }); };
+    const report = function (rows, todayDone) { if (!sent && todayDone) { sent = true; onToday(todayRows(rows)); } };
+    let res, path;
+    try {
+      res = await myciFetchOrdered(uid, win, report);
+      path = 'ordered';
+      console.info('[my-checkins-60d] path: ordered — checkIns where userId == uid, orderBy timestamp desc, ' + res.pages + ' page(s) of ≤'
+        + MYCI_PAGE + ', ' + res.rows.length + ' check-in(s) in the window' + (res.capped ? ' (stopped at the ' + MYCI_MAX_PAGES + '-page cap)' : ''));
+    } catch (err) {
+      console.warn('[my-checkins-60d] ordered query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err)
+        + '); falling back to where(userId == uid).limit(' + MYCI_PAGE + ') pages + client-side 60-day filter.');
+      res = await myciFetchFallback(uid, win);
+      path = 'fallback';
+      console.info('[my-checkins-60d] path: fallback — ' + res.pages + ' page(s) of ≤' + MYCI_PAGE + ', ' + res.rows.length + ' check-in(s) in the window'
+        + (res.capped ? ' (stopped at the ' + MYCI_FALLBACK_MAX_PAGES + '-page cap; older docs not read)' : ''));
+    }
+    report(res.rows, true);
+    res.path = path;
+    return res;
+  }
+  /** Today's own check-ins for the TerraBucks "Your activity" box: from the
+   *  shared 60-day fetch, else (not started / failed) its own today query. */
+  function myCheckInsToday(uid, startISO) {
+    if (!myciToday || myciToday.uid !== uid) return queryTodayCheckIns('userId', uid, startISO);
+    return myciToday.promise.catch(function (err) {
+      console.warn('[my-checkins-60d] shared fetch failed; Your activity uses its own today query:', err && (err.code || err.message || err));
+      return queryTodayCheckIns('userId', uid, startISO);
+    });
+  }
+  function myciPreviewRows(win) {
+    // Local preview only (no Firestore): deterministic sample check-ins.
+    const owners = ['pv-ada', 'pv-bo', 'pv-cy', 'pv-dee'];
+    const rows = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 4 : ((i * 5 + 1) % 7 === 0 ? 0 : (i * 3 + 2) % 6);
+      for (let k = 0; k < n; k++) {
+        rows.push({ id: 'pv-ci-' + i + '-' + k, data: { userId: 'me', propertyOwnerId: owners[(i + k) % owners.length], propertyId: 'pv-m' + ((i + k) % 9),
+          timestamp: new Date(d.date.getTime() + (8 + k) * 3600000).toISOString() } });
+      }
+    });
+    return rows;
+  }
+  function setMyciMsg(text, cls) { setDashMsg($('dash-myci-msg'), text, cls); }
+  function renderMyCheckIns60() {
+    const last = (_myci.days ? _myci.days.length : VIS60_DAYS) - 1;
+    drawDayBars($('dash-myci-chart'), _myci, {
+      render: renderMyCheckIns60,
+      emptyDays: function () { return myciBuildDays().days; },
+      total: function (d) { return d.count; },
+      segments: function (d, i, hovered) {
+        return [{ key: 'checkIns', v: d.count, color: hovered ? '#F59E0B' : (i === last ? '#A0522D' : '#8B7355') }];
+      },
+      aria: function (sum, max) {
+        return 'Bar graph of your check-ins at other players\u2019 mines per day for the last 60 days: '
+          + (_myci.status === 'loading' ? 'loading' : fmtNum(sum) + ' check-ins, busiest day ' + fmtNum(max));
+      }
+    });
+  }
+  function myciSortedOwners(day) {
+    return Array.from(day.owners.values()).sort(function (a, b) {
+      return (b.count - a.count) || (b.checkIns - a.checkIns) || (b.lastMs - a.lastMs) || (a.uid < b.uid ? -1 : 1);
+    });
+  }
+  function fillMyciTip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _myci.days && _myci.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _myci.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const uniq = day.owners.size;
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(uniq);
+    const b2 = document.createElement('strong'); b2.textContent = fmtNum(day.count);
+    sum.append(b1, document.createTextNode(uniq === 1 ? ' mine owner \u00b7 ' : ' mine owners \u00b7 '),
+      b2, document.createTextNode(day.count === 1 ? ' check-in' : ' check-ins'));
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No check-ins this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const list = myciSortedOwners(day);
+    const shown = list.slice(0, MYCI_TIP_MAX_ROWS);
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    shown.forEach(function (o) {
+      rows.appendChild(vis60VisitorRow(o, '\u00d7' + fmtNum(o.count) + (o.count === 1 ? ' mine' : ' mines')));
+    });
+    tip.appendChild(rows);
+    if (list.length > shown.length) {
+      const more = document.createElement('div');
+      more.className = 'dash-visits-tip-more';
+      const n = list.length - shown.length;
+      more.textContent = 'and ' + fmtNum(n) + ' more ' + (n === 1 ? 'owner' : 'owners');
+      tip.appendChild(more);
+    }
+    // Owner profiles for the rows shown: the shared publicProfiles cache (one read per uid per page load)
+    if (!_myci.preview) {
+      const need = shown.map(function (o) { return o.uid; }).filter(function (u) { return !vis60ProfileCache.has(u); });
+      if (need.length) {
+        vis60EnsureProfiles(need).then(function () {
+          if (vis60TipChart === MYCI_CHART && vis60TipIdx === idx && vis60TipShown()) { fillMyciTip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
+        });
+      }
+    }
+  }
+  async function loadMyCheckIns60(uid, options) {
+    options = options || {};
+    const seq = ++_myci.seq;
+    const win = myciBuildDays();
+    win.todayMs = win.days[win.days.length - 1].date.getTime();
+    _myci.status = 'loading';
+    _myci.preview = !!options.preview;
+    _myci.days = win.days;
+    if (vis60TipChart === MYCI_CHART) hideVis60Tip();
+    setMyciMsg('', 'is-loading');
+    const total = $('dash-myci-total'); if (total) total.textContent = '\u2014';
+    renderMyCheckIns60();
+    let resolveToday, rejectToday;
+    const todayP = new Promise(function (res, rej) { resolveToday = res; rejectToday = rej; });
+    todayP.catch(function () {});        // handled by myCheckInsToday
+    if (!options.preview) myciToday = { uid: uid, promise: todayP };
+    let res;
+    try {
+      res = options.preview ? { rows: myciPreviewRows(win), pages: 0, capped: false, path: 'preview' }
+        : await myciFetch(uid, win, function (rows) { resolveToday(rows); });
+    } catch (err) {
+      rejectToday(err);
+      if (seq !== _myci.seq) return;
+      console.warn('[my-checkins-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
+      _myci.status = 'error';
+      setMyciMsg('Could not load your check-ins.', 'is-error');
+      renderMyCheckIns60();
+      return;
+    }
+    if (seq !== _myci.seq) return;
+    _myci.skipped = myciAggregate(res.rows, uid, win);
+    _myci.days = win.days;
+    _myci.pages = res.pages;
+    _myci.capped = res.capped;
+    _myci.path = res.path;
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    _myci.status = sum ? 'ready' : 'empty';
+    if (total) total.textContent = fmtNum(sum) + (res.capped ? '+' : '') + (sum === 1 && !res.capped ? ' check-in' : ' check-ins');
+    setMyciMsg(sum ? '' : 'No check-ins in the last 60 days', '');
+    renderMyCheckIns60();
+    if (vis60TipChart === MYCI_CHART && _myci.hover >= 0) { fillMyciTip(_myci.hover); placeVis60Tip(vis60TipX, vis60TipY); }
+  }
+  const MYCI_CHART = { canvasId: 'dash-myci-chart', st: _myci, render: renderMyCheckIns60, fill: fillMyciTip };
+  bindDayBarTip(MYCI_CHART);
+  renderMyCheckIns60(); // empty 60-slot frame under the spinner
 
   applyTypeOrderLayout();
   initPageSettings();
