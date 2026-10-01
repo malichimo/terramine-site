@@ -1300,9 +1300,38 @@ body.auth-pending #portal {
   width: 28px;
   height: 28px;
 }
-.tb-today-section-soon {
-  filter: grayscale(1);
-  opacity: 0.48;
-  pointer-events: none;
-  user-select: none;
+/* Oct 1, 2026: Mini games table (renderMiniGamesTable) — shared by the
+   "Mini games today" box and the Mini Games 30-day graph popup. */
+.mg-table .mg-total-row { border-top: 1px solid rgba(139, 115, 85, 0.2); }
+.mg-table .mg-total-row th,
+.mg-table .mg-total-row td { padding-top: 5px; }
+.mg-table .mg-total-row th[scope="row"] { font-weight: 700; color: #1e293b; }
+.mg-summary {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 15px;
+  color: #64748b;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
+.mg-table td { white-space: nowrap; }
+/* Same row height for "—" (loading) and "<TB icon> N TB" (loaded): fixed
+   27px rows (border-box) with ≤18px content, so loading → loaded never shifts. */
+.mg-table tbody th,
+.mg-table tbody td,
+.tb-today-section-refs .tb-today-table th,
+.tb-today-section-refs .tb-today-table td { height: 27px; }
+.mg-table tbody th,
+.mg-table tbody td { line-height: 18px; }
+.mg-table td .tb-today-tb-val { display: flex; height: 18px; }
+.dash-visits-tip .mg-table-wrap { margin-top: 6px; }
+.dash-visits-tip .mg-table td:nth-child(2) { width: auto; padding-left: 8px; }
+.dash-visits-tip .mg-table td:nth-child(3) { width: auto; padding-left: 10px; }
+.dash-visits-tip .mg-table { font-size: 12px; color: #e2e8f0; }
+.dash-visits-tip .mg-table th[scope="row"] { color: #cbd5e1; }
+.dash-visits-tip .mg-table td { color: #f8fafc; }
+.dash-visits-tip .mg-table thead th { color: #94a3b8; border-bottom-color: rgba(255, 255, 255, 0.16); }
+.dash-visits-tip .mg-table .mg-total-row { border-top-color: rgba(255, 255, 255, 0.16); }
+.dash-visits-tip .mg-table .mg-total-row th[scope="row"] { color: #fff; }
+.dash-visits-tip .mg-table .tb-today-tb-val img { width: 15px; height: 15px; }
+.dash-visits-tip .mg-summary { color: #cbd5e1; }

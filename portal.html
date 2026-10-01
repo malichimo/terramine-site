@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-6" />
+  <link rel="stylesheet" href="portal.css?v=20261001-7" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -267,6 +267,19 @@
                 </div>
               </div>
             </section>
+            <!-- Oct 1, 2026: mini games per day (games stacked by type + TB), last 30 days -->
+            <section class="dash-visits-card dash-games-card" id="dash-games-card" aria-labelledby="dash-games-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-games-title">Mini Games &mdash; Last 30 Days</h2>
+                <div class="dash-visits-total" id="dash-games-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-games-wrap">
+                  <canvas id="dash-games-chart" role="img" aria-label="Bar graph of mini games you played per day for the last 30 days, by type, with TB earned"></canvas>
+                  <div class="dash-visits-msg" id="dash-games-msg" role="status">Loading mini games&hellip;</div>
+                </div>
+              </div>
+            </section>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-slot">
             <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
@@ -303,39 +316,11 @@
                     </tbody>
                   </table>
                 </div>
-                <div class="tb-today-section tb-today-section-soon" aria-disabled="true">
+                <!-- Oct 1, 2026: live from gameResults (table built by renderMiniGamesTable, shared with the graph popup) -->
+                <div class="tb-today-section tb-today-section-games" id="tb-today-games">
                   <div class="tb-today-section-title">Mini games today</div>
-                  <table class="tb-today-table tb-today-table-games" aria-label="Mini games today">
-                    <thead>
-                      <tr>
-                        <th scope="col">Type</th>
-                        <th scope="col">Played</th>
-                        <th scope="col">TB earned</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr data-game="rock">
-                        <th scope="row"><img src="/images/mine-icons/rock.svg" alt=""> Rock</th>
-                        <td id="tb-today-game-rock-plays">—</td>
-                        <td id="tb-today-game-rock-tb">—</td>
-                      </tr>
-                      <tr data-game="coal">
-                        <th scope="row"><img src="/images/mine-icons/coal.svg" alt=""> Coal</th>
-                        <td id="tb-today-game-coal-plays">—</td>
-                        <td id="tb-today-game-coal-tb">—</td>
-                      </tr>
-                      <tr data-game="gold">
-                        <th scope="row"><img src="/images/mine-icons/gold.svg" alt=""> Gold</th>
-                        <td id="tb-today-game-gold-plays">—</td>
-                        <td id="tb-today-game-gold-tb">—</td>
-                      </tr>
-                      <tr data-game="diamond">
-                        <th scope="row"><img src="/images/mine-icons/diamond.svg" alt=""> Diamond</th>
-                        <td id="tb-today-game-diamond-plays">—</td>
-                        <td id="tb-today-game-diamond-tb">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div class="tb-today-games-table" id="tb-today-games-table"></div>
+                  <div class="tb-today-ref-msg" id="tb-today-games-msg" role="status" hidden></div>
                 </div>
                 <!-- Oct 1, 2026: referral bonuses paid today (referralLogs.completedAt) -->
                 <div class="tb-today-section tb-today-section-refs" id="tb-today-refs">
@@ -1439,6 +1424,11 @@
     loadReferrals60(user.uid, options).catch(function (err) {
       console.warn('[referrals] load failed:', err);
     });
+    // Mini games: one shared gameResults fetch feeds the "Mini games today"
+    // box and the Mini Games 30-day graph.
+    loadMiniGames30(user.uid, options).catch(function (err) {
+      console.warn('[mini-games] load failed:', err);
+    });
     try {
       const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
       const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
@@ -1595,11 +1585,11 @@
   }
 
   // "Known TB today" sums the boxes above it: check-ins (visitors + yours
-  // when known) and referral bonuses paid today. Each part lands on its own
+  // when known), mini games played today and referral bonuses paid today. Each part lands on its own
   // fetch; a part that is still loading or failed is left out.
-  const tbTodayKnown = { checkIns: null, referrals: null };
+  const tbTodayKnown = { checkIns: null, games: null, referrals: null };
   function updateKnownTbTotal() {
-    const parts = [tbTodayKnown.checkIns, tbTodayKnown.referrals].filter(function (v) { return v != null; });
+    const parts = [tbTodayKnown.checkIns, tbTodayKnown.games, tbTodayKnown.referrals].filter(function (v) { return v != null; });
     setTbTodayCell('tb-today-known-total', parts.length ? parts.reduce(function (a, b) { return a + b; }, 0) : null, { tb: true });
   }
   function renderTbTodayPreview() {
@@ -1612,15 +1602,11 @@
     setTbTodayCell('tb-today-visitors-tb', 6, { tb: true });
     setTbTodayCell('tb-today-yours-count', 2);
     setTbTodayCell('tb-today-yours-tb', null);
-    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
-      setTbTodayCell('tb-today-game-' + t + '-plays', null);
-      setTbTodayCell('tb-today-game-' + t + '-tb', null);
-    });
     tbTodayKnown.checkIns = 6;
     updateKnownTbTotal();
     var note = $('tb-today-note');
     if (note) {
-      note.textContent = 'Preview: check-in counts are sample. Currently the database doesn\'t store minigame data. We hope to add this in the future.';
+      note.textContent = 'Preview: check-in, mini-game and referral numbers are sample data.';
     }
   }
 
@@ -1701,12 +1687,6 @@
     setTbTodayCell('tb-today-visitors-tb', visitorsTbSum, { tb: true });
     setTbTodayCell('tb-today-yours-tb', yoursTbKnown ? yoursTbSum : null, { tb: true });
 
-    // Mini-games: no daily per-type collection exposed to the portal yet.
-    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
-      setTbTodayCell('tb-today-game-' + t + '-plays', null);
-      setTbTodayCell('tb-today-game-' + t + '-tb', null);
-    });
-
     var knownTotal = visitorsTbSum + (yoursTbKnown ? yoursTbSum : 0);
     tbTodayKnown.checkIns = knownTotal;
     updateKnownTbTotal(); // + referral TB paid today once that fetch lands
@@ -1735,7 +1715,7 @@
     } else if (yours.length && yoursTbKnown !== yours.length) {
       bits.push('Only some of your check-ins had a TB reward field; that total may be incomplete.');
     }
-    bits.push('Currently the database doesn\'t store minigame data. We hope to add this in the future.');
+    bits.push('Mini games are your gameResults for today (TB = rewardsEarned.tb).');
     note.textContent = bits.join(' ');
   }
 
@@ -1769,10 +1749,10 @@
   function vis60DayKey(d) {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
-  function vis60BuildDays(nowDate) {
+  function vis60BuildDays(nowDate, nDays) {
     const now = nowDate || new Date();
     const days = [];
-    for (let i = VIS60_DAYS - 1; i >= 0; i--) {
+    for (let i = (nDays || VIS60_DAYS) - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); // local midnight, DST-safe
       days.push({ key: vis60DayKey(d), date: d, count: 0, visitors: new Map() });
     }
@@ -2020,7 +2000,11 @@
    *  opts.total(day) = bar height; opts.segments(day, i, hovered) = stacked
    *  pieces bottom → top [{ key, v, color }]; opts.hoverOutline draws an amber
    *  outline around the hovered stack; opts.aria(sum, max) = canvas label;
-   *  opts.axis(max) = y axis (default vis60Axis: 0..10 minimum). */
+   *  opts.axis(max) = y axis (default vis60Axis: 0..10 minimum).
+   *  opts.second = { total(day), color, axis(max, nTicks) } adds a second
+   *  bar beside each day's bar on its own RIGHT axis (ticks aligned to the
+   *  left gridlines); opts.titles = { left, right } draws small axis titles;
+   *  opts.hoverOutlineColor overrides the amber outline. */
   function drawDayBars(canvas, st, opts) {
     if (!canvas || !canvas.getContext) return;
     const wrap = canvas.parentElement;
@@ -2045,17 +2029,25 @@
     st.axis = axis;
     const tickFont = '500 10px DM Sans, sans-serif';
     ctx.font = tickFont;
+    const nTicks = Math.round(axis.max / axis.step);
+    const two = opts.second || null;
+    const max2 = two ? days.reduce(function (m, d) { return Math.max(m, two.total(d)); }, 0) : 0;
+    const axis2 = two ? two.axis(max2, nTicks) : null;
+    st.axis2 = axis2;
     const yLabelW = Math.ceil(ctx.measureText(fmtNum(axis.max)).width);
-    const padL = yLabelW + 8, padR = 4, padT = 8, padB = 22;
+    const yLabelW2 = two ? Math.ceil(ctx.measureText(fmtNum(axis2.max)).width) : 0;
+    const padL = yLabelW + 8, padR = two ? yLabelW2 + 8 : 4, padT = opts.titles ? 18 : 8, padB = 22;
     const plotW = Math.max(60, cssW - padL - padR);
     const plotH = Math.max(40, cssH - padT - padB);
     const x0 = padL, y0 = padT, yBase = padT + plotH;
     const slotW = plotW / days.length;
-    const barW = Math.max(1 / dpr, Math.min(slotW - Math.max(1, slotW * 0.22), 18));
+    const barW = Math.max(1 / dpr, Math.min(slotW - Math.max(1, slotW * 0.22), two ? 30 : 18));
+    const pairGap = two ? (slotW >= 10 ? 2 : 1) : 0;
+    const barW1 = two ? Math.max(1 / dpr, (barW - pairGap) / 2) : barW;
     const yOf = function (v) { return yBase - (v / axis.max) * plotH; };
+    const yOf2 = function (v) { return yBase - (v / axis2.max) * plotH; };
 
     // Grid + y labels (every tick 1..10 at the default scale)
-    const nTicks = Math.round(axis.max / axis.step);
     const labelEvery = (plotH / nTicks) < 11 ? 2 : 1;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -2070,7 +2062,24 @@
       if (t > 0 && (t % labelEvery === 0 || t === nTicks)) {
         ctx.fillStyle = '#6b5a45';
         ctx.fillText(fmtNum(v), padL - 5, yOf(v));
+        if (two) {                       // right axis: same gridline, its own value
+          ctx.textAlign = 'left';
+          ctx.fillStyle = '#9a5b06';
+          ctx.fillText(fmtNum(t * axis2.step), x0 + plotW + 5, yOf(v));
+          ctx.textAlign = 'right';
+        }
       }
+    }
+    if (opts.titles) {
+      ctx.font = '600 9px DM Sans, sans-serif';
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#6b5a45';
+      if (opts.titles.left) ctx.fillText(opts.titles.left, 0, 1);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#9a5b06';
+      if (opts.titles.right) ctx.fillText(opts.titles.right, cssW, 1);
+      ctx.font = tickFont;
     }
 
     // Bars (every day has a slot; zero days just show the baseline).
@@ -2079,15 +2088,32 @@
     days.forEach(function (d, i) {
       const sx = x0 + i * slotW;
       const bx = px(sx + (slotW - barW) / 2);
-      const bw = Math.max(1 / dpr, px(sx + (slotW + barW) / 2) - bx);
+      const bw = two ? Math.max(1 / dpr, px(bx + barW1) - bx) : Math.max(1 / dpr, px(sx + (slotW + barW) / 2) - bx);
       const total = opts.total(d);
       const top = px(yOf(total));
       const g = { i: i, x: sx, w: slotW, bx: bx, bw: bw, top: top, segs: [] };
       geom.push(g);
       const hovered = i === st.hover;
+      const lw = Math.max(1, Math.round(1.5 * dpr)) / dpr;   // hover outline, drawn just outside the bar
       if (hovered) {
         ctx.fillStyle = 'rgba(245,158,11,0.16)';
         ctx.fillRect(px(sx), y0, Math.max(1 / dpr, px(sx + slotW) - px(sx)), plotH);
+      }
+      if (two) {                         // second bar (right axis), right of the first
+        const v2 = two.total(d);
+        g.bx2 = px(bx + bw + pairGap);
+        g.bw2 = Math.max(1 / dpr, px(sx + (slotW + barW) / 2) - g.bx2);
+        g.v2 = v2;
+        g.top2 = px(yOf2(v2));
+        if (v2 > 0) {
+          ctx.fillStyle = two.color;
+          ctx.fillRect(g.bx2, g.top2, g.bw2, px(yBase) - g.top2);
+          if (hovered && opts.hoverOutline) {
+            ctx.strokeStyle = opts.hoverOutlineColor || '#F59E0B';
+            ctx.lineWidth = lw;
+            ctx.strokeRect(g.bx2 - lw / 2, g.top2 - lw / 2, g.bw2 + lw, px(yBase) - g.top2 + lw / 2);
+          }
+        }
       }
       if (!total) return;
       let acc = 0;
@@ -2100,8 +2126,7 @@
         acc += seg.v;
       });
       if (hovered && opts.hoverOutline) {
-        const lw = Math.max(1, Math.round(1.5 * dpr)) / dpr;   // drawn just outside the stack
-        ctx.strokeStyle = '#F59E0B';
+        ctx.strokeStyle = opts.hoverOutlineColor || '#F59E0B';
         ctx.lineWidth = lw;
         ctx.strokeRect(bx - lw / 2, top - lw / 2, bw + lw, px(yBase) - top + lw / 2);
       }
@@ -2806,7 +2831,14 @@
     return { id: id, uid: u ? u.uid : '', uidField: u ? u.field : '', nick: nick, code: code, avatar: '',
       tb: Number.isFinite(tb) ? tb : 0, ms: ms, createdMs: purchaseTsMs(d.referredCreatedAt) };
   }
-  async function ref60FetchOrdered(uid, win) {
+  // ── Shared windowed fetch (referrals, mini games) ─────────────────────
+  // spec: { tag, coll, field, uid, tsField, page, maxPages, fallbackMaxPages, days }.
+  // Ordered: where(field == uid).orderBy(tsField desc), bounded to the window
+  // with startAt/endAt cursors, one segment per stored type (Firestore orders
+  // strings > timestamps > numbers, so a plain "stop once older" scan could
+  // miss a lower-typed doc). limit(page) pages, startAfter(lastDoc), at most
+  // maxPages in total. Needs a composite index (field asc, tsField desc).
+  async function fetchWindowOrdered(spec, win) {
     const TS = firebase.firestore.Timestamp;
     const segments = [
       { type: 'string', hi: '\uf8ff', lo: new Date(win.startMs).toISOString() },
@@ -2818,52 +2850,62 @@
     for (let s = 0; s < segments.length && !capped; s++) {
       let cursor = null;
       for (;;) {
-        let q = db.collection('referralLogs')
-          .where('referrerId', '==', uid)
-          .orderBy('completedAt', 'desc');
+        let q = db.collection(spec.coll)
+          .where(spec.field, '==', spec.uid)
+          .orderBy(spec.tsField, 'desc');
         q = cursor ? q.startAfter(cursor) : q.startAt(segments[s].hi);
-        q = q.endAt(segments[s].lo).limit(REF60_PAGE);
+        q = q.endAt(segments[s].lo).limit(spec.page);
         const snap = await q.get();
         pages++;
         snap.docs.forEach(function (doc) { docs.push(doc); });
-        if (snap.docs.length < REF60_PAGE) break;
-        if (pages >= REF60_MAX_PAGES) { capped = true; break; }
+        if (snap.docs.length < spec.page) break;
+        if (pages >= spec.maxPages) { capped = true; break; }
         cursor = snap.docs[snap.docs.length - 1];
       }
     }
     return { docs: docs, pages: pages, capped: capped };
   }
-  async function ref60FetchFallback(uid) {
+  // Fallback: the plain required shape where(field == uid).limit(page), paged
+  // with startAfter on the last doc (document-id order) up to fallbackMaxPages;
+  // the caller filters to the window client-side.
+  async function fetchFilteredPages(spec) {
     const docs = [];
     let cursor = null, pages = 0, capped = false;
     for (;;) {
-      let q = db.collection('referralLogs').where('referrerId', '==', uid).limit(REF60_PAGE);
+      let q = db.collection(spec.coll).where(spec.field, '==', spec.uid).limit(spec.page);
       if (cursor) q = q.startAfter(cursor);
       const snap = await q.get();
       pages++;
       snap.docs.forEach(function (doc) { docs.push(doc); });
-      if (snap.docs.length < REF60_PAGE) break;
-      if (pages >= REF60_FALLBACK_MAX_PAGES) { capped = true; break; }
+      if (snap.docs.length < spec.page) break;
+      if (pages >= spec.fallbackMaxPages) { capped = true; break; }
       cursor = snap.docs[snap.docs.length - 1];
     }
     return { docs: docs, pages: pages, capped: capped };
   }
-  /** Shared fetch: paid referrals with completedAt in the 60-day window. */
-  async function ref60Fetch(uid, win) {
+  async function fetchWindowWithFallback(spec, win) {
     let res, path;
     try {
-      res = await ref60FetchOrdered(uid, win);
+      res = await fetchWindowOrdered(spec, win);
       path = 'ordered';
-      console.info('[referrals] path: ordered — referralLogs where referrerId == uid, orderBy completedAt desc, 60-day cursors per type, '
-        + res.pages + ' page(s) of ≤' + REF60_PAGE + ', ' + res.docs.length + ' doc(s)' + (res.capped ? ' (cap reached)' : ''));
+      console.info(spec.tag + ' path: ordered — ' + spec.coll + ' where ' + spec.field + ' == uid, orderBy ' + spec.tsField + ' desc, '
+        + spec.days + '-day cursors per type, ' + res.pages + ' page(s) of ≤' + spec.page + ', ' + res.docs.length + ' doc(s)' + (res.capped ? ' (cap reached)' : ''));
     } catch (err) {
-      console.warn('[referrals] ordered query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err)
-        + '); falling back to where(referrerId == uid).limit(' + REF60_PAGE + ') pages + client-side 60-day filter.');
-      res = await ref60FetchFallback(uid);
+      console.warn(spec.tag + ' ordered query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err)
+        + '); falling back to where(' + spec.field + ' == uid).limit(' + spec.page + ') pages + client-side ' + spec.days + '-day filter.');
+      res = await fetchFilteredPages(spec);
       path = 'fallback';
-      console.info('[referrals] path: fallback — ' + res.pages + ' page(s) of ≤' + REF60_PAGE + ', ' + res.docs.length + ' doc(s) scanned'
-        + (res.capped ? ' (stopped at the ' + REF60_FALLBACK_MAX_PAGES + '-page cap; older docs not read)' : ''));
+      console.info(spec.tag + ' path: fallback — ' + res.pages + ' page(s) of ≤' + spec.page + ', ' + res.docs.length + ' doc(s) scanned'
+        + (res.capped ? ' (stopped at the ' + spec.fallbackMaxPages + '-page cap; older docs not read)' : ''));
     }
+    res.path = path;
+    return res;
+  }
+  /** Shared fetch: paid referrals with completedAt in the 60-day window. */
+  async function ref60Fetch(uid, win) {
+    const res = await fetchWindowWithFallback({ tag: '[referrals]', coll: 'referralLogs', field: 'referrerId', uid: uid, tsField: 'completedAt',
+      page: REF60_PAGE, maxPages: REF60_MAX_PAGES, fallbackMaxPages: REF60_FALLBACK_MAX_PAGES, days: VIS60_DAYS }, win);
+    const path = res.path;
     const seen = new Set(), rows = [];
     let unpaid = 0;
     res.docs.forEach(function (doc) {
@@ -3121,6 +3163,248 @@
   const REF60_CHART = { canvasId: 'dash-refs-chart', st: _ref60, render: renderReferrals60, fill: fillRef60Tip };
   bindDayBarTip(REF60_CHART);
   renderReferrals60(); // empty 60-slot frame under the "Loading…" message
+
+  // ── Mini games: "Mini games today" box + "Mini Games — Last 30 Days" ─────
+  // Oct 1, 2026. Read-only, one shared fetch. gameResults docs (per the DB
+  // notes): userId, mineType (rock/coal/gold/diamond), won, perfectGame,
+  // gameLevel, rewardsEarned.tb, timestamp (Timestamp, ISO string or millis).
+  // Very old docs without mineType are ignored everywhere. Rules require the
+  // userId filter: where(userId == uid).orderBy(timestamp desc).limit(50)
+  // pages bounded to the 30-day window (cap 40 pages), else the plain
+  // filtered pages + client-side window filter (see fetchWindowWithFallback).
+  const MG30_DAYS = 30;
+  const MG30_PAGE = 50;
+  const MG30_MAX_PAGES = 40;           // 2,000 games in 30 days
+  const MG30_FALLBACK_MAX_PAGES = 40;  // fallback scans at most 2,000 docs
+  const MG30_TB_COLOR = '#F59E0B';     // TB orange (the TB numbers' color)
+  const MG_TYPES = ['rock', 'coal', 'gold', 'diamond'];   // table rows + stack bottom → top
+  const _mg30 = {
+    seq: 0, status: 'loading', days: null, axis: null, axis2: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', skipped: null
+  };
+  function mgEmptyTypes() {
+    const t = {};
+    MG_TYPES.forEach(function (k) { t[k] = { played: 0, tb: 0, won: 0, perfect: 0 }; });
+    return t;
+  }
+  function mg30BuildDays() {
+    const win = vis60BuildDays(null, MG30_DAYS);
+    win.days.forEach(function (d) { d.types = mgEmptyTypes(); d.played = 0; d.tb = 0; d.won = 0; d.perfect = 0; });
+    return win;
+  }
+  /** gameResults doc → { type, ms, tb, won, perfect }, or a skip reason. */
+  function mgEntry(d) {
+    const raw = d.mineType;
+    if (raw == null || String(raw).trim() === '') return { skip: 'noType' };   // very old docs: ignored entirely
+    const type = String(raw).trim().toLowerCase();
+    if (MG_TYPES.indexOf(type) === -1) return { skip: 'otherType' };
+    const ms = purchaseTsMs(d.timestamp);
+    if (ms == null) return { skip: 'noTime' };
+    const tb = Number(d.rewardsEarned && typeof d.rewardsEarned === 'object' ? d.rewardsEarned.tb : NaN);
+    return { type: type, ms: ms, tb: Number.isFinite(tb) ? tb : 0, won: d.won === true, perfect: d.perfectGame === true };
+  }
+  function mg30Aggregate(entries, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    entries.forEach(function (e) {
+      if (e.ms < win.startMs || e.ms >= win.endMs) return;
+      const day = byKey[vis60DayKey(new Date(e.ms))];
+      if (!day) return;
+      const t = day.types[e.type];
+      t.played++; t.tb += e.tb; if (e.won) t.won++; if (e.perfect) t.perfect++;
+      day.played++; day.tb += e.tb; if (e.won) day.won++; if (e.perfect) day.perfect++;
+    });
+  }
+  function mgTbHtml(n) {
+    return '<span class="tb-today-tb-val"><img src="images/mine-icons/terrabucks-small.png" alt="">' + fmtNum(n) + ' TB</span>';
+  }
+  /** The Mini games table for one day: Type / Played / TB earned rows for
+   *  Rock, Coal, Gold, Diamond, a Total row and a won / perfect line.
+   *  dayData null = not loaded ("—"). Used by the "Mini games today" box AND
+   *  the 30-day graph popup, so the two always match. */
+  function renderMiniGamesTable(dayData) {
+    const wrap = document.createElement('div');
+    wrap.className = 'mg-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'tb-today-table tb-today-table-games mg-table';
+    table.setAttribute('aria-label', 'Mini games');
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Played</th><th scope="col">TB earned</th></tr>';
+    const tbody = document.createElement('tbody');
+    const cell = function (td, v, isTb) {
+      if (v == null) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); return; }
+      if (isTb) td.innerHTML = mgTbHtml(v); else td.textContent = fmtNum(v);
+    };
+    const addRow = function (key, label, icon, played, tb, cls) {
+      const tr = document.createElement('tr');
+      tr.dataset.game = key;
+      if (cls) tr.className = cls;
+      const th = document.createElement('th');
+      th.scope = 'row';
+      if (icon) { const im = document.createElement('img'); im.src = icon; im.alt = ''; th.appendChild(im); th.appendChild(document.createTextNode(' ')); }
+      th.appendChild(document.createTextNode(label));
+      const tdP = document.createElement('td'); tdP.dataset.col = 'played';
+      const tdT = document.createElement('td'); tdT.dataset.col = 'tb';
+      cell(tdP, played, false); cell(tdT, tb, true);
+      tr.append(th, tdP, tdT);
+      tbody.appendChild(tr);
+    };
+    MG_TYPES.forEach(function (t) {
+      const v = dayData ? dayData.types[t] : null;
+      addRow(t, MINE_TYPE_PIE_LABELS[t], '/images/mine-icons/' + t + '.svg', v ? v.played : null, v ? v.tb : null);
+    });
+    addRow('total', 'Total', '', dayData ? dayData.played : null, dayData ? dayData.tb : null, 'mg-total-row');
+    table.append(thead, tbody);
+    wrap.appendChild(table);
+    const sum = document.createElement('div');   // always present, so loading → loaded doesn't shift the layout
+    sum.className = 'mg-summary';
+    sum.textContent = 'Won ' + (dayData ? fmtNum(dayData.won) : '\u2014') + ' \u00b7 Perfect ' + (dayData ? fmtNum(dayData.perfect) : '\u2014');
+    wrap.appendChild(sum);
+    return wrap;
+  }
+  function setMgTodayMsg(text) {
+    const m = $('tb-today-games-msg');
+    if (!m) return;
+    m.textContent = text || '';
+    m.hidden = !text;
+  }
+  function renderMgToday(dayData) {
+    const host = $('tb-today-games-table');
+    if (host) host.replaceChildren(renderMiniGamesTable(dayData));
+  }
+  function setMg30Msg(text, cls) {
+    const msg = $('dash-games-msg');
+    if (!msg) return;
+    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
+    msg.textContent = text || '';
+    msg.hidden = !text;
+  }
+  /** Right (TB) axis: ticks on the left axis' gridlines (same count), step
+   *  the smallest 1/2/5×10ⁿ that fits the busiest TB day. */
+  function mg30AxisTb(maxTb, nTicks) {
+    const n = Math.max(1, nTicks || 10);
+    for (let mag = 1; mag < 1e12; mag *= 10) {
+      const steps = [1, 2, 5];
+      for (let i = 0; i < steps.length; i++) {
+        const st = steps[i] * mag;
+        if (st * n >= maxTb) return { max: st * n, step: st };
+      }
+    }
+    return { max: maxTb, step: maxTb / n };
+  }
+  function renderMiniGames30() {
+    drawDayBars($('dash-games-chart'), _mg30, {
+      render: renderMiniGames30,
+      emptyDays: function () { return mg30BuildDays().days; },
+      total: function (d) { return d.played; },
+      segments: function (d) {
+        return MG_TYPES.map(function (t) { return { key: t, v: d.types[t].played, color: MINE_TYPE_PIE_COLORS[t] }; });
+      },
+      second: { total: function (d) { return d.tb; }, color: MG30_TB_COLOR, axis: mg30AxisTb },
+      titles: { left: 'Games', right: 'TB' },
+      hoverOutline: true,
+      hoverOutlineColor: '#5C3317',
+      aria: function (sum, max) {
+        const tb = (_mg30.days || []).reduce(function (a, d) { return a + d.tb; }, 0);
+        return 'Bar graph of mini games you played per day for the last 30 days (games by type on the left axis, TB earned on the right axis): '
+          + (_mg30.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' game, ' : ' games, ') + fmtNum(tb) + ' TB, most in one day ' + fmtNum(max));
+      }
+    });
+  }
+  function fillMg30Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _mg30.days && _mg30.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _mg30.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    tip.appendChild(renderMiniGamesTable(day));   // same table as the "Mini games today" box
+  }
+  function mg30PreviewDocs(win) {
+    // Local preview only (no Firestore): deterministic sample games.
+    const out = [];
+    win.days.forEach(function (d, i) {
+      const n = i === MG30_DAYS - 1 ? 4 : ((i * 7 + 2) % 5 === 0 ? 0 : (i * 3 + 1) % 6);
+      for (let k = 0; k < n; k++) {
+        const type = MG_TYPES[(i + k) % 4];
+        out.push({ type: type, ms: d.date.getTime() + (9 + k) * 3600000, tb: [5, 10, 25, 50][MG_TYPES.indexOf(type)] * (k % 2 ? 2 : 1),
+          won: k % 3 !== 2, perfect: k % 4 === 0 });
+      }
+    });
+    return out;
+  }
+  function mg30SetLoading(win) {
+    _mg30.status = 'loading';
+    _mg30.days = (win || mg30BuildDays()).days;
+    if (vis60TipChart === MG30_CHART) hideVis60Tip();
+    setMg30Msg('Loading mini games\u2026', 'is-loading');
+    const total = $('dash-games-total'); if (total) total.textContent = '\u2014';
+    renderMgToday(null);
+    setMgTodayMsg('');
+    tbTodayKnown.games = null;
+    updateKnownTbTotal();
+    renderMiniGames30();
+  }
+  async function loadMiniGames30(uid, options) {
+    options = options || {};
+    const seq = ++_mg30.seq;
+    const win = mg30BuildDays();
+    _mg30.preview = !!options.preview;
+    mg30SetLoading(win);
+    let entries, res = null;
+    try {
+      if (options.preview) {
+        entries = mg30PreviewDocs(win);
+      } else {
+        res = await fetchWindowWithFallback({ tag: '[mini-games]', coll: 'gameResults', field: 'userId', uid: uid, tsField: 'timestamp',
+          page: MG30_PAGE, maxPages: MG30_MAX_PAGES, fallbackMaxPages: MG30_FALLBACK_MAX_PAGES, days: MG30_DAYS }, win);
+        const seen = new Set(), skipped = { noType: 0, otherType: 0, noTime: 0 };
+        entries = [];
+        res.docs.forEach(function (doc) {
+          if (seen.has(doc.id)) return;
+          seen.add(doc.id);
+          const e = mgEntry(doc.data() || {});
+          if (e.skip) { skipped[e.skip]++; return; }
+          entries.push(e);
+        });
+        _mg30.skipped = skipped;
+        if (skipped.noType || skipped.otherType || skipped.noTime) {
+          console.info('[mini-games] ignored ' + skipped.noType + ' doc(s) with no mineType, ' + skipped.otherType
+            + ' with an unknown mineType, ' + skipped.noTime + ' with no timestamp.');
+        }
+      }
+    } catch (err) {
+      if (seq !== _mg30.seq) return;
+      console.warn('[mini-games] gameResults query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      _mg30.status = 'error';
+      setMg30Msg('Could not load mini games.', 'is-error');
+      setMgTodayMsg('Could not load mini games; not included in Known TB today.');
+      renderMiniGames30();
+      return;
+    }
+    if (seq !== _mg30.seq) return;
+    _mg30.path = res ? res.path : 'preview';
+    _mg30.capped = !!(res && res.capped);
+    mg30Aggregate(entries, win);
+    const games = win.days.reduce(function (a, d) { return a + d.played; }, 0);
+    const tb = win.days.reduce(function (a, d) { return a + d.tb; }, 0);
+    _mg30.status = games ? 'ready' : 'empty';
+    const total = $('dash-games-total');
+    if (total) total.textContent = fmtNum(games) + (_mg30.capped ? '+' : '') + (games === 1 ? ' game' : ' games') + ' \u00b7 ' + fmtNum(tb) + ' TB';
+    setMg30Msg(games ? '' : 'No mini games played in the last 30 days', '');
+    const today = win.days[win.days.length - 1];
+    renderMgToday(today);
+    tbTodayKnown.games = today.tb;
+    updateKnownTbTotal();
+    renderMiniGames30();
+  }
+  const MG30_CHART = { canvasId: 'dash-games-chart', st: _mg30, render: renderMiniGames30, fill: fillMg30Tip };
+  bindDayBarTip(MG30_CHART);
+  renderMgToday(null);
+  renderMiniGames30(); // empty 30-slot frame under the "Loading…" message
 
   applyTypeOrderLayout();
   initPageSettings();
