@@ -696,6 +696,10 @@ body.auth-pending #portal {
   cursor: default; user-select: none; -webkit-user-select: none;
 }
 .tb-today-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Oct 1, 2026: "Referral rewards paid today" uses the same section, icon row
+   (one icon per referral paid today) and table styles as the boxes above. */
+.tb-today-ref-msg { font-size: 11px; line-height: 1.35; color: #8a2c1c; margin: 2px 0 2px; }
+.tb-today-ref-msg[hidden] { display: none; }
 .tb-today-table {
   width: 100%;
   border-collapse: collapse;
@@ -890,6 +894,9 @@ body.auth-pending #portal {
 .dash-visits-tip-count { font-size: 12px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
 .dash-visits-tip-more { margin-top: 6px; font-size: 12px; color: #cbd5e1; font-style: italic; }
 .dash-visits-tip-empty { font-size: 12px; color: #cbd5e1; }
+/* Referrals popups: "+N TB" in gold, optional "Paid …" date line */
+.dash-refs-tip-tb { color: #fde68a; font-weight: 700; }
+.dash-refs-tip-paid { font-size: 11px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
 /* Mines Purchased — Last 60 Days (same card shell, renderer and popup as
    Visitors; sits under it in column 2). Popup rows: type icon, name, count. */
 .dash-buys-tip-row {

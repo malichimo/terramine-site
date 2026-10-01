@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-5" />
+  <link rel="stylesheet" href="portal.css?v=20261001-6" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -337,6 +337,24 @@
                     </tbody>
                   </table>
                 </div>
+                <!-- Oct 1, 2026: referral bonuses paid today (referralLogs.completedAt) -->
+                <div class="tb-today-section tb-today-section-refs" id="tb-today-refs">
+                  <div class="tb-today-section-title">Referral rewards paid today</div>
+                  <div class="tb-today-visitor-avatars" id="tb-today-ref-avatars" aria-label="Referrals paid today" hidden></div>
+                  <table class="tb-today-table" aria-label="Referral rewards paid today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Referrals</th>
+                        <td id="tb-today-refs-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned from them</th>
+                        <td id="tb-today-refs-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="tb-today-ref-msg" id="tb-today-refs-msg" role="status" hidden></div>
+                </div>
                 <div class="tb-today-total">
                   <span>Known TB today</span>
                   <strong id="tb-today-known-total">—</strong>
@@ -344,6 +362,19 @@
                 <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
               </div>
             </div>
+            <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
+            <section class="dash-visits-card dash-refs-card" id="dash-refs-card" aria-labelledby="dash-refs-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-refs-title">Referrals &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-refs-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-refs-wrap">
+                  <canvas id="dash-refs-chart" role="img" aria-label="Bar graph of referral rewards paid to you per day for the last 60 days"></canvas>
+                  <div class="dash-visits-msg" id="dash-refs-msg" role="status">Loading referrals&hellip;</div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -1402,6 +1433,12 @@
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
     setBuys60Loading();
+    // Referrals: one shared referralLogs fetch feeds the TerraBucks Today
+    // "Referral rewards paid today" box and the Referrals 60-day graph.
+    // Needs only the uid, so it starts first and is not awaited.
+    loadReferrals60(user.uid, options).catch(function (err) {
+      console.warn('[referrals] load failed:', err);
+    });
     try {
       const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
       const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
@@ -1557,6 +1594,14 @@
     }
   }
 
+  // "Known TB today" sums the boxes above it: check-ins (visitors + yours
+  // when known) and referral bonuses paid today. Each part lands on its own
+  // fetch; a part that is still loading or failed is left out.
+  const tbTodayKnown = { checkIns: null, referrals: null };
+  function updateKnownTbTotal() {
+    const parts = [tbTodayKnown.checkIns, tbTodayKnown.referrals].filter(function (v) { return v != null; });
+    setTbTodayCell('tb-today-known-total', parts.length ? parts.reduce(function (a, b) { return a + b; }, 0) : null, { tb: true });
+  }
   function renderTbTodayPreview() {
     setTbTodayCell('tb-today-visitors-count', 3);
     setTbTodayVisitors([ // local preview only (no Firestore): 3 check-ins from 2 visitors
@@ -1571,7 +1616,8 @@
       setTbTodayCell('tb-today-game-' + t + '-plays', null);
       setTbTodayCell('tb-today-game-' + t + '-tb', null);
     });
-    setTbTodayCell('tb-today-known-total', 6, { tb: true });
+    tbTodayKnown.checkIns = 6;
+    updateKnownTbTotal();
     var note = $('tb-today-note');
     if (note) {
       note.textContent = 'Preview: check-in counts are sample. Currently the database doesn\'t store minigame data. We hope to add this in the future.';
@@ -1662,7 +1708,8 @@
     });
 
     var knownTotal = visitorsTbSum + (yoursTbKnown ? yoursTbSum : 0);
-    setTbTodayCell('tb-today-known-total', knownTotal, { tb: true });
+    tbTodayKnown.checkIns = knownTotal;
+    updateKnownTbTotal(); // + referral TB paid today once that fetch lands
 
     // Probe first few docs for unexpected keys (helps decide if TB is under another name).
     var sampleKeys = {};
@@ -1682,6 +1729,7 @@
     var bits = [];
     bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
     bits.push('Visitor check-in TB is counted at 2 TB each.');
+    bits.push('Referral TB is the tbAwarded on referral bonuses paid today (referralLogs completedAt).');
     if (yours.length && !yoursTbKnown) {
       bits.push('Your check-in TB amounts were not on those docs, so that total stays blank.');
     } else if (yours.length && yoursTbKnown !== yours.length) {
@@ -1780,8 +1828,8 @@
   }
   /** Y axis: max ≥ 10 with a tick every 1 up to 10; above that a 1/2/5×10ⁿ step
    *  with at most 10 ticks (23 → 0..25 by 5, 11 → 0..12 by 2, 140 → 0..140 by 20... ). */
-  function vis60Axis(maxCount) {
-    if (!(maxCount > 10)) return { max: 10, step: 1 };
+  function niceDayAxis(maxCount, minTop) {
+    if (!(maxCount > minTop)) return { max: minTop, step: 1 };
     for (let mag = 1; mag < 1e9; mag *= 10) {
       const steps = [1, 2, 5];
       for (let i = 0; i < steps.length; i++) {
@@ -1792,6 +1840,8 @@
     }
     return { max: maxCount, step: maxCount };
   }
+  function vis60Axis(maxCount) { return niceDayAxis(maxCount, 10); }
+
 
   async function vis60FetchCheckIns(uid, win) {
     const rows = [];
@@ -1969,7 +2019,8 @@
    *  st: { days, hover, w, dpr, axis, geom, ro, timer, status }.
    *  opts.total(day) = bar height; opts.segments(day, i, hovered) = stacked
    *  pieces bottom → top [{ key, v, color }]; opts.hoverOutline draws an amber
-   *  outline around the hovered stack; opts.aria(sum, max) = canvas label. */
+   *  outline around the hovered stack; opts.aria(sum, max) = canvas label;
+   *  opts.axis(max) = y axis (default vis60Axis: 0..10 minimum). */
   function drawDayBars(canvas, st, opts) {
     if (!canvas || !canvas.getContext) return;
     const wrap = canvas.parentElement;
@@ -1990,7 +2041,7 @@
     const hair = function (v) { return (Math.floor(v * dpr) + 0.5) / dpr; }; // crisp 1-device-px line
 
     const maxCount = days.reduce(function (m, d) { return Math.max(m, opts.total(d)); }, 0);
-    const axis = vis60Axis(maxCount);
+    const axis = (opts.axis || vis60Axis)(maxCount);
     st.axis = axis;
     const tickFont = '500 10px DM Sans, sans-serif';
     ctx.font = tickFont;
@@ -2186,6 +2237,7 @@
 
   let vis60Tip = null, vis60TipTimer = null, vis60TouchTimer = null;
   let tbAvTipUid = null; // uid whose TerraBucks-today icon popup is open (shares vis60Tip)
+  let refAvTipKey = null; // referralLogs doc id whose "paid today" icon popup is open (shares vis60Tip)
   let vis60TipIdx = -1, vis60TipX = 0, vis60TipY = 0, vis60TouchOpen = false;
   // Day-bar charts sharing the popup: { canvasId, canvas, st, render, fill }.
   const DAY_CHARTS = [];
@@ -2280,6 +2332,7 @@
     vis60TipIdx = -1;
     vis60TipChart = null;
     tbAvTipUid = null;
+    refAvTipKey = null;
     if (vis60Tip) vis60Tip.style.display = 'none';
     DAY_CHARTS.forEach(function (c) { if (c.st.hover !== -1) dayChartSetHover(c, -1); });
   }
@@ -2648,8 +2701,10 @@
     fillTbAvTip(uid);
     placeVis60Tip(x, y);
   }
-  (function bindTbTodayVisitorIcons() {
-    const host = $('tb-today-visitor-avatars');
+  /** Hover/tap popup for a row of 30px avatar icons (shares vis60Tip):
+   *  ~250ms hover delay, follows the mouse; touch/pen tap toggles and
+   *  auto-hides after 3s, on scroll, or a tap elsewhere. */
+  function bindAvatarRowTip(host, api) {
     if (!host) return;
     let hoverEl = null;
     const iconAt = function (e) { const el = e.target && e.target.closest ? e.target.closest('.tb-today-av') : null; return el && host.contains(el) ? el : null; };
@@ -2662,7 +2717,7 @@
       vis60TipX = e.clientX; vis60TipY = e.clientY;
       vis60TipTimer = setTimeout(function () {
         vis60TipTimer = null;
-        if (hoverEl === el && el.isConnected) showTbAvTip(el.dataset.uid, vis60TipX, vis60TipY);
+        if (hoverEl === el && el.isConnected) api.show(api.keyOf(el), vis60TipX, vis60TipY);
       }, VIS60_TIP_DELAY_MS);
     });
     host.addEventListener('pointermove', function (e) {
@@ -2670,7 +2725,7 @@
       const el = iconAt(e);
       if (!el || el !== hoverEl) return;
       vis60TipX = e.clientX; vis60TipY = e.clientY;
-      if (tbAvTipUid && vis60TipShown() && !vis60TipTimer) placeVis60Tip(e.clientX, e.clientY);
+      if (api.isOpen(api.keyOf(el)) && vis60TipShown() && !vis60TipTimer) placeVis60Tip(e.clientX, e.clientY);
     });
     host.addEventListener('pointerout', function (e) {
       if (e.pointerType !== 'mouse' || !hoverEl) return;
@@ -2679,21 +2734,393 @@
       hoverEl = null;
       hideVis60Tip();
     });
-    // Touch / pen: tap toggles; auto-hides after 3s, on scroll, or a tap elsewhere.
     host.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse') return;
       const el = iconAt(e);
       if (!el) return;
-      const uid = el.dataset.uid;
-      const wasSame = vis60TouchOpen && tbAvTipUid === uid && vis60TipShown();
+      const key = api.keyOf(el);
+      const wasSame = vis60TouchOpen && api.isOpen(key) && vis60TipShown();
       hideVis60Tip();
       if (wasSame) return;
       vis60TouchOpen = true;
-      showTbAvTip(uid, e.clientX, e.clientY);
+      api.show(key, e.clientX, e.clientY);
       vis60TouchTimer = setTimeout(function () { vis60TouchTimer = null; if (vis60TouchOpen) hideVis60Tip(); }, VIS60_TIP_TOUCH_MS);
     });
-  })();
+  }
+  bindAvatarRowTip($('tb-today-visitor-avatars'), {
+    keyOf: function (el) { return el.dataset.uid; },
+    isOpen: function (k) { return !!tbAvTipUid && tbAvTipUid === k; },
+    show: showTbAvTip
+  });
 
+  // ── Referrals: TerraBucks Today box + "Referrals — Last 60 Days" graph ────
+  // Oct 1, 2026. Read-only, one shared fetch. referralLogs docs (per the DB
+  // notes): referrerId, tbAwarded, completedAt (when the bonus was paid; docs
+  // without it are not paid yet and are skipped), referredNickname,
+  // referredCode, referredCreatedAt. completedAt may be a Timestamp, an ISO
+  // string or millis. The rules require the referrerId filter.
+  //  1) Ordered: where(referrerId == uid).orderBy(completedAt desc) with
+  //     startAt/endAt cursors bounding the 60-day window, one segment per
+  //     stored type (Firestore orders strings > timestamps > numbers, so a
+  //     plain "stop when older" scan could miss a lower-typed doc).
+  //     limit(100) pages, startAfter(lastDoc). Needs a composite index
+  //     (referrerId asc, completedAt desc).
+  //  2) Fallback if (1) fails (missing index / rules): the required plain
+  //     shape where(referrerId == uid).limit(100), paged with startAfter on
+  //     the last doc (document-id order) up to REF60_FALLBACK_MAX_PAGES,
+  //     filtered to the window client-side.
+  const REF60_PAGE = 100;
+  const REF60_MAX_PAGES = 20;          // ordered path: 2,000 paid referrals in 60 days
+  const REF60_FALLBACK_MAX_PAGES = 10; // fallback: 1,000 referral docs total
+  const REF60_TIP_MAX_ROWS = 12;
+  // Field names that might hold the referred user's uid (none are confirmed
+  // by the DB notes or any code in this repo; checked per doc).
+  const REF_UID_FIELDS = ['referredUserId', 'referredUid', 'referredUserUid', 'referredId', 'newUserId', 'userId', 'uid'];
+  const _ref60 = {
+    seq: 0, status: 'loading', days: null, axis: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', today: []
+  };
+  let ref60UidFieldLogged = false;
+  function ref60Axis(maxCount) { return niceDayAxis(maxCount, 3); }  // 0..3 minimum (ticks 1, 2, 3)
+  function ref60BuildDays() {
+    const win = vis60BuildDays();
+    win.days.forEach(function (d) { d.tb = 0; d.refs = []; });
+    return win;
+  }
+  function ref60ReferredUid(d, ownerUid) {
+    for (let i = 0; i < REF_UID_FIELDS.length; i++) {
+      let v = d[REF_UID_FIELDS[i]];
+      if (v && typeof v === 'object' && typeof v.id === 'string') v = v.id;
+      if (typeof v === 'string' && v.trim() && v.trim() !== ownerUid) return { uid: v.trim(), field: REF_UID_FIELDS[i] };
+    }
+    return null;
+  }
+  /** referralLogs doc → { id, uid, nick, code, tb, ms } (null = not paid yet). */
+  function ref60Entry(id, d, ownerUid) {
+    const ms = purchaseTsMs(d.completedAt);
+    if (ms == null) return null;
+    const u = ref60ReferredUid(d, ownerUid);
+    const tb = Number(d.tbAwarded);
+    const nick = (typeof d.referredNickname === 'string') ? d.referredNickname.trim().replace(/^@+/, '') : '';
+    const code = (typeof d.referredCode === 'string') ? d.referredCode.trim() : '';
+    return { id: id, uid: u ? u.uid : '', uidField: u ? u.field : '', nick: nick, code: code, avatar: '',
+      tb: Number.isFinite(tb) ? tb : 0, ms: ms, createdMs: purchaseTsMs(d.referredCreatedAt) };
+  }
+  async function ref60FetchOrdered(uid, win) {
+    const TS = firebase.firestore.Timestamp;
+    const segments = [
+      { type: 'string', hi: '\uf8ff', lo: new Date(win.startMs).toISOString() },
+      { type: 'timestamp', hi: TS.fromMillis(253402300799999), lo: TS.fromMillis(win.startMs) }, // max Timestamp (9999-12-31)
+      { type: 'number', hi: Number.MAX_SAFE_INTEGER, lo: win.startMs }
+    ];
+    const docs = [];
+    let pages = 0, capped = false;
+    for (let s = 0; s < segments.length && !capped; s++) {
+      let cursor = null;
+      for (;;) {
+        let q = db.collection('referralLogs')
+          .where('referrerId', '==', uid)
+          .orderBy('completedAt', 'desc');
+        q = cursor ? q.startAfter(cursor) : q.startAt(segments[s].hi);
+        q = q.endAt(segments[s].lo).limit(REF60_PAGE);
+        const snap = await q.get();
+        pages++;
+        snap.docs.forEach(function (doc) { docs.push(doc); });
+        if (snap.docs.length < REF60_PAGE) break;
+        if (pages >= REF60_MAX_PAGES) { capped = true; break; }
+        cursor = snap.docs[snap.docs.length - 1];
+      }
+    }
+    return { docs: docs, pages: pages, capped: capped };
+  }
+  async function ref60FetchFallback(uid) {
+    const docs = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection('referralLogs').where('referrerId', '==', uid).limit(REF60_PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      snap.docs.forEach(function (doc) { docs.push(doc); });
+      if (snap.docs.length < REF60_PAGE) break;
+      if (pages >= REF60_FALLBACK_MAX_PAGES) { capped = true; break; }
+      cursor = snap.docs[snap.docs.length - 1];
+    }
+    return { docs: docs, pages: pages, capped: capped };
+  }
+  /** Shared fetch: paid referrals with completedAt in the 60-day window. */
+  async function ref60Fetch(uid, win) {
+    let res, path;
+    try {
+      res = await ref60FetchOrdered(uid, win);
+      path = 'ordered';
+      console.info('[referrals] path: ordered — referralLogs where referrerId == uid, orderBy completedAt desc, 60-day cursors per type, '
+        + res.pages + ' page(s) of ≤' + REF60_PAGE + ', ' + res.docs.length + ' doc(s)' + (res.capped ? ' (cap reached)' : ''));
+    } catch (err) {
+      console.warn('[referrals] ordered query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err)
+        + '); falling back to where(referrerId == uid).limit(' + REF60_PAGE + ') pages + client-side 60-day filter.');
+      res = await ref60FetchFallback(uid);
+      path = 'fallback';
+      console.info('[referrals] path: fallback — ' + res.pages + ' page(s) of ≤' + REF60_PAGE + ', ' + res.docs.length + ' doc(s) scanned'
+        + (res.capped ? ' (stopped at the ' + REF60_FALLBACK_MAX_PAGES + '-page cap; older docs not read)' : ''));
+    }
+    const seen = new Set(), rows = [];
+    let unpaid = 0;
+    res.docs.forEach(function (doc) {
+      if (seen.has(doc.id)) return;
+      seen.add(doc.id);
+      const e = ref60Entry(doc.id, doc.data() || {}, uid);
+      if (!e) { unpaid++; return; }
+      if (e.ms < win.startMs || e.ms >= win.endMs) return;
+      rows.push(e);
+    });
+    if (!ref60UidFieldLogged && res.docs.length) {
+      ref60UidFieldLogged = true;
+      const withUid = rows.find(function (r) { return r.uidField; });
+      console.info('[referrals] referred-user uid field: ' + (withUid ? withUid.uidField + ' (avatars/nicknames from publicProfiles)' : 'none found ('
+        + REF_UID_FIELDS.join(', ') + '); using referredNickname + initials') + '. Sample keys: '
+        + Object.keys(res.docs[0].data() || {}).sort().join(', '));
+    }
+    rows.sort(function (a, b) { return b.ms - a.ms; });
+    return { rows: rows, path: path, pages: res.pages, capped: res.capped, unpaid: unpaid };
+  }
+  function ref60PreviewRows(win) {
+    // Local preview only (no Firestore): deterministic sample referrals.
+    const names = ['Ada Lovelace', 'Bo', 'Cy Miner', 'Dee', 'Eli'];
+    const rows = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 2 : ((i * 5 + 2) % 9 === 0 ? 1 + (i % 2) : 0);
+      for (let k = 0; k < n; k++) {
+        rows.push({ id: 'pv-ref-' + i + '-' + k, uid: '', nick: names[(i + k) % names.length], code: '', avatar: '',
+          tb: 1000, ms: d.date.getTime() + (9 + k * 3) * 3600000, createdMs: null });
+      }
+    });
+    return rows.sort(function (a, b) { return b.ms - a.ms; });
+  }
+  function ref60Identity(r) {
+    const prof = r.uid ? (vis60ProfileCache.get(r.uid) || null) : null;
+    const nick = (prof && prof.nickname) || r.nick || r.code || 'New Miner';
+    const url = (prof && prof.avatarUrl) || r.avatar || '';
+    return { nick: nick, url: (url && url.startsWith('https://')) ? url : '' };
+  }
+  function ref60TbText(r) { return '+' + fmtNum(r.tb) + ' TB'; }
+  function ref60PaidText(ms) {
+    return 'Paid ' + new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  /** Popup row: 40px avatar, nickname, "+N TB" (+ optional paid date line). */
+  function ref60Row(r, withDate) {
+    const id = ref60Identity(r);
+    const row = document.createElement('div');
+    row.className = 'dash-visits-tip-row dash-refs-tip-row';
+    row.dataset.ref = r.id;
+    const av = vis60AvatarEl('dash-visits-av', id);
+    const txt = document.createElement('div');
+    txt.className = 'dash-visits-tip-text';
+    const nk = document.createElement('div');
+    nk.className = 'dash-visits-tip-nick';
+    nk.textContent = id.nick;
+    const ct = document.createElement('div');
+    ct.className = 'dash-visits-tip-count dash-refs-tip-tb';
+    ct.textContent = ref60TbText(r);
+    txt.append(nk, ct);
+    if (withDate) {
+      const dt = document.createElement('div');
+      dt.className = 'dash-refs-tip-paid';
+      dt.textContent = ref60PaidText(r.ms);
+      txt.appendChild(dt);
+    }
+    row.append(av, txt);
+    return row;
+  }
+  function ref60NeedProfiles(list) {
+    if (_ref60.preview) return [];
+    return list.map(function (r) { return r.uid; }).filter(function (u, i, a) { return u && a.indexOf(u) === i && !vis60ProfileCache.has(u); });
+  }
+  function setRef60Msg(text, cls) {
+    const msg = $('dash-refs-msg');
+    if (!msg) return;
+    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
+    msg.textContent = text || '';
+    msg.hidden = !text;
+  }
+  function setRefTodayMsg(text) {
+    const m = $('tb-today-refs-msg');
+    if (!m) return;
+    m.textContent = text || '';
+    m.hidden = !text;
+  }
+  // ── TerraBucks Today: referral rewards paid today ──
+  function renderRefTodayIcons() {
+    const host = $('tb-today-ref-avatars');
+    if (!host) return;
+    host.replaceChildren();
+    const list = _ref60.today || [];
+    host.hidden = !list.length;
+    list.forEach(function (r) {
+      const id = ref60Identity(r);
+      const el = vis60AvatarEl('tb-today-av', id);
+      el.dataset.ref = r.id;
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', id.nick + ', ' + ref60TbText(r) + ', ' + ref60PaidText(r.ms));
+      host.appendChild(el);
+    });
+  }
+  function setRefToday(rows, todayStartMs) {
+    const today = rows.filter(function (r) { return r.ms >= todayStartMs; });
+    _ref60.today = today;
+    const tb = today.reduce(function (a, r) { return a + r.tb; }, 0);
+    setTbTodayCell('tb-today-refs-count', today.length);
+    setTbTodayCell('tb-today-refs-tb', tb, { tb: true });
+    setRefTodayMsg('');
+    tbTodayKnown.referrals = tb;
+    updateKnownTbTotal();
+    renderRefTodayIcons();
+    const need = ref60NeedProfiles(today);
+    if (need.length) {
+      vis60EnsureProfiles(need).then(function () {
+        renderRefTodayIcons();
+        if (refAvTipKey && vis60TipShown()) { fillRefAvTip(refAvTipKey); placeVis60Tip(vis60TipX, vis60TipY); }
+      });
+    }
+  }
+  function fillRefAvTip(key) {
+    const tip = ensureVis60Tip();
+    const r = (_ref60.today || []).find(function (x) { return x.id === key; });
+    tip.replaceChildren();
+    if (!r) return;
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    rows.appendChild(ref60Row(r, true));
+    tip.appendChild(rows);
+  }
+  function showRefAvTip(key, x, y) {
+    refAvTipKey = key; vis60TipX = x; vis60TipY = y;
+    fillRefAvTip(key);
+    placeVis60Tip(x, y);
+  }
+  bindAvatarRowTip($('tb-today-ref-avatars'), {
+    keyOf: function (el) { return el.dataset.ref; },
+    isOpen: function (k) { return !!refAvTipKey && refAvTipKey === k; },
+    show: showRefAvTip
+  });
+  // ── Graph ──
+  function renderReferrals60() {
+    drawDayBars($('dash-refs-chart'), _ref60, {
+      render: renderReferrals60,
+      emptyDays: function () { return ref60BuildDays().days; },
+      axis: ref60Axis,
+      total: function (d) { return d.count; },
+      segments: function (d, i, hovered) {
+        return [{ key: 'referrals', v: d.count, color: hovered ? '#F59E0B' : (i === VIS60_DAYS - 1 ? '#A0522D' : '#8B7355') }];
+      },
+      aria: function (sum, max) {
+        return 'Bar graph of referral rewards paid to you per day for the last 60 days: '
+          + (_ref60.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' referral' : ' referrals') + ', most in one day ' + fmtNum(max));
+      }
+    });
+  }
+  function fillRef60Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _ref60.days && _ref60.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _ref60.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(day.count);
+    const b2 = document.createElement('strong'); b2.textContent = fmtNum(day.tb) + ' TB';
+    sum.append(b1, document.createTextNode(day.count === 1 ? ' referral \u00b7 ' : ' referrals \u00b7 '), b2);
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No referral rewards paid this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const shown = day.refs.slice(0, REF60_TIP_MAX_ROWS);
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    shown.forEach(function (r) { rows.appendChild(ref60Row(r, false)); });
+    tip.appendChild(rows);
+    if (day.refs.length > shown.length) {
+      const more = document.createElement('div');
+      more.className = 'dash-visits-tip-more';
+      const n = day.refs.length - shown.length;
+      more.textContent = 'and ' + fmtNum(n) + ' more ' + (n === 1 ? 'referral' : 'referrals');
+      tip.appendChild(more);
+    }
+    const need = ref60NeedProfiles(shown);
+    if (need.length) {
+      vis60EnsureProfiles(need).then(function () {
+        if (vis60TipChart === REF60_CHART && vis60TipIdx === idx && vis60TipShown()) { fillRef60Tip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
+      });
+    }
+  }
+  function ref60Aggregate(rows, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    rows.forEach(function (r) {
+      const day = byKey[vis60DayKey(new Date(r.ms))];
+      if (!day) return;
+      day.count++;
+      day.tb += r.tb;
+      day.refs.push(r);   // rows arrive newest first
+    });
+  }
+  /** Loading UI for the box + graph (also shown as soon as loadDashboard starts). */
+  function ref60SetLoading(win) {
+    _ref60.status = 'loading';
+    _ref60.days = (win || ref60BuildDays()).days;
+    _ref60.today = [];
+    if (vis60TipChart === REF60_CHART || refAvTipKey) hideVis60Tip();
+    setRef60Msg('Loading referrals\u2026', 'is-loading');
+    const total = $('dash-refs-total'); if (total) total.textContent = '\u2014';
+    setTbTodayCell('tb-today-refs-count', null);
+    setTbTodayCell('tb-today-refs-tb', null);
+    setRefTodayMsg('');
+    renderRefTodayIcons();
+    tbTodayKnown.referrals = null;
+    renderReferrals60();
+  }
+  async function loadReferrals60(uid, options) {
+    options = options || {};
+    const seq = ++_ref60.seq;
+    const win = ref60BuildDays();
+    _ref60.preview = !!options.preview;
+    ref60SetLoading(win);
+    const total = $('dash-refs-total');
+    let res;
+    try {
+      res = options.preview ? { rows: ref60PreviewRows(win), path: 'preview', pages: 0, capped: false } : await ref60Fetch(uid, win);
+    } catch (err) {
+      if (seq !== _ref60.seq) return;
+      console.warn('[referrals] referralLogs query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      _ref60.status = 'error';
+      setRef60Msg('Could not load referrals.', 'is-error');
+      setRefTodayMsg('Could not load referrals; not included in Known TB today.');
+      updateKnownTbTotal();
+      renderReferrals60();
+      return;
+    }
+    if (seq !== _ref60.seq) return;
+    _ref60.path = res.path;
+    _ref60.capped = !!res.capped;
+    ref60Aggregate(res.rows, win);
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    _ref60.status = sum ? 'ready' : 'empty';
+    if (total) total.textContent = fmtNum(sum) + (res.capped ? '+' : '') + (sum === 1 ? ' referral' : ' referrals');
+    setRef60Msg(sum ? '' : 'No referral rewards paid in the last 60 days', '');
+    setRefToday(res.rows, win.days[win.days.length - 1].date.getTime());
+    renderReferrals60();
+  }
+  const REF60_CHART = { canvasId: 'dash-refs-chart', st: _ref60, render: renderReferrals60, fill: fillRef60Tip };
+  bindDayBarTip(REF60_CHART);
+  renderReferrals60(); // empty 60-slot frame under the "Loading…" message
 
   applyTypeOrderLayout();
   initPageSettings();
