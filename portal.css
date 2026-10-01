@@ -532,10 +532,12 @@ body.auth-pending #portal {
 .dash-pie-legend { display: none !important; }
 
 /* Oct 1, 2026 layout: column 1 = stat stack, "Mines by Type" donut, then the
-   Mine Dominance map; column 2 = "Visitors — Last 60 Days" (top);
-   column 3 = TerraBucks Earned Today. 721–1100px: column 1 on the left, the
-   Visitors graph and TerraBucks stacked on the right. Stacked (<=720) follows
-   the DOM: stats, donut, dominance, visitors graph, TerraBucks.
+   Mine Dominance map; column 2 (.dash-breakdown-col-visits) = TerraBucks
+   Earned Today; column 3 (.dash-breakdown-col-slot) = the bar graphs:
+   Visitors, Mines Purchased, Mini Games, Referrals. (The class names are grid
+   slots kept from the earlier layout.) 721–1100px: column 1 on the left,
+   TerraBucks then the graphs stacked on the right. Stacked (<=720) follows the
+   DOM: stats, donut, dominance, TerraBucks, graphs.
    The donut canvas is square: min(580px, the wrap's width) — see
    renderMineTypePie(); it redraws when the wrap's width changes. */
 .dash-breakdown-col-stats { gap: 12px; }
@@ -914,7 +916,7 @@ body.auth-pending #portal {
     /* minmax(0,…) so min-content (pie canvas, TB table) can't blow a column out */
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  /* column 1 spans both rows on the left; the Visitors graph and TerraBucks
+  /* column 1 spans both rows on the left; TerraBucks and the graphs
      stack on the right (row 2 is 1fr so column 1's height lands there, not
      as a gap under the graph) */
   .dash-breakdown-row { grid-template-rows: auto 1fr; }

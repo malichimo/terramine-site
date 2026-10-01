@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-8" />
+  <link rel="stylesheet" href="portal.css?v=20261001-9" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -241,6 +241,76 @@
             </section>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-visits">
+            <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today (class names are grid slots: -visits = column 2, -slot = column 3) -->
+            <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
+              <div class="stat-card-label">TerraBucks Earned Today</div>
+              <div class="tb-today" id="tb-today">
+                <div class="tb-today-section">
+                  <div class="tb-today-section-title">Visitor check-ins to your mines</div>
+                  <div class="tb-today-visitor-avatars" id="tb-today-visitor-avatars" aria-label="Today&rsquo;s visitors" hidden></div>
+                  <table class="tb-today-table" aria-label="Visitor check-ins today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Check-ins</th>
+                        <td id="tb-today-visitors-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned from them</th>
+                        <td id="tb-today-visitors-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <!-- Oct 1, 2026: live from gameResults (table built by renderMiniGamesTable, shared with the graph popup) -->
+                <div class="tb-today-section tb-today-section-games" id="tb-today-games">
+                  <div class="tb-today-section-title">Mini games today</div>
+                  <div class="tb-today-games-table" id="tb-today-games-table"></div>
+                  <div class="tb-today-ref-msg" id="tb-today-games-msg" role="status" hidden></div>
+                </div>
+                <!-- Oct 1, 2026: referral bonuses paid today (referralLogs.completedAt) -->
+                <div class="tb-today-section tb-today-section-refs" id="tb-today-refs">
+                  <div class="tb-today-section-title">Referral rewards paid today</div>
+                  <div class="tb-today-visitor-avatars" id="tb-today-ref-avatars" aria-label="Referrals paid today" hidden></div>
+                  <table class="tb-today-table" aria-label="Referral rewards paid today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Referrals</th>
+                        <td id="tb-today-refs-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned from them</th>
+                        <td id="tb-today-refs-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="tb-today-ref-msg" id="tb-today-refs-msg" role="status" hidden></div>
+                </div>
+                <!-- Oct 1, 2026: your own check-ins moved to the bottom, above the total -->
+                <div class="tb-today-section" id="tb-today-yours">
+                  <div class="tb-today-section-title">Your activity check-ins to other mines</div>
+                  <table class="tb-today-table" aria-label="Your check-ins today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Check-ins</th>
+                        <td id="tb-today-yours-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned</th>
+                        <td id="tb-today-yours-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tb-today-total">
+                  <span>Known TB today</span>
+                  <strong id="tb-today-known-total">—</strong>
+                </div>
+                <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
+              </div>
+            </div>
+          </div>
+          <div class="dash-breakdown-col dash-breakdown-col-slot">
+            <!-- column 3 = the bar graphs: Visitors, Mines Purchased, Mini Games, Referrals -->
             <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
             <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
               <div class="dash-visits-head">
@@ -281,73 +351,6 @@
                 <div class="dash-games-note" id="dash-games-note" role="note" hidden></div>
               </div>
             </section>
-          </div>
-          <div class="dash-breakdown-col dash-breakdown-col-slot">
-            <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
-              <div class="stat-card-label">TerraBucks Earned Today</div>
-              <div class="tb-today" id="tb-today">
-                <div class="tb-today-section">
-                  <div class="tb-today-section-title">Visitor check-ins to your mines</div>
-                  <div class="tb-today-visitor-avatars" id="tb-today-visitor-avatars" aria-label="Today&rsquo;s visitors" hidden></div>
-                  <table class="tb-today-table" aria-label="Visitor check-ins today">
-                    <tbody>
-                      <tr>
-                        <th scope="row">Check-ins</th>
-                        <td id="tb-today-visitors-count">—</td>
-                      </tr>
-                      <tr>
-                        <th scope="row">TB earned from them</th>
-                        <td id="tb-today-visitors-tb">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="tb-today-section">
-                  <div class="tb-today-section-title">Your activity check-ins to other mines</div>
-                  <table class="tb-today-table" aria-label="Your check-ins today">
-                    <tbody>
-                      <tr>
-                        <th scope="row">Check-ins</th>
-                        <td id="tb-today-yours-count">—</td>
-                      </tr>
-                      <tr>
-                        <th scope="row">TB earned</th>
-                        <td id="tb-today-yours-tb">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <!-- Oct 1, 2026: live from gameResults (table built by renderMiniGamesTable, shared with the graph popup) -->
-                <div class="tb-today-section tb-today-section-games" id="tb-today-games">
-                  <div class="tb-today-section-title">Mini games today</div>
-                  <div class="tb-today-games-table" id="tb-today-games-table"></div>
-                  <div class="tb-today-ref-msg" id="tb-today-games-msg" role="status" hidden></div>
-                </div>
-                <!-- Oct 1, 2026: referral bonuses paid today (referralLogs.completedAt) -->
-                <div class="tb-today-section tb-today-section-refs" id="tb-today-refs">
-                  <div class="tb-today-section-title">Referral rewards paid today</div>
-                  <div class="tb-today-visitor-avatars" id="tb-today-ref-avatars" aria-label="Referrals paid today" hidden></div>
-                  <table class="tb-today-table" aria-label="Referral rewards paid today">
-                    <tbody>
-                      <tr>
-                        <th scope="row">Referrals</th>
-                        <td id="tb-today-refs-count">—</td>
-                      </tr>
-                      <tr>
-                        <th scope="row">TB earned from them</th>
-                        <td id="tb-today-refs-tb">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div class="tb-today-ref-msg" id="tb-today-refs-msg" role="status" hidden></div>
-                </div>
-                <div class="tb-today-total">
-                  <span>Known TB today</span>
-                  <strong id="tb-today-known-total">—</strong>
-                </div>
-                <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
-              </div>
-            </div>
             <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
             <section class="dash-visits-card dash-refs-card" id="dash-refs-card" aria-labelledby="dash-refs-title">
               <div class="dash-visits-head">
