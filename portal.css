@@ -747,6 +747,128 @@ body.auth-pending #portal {
   line-height: 1.35;
   color: #64748b;
 }
+/* ── Column 3 (below TerraBucks Earned Today): Visitors — Last 60 Days ──
+   Oct 1, 2026. Same card shell as Mine Dominance (brown title bar + border).
+   Canvas is redrawn at the card's width × devicePixelRatio (see
+   renderVisitors60() in portal.html). */
+.dash-breakdown-col-slot { gap: 12px; }
+.dash-visits-card {
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--brown);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.85);
+}
+.dash-visits-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 9px 14px 8px;
+  background: var(--brown);
+  border-bottom: 2px solid var(--brown-dark);
+  color: var(--bg);
+}
+.dash-visits-title {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  color: #fff8ec;
+  text-shadow: 0 1px 0 var(--brown-dark);
+  white-space: nowrap;
+}
+.dash-visits-total {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--bg);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-visits-body { padding: 10px 10px 8px; min-width: 0; }
+.dash-visits-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 220px;
+}
+.dash-visits-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 220px;
+  max-width: 100%;
+  touch-action: pan-y;   /* vertical page scroll still works over the graph */
+  cursor: default;
+}
+.dash-visits-msg {
+  position: absolute;
+  inset: 0 0 22px 0;     /* keep the x-axis labels visible under the message */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-mid);
+  pointer-events: none;
+}
+.dash-visits-msg[hidden] { display: none; }
+.dash-visits-msg.is-loading { background: rgba(255, 255, 255, 0.55); border-radius: 6px; }
+.dash-visits-msg.is-error { color: #8a2c1c; }
+@media (max-width: 400px) {
+  .dash-visits-head { padding: 8px 12px 7px; }
+  .dash-visits-total { font-size: 12px; }
+  .dash-visits-body { padding: 8px 6px 6px; }
+  .dash-visits-wrap, .dash-visits-wrap canvas { height: 200px; }
+}
+
+/* Visitors graph hover/tap popup (follows the mouse like the odds popup) */
+.dash-visits-tip {
+  position: fixed; left: 0; top: 0; z-index: 600; pointer-events: none; display: none;
+  background: rgba(15,23,42,.95); color: #f8fafc; border: 1px solid rgba(255,215,0,.35);
+  border-radius: 8px; padding: 8px 10px 9px; box-shadow: 0 12px 28px rgba(6,10,16,.45);
+  font: 500 13px/1.35 'DM Sans', sans-serif; text-align: left;
+  width: 260px; max-width: calc(100vw - 16px); box-sizing: border-box;
+}
+.dash-visits-tip-date { font-weight: 700; font-size: 13px; color: #fde68a; }
+.dash-visits-tip-sum {
+  font-size: 12px; color: #e2e8f0;
+  padding: 2px 0 6px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.dash-visits-tip-sum strong { color: #fff; font-variant-numeric: tabular-nums; }
+.dash-visits-tip-rows { display: flex; flex-direction: column; gap: 5px; }
+.dash-visits-tip-row {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; column-gap: 8px;
+}
+.dash-visits-av {
+  width: 40px; height: 40px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brown-mid); color: #fff8ec;
+  font: 700 14px/1 'DM Sans', sans-serif; letter-spacing: .02em;
+  border: 1px solid rgba(255,255,255,.25); box-sizing: border-box;
+}
+.dash-visits-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dash-visits-tip-text { min-width: 0; }
+.dash-visits-tip-nick {
+  font-weight: 700; font-size: 13px; color: #f8fafc;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-visits-tip-count { font-size: 12px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
+.dash-visits-tip-more { margin-top: 6px; font-size: 12px; color: #cbd5e1; font-style: italic; }
+.dash-visits-tip-empty { font-size: 12px; color: #cbd5e1; }
+
 @media (max-width: 1100px) {
   .dash-breakdown-row {
     /* minmax(0,…) so min-content (pie canvas, TB table) can't blow a column out */

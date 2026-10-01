@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20260929-5" />
+  <link rel="stylesheet" href="portal.css?v=20261001-1" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -312,6 +312,19 @@
                 <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
               </div>
             </div>
+            <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
+            <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-visits-title">Visitors &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-visits-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-visits-wrap">
+                  <canvas id="dash-visits-chart" role="img" aria-label="Bar graph of visitor check-ins to your mines per day for the last 60 days"></canvas>
+                  <div class="dash-visits-msg" id="dash-visits-msg" role="status">Loading check-ins&hellip;</div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -1440,6 +1453,11 @@
       // Mines Ready stat (no mine-card grid on dashboard)
       updateReadyStat(props, options);
 
+      // Column 3 (below TerraBucks): visitors per day, last 60 days. Not awaited.
+      loadVisitors60(user.uid, options).catch(function (err) {
+        console.warn('Visitors 60-day graph failed:', err);
+      });
+
       // Column 3: TerraBucks earned today (check-in counts + any TB fields we can find)
       await loadTbTodayEarned(user, options);
 
@@ -1643,6 +1661,564 @@
     note.textContent = bits.join(' ');
   }
 
+
+
+  // ── Column 3: Visitors — Last 60 Days (bar graph + per-day popup) ──────────
+  // Oct 1, 2026. Read-only. Query mirrors visitors.html loadVisitsPage():
+  //   checkIns.where('propertyOwnerId','==',uid).orderBy('timestamp','desc')
+  //           .limit(500).startAfter(lastDoc)
+  // Pages newest-first and stops once a page reaches past the 60-day window
+  // (no timestamp range filter, so mixed ISO-string / Timestamp values can't
+  // silently drop rows, and it needs only the index Visitors already uses).
+  // Days are browser-local; oldest day is the far-left slot, today the far right.
+  const VIS60_DAYS = 60;
+  const VIS60_PAGE = 500;
+  const VIS60_MAX_PAGES = 40;          // 20,000 check-ins — sanity cap
+  const VIS60_TIP_DELAY_MS = 250;
+  const VIS60_TIP_TOUCH_MS = 3000;
+  const VIS60_TIP_MAX_ROWS = 12;
+  const VIS60_PROFILE_BATCH = 40;
+  const _vis60 = {
+    seq: 0, status: 'loading', days: null, axis: null, geom: null,
+    hover: -1, w: 0, dpr: 0, ro: null, timer: 0, capped: false, pages: 0, preview: false
+  };
+  // publicProfiles/{uid}: one read per uid per page load (cached, incl. misses).
+  const vis60ProfileCache = new Map();    // uid -> { nickname, avatarUrl } | null
+  const vis60ProfileInflight = new Map(); // uid -> Promise
+  let vis60ProfileWarned = false;
+
+  function vis60DayKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function vis60BuildDays(nowDate) {
+    const now = nowDate || new Date();
+    const days = [];
+    for (let i = VIS60_DAYS - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); // local midnight, DST-safe
+      days.push({ key: vis60DayKey(d), date: d, count: 0, visitors: new Map() });
+    }
+    const last = days[days.length - 1].date;
+    return {
+      days: days,
+      startMs: days[0].date.getTime(),
+      endMs: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime()
+    };
+  }
+  function vis60VisitorUid(v) {
+    let id = v.userId || v.uid || null;
+    if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
+    return (typeof id === 'string' && id) ? id : null;
+  }
+  function vis60CheckInNick(v) {
+    const n = v && (v.visitorNickname || v.nickname || v.userNickname);
+    return (typeof n === 'string' && n.trim()) ? n.trim().replace(/^@+/, '') : '';
+  }
+  function vis60CheckInAvatar(v) {
+    const c = [v.visitorAvatarUrl, v.visitorAvatarURL, v.visitorPhotoURL, v.visitorPhotoUrl, v.avatarUrl, v.avatarURL, v.userPhotoURL, v.userPhotoUrl];
+    for (let i = 0; i < c.length; i++) {
+      if (typeof c[i] === 'string' && c[i].trim().startsWith('https://')) return c[i].trim();
+    }
+    return '';
+  }
+  /** Bucket raw checkIn docs into the day slots. Same visitor filter as the
+   *  TerraBucks Today card: needs a visitor uid, and self check-ins are skipped. */
+  function vis60Aggregate(rows, ownerUid, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    rows.forEach(function (v) {
+      const ms = checkInTsMillis(v.timestamp);
+      if (!ms || ms < win.startMs || ms >= win.endMs) return;
+      const vUid = vis60VisitorUid(v);
+      if (!vUid || vUid === ownerUid) return;
+      const day = byKey[vis60DayKey(new Date(ms))];
+      if (!day) return;
+      day.count++;
+      let e = day.visitors.get(vUid);
+      if (!e) { e = { uid: vUid, count: 0, nick: '', avatar: '', lastMs: 0 }; day.visitors.set(vUid, e); }
+      e.count++;
+      if (ms >= e.lastMs) {
+        e.lastMs = ms;
+        const n = vis60CheckInNick(v); if (n) e.nick = n;
+        const a = vis60CheckInAvatar(v); if (a) e.avatar = a;
+      } else {
+        if (!e.nick) e.nick = vis60CheckInNick(v);
+        if (!e.avatar) e.avatar = vis60CheckInAvatar(v);
+      }
+    });
+    return win.days;
+  }
+  /** Y axis: max ≥ 10 with a tick every 1 up to 10; above that a 1/2/5×10ⁿ step
+   *  with at most 10 ticks (23 → 0..25 by 5, 11 → 0..12 by 2, 140 → 0..150 by 50... ). */
+  function vis60Axis(maxCount) {
+    if (!(maxCount > 10)) return { max: 10, step: 1 };
+    for (let mag = 1; mag < 1e9; mag *= 10) {
+      const steps = [1, 2, 5];
+      for (let i = 0; i < steps.length; i++) {
+        const st = steps[i] * mag;
+        const top = Math.ceil(maxCount / st) * st;
+        if (top / st <= 10) return { max: top, step: st };
+      }
+    }
+    return { max: maxCount, step: maxCount };
+  }
+
+  async function vis60FetchCheckIns(uid, win) {
+    const rows = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection('checkIns')
+        .where('propertyOwnerId', '==', uid)
+        .orderBy('timestamp', 'desc')
+        .limit(VIS60_PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      const docs = (snap && snap.docs) || [];
+      let lastMs = 0;
+      docs.forEach(function (d) {
+        const data = d.data() || {};
+        lastMs = checkInTsMillis(data.timestamp);
+        if (lastMs >= win.startMs) rows.push(data);
+      });
+      if (docs.length < VIS60_PAGE) break;                // no more check-ins
+      if (lastMs && lastMs < win.startMs) break;          // page reached past the window
+      if (pages >= VIS60_MAX_PAGES) { capped = true; break; }
+      cursor = docs[docs.length - 1];
+    }
+    if (capped) {
+      console.info('[visitors-60d] stopped at the ' + VIS60_MAX_PAGES + '-page cap (' + (VIS60_MAX_PAGES * VIS60_PAGE)
+        + ' check-ins) before reaching 60 days back; the oldest days in the graph may be undercounted.');
+    }
+    return { rows: rows, pages: pages, capped: capped };
+  }
+
+  function vis60PreviewRows(win) {
+    // Local preview only (no Firestore): deterministic sample check-ins.
+    const people = [
+      { userId: 'pv-ada', nickname: 'Ada Lovelace' }, { userId: 'pv-bo', nickname: 'Bo' },
+      { userId: 'pv-cy', nickname: 'Cy Miner' }, { userId: 'pv-dee', nickname: '' }, { userId: 'pv-eli', nickname: 'Eli' }
+    ];
+    const rows = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 3 : ((i * 7 + 3) % 11 === 0 ? 0 : (i * 5 + 2) % 7);
+      for (let k = 0; k < n; k++) {
+        const p = people[(i + k * 2) % people.length];
+        rows.push({ userId: p.userId, nickname: p.nickname, timestamp: new Date(d.date.getTime() + (9 + k) * 3600000).toISOString() });
+      }
+    });
+    return rows;
+  }
+
+  function setVis60Msg(text, cls) {
+    const msg = $('dash-visits-msg');
+    if (!msg) return;
+    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
+    msg.textContent = text || '';
+    msg.hidden = !text;
+  }
+
+  async function loadVisitors60(uid, options) {
+    options = options || {};
+    const seq = ++_vis60.seq;
+    const win = vis60BuildDays();
+    _vis60.status = 'loading';
+    _vis60.preview = !!options.preview;
+    _vis60.days = win.days; // empty slots while loading
+    setVis60Msg('Loading check-ins\u2026', 'is-loading');
+    const total = $('dash-visits-total'); if (total) total.textContent = '\u2014';
+    hideVis60Tip();
+    renderVisitors60();
+    let res;
+    try {
+      res = options.preview ? { rows: vis60PreviewRows(win), pages: 0, capped: false } : await vis60FetchCheckIns(uid, win);
+    } catch (err) {
+      if (seq !== _vis60.seq) return;
+      console.warn('[visitors-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
+      _vis60.status = 'error';
+      setVis60Msg('Could not load check-ins.', 'is-error');
+      renderVisitors60();
+      return;
+    }
+    if (seq !== _vis60.seq) return;
+    vis60Aggregate(res.rows, uid, win);
+    _vis60.days = win.days;
+    _vis60.pages = res.pages;
+    _vis60.capped = res.capped;
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    _vis60.status = sum ? 'ready' : 'empty';
+    if (total) total.textContent = sum ? (fmtNum(sum) + (sum === 1 ? ' check-in' : ' check-ins')) : '0 check-ins';
+    setVis60Msg(sum ? '' : 'No check-ins in the last 60 days', '');
+    renderVisitors60();
+  }
+
+  function vis60AvailWidth(wrap) {
+    return wrap ? wrap.clientWidth : 300;
+  }
+  function bindVis60Resize(wrap) {
+    if (_vis60.ro || !wrap) return;
+    const redraw = function (force) {
+      clearTimeout(_vis60.timer);
+      _vis60.timer = setTimeout(function () {
+        const w = Math.round(vis60AvailWidth(wrap));
+        const dpr = window.devicePixelRatio || 1;
+        const changed = w !== _vis60.w || dpr !== _vis60.dpr;
+        if (force !== true && !changed) return;
+        if (changed) hideVis60Tip(); // geometry moved; a font-load redraw keeps the popup
+        renderVisitors60();
+      }, 80);
+    };
+    if (typeof ResizeObserver === 'function') {
+      _vis60.ro = new ResizeObserver(redraw);
+      _vis60.ro.observe(wrap);
+    } else {
+      _vis60.ro = true;
+    }
+    window.addEventListener('resize', redraw);
+    if (document.fonts) {
+      if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', function () { redraw(true); });
+      if (document.fonts.ready) document.fonts.ready.then(function () { redraw(true); });
+    }
+    (function watchDpr() {
+      if (!window.matchMedia) return;
+      const mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+      const onChange = function () {
+        if (mq.removeEventListener) mq.removeEventListener('change', onChange); else if (mq.removeListener) mq.removeListener(onChange);
+        redraw(); watchDpr();
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+    })();
+  }
+
+  function vis60ShortDate(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function renderVisitors60() {
+    const canvas = $('dash-visits-chart');
+    if (!canvas || !canvas.getContext) return;
+    const wrap = canvas.parentElement;
+    bindVis60Resize(wrap);
+    const days = _vis60.days || vis60BuildDays().days;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = Math.max(120, Math.round(vis60AvailWidth(wrap)) || 300);
+    const cssH = Math.max(120, Math.round(wrap.clientHeight) || 220);
+    _vis60.w = Math.round(vis60AvailWidth(wrap)); _vis60.dpr = dpr;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    const px = function (v) { return Math.round(v * dpr) / dpr; };         // snap to device pixels
+    const hair = function (v) { return (Math.floor(v * dpr) + 0.5) / dpr; }; // crisp 1-device-px line
+
+    const maxCount = days.reduce(function (m, d) { return Math.max(m, d.count); }, 0);
+    const axis = vis60Axis(maxCount);
+    _vis60.axis = axis;
+    const tickFont = '500 10px DM Sans, sans-serif';
+    ctx.font = tickFont;
+    const yLabelW = Math.ceil(ctx.measureText(fmtNum(axis.max)).width);
+    const padL = yLabelW + 8, padR = 4, padT = 8, padB = 22;
+    const plotW = Math.max(60, cssW - padL - padR);
+    const plotH = Math.max(40, cssH - padT - padB);
+    const x0 = padL, y0 = padT, yBase = padT + plotH;
+    const slotW = plotW / days.length;
+    const barW = Math.max(1 / dpr, Math.min(slotW - Math.max(1, slotW * 0.22), 18));
+    const yOf = function (v) { return yBase - (v / axis.max) * plotH; };
+
+    // Grid + y labels (every tick 1..10 at the default scale)
+    const nTicks = Math.round(axis.max / axis.step);
+    const labelEvery = (plotH / nTicks) < 11 ? 2 : 1;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let t = 0; t <= nTicks; t++) {
+      const v = t * axis.step;
+      const y = hair(yOf(v));
+      ctx.beginPath();
+      ctx.moveTo(x0, y); ctx.lineTo(x0 + plotW, y);
+      ctx.strokeStyle = t === 0 ? 'rgba(92,51,23,0.55)' : 'rgba(139,115,85,0.18)';
+      ctx.lineWidth = 1 / dpr;
+      ctx.stroke();
+      if (t > 0 && (t % labelEvery === 0 || t === nTicks)) {
+        ctx.fillStyle = '#6b5a45';
+        ctx.fillText(fmtNum(v), padL - 5, yOf(v));
+      }
+    }
+
+    // Bars (every day has a slot; zero days just show the baseline)
+    const geom = [];
+    days.forEach(function (d, i) {
+      const sx = x0 + i * slotW;
+      const bx = px(sx + (slotW - barW) / 2);
+      const bw = Math.max(1 / dpr, px(sx + (slotW + barW) / 2) - bx);
+      const top = px(yOf(d.count));
+      geom.push({ i: i, x: sx, w: slotW, bx: bx, bw: bw, top: top });
+      if (i === _vis60.hover) {
+        ctx.fillStyle = 'rgba(245,158,11,0.16)';
+        ctx.fillRect(px(sx), y0, Math.max(1 / dpr, px(sx + slotW) - px(sx)), plotH);
+      }
+      if (!d.count) return;
+      ctx.fillStyle = i === _vis60.hover ? '#F59E0B' : (i === days.length - 1 ? '#A0522D' : '#8B7355');
+      ctx.fillRect(bx, top, bw, px(yBase) - top);
+    });
+    _vis60.geom = { x0: x0, y0: y0, plotW: plotW, plotH: plotH, slotW: slotW, cssW: cssW, cssH: cssH, bars: geom };
+
+    // X labels: today, then every 10 days back; skip any that would overlap.
+    ctx.font = tickFont;
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#6b5a45';
+    let leftLimit = Infinity;
+    for (let i = days.length - 1; i >= 0; i -= 10) {
+      const text = i === days.length - 1 ? 'Today' : vis60ShortDate(days[i].date);
+      const tw = ctx.measureText(text).width;
+      const cx = x0 + (i + 0.5) * slotW;
+      let lx = Math.min(cx - tw / 2, cssW - padR - tw);
+      lx = Math.max(0, lx);
+      if (lx + tw > leftLimit - 6) continue;
+      ctx.textAlign = 'left';
+      ctx.fillText(text, lx, yBase + 6);
+      ctx.beginPath();
+      ctx.moveTo(hair(cx), yBase); ctx.lineTo(hair(cx), yBase + 4);
+      ctx.strokeStyle = 'rgba(92,51,23,0.55)'; ctx.lineWidth = 1 / dpr; ctx.stroke();
+      leftLimit = lx;
+    }
+    const sum = days.reduce(function (a, d) { return a + d.count; }, 0);
+    canvas.setAttribute('aria-label', 'Bar graph of visitor check-ins to your mines per day for the last 60 days: '
+      + (_vis60.status === 'loading' ? 'loading' : fmtNum(sum) + ' check-ins, busiest day ' + fmtNum(maxCount)));
+  }
+
+  // ── Popup ──
+  function vis60NormProfile(p) {
+    if (!p || typeof p !== 'object') return null;
+    const nick = (typeof p.nickname === 'string') ? p.nickname.trim().replace(/^@+/, '') : '';
+    const url = (typeof p.avatarUrl === 'string') ? p.avatarUrl.trim() : '';
+    return { nickname: nick, avatarUrl: url.startsWith('https://') ? url : '' };
+  }
+  function vis60WarnProfile(kind, uid, err) {
+    if (vis60ProfileWarned) return;
+    vis60ProfileWarned = true;
+    console.warn('[visitors-60d] publicProfiles/' + uid + ' ' + kind
+      + (err ? ' (' + ((err && err.code) || (err && err.message) || err) + ')' : '')
+      + '; using check-in nicknames / initials. Further misses are not logged.');
+  }
+  function vis60FetchProfile(uid) {
+    if (!uid) return Promise.resolve(null);
+    if (vis60ProfileCache.has(uid)) return Promise.resolve(vis60ProfileCache.get(uid));
+    if (vis60ProfileInflight.has(uid)) return vis60ProfileInflight.get(uid);
+    const p = db.collection('publicProfiles').doc(uid).get().then(function (snap) {
+      const prof = (snap && snap.exists) ? vis60NormProfile(snap.data() || {}) : null;
+      if (!prof) vis60WarnProfile('is missing', uid);
+      vis60ProfileCache.set(uid, prof);
+      return prof;
+    }).catch(function (err) {
+      vis60WarnProfile('read failed or was denied', uid, err);
+      vis60ProfileCache.set(uid, null);
+      return null;
+    }).finally(function () { vis60ProfileInflight.delete(uid); });
+    vis60ProfileInflight.set(uid, p);
+    return p;
+  }
+  async function vis60EnsureProfiles(uids) {
+    const todo = uids.filter(function (u) { return u && !vis60ProfileCache.has(u); });
+    for (let i = 0; i < todo.length; i += VIS60_PROFILE_BATCH) {
+      await Promise.all(todo.slice(i, i + VIS60_PROFILE_BATCH).map(vis60FetchProfile));
+    }
+  }
+  function vis60SortedVisitors(day) {
+    return Array.from(day.visitors.values()).sort(function (a, b) {
+      return (b.count - a.count) || (b.lastMs - a.lastMs) || (a.uid < b.uid ? -1 : 1);
+    });
+  }
+
+  let vis60Tip = null, vis60TipTimer = null, vis60TouchTimer = null;
+  let vis60TipIdx = -1, vis60TipX = 0, vis60TipY = 0, vis60TouchOpen = false, vis60InChart = false;
+  function ensureVis60Tip() {
+    if (vis60Tip) return vis60Tip;
+    vis60Tip = document.createElement('div');
+    vis60Tip.className = 'dash-visits-tip';
+    vis60Tip.id = 'dash-visits-tip';
+    vis60Tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(vis60Tip);
+    return vis60Tip;
+  }
+  function vis60TipShown() { return !!vis60Tip && vis60Tip.style.display === 'block'; }
+  function fillVis60Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _vis60.days && _vis60.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _vis60.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const uniq = day.visitors.size;
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(day.count);
+    const b2 = document.createElement('strong'); b2.textContent = fmtNum(uniq);
+    sum.append(b1, document.createTextNode(day.count === 1 ? ' check-in \u00b7 ' : ' check-ins \u00b7 '),
+      b2, document.createTextNode(uniq === 1 ? ' unique visitor' : ' unique visitors'));
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No visitors this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const list = vis60SortedVisitors(day);
+    const shown = list.slice(0, VIS60_TIP_MAX_ROWS);
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    shown.forEach(function (v) {
+      const prof = vis60ProfileCache.get(v.uid) || null;
+      const nick = (prof && prof.nickname) || v.nick || 'Anonymous Miner';
+      const url = (prof && prof.avatarUrl) || v.avatar || '';
+      const row = document.createElement('div');
+      row.className = 'dash-visits-tip-row';
+      row.dataset.uid = v.uid;
+      const av = document.createElement('div');
+      av.className = 'dash-visits-av';
+      const init = initials(nick);
+      if (url && url.startsWith('https://')) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        img.addEventListener('error', function () { av.textContent = init; }, { once: true });
+        img.src = url;
+        av.appendChild(img);
+      } else {
+        av.textContent = init;
+      }
+      const txt = document.createElement('div');
+      txt.className = 'dash-visits-tip-text';
+      const nk = document.createElement('div');
+      nk.className = 'dash-visits-tip-nick';
+      nk.textContent = nick;
+      const ct = document.createElement('div');
+      ct.className = 'dash-visits-tip-count';
+      ct.textContent = '\u00d7' + fmtNum(v.count) + (v.count === 1 ? ' check-in' : ' check-ins');
+      txt.append(nk, ct);
+      row.append(av, txt);
+      rows.appendChild(row);
+    });
+    tip.appendChild(rows);
+    if (list.length > shown.length) {
+      const more = document.createElement('div');
+      more.className = 'dash-visits-tip-more';
+      const n = list.length - shown.length;
+      more.textContent = 'and ' + fmtNum(n) + ' more ' + (n === 1 ? 'visitor' : 'visitors');
+      tip.appendChild(more);
+    }
+    // Profiles for the rows shown (one read per uid per page load; preview skips Firestore)
+    if (!_vis60.preview) {
+      const need = shown.map(function (v) { return v.uid; }).filter(function (u) { return !vis60ProfileCache.has(u); });
+      if (need.length) {
+        vis60EnsureProfiles(need).then(function () {
+          if (vis60TipIdx === idx && vis60TipShown()) { fillVis60Tip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
+        });
+      }
+    }
+  }
+  function placeVis60Tip(x, y) {
+    const t = ensureVis60Tip();
+    const gap = 14, edge = 8;
+    t.style.visibility = 'hidden';
+    t.style.display = 'block';
+    const w = t.offsetWidth, h = t.offsetHeight;
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    const vh = document.documentElement.clientHeight || window.innerHeight;
+    let left = x + gap, top = y + gap;
+    if (left + w > vw - edge) left = x - gap - w;
+    if (top + h > vh - edge) top = y - gap - h;
+    left = Math.max(edge, Math.min(left, vw - edge - w));
+    top = Math.max(edge, Math.min(top, vh - edge - h));
+    t.style.left = Math.round(left) + 'px';
+    t.style.top = Math.round(top) + 'px';
+    t.style.visibility = 'visible';
+  }
+  function setVis60Hover(idx) {
+    if (_vis60.hover === idx) return;
+    _vis60.hover = idx;
+    renderVisitors60();
+  }
+  function hideVis60Tip() {
+    if (vis60TipTimer) { clearTimeout(vis60TipTimer); vis60TipTimer = null; }
+    if (vis60TouchTimer) { clearTimeout(vis60TouchTimer); vis60TouchTimer = null; }
+    vis60TouchOpen = false;
+    vis60TipIdx = -1;
+    if (vis60Tip) vis60Tip.style.display = 'none';
+    if (_vis60.hover !== -1) setVis60Hover(-1);
+  }
+  function vis60ShowAt(idx, x, y) {
+    vis60TipIdx = idx; vis60TipX = x; vis60TipY = y;
+    fillVis60Tip(idx);
+    placeVis60Tip(x, y);
+  }
+  /** Day slot under a viewport point, or -1 outside the plot (x labels count). */
+  function vis60IndexAt(canvas, clientX, clientY) {
+    const g = _vis60.geom;
+    if (!g || !_vis60.days || _vis60.status === 'loading' || _vis60.status === 'error') return -1;
+    const r = canvas.getBoundingClientRect();
+    const x = clientX - r.left, y = clientY - r.top;
+    if (x < g.x0 || x >= g.x0 + g.plotW || y < g.y0 - 4 || y > g.cssH) return -1;
+    return Math.max(0, Math.min(_vis60.days.length - 1, Math.floor((x - g.x0) / g.slotW)));
+  }
+  (function bindVisitors60Tip() {
+    const canvas = $('dash-visits-chart');
+    if (!canvas) return;
+    function onMouse(e) {
+      const idx = vis60IndexAt(canvas, e.clientX, e.clientY);
+      vis60TipX = e.clientX; vis60TipY = e.clientY;
+      if (idx < 0) { if (vis60InChart) { vis60InChart = false; hideVis60Tip(); } return; }
+      setVis60Hover(idx);
+      if (!vis60InChart) {
+        // entering the graph: ~250ms before the popup appears
+        vis60InChart = true;
+        vis60TipIdx = idx;
+        if (vis60TipTimer) clearTimeout(vis60TipTimer);
+        vis60TipTimer = setTimeout(function () {
+          vis60TipTimer = null;
+          if (!vis60InChart) return;
+          vis60ShowAt(_vis60.hover, vis60TipX, vis60TipY);
+        }, VIS60_TIP_DELAY_MS);
+        return;
+      }
+      if (vis60TipTimer) { vis60TipIdx = idx; return; } // still in the delay
+      if (idx !== vis60TipIdx) vis60ShowAt(idx, e.clientX, e.clientY);
+      else placeVis60Tip(e.clientX, e.clientY);
+    }
+    canvas.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse') onMouse(e); });
+    canvas.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') onMouse(e); });
+    canvas.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      vis60InChart = false;
+      hideVis60Tip();
+    });
+    // Touch / pen: tap a bar toggles its popup; auto-hides after 3s or on scroll.
+    canvas.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse') return;
+      const idx = vis60IndexAt(canvas, e.clientX, e.clientY);
+      if (idx < 0) { hideVis60Tip(); return; }
+      const wasSame = vis60TouchOpen && vis60TipIdx === idx && vis60TipShown();
+      hideVis60Tip();
+      if (wasSame) return;
+      setVis60Hover(idx);
+      vis60TouchOpen = true;
+      vis60ShowAt(idx, e.clientX, e.clientY);
+      vis60TouchTimer = setTimeout(function () { vis60TouchTimer = null; if (vis60TouchOpen) hideVis60Tip(); }, VIS60_TIP_TOUCH_MS);
+    });
+    document.addEventListener('pointerdown', function (e) {
+      if (!vis60TouchOpen || e.target === canvas) return;
+      hideVis60Tip();
+    }, true);
+    window.addEventListener('scroll', function () { if (vis60TouchOpen) hideVis60Tip(); }, { passive: true, capture: true });
+    window.addEventListener('blur', function () { vis60InChart = false; hideVis60Tip(); });
+  })();
+  renderVisitors60(); // empty 60-slot frame under the "Loading…" message
 
 
   applyTypeOrderLayout();
