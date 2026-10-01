@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-2" />
+  <link rel="stylesheet" href="portal.css?v=20261001-3" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -202,11 +202,6 @@
           </div>
           <div class="stat-row-secondary">
             <div class="stat-card">
-              <div class="stat-card-label">Total Check-ins</div>
-              <div class="stat-card-value" id="stat-checkins">—</div>
-              <div class="stat-card-sub">Visits to your mines</div>
-            </div>
-            <div class="stat-card">
               <div class="stat-card-label">Total Terra Bucks Earned</div>
               <div class="stat-card-value amber" id="stat-tb-earned">—</div>
               <div class="stat-card-sub">All-time</div>
@@ -216,8 +211,24 @@
               <div class="stat-card-value" id="stat-ready">—</div>
               <div class="stat-card-sub">Daily activity available</div>
             </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Total Check-ins</div>
+              <div class="stat-card-value" id="stat-checkins">—</div>
+              <div class="stat-card-sub">Visits to your mines</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Distinct Visitors</div>
+              <div class="stat-card-value" id="stat-distinct">—</div>
+              <div class="stat-card-sub">Last 90 days</div>
+            </div>
           </div>
         </div>
+            <div class="stat-card dash-pie-card">
+              <div class="stat-card-label">Mines by Type</div>
+              <div class="dash-pie-wrap">
+                <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
+              </div>
+            </div>
             <section class="dash-dominance-card" id="dash-dominance-card" aria-labelledby="dash-dominance-title">
               <div class="dash-dominance-head">
                 <h2 class="dash-dominance-title" id="dash-dominance-title">Mine Dominance</h2>
@@ -229,13 +240,20 @@
               </div>
             </section>
           </div>
-          <div class="dash-breakdown-col dash-breakdown-col-pie">
-            <div class="stat-card dash-pie-card">
-              <div class="stat-card-label">Mines by Type</div>
-              <div class="dash-pie-wrap">
-                <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
+          <div class="dash-breakdown-col dash-breakdown-col-visits">
+            <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
+            <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-visits-title">Visitors &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-visits-total" aria-live="polite">&mdash;</div>
               </div>
-            </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-visits-wrap">
+                  <canvas id="dash-visits-chart" role="img" aria-label="Bar graph of visitor check-ins to your mines per day for the last 60 days"></canvas>
+                  <div class="dash-visits-msg" id="dash-visits-msg" role="status">Loading check-ins&hellip;</div>
+                </div>
+              </div>
+            </section>
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-slot">
             <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
@@ -313,19 +331,6 @@
                 <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
               </div>
             </div>
-            <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
-            <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
-              <div class="dash-visits-head">
-                <h2 class="dash-visits-title" id="dash-visits-title">Visitors &mdash; Last 60 Days</h2>
-                <div class="dash-visits-total" id="dash-visits-total" aria-live="polite">&mdash;</div>
-              </div>
-              <div class="dash-visits-body">
-                <div class="dash-visits-wrap" id="dash-visits-wrap">
-                  <canvas id="dash-visits-chart" role="img" aria-label="Bar graph of visitor check-ins to your mines per day for the last 60 days"></canvas>
-                  <div class="dash-visits-msg" id="dash-visits-msg" role="status">Loading check-ins&hellip;</div>
-                </div>
-              </div>
-            </section>
           </div>
         </div>
 
@@ -1417,7 +1422,13 @@
       $('sb-tb').textContent = fmtTBBalance(userData.tbBalance || 0);
       $('sb-usd').textContent = fmtUSDBalance(userData.usdEarnings || 0);
       $('stat-tb-earned').textContent = fmtNum(userData.totalTBEarned || 0);
-      $('stat-checkins').textContent  = fmtNum(userData.totalCheckIns || 0);
+      // Total Check-ins = check-ins to YOUR mines (server count aggregation);
+      // Distinct Visitors (90 days) + the 60-day graph share one paged fetch.
+      // Neither is awaited; both show "—" until they land.
+      loadOwnerCheckInCount(user.uid, options);
+      loadVisitors60(user.uid, options).catch(function (err) {
+        console.warn('Visitors 60-day graph failed:', err);
+      });
 
       // Avatar: prefer Firestore profile avatar (same as Mines/Visitors/Activity),
       // then fall back to Auth photoURL, then initials.
@@ -1453,11 +1464,6 @@
 
       // Mines Ready stat (no mine-card grid on dashboard)
       updateReadyStat(props, options);
-
-      // Column 3 (below TerraBucks): visitors per day, last 60 days. Not awaited.
-      loadVisitors60(user.uid, options).catch(function (err) {
-        console.warn('Visitors 60-day graph failed:', err);
-      });
 
       // Column 3: TerraBucks earned today (check-in counts + any TB fields we can find)
       await loadTbTodayEarned(user, options);
@@ -1681,6 +1687,7 @@
   const VIS60_DAYS = 60;
   const VIS60_PAGE = 500;
   const VIS60_MAX_PAGES = 40;          // 20,000 check-ins — sanity cap
+  const VISIT_STATS_DAYS = 90;         // one fetch covers the 60-day graph + 90-day Distinct Visitors
   const VIS60_TIP_DELAY_MS = 250;
   const VIS60_TIP_TOUCH_MS = 3000;
   const VIS60_TIP_MAX_ROWS = 12;
@@ -1794,7 +1801,7 @@
     }
     if (capped) {
       console.info('[visitors-60d] stopped at the ' + VIS60_MAX_PAGES + '-page cap (' + (VIS60_MAX_PAGES * VIS60_PAGE)
-        + ' check-ins) before reaching 60 days back; the oldest days in the graph may be undercounted.');
+        + ' check-ins) before reaching ' + VISIT_STATS_DAYS + ' days back; Distinct Visitors shows "+" and the oldest graph days may be undercounted.');
     }
     return { rows: rows, pages: pages, capped: capped };
   }
@@ -1828,6 +1835,8 @@
     options = options || {};
     const seq = ++_vis60.seq;
     const win = vis60BuildDays();
+    const fetchWin = { startMs: visitStatsStartMs(), endMs: win.endMs };
+    setDistinctVisitors(undefined); // loading dash
     _vis60.status = 'loading';
     _vis60.preview = !!options.preview;
     _vis60.days = win.days; // empty slots while loading
@@ -1837,16 +1846,18 @@
     renderVisitors60();
     let res;
     try {
-      res = options.preview ? { rows: vis60PreviewRows(win), pages: 0, capped: false } : await vis60FetchCheckIns(uid, win);
+      res = options.preview ? { rows: vis60PreviewRows(win), pages: 0, capped: false } : await vis60FetchCheckIns(uid, fetchWin);
     } catch (err) {
       if (seq !== _vis60.seq) return;
       console.warn('[visitors-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
+      setDistinctVisitors(null);
       _vis60.status = 'error';
       setVis60Msg('Could not load check-ins.', 'is-error');
       renderVisitors60();
       return;
     }
     if (seq !== _vis60.seq) return;
+    setDistinctVisitors(countDistinctVisitors(res.rows, uid, fetchWin), res.capped);
     vis60Aggregate(res.rows, uid, win);
     _vis60.days = win.days;
     _vis60.pages = res.pages;
@@ -1856,6 +1867,93 @@
     if (total) total.textContent = sum ? (fmtNum(sum) + (sum === 1 ? ' check-in' : ' check-ins')) : '0 check-ins';
     setVis60Msg(sum ? '' : 'No check-ins in the last 60 days', '');
     renderVisitors60();
+  }
+
+  // ── Stat boxes: Distinct Visitors (90 days) + Total Check-ins (count) ────
+  function visitStatsStartMs() {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate() - (VISIT_STATS_DAYS - 1)).getTime(); // local midnight
+  }
+  /** Unique visitor uids in [startMs, endMs); same exclusions as the graph
+   *  (no uid, or the owner checking in at their own mine). */
+  function countDistinctVisitors(rows, ownerUid, w) {
+    const seen = new Set();
+    rows.forEach(function (v) {
+      const ms = checkInTsMillis(v.timestamp);
+      if (!ms || ms < w.startMs || ms >= w.endMs) return;
+      const vUid = vis60VisitorUid(v);
+      if (!vUid || vUid === ownerUid) return;
+      seen.add(vUid);
+    });
+    return seen.size;
+  }
+  /** undefined = loading, null = failed (both "—"); capped adds "+". */
+  function setDistinctVisitors(n, capped) {
+    const el = $('stat-distinct');
+    if (!el) return;
+    el.textContent = (n == null) ? '\u2014' : fmtNum(n) + (capped ? '+' : '');
+    if (capped) el.setAttribute('aria-label', fmtNum(n) + ' or more'); else el.removeAttribute('aria-label');
+  }
+
+  // Total Check-ins: server-side count aggregation — never reads the docs.
+  // The compat SDK this page loads (9.23.0) has no Query.count(), so the
+  // modular 9.23.0 SDK (same CDN version) is imported on demand for
+  // getCountFromServer. It needs its own modular app + auth instance; that
+  // auth restores the same signed-in user from the shared IndexedDB
+  // persistence (same apiKey + "[DEFAULT]" app name as the compat app).
+  // Note: this counts EVERY checkIns doc with propertyOwnerId == uid,
+  // including the owner's own check-ins at their own mines (a count query
+  // can't exclude them), unlike the graph / Distinct Visitors.
+  const FB_MODULAR_BASE = 'https://www.gstatic.com/firebasejs/9.23.0/';
+  let _countApiPromise = null;
+  function loadModularCountApi() {
+    if (_countApiPromise) return _countApiPromise;
+    _countApiPromise = Promise.all([
+      import(FB_MODULAR_BASE + 'firebase-app.js'),
+      import(FB_MODULAR_BASE + 'firebase-auth.js'),
+      import(FB_MODULAR_BASE + 'firebase-firestore.js')
+    ]).then(function (mods) {
+      const appMod = mods[0], authMod = mods[1], fsMod = mods[2];
+      if (typeof fsMod.getCountFromServer !== 'function') throw new Error('getCountFromServer not in this SDK build');
+      const app = (appMod.getApps() || []).find(function (a) { return a.name === '[DEFAULT]'; })
+        || appMod.initializeApp(firebase.app().options);
+      return { authMod: authMod, fsMod: fsMod, auth: authMod.getAuth(app), fs: fsMod.getFirestore(app) };
+    });
+    _countApiPromise.catch(function () { _countApiPromise = null; });
+    return _countApiPromise;
+  }
+  function waitForModularUser(api, uid, timeoutMs) {
+    const cur = api.auth.currentUser;
+    if (cur && cur.uid === uid) return Promise.resolve(cur);
+    return new Promise(function (resolve, reject) {
+      let done = false, unsub = null;
+      const finish = function (fn, val) { if (done) return; done = true; clearTimeout(timer); if (unsub) unsub(); fn(val); };
+      const timer = setTimeout(function () { finish(reject, new Error('modular auth did not restore the signed-in user')); }, timeoutMs || 10000);
+      unsub = api.authMod.onAuthStateChanged(api.auth, function (u) { if (u && u.uid === uid) finish(resolve, u); });
+      if (done && unsub) unsub();
+    });
+  }
+  async function loadOwnerCheckInCount(uid, options) {
+    options = options || {};
+    const el = $('stat-checkins');
+    if (!el) return;
+    el.textContent = '\u2014';
+    if (options.preview) {
+      el.textContent = fmtNum(vis60PreviewRows(vis60BuildDays()).length);
+      return;
+    }
+    try {
+      const api = await loadModularCountApi();
+      await waitForModularUser(api, uid);
+      const f = api.fsMod;
+      const q = f.query(f.collection(api.fs, 'checkIns'), f.where('propertyOwnerId', '==', uid));
+      const snap = await f.getCountFromServer(q);
+      const n = snap && snap.data ? snap.data().count : null;
+      el.textContent = (typeof n === 'number' && isFinite(n)) ? fmtNum(n) : '\u2014';
+    } catch (err) {
+      console.warn('[stat-checkins] count aggregation failed; leaving "\u2014" (no full read):', err && (err.code || ''), err && err.message);
+      el.textContent = '\u2014';
+    }
   }
 
   function vis60AvailWidth(wrap) {

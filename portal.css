@@ -531,26 +531,28 @@ body.auth-pending #portal {
 }
 .dash-pie-legend { display: none !important; }
 
-/* Sep 29, 2026 layout: column 1 = stat stack + Mine Dominance map below it;
-   column 2 = "Mines by Type"; column 3 = TerraBucks. Stacked (<=720) follows
-   the DOM: stats, dominance, pie, TerraBucks.
+/* Oct 1, 2026 layout: column 1 = stat stack, "Mines by Type" donut, then the
+   Mine Dominance map; column 2 = "Visitors — Last 60 Days" (top);
+   column 3 = TerraBucks Earned Today. 721–1100px: column 1 on the left, the
+   Visitors graph and TerraBucks stacked on the right. Stacked (<=720) follows
+   the DOM: stats, donut, dominance, visitors graph, TerraBucks.
    The donut canvas is square: min(580px, the wrap's width) — see
    renderMineTypePie(); it redraws when the wrap's width changes. */
 .dash-breakdown-col-stats { gap: 12px; }
 .dash-breakdown-col-stats .stat-stack { flex: 0 0 auto; }
-.dash-breakdown-col-pie .dash-pie-card { flex: 0 0 auto; height: auto; min-height: 600px; }
+.dash-breakdown-col .dash-pie-card { flex: 0 0 auto; height: auto; min-height: 600px; }
 /* donut centered in the card; a 580px donut + label is taller than 600, so the
    card grows to fit (min 600) */
-.dash-breakdown-col-pie .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 4px 0; min-width: 0; }
+.dash-breakdown-col .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 4px 0; min-width: 0; }
 /* cards in a column no longer grow to fill a stretched column */
 .dash-breakdown-col > .dash-slot-card,
 .dash-breakdown-col > .dash-dominance-card { flex: 0 0 auto; }
-.dash-breakdown-col-pie .dash-pie-wrap {
+.dash-breakdown-col .dash-pie-wrap {
   width: 100%;
   max-width: none;
   margin: 0 auto;
 }
-.dash-breakdown-col-pie .dash-pie-wrap canvas {
+.dash-breakdown-col .dash-pie-wrap canvas {
   flex: 0 0 auto;
   max-width: 100%;
   height: auto;          /* square via the canvas's own aspect ratio */
@@ -770,7 +772,8 @@ body.auth-pending #portal {
    Oct 1, 2026. Same card shell as Mine Dominance (brown title bar + border).
    Canvas is redrawn at the card's width × devicePixelRatio (see
    renderVisitors60() in portal.html). */
-.dash-breakdown-col-slot { gap: 12px; }
+.dash-breakdown-col-slot,
+.dash-breakdown-col-visits { gap: 12px; }
 .dash-visits-card {
   flex: 0 0 auto;
   width: 100%;
@@ -893,11 +896,19 @@ body.auth-pending #portal {
     /* minmax(0,…) so min-content (pie canvas, TB table) can't blow a column out */
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .dash-breakdown-col-slot { grid-column: 1 / -1; }
+  /* column 1 spans both rows on the left; the Visitors graph and TerraBucks
+     stack on the right (row 2 is 1fr so column 1's height lands there, not
+     as a gap under the graph) */
+  .dash-breakdown-row { grid-template-rows: auto 1fr; }
+  .dash-breakdown-col-stats { grid-column: 1; grid-row: 1 / span 2; }
+  .dash-breakdown-col-visits { grid-column: 2; grid-row: 1; }
+  .dash-breakdown-col-slot { grid-column: 2; grid-row: 2; }
 }
 @media (max-width: 720px) {
-  .dash-breakdown-row { grid-template-columns: minmax(0, 1fr); }
-  .dash-breakdown-col-slot { grid-column: auto; }
+  .dash-breakdown-row { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .dash-breakdown-col-stats,
+  .dash-breakdown-col-visits,
+  .dash-breakdown-col-slot { grid-column: auto; grid-row: auto; }
 }
 @media (max-width: 400px) {
   .dash-dominance-head { padding: 8px 12px 7px; }
@@ -937,9 +948,13 @@ body.auth-pending #portal {
 .stat-card-value.amber { color: var(--amber2); }
 .stat-card-sub { font-size: 11px; color: var(--text-mid); margin-top: 4px; }
 
+/* Oct 1, 2026: 4 boxes. Sized by the stat stack's own width (container
+   query): 4 across when it is >= 540px, 2×2 below that, 1 column under 280px.
+   Without container-query support it stays 2×2. */
+.stat-stack { container-type: inline-size; }
 .stat-row-secondary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
 }
@@ -1006,8 +1021,11 @@ body.auth-pending #portal {
   text-align: center;
 }
 
-@media (max-width: 720px) {
-  .stat-row-secondary { grid-template-columns: 1fr; }
+@container (min-width: 540px) {
+  .stat-row-secondary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container (max-width: 279px) {
+  .stat-row-secondary { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── Section header ── */
