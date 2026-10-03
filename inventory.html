@@ -329,9 +329,9 @@
     gold: { common: 'gold-flakes', uncommon: 'gold-nugget', rare: 'gold-bar', epic: 'gold-ingot' },
     diamond: { common: 'diamond-chip', uncommon: 'raw-diamond', rare: 'cut-diamond', epic: 'flawless-diamond' }
   };
-  const ITEM_IMAGE_IDS = new Set(['goggles']);
+  const ITEM_IMAGE_IDS = new Set(['goggles', 'pumpkin']);
   Object.keys(RESOURCE_IMAGE_IDS).forEach(k => Object.values(RESOURCE_IMAGE_IDS[k]).forEach(id => ITEM_IMAGE_IDS.add(id)));
-  const ITEM_IMAGE_ALIASES = { granit: 'granite', 'mining-goggles': 'goggles', goggle: 'goggles' };
+  const ITEM_IMAGE_ALIASES = { granit: 'granite', 'mining-goggles': 'goggles', goggle: 'goggles', pumpkins: 'pumpkin' };
   function itemSlug(s) {
     return String(s == null ? '' : s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -347,6 +347,8 @@
       if (!sl) continue;
       // any name containing "goggle" (Safety Goggles, Miner's Goggles, NightGoggles…)
       if (sl.indexOf('goggle') >= 0) return 'goggles';
+      // any name containing "pumpkin" (pumpkins, Pumpkin, pumpkins_2026, halloweenPumpkin…)
+      if (sl.indexOf('pumpkin') >= 0) return 'pumpkin';
       if (ITEM_IMAGE_IDS.has(sl)) return sl;
       if (ITEM_IMAGE_ALIASES[sl]) return ITEM_IMAGE_ALIASES[sl];
       const sing = sl.replace(/s$/, '');
