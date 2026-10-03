@@ -1457,3 +1457,50 @@ body.auth-pending #portal {
   .dash-visits-tip.is-inv .inv-card { width: 158px; }
   .dash-visits-tip.is-inv .inv-qty { font-size: 16px; padding: 2px 12px; bottom: 6px; }
 }
+
+/* ── Pioneer Pass gate: locked column-3 graphs ── Oct 3, 2026
+   Empty graph, blurred, with a link overlay: lock · "Requires" · Pioneer Pass logo. */
+.dash-visits-card.is-pp-locked .dash-visits-wrap { container-type: size; }
+.dash-visits-card.is-pp-locked .dash-visits-wrap > canvas,
+.dash-visits-card.is-pp-locked .dash-visits-msg,
+.dash-visits-card.is-pp-locked .dash-games-note {
+  filter: blur(3px);
+  user-select: none; -webkit-user-select: none;
+}
+.dash-pp-lock {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(2px, 2.2cqh, 8px);
+  padding: 8px;
+  text-decoration: none; color: var(--brown-dark, #5C3317);
+  background: rgba(255, 248, 236, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dash-pp-lock:hover { background: rgba(255, 248, 236, 0.5); }
+.dash-pp-lock:focus-visible { outline: 3px solid #F59E0B; outline-offset: -3px; }
+.dash-pp-lock-icon {
+  width: clamp(30px, 24cqh, 56px); height: clamp(30px, 24cqh, 56px);
+  color: var(--brown, #8B4513);
+  filter: drop-shadow(0 2px 3px rgba(92, 51, 23, 0.35));
+  flex: 0 0 auto;
+}
+.dash-pp-lock-req {
+  font: 700 clamp(12px, 7cqh, 16px)/1.1 'DM Sans', sans-serif;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--brown-dark, #5C3317);
+  text-shadow: 0 1px 0 rgba(255, 248, 236, 0.9);
+}
+.dash-pp-lock-logo { display: block; flex: 0 0 auto; }
+.dash-pp-lock-logo img {
+  display: block; width: auto; height: clamp(34px, 26cqh, 64px); max-width: 80cqw;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(13, 27, 42, 0.35));
+}
+.dash-pp-lock:hover .dash-pp-lock-logo img { transform: scale(1.04); }
+@supports not (height: 1cqh) {
+  .dash-pp-lock-icon { width: 44px; height: 44px; }
+  .dash-pp-lock-req { font-size: 14px; }
+  .dash-pp-lock-logo img { height: 48px; max-width: 80%; }
+}

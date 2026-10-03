@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261001-11" />
+  <link rel="stylesheet" href="portal.css?v=20261003-1" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -1454,25 +1454,44 @@
   async function loadDashboard(user, options = {}) {
     setBuys60Loading();
     setInventoryLoading();
-    // Referrals: one shared referralLogs fetch feeds the TerraBucks Today
-    // "Referral rewards paid today" box and the Referrals 60-day graph.
-    // Needs only the uid, so it starts first and is not awaited.
-    loadReferrals60(user.uid, options).catch(function (err) {
-      console.warn('[referrals] load failed:', err);
-    });
-    // Mini games: one shared gameResults fetch feeds the "Mini games today"
-    // box and the Mini Games 30-day graph.
-    loadMiniGames30(user.uid, options).catch(function (err) {
-      console.warn('[mini-games] load failed:', err);
-    });
-    // My Check-ins: one shared fetch of your own check-ins (60 days) feeds the
-    // My Check-ins graph and the TerraBucks "Your activity" box (today).
-    loadMyCheckIns60(user.uid, options).catch(function (err) {
-      console.warn('[my-checkins-60d] load failed:', err);
-    });
+    // Loading UI right away (no fetch yet): the graph fetches wait for the
+    // users doc's Pioneer status, so nothing stale shows meanwhile.
+    if (!_vis60.locked) { _vis60.seq++; vis60SetLoading(); }   // a reload drops any in-flight graph result
+    ref60SetLoading();
+    mg30SetLoading();
+    myciSetLoading();
+    pioneerLocked = null;   // decided from the users doc below (column-3 graphs keep their spinners until then)
     try {
       const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
       const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
+      // Pioneer Pass gate for the column-3 graphs (members: unchanged). Non-members
+      // get empty, blurred graphs with a "Requires Pioneer Pass" overlay and none
+      // of the graph-only queries; boxes outside the graphs still load.
+      const locked = !options.preview && !isPioneerMember(userData);
+      setPioneerGate(locked);
+      if (!locked) {
+        // Referrals: one shared referralLogs fetch feeds the TerraBucks Today
+        // "Referral rewards paid today" box and the Referrals 60-day graph.
+        loadReferrals60(user.uid, options).catch(function (err) {
+          console.warn('[referrals] load failed:', err);
+        });
+        // Mini games: one shared gameResults fetch feeds the "Mini games today"
+        // box and the Mini Games 30-day graph.
+        loadMiniGames30(user.uid, options).catch(function (err) {
+          console.warn('[mini-games] load failed:', err);
+        });
+        // My Check-ins: one shared fetch of your own check-ins (60 days) feeds the
+        // My Check-ins graph and the TerraBucks "Your activity" box (today).
+        loadMyCheckIns60(user.uid, options).catch(function (err) {
+          console.warn('[my-checkins-60d] load failed:', err);
+        });
+      } else {
+        // Locked: only today's referrals / mini games for the TerraBucks boxes;
+        // "Your activity" uses its own today query (no 60-day My Check-ins fetch).
+        myciToday = null;
+        loadReferralsTodayOnly(user.uid).catch(function (err) { console.warn('[referrals] today load failed:', err); });
+        loadMiniGamesTodayOnly(user.uid).catch(function (err) { console.warn('[mini-games] today load failed:', err); });
+      }
       // Inventory card: same users-doc fields as inventory.html, no extra read.
       try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, options); }
       catch (invErr) { setInventoryError(invErr); }
@@ -1572,6 +1591,7 @@
     } catch(e) {
       if (_buys60.status === 'loading') setBuys60Error(e);
       if (_inv.status === 'loading') setInventoryError(e);
+      if (pioneerLocked === null) pioneerGateFailed(e);   // users doc failed: graphs can't load either
       console.error('Dashboard load error:', e);
       showToast('Error loading dashboard: ' + e.message, 'error');
     }
@@ -1937,6 +1957,16 @@
     msg.hidden = !text;
   }
 
+  /** Visitors graph loading UI (empty slots + spinner); also shown while the users doc decides the Pioneer gate. */
+  function vis60SetLoading(win) {
+    if (_vis60.locked) return;
+    _vis60.status = 'loading';
+    _vis60.days = (win || vis60BuildDays()).days;
+    setVis60Msg('Loading check-ins\u2026', 'is-loading');
+    const total = $('dash-visits-total'); if (total) total.textContent = '\u2014';
+    hideVis60Tip();
+    renderVisitors60();
+  }
   async function loadVisitors60(uid, options) {
     options = options || {};
     const seq = ++_vis60.seq;
@@ -1944,13 +1974,12 @@
     const fetchWin = { startMs: visitStatsStartMs(), endMs: win.endMs };
     setDistinctVisitors(undefined); // loading dash
     setTotalCheckIns(undefined);
-    _vis60.status = 'loading';
-    _vis60.preview = !!options.preview;
-    _vis60.days = win.days; // empty slots while loading
-    setVis60Msg('Loading check-ins\u2026', 'is-loading');
-    const total = $('dash-visits-total'); if (total) total.textContent = '\u2014';
-    hideVis60Tip();
-    renderVisitors60();
+    const locked = !!_vis60.locked;   // Pioneer gate: fetch for the stat boxes only, graph stays empty
+    const total = $('dash-visits-total');
+    if (!locked) {
+      _vis60.preview = !!options.preview;
+      vis60SetLoading(win);
+    }
     let res;
     try {
       res = options.preview ? { rows: vis60PreviewRows(win), pages: 0, capped: false } : await vis60FetchCheckIns(uid, fetchWin);
@@ -1959,6 +1988,7 @@
       console.warn('[visitors-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
       setDistinctVisitors(null);
       setTotalCheckIns(null);
+      if (_vis60.locked) return;
       _vis60.status = 'error';
       setVis60Msg('Could not load check-ins.', 'is-error');
       renderVisitors60();
@@ -1968,6 +1998,7 @@
     const stats90 = countVisitStats(res.rows, uid, fetchWin);
     setTotalCheckIns(stats90.checkIns, res.capped);
     setDistinctVisitors(stats90.distinct, res.capped);
+    if (_vis60.locked) return;          // Pioneer gate: no graph data
     vis60Aggregate(res.rows, uid, win);
     _vis60.days = win.days;
     _vis60.pages = res.pages;
@@ -2221,7 +2252,7 @@
       leftLimit = lx;
     }
     const sum = days.reduce(function (a, d) { return a + opts.total(d); }, 0);
-    canvas.setAttribute('aria-label', opts.aria(sum, maxCount));
+    canvas.setAttribute('aria-label', st.locked ? 'Graph locked: requires the Pioneer Pass' : opts.aria(sum, maxCount));
   }
 
   function renderVisitors60() {
@@ -2441,7 +2472,7 @@
   /** Day slot under a viewport point, or -1 outside the plot (x labels count). */
   function dayChartIndexAt(chart, clientX, clientY) {
     const st = chart.st, g = st.geom;
-    if (!g || !st.days || st.status === 'loading' || st.status === 'error') return -1;
+    if (!g || !st.days || st.locked || st.status === 'loading' || st.status === 'error') return -1;
     const r = chart.canvas.getBoundingClientRect();
     const x = clientX - r.left, y = clientY - r.top;
     if (x < g.x0 || x >= g.x0 + g.plotW || y < g.y0 - 4 || y > g.cssH) return -1;
@@ -2639,6 +2670,7 @@
   }
   function setBuys60Msg(text, cls) { setDashMsg($('dash-buys-msg'), text, cls); }
   function setBuys60(mines, options) {
+    if (_buys60.locked) return;          // Pioneer gate
     options = options || {};
     const win = buys60BuildDays();
     _buys60.preview = !!options.preview;
@@ -2666,6 +2698,7 @@
     if (vis60TipChart === BUYS60_CHART && _buys60.hover >= 0) BUYS60_CHART.fill(_buys60.hover);   // keep an open popup current
   }
   function setBuys60Loading() {
+    if (_buys60.locked) return;
     _buys60.status = 'loading';
     _buys60.days = buys60BuildDays().days; // empty slots while loading
     const total = $('dash-buys-total'); if (total) total.textContent = '\u2014';
@@ -2674,6 +2707,7 @@
     renderBuys60();
   }
   function setBuys60Error(err) {
+    if (_buys60.locked) return;
     _buys60.status = 'error';
     _buys60.days = buys60BuildDays().days;
     const total = $('dash-buys-total'); if (total) total.textContent = '\u2014';
@@ -3752,6 +3786,14 @@
     return rows;
   }
   function setMyciMsg(text, cls) { setDashMsg($('dash-myci-msg'), text, cls); }
+  function myciSetLoading(win) {
+    _myci.status = 'loading';
+    _myci.days = (win || myciBuildDays()).days;
+    if (vis60TipChart === MYCI_CHART) hideVis60Tip();
+    setMyciMsg('', 'is-loading');
+    const total = $('dash-myci-total'); if (total) total.textContent = '\u2014';
+    renderMyCheckIns60();
+  }
   function renderMyCheckIns60() {
     const last = (_myci.days ? _myci.days.length : VIS60_DAYS) - 1;
     drawDayBars($('dash-myci-chart'), _myci, {
@@ -3827,13 +3869,9 @@
     const seq = ++_myci.seq;
     const win = myciBuildDays();
     win.todayMs = win.days[win.days.length - 1].date.getTime();
-    _myci.status = 'loading';
     _myci.preview = !!options.preview;
-    _myci.days = win.days;
-    if (vis60TipChart === MYCI_CHART) hideVis60Tip();
-    setMyciMsg('', 'is-loading');
-    const total = $('dash-myci-total'); if (total) total.textContent = '\u2014';
-    renderMyCheckIns60();
+    myciSetLoading(win);
+    const total = $('dash-myci-total');
     let resolveToday, rejectToday;
     const todayP = new Promise(function (res, rej) { resolveToday = res; rejectToday = rej; });
     todayP.catch(function () {});        // handled by myCheckInsToday
@@ -4339,6 +4377,147 @@
     isOpen: function (k) { return invTipKey != null && invTipKey === k; },
     show: showInvTip
   });
+
+  // ── Pioneer Pass gate: column-3 bar graphs ────────────────────────────────
+  // Oct 3, 2026. Membership = users/{uid}.isPioneerMember === true, the same
+  // check as account.html's Pioneer Pass box. There is no expiry field: per
+  // admin-users.html, isPioneerMember is the only field anything should check
+  // (memberships are granted/revoked by hand; pioneerMemberSince is only the
+  // grant date). Non-members: each graph card keeps its title bar, draws empty
+  // axes (default scale, total "—"), is blurred, and gets a link overlay
+  // (lock · "Requires" · Pioneer Pass logo) to /pioneer-pass.html, the page the
+  // nav item and the account page's "Get the Pioneer Pass" link use. Graph-only
+  // queries are skipped: My Check-ins' 60-day fetch ("Your activity" uses its own
+  // today query), and Referrals / Mini Games read today only (for the TerraBucks
+  // boxes). Visitors' 90-day fetch still runs for Total Check-ins / Distinct
+  // Visitors; Mines Purchased never had queries of its own.
+  const PIONEER_PASS_URL = '/pioneer-pass.html';
+  let pioneerLocked = null;   // null until the users doc decides
+  function isPioneerMember(ud) { return !!ud && ud.isPioneerMember === true; }
+  function ppGraphs() {
+    return [
+      { key: 'visitors', card: 'dash-visits-card', wrap: 'dash-visits-wrap', msg: 'dash-visits-msg', total: 'dash-visits-total', st: _vis60, chart: VIS60_CHART, empty: function () { return vis60BuildDays().days; }, render: renderVisitors60 },
+      { key: 'buys', card: 'dash-buys-card', wrap: 'dash-buys-wrap', msg: 'dash-buys-msg', total: 'dash-buys-total', st: _buys60, chart: BUYS60_CHART, empty: function () { return buys60BuildDays().days; }, render: renderBuys60 },
+      { key: 'games', card: 'dash-games-card', wrap: 'dash-games-wrap', msg: 'dash-games-msg', total: 'dash-games-total', note: 'dash-games-note', st: _mg30, chart: MG30_CHART, empty: function () { return mg30BuildDays().days; }, render: renderMiniGames30 },
+      { key: 'refs', card: 'dash-refs-card', wrap: 'dash-refs-wrap', msg: 'dash-refs-msg', total: 'dash-refs-total', st: _ref60, chart: REF60_CHART, empty: function () { return ref60BuildDays().days; }, render: renderReferrals60 },
+      { key: 'myci', card: 'dash-myci-card', wrap: 'dash-myci-wrap', msg: 'dash-myci-msg', total: 'dash-myci-total', st: _myci, chart: MYCI_CHART, empty: function () { return myciBuildDays().days; }, render: renderMyCheckIns60 }
+    ];
+  }
+  function ppLockOverlay() {
+    const a = document.createElement('a');
+    a.className = 'dash-pp-lock';
+    a.href = PIONEER_PASS_URL;
+    a.setAttribute('aria-label', 'This graph requires the Pioneer Pass. Get the Pioneer Pass');
+    a.innerHTML =
+      '<svg class="dash-pp-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+      + '<path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<rect x="4" y="10" width="16" height="12" rx="2.5" fill="currentColor"/>'
+      + '<circle cx="12" cy="15.4" r="1.7" fill="#fff8ec"/><rect x="11.1" y="16" width="1.8" height="3.2" rx=".9" fill="#fff8ec"/></svg>'
+      + '<span class="dash-pp-lock-req">Requires</span>'
+      + '<picture class="dash-pp-lock-logo"><source type="image/webp" srcset="/images/pioneer-pass-logo-88.webp 1x, /images/pioneer-pass-logo-176.webp 2x" />'
+      + '<img src="/images/pioneer-pass-logo-88.png" srcset="/images/pioneer-pass-logo-88.png 1x, /images/pioneer-pass-logo.png 2x" width="175" height="72" alt="Pioneer Pass" decoding="async" /></picture>';
+    return a;
+  }
+  function ppLockGraph(g) {
+    const st = g.st;
+    st.locked = true;
+    st.seq++;                             // drop any in-flight graph result
+    st.status = 'locked';
+    st.hover = -1;
+    st.days = g.empty();
+    if (vis60TipChart === g.chart || vis60InChart === g.chart) { vis60InChart = null; hideVis60Tip(); }
+    const total = $(g.total); if (total) total.textContent = '\u2014';
+    const msg = $(g.msg); if (msg) { msg.textContent = ''; msg.hidden = true; }
+    if (g.note) { const n = $(g.note); if (n) { n.textContent = ''; n.hidden = true; } }
+    const card = $(g.card); if (card) card.classList.add('is-pp-locked');
+    const wrap = $(g.wrap);
+    if (wrap && !wrap.querySelector('.dash-pp-lock')) wrap.appendChild(ppLockOverlay());
+    g.render();
+  }
+  function ppUnlockGraph(g) {
+    g.st.locked = false;
+    const card = $(g.card); if (card) card.classList.remove('is-pp-locked');
+    const wrap = $(g.wrap); const o = wrap && wrap.querySelector('.dash-pp-lock'); if (o) o.remove();
+  }
+  function setPioneerGate(locked) {
+    pioneerLocked = !!locked;
+    ppGraphs().forEach(function (g) { (locked ? ppLockGraph : ppUnlockGraph)(g); });
+    if (locked) {
+      console.info('[pioneer] not a Pioneer Pass member (users doc isPioneerMember !== true): column-3 graphs locked; skipped the My Check-ins 60-day fetch, '
+        + 'Referrals / Mini Games read today only, Visitors keeps its 90-day fetch for the stat boxes.');
+    }
+  }
+  /** The users doc failed, so membership (and every graph) is unknown: stop the spinners. */
+  function pioneerGateFailed(err) {
+    ppGraphs().forEach(function (g) {
+      if (g.st.locked) return;
+      g.st.seq++;
+      g.st.status = 'error';
+      g.st.days = g.empty();
+      const total = $(g.total); if (total) total.textContent = '\u2014';
+      setDashMsg($(g.msg), 'Could not load.', 'is-error');
+      g.render();
+    });
+    renderMgToday(null);
+    setMgTodayMsg('Could not load mini games; not included in Known TB today.');
+    setRefTodayMsg('Could not load referrals; not included in Known TB today.');
+  }
+  // Locked users: today's referrals only (TerraBucks "Referral rewards paid today" + Known TB).
+  async function loadReferralsTodayOnly(uid) {
+    const win = ref60BuildDays();
+    const todayMs = win.days[win.days.length - 1].date.getTime();
+    _ref60.today = [];
+    setTbTodayCell('tb-today-refs-count', null);
+    setTbTodayCell('tb-today-refs-tb', null);
+    setRefTodayMsg('');
+    renderRefTodayIcons();
+    tbTodayKnown.referrals = null;
+    let res;
+    try {
+      res = await ref60Fetch(uid, { days: win.days, startMs: todayMs, endMs: win.endMs });
+    } catch (err) {
+      console.warn('[referrals] today-only referralLogs query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      setRefTodayMsg('Could not load referrals; not included in Known TB today.');
+      updateKnownTbTotal();
+      return;
+    }
+    if (!pioneerLocked) return;          // gate changed meanwhile (full load owns the box)
+    setRefToday(res.rows, todayMs);
+  }
+  // Locked users: today's mini games only (TerraBucks "Mini games today" + Known TB).
+  async function loadMiniGamesTodayOnly(uid) {
+    const win = mg30BuildDays();
+    const todayIdx = win.days.length - 1;
+    const todayMs = win.days[todayIdx].date.getTime();
+    renderMgToday(null, true);
+    setMgTodayMsg('');
+    tbTodayKnown.games = null;
+    updateKnownTbTotal();
+    let res;
+    try {
+      res = await fetchWindowWithFallback({ tag: '[mini-games]', coll: 'gameResults', field: 'userId', uid: uid, tsField: 'timestamp',
+        page: MG30_PAGE, maxPages: MG30_MAX_PAGES, fallbackMaxPages: MG30_FALLBACK_MAX_PAGES, days: 1 },
+        { days: win.days, startMs: todayMs, endMs: win.endMs });
+    } catch (err) {
+      console.warn('[mini-games] today-only gameResults query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      renderMgToday(null);
+      setMgTodayMsg('Could not load mini games; not included in Known TB today.');
+      return;
+    }
+    if (!pioneerLocked) return;
+    const seen = new Set();
+    res.docs.forEach(function (doc) {
+      if (seen.has(doc.id)) return;
+      seen.add(doc.id);
+      const e = mgEntry(doc.data() || {});
+      if (!e.skip && e.ms >= todayMs) mg30Add(win, e);
+    });
+    const today = win.days[todayIdx];
+    today.incomplete = !!res.capped;
+    renderMgToday(today);
+    tbTodayKnown.games = today.tb;
+    updateKnownTbTotal();
+  }
 
   applyTypeOrderLayout();
   initPageSettings();
