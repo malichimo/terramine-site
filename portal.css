@@ -1504,3 +1504,22 @@ body.auth-pending #portal {
   .dash-pp-lock-req { font-size: 14px; }
   .dash-pp-lock-logo img { height: 48px; max-width: 80%; }
 }
+
+/* ── Pioneer Pass free trial (non-members, until PIONEER_TRIAL_END) ── Oct 3, 2026
+   Same overlay as a <button>: open padlock · "Free trial until October 9" · logo.
+   One click opens all five graphs (member view) for this page / browser. */
+button.dash-pp-lock {
+  -webkit-appearance: none; appearance: none;
+  margin: 0; border: 0; width: 100%; height: 100%;
+  font: inherit; text-align: center;
+}
+.dash-pp-lock.is-trial .dash-pp-lock-req {
+  max-width: 92%;
+  font-size: clamp(11px, min(6.5cqh, 4.6cqw), 15px);
+  letter-spacing: .04em;
+  text-wrap: balance;
+}
+.dash-visits-card[tabindex="-1"]:focus { outline: none; }
+@supports not (height: 1cqh) {
+  .dash-pp-lock.is-trial .dash-pp-lock-req { font-size: 13px; }
+}

@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261003-1" />
+  <link rel="stylesheet" href="portal.css?v=20261003-2" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -1467,7 +1467,10 @@
       // Pioneer Pass gate for the column-3 graphs (members: unchanged). Non-members
       // get empty, blurred graphs with a "Requires Pioneer Pass" overlay and none
       // of the graph-only queries; boxes outside the graphs still load.
-      const locked = !options.preview && !isPioneerMember(userData);
+      const nonMember = !options.preview && !isPioneerMember(userData);
+      // Free trial opened earlier (this browser, still in the trial): load like a member.
+      const locked = nonMember && !ppTrialRemembered(user.uid);
+      ppCtx = locked ? { uid: user.uid, options: options } : null;
       setPioneerGate(locked);
       if (!locked) {
         // Referrals: one shared referralLogs fetch feeds the TerraBucks Today
@@ -1998,7 +2001,11 @@
     const stats90 = countVisitStats(res.rows, uid, fetchWin);
     setTotalCheckIns(stats90.checkIns, res.capped);
     setDistinctVisitors(stats90.distinct, res.capped);
-    if (_vis60.locked) return;          // Pioneer gate: no graph data
+    if (_vis60.locked) { _vis60.lockedRes = { res: res, uid: uid, win: win }; return; }   // Pioneer gate: no graph data (kept for a trial unlock)
+    vis60Draw(res, uid, win);
+  }
+  function vis60Draw(res, uid, win) {
+    const total = $('dash-visits-total');
     vis60Aggregate(res.rows, uid, win);
     _vis60.days = win.days;
     _vis60.pages = res.pages;
@@ -2670,7 +2677,7 @@
   }
   function setBuys60Msg(text, cls) { setDashMsg($('dash-buys-msg'), text, cls); }
   function setBuys60(mines, options) {
-    if (_buys60.locked) return;          // Pioneer gate
+    if (_buys60.locked) { _buys60.lastMines = mines; _buys60.lastOpts = options || {}; return; }   // Pioneer gate (kept for a trial unlock)
     options = options || {};
     const win = buys60BuildDays();
     _buys60.preview = !!options.preview;
@@ -4394,7 +4401,32 @@
   // boxes). Visitors' 90-day fetch still runs for Total Check-ins / Distinct
   // Visitors; Mines Purchased never had queries of its own.
   const PIONEER_PASS_URL = '/pioneer-pass.html';
+  // Free trial for non-members: until this absolute instant (client clock) the
+  // locked graphs offer a one-click unlock. Change the date to move it; set it
+  // to '' to remove the trial (then the plain lock overlay shows).
+  const PIONEER_TRIAL_END = '2026-10-10T00:00:00-04:00';   // end of Oct 9, America/New_York
+  const PIONEER_TRIAL_END_MS = PIONEER_TRIAL_END ? Date.parse(PIONEER_TRIAL_END) : NaN;
+  // Overlay text, from the end date: the last trial day in New York ("October 9").
+  const PIONEER_TRIAL_LABEL = isFinite(PIONEER_TRIAL_END_MS)
+    ? 'Free trial until ' + new Date(PIONEER_TRIAL_END_MS - 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' })
+    : '';
   let pioneerLocked = null;   // null until the users doc decides
+  let ppCtx = null;           // { uid, options } of the locked load (trial unlock reuses it)
+  let ppTrialTimer = 0;
+  function ppTrialActive() { return isFinite(PIONEER_TRIAL_END_MS) && Date.now() < PIONEER_TRIAL_END_MS; }
+  // Remembered per user (this browser) for the rest of the trial, so a reload
+  // keeps the graphs open; ignored once the trial ends or the end date changes.
+  function ppTrialKey(uid) { return 'tmPioneerTrialOpen:' + uid; }
+  function ppTrialRemembered(uid) {
+    try {
+      const v = localStorage.getItem(ppTrialKey(uid));
+      if (v == null) return false;
+      if (ppTrialActive() && v === String(PIONEER_TRIAL_END_MS)) return true;
+      localStorage.removeItem(ppTrialKey(uid));   // stale (trial over / date changed)
+    } catch (e) {}
+    return false;
+  }
+  function ppTrialRemember(uid) { try { localStorage.setItem(ppTrialKey(uid), String(PIONEER_TRIAL_END_MS)); } catch (e) {} }
   function isPioneerMember(ud) { return !!ud && ud.isPioneerMember === true; }
   function ppGraphs() {
     return [
@@ -4406,18 +4438,29 @@
     ];
   }
   function ppLockOverlay() {
-    const a = document.createElement('a');
-    a.className = 'dash-pp-lock';
-    a.href = PIONEER_PASS_URL;
-    a.setAttribute('aria-label', 'This graph requires the Pioneer Pass. Get the Pioneer Pass');
+    const trial = ppTrialActive();
+    // Trial: a button that opens the graphs here; otherwise a link to the Pioneer Pass page.
+    const a = document.createElement(trial ? 'button' : 'a');
+    a.className = 'dash-pp-lock' + (trial ? ' is-trial' : '');
+    if (trial) {
+      a.type = 'button';
+      a.setAttribute('aria-label', PIONEER_TRIAL_LABEL + ': show the Pioneer Pass graphs');
+      a.addEventListener('click', function (e) { e.preventDefault(); ppTrialUnlock(a); });
+    } else {
+      a.href = PIONEER_PASS_URL;
+      a.setAttribute('aria-label', 'This graph requires the Pioneer Pass. Get the Pioneer Pass');
+    }
     a.innerHTML =
-      '<svg class="dash-pp-lock-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
-      + '<path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'
+      '<svg class="dash-pp-lock-icon' + (trial ? ' is-open' : '') + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+      + (trial
+        ? '<path d="M7 10V6.6a5 5 0 0 1 9.7-1.7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'   // shackle swung open
+        : '<path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>')
       + '<rect x="4" y="10" width="16" height="12" rx="2.5" fill="currentColor"/>'
       + '<circle cx="12" cy="15.4" r="1.7" fill="#fff8ec"/><rect x="11.1" y="16" width="1.8" height="3.2" rx=".9" fill="#fff8ec"/></svg>'
-      + '<span class="dash-pp-lock-req">Requires</span>'
+      + '<span class="dash-pp-lock-req">' + (trial ? '' : 'Requires') + '</span>'
       + '<picture class="dash-pp-lock-logo"><source type="image/webp" srcset="/images/pioneer-pass-logo-88.webp 1x, /images/pioneer-pass-logo-176.webp 2x" />'
       + '<img src="/images/pioneer-pass-logo-88.png" srcset="/images/pioneer-pass-logo-88.png 1x, /images/pioneer-pass-logo.png 2x" width="175" height="72" alt="Pioneer Pass" decoding="async" /></picture>';
+    if (trial) a.querySelector('.dash-pp-lock-req').textContent = PIONEER_TRIAL_LABEL;
     return a;
   }
   function ppLockGraph(g) {
@@ -4443,11 +4486,57 @@
   }
   function setPioneerGate(locked) {
     pioneerLocked = !!locked;
+    _vis60.lockedRes = null; _buys60.lastMines = null;   // this load's data lands after the decision
+    // A lock created before a reload must not keep the old overlay kind (trial / plain).
+    if (locked) ppGraphs().forEach(function (g) { const o = $(g.wrap) && $(g.wrap).querySelector('.dash-pp-lock'); if (o) o.remove(); });
     ppGraphs().forEach(function (g) { (locked ? ppLockGraph : ppUnlockGraph)(g); });
+    clearTimeout(ppTrialTimer);
     if (locked) {
       console.info('[pioneer] not a Pioneer Pass member (users doc isPioneerMember !== true): column-3 graphs locked; skipped the My Check-ins 60-day fetch, '
-        + 'Referrals / Mini Games read today only, Visitors keeps its 90-day fetch for the stat boxes.');
+        + 'Referrals / Mini Games read today only, Visitors keeps its 90-day fetch for the stat boxes.'
+        + (ppTrialActive() ? ' Free trial until ' + PIONEER_TRIAL_END + ': clicking a graph opens them all.' : ''));
+      // Trial ends while the page is open and nothing was clicked: back to the plain lock.
+      if (ppTrialActive()) {
+        ppTrialTimer = setTimeout(function check() {
+          if (pioneerLocked !== true) return;
+          const left = PIONEER_TRIAL_END_MS - Date.now();
+          if (left > 0) { ppTrialTimer = setTimeout(check, Math.min(left + 50, 0x7fffffff)); return; }
+          ppRefreshOverlays();
+        }, Math.min(PIONEER_TRIAL_END_MS - Date.now() + 50, 0x7fffffff));
+      }
     }
+  }
+  /** Re-create the overlays of the locked graphs (trial ↔ plain lock). */
+  function ppRefreshOverlays() {
+    ppGraphs().forEach(function (g) {
+      const wrap = $(g.wrap); if (!wrap || !g.st.locked) return;
+      const o = wrap.querySelector('.dash-pp-lock'); if (o) o.remove();
+      wrap.appendChild(ppLockOverlay());
+    });
+  }
+  /** Free trial: one click opens all five graphs and runs the member loads that
+   *  were skipped (Visitors / Mines Purchased reuse the data already loaded). */
+  function ppTrialUnlock(fromEl) {
+    if (pioneerLocked !== true || !ppCtx) return;
+    if (!ppTrialActive()) { ppRefreshOverlays(); return; }   // trial just ended: plain lock, no unlock
+    const ctx = ppCtx;
+    const card = fromEl && fromEl.closest ? fromEl.closest('.dash-visits-card') : null;
+    ppTrialRemember(ctx.uid);
+    pioneerLocked = false;               // in-flight today-only reads drop their results (full loads own the boxes)
+    clearTimeout(ppTrialTimer);
+    ppGraphs().forEach(ppUnlockGraph);
+    console.info('[pioneer] free trial: graphs opened; loading the Pioneer Pass graph data.');
+    // Visitors: the 90-day rows already fetched for the stat boxes (or still on their way).
+    if (_vis60.lockedRes) { const r = _vis60.lockedRes; _vis60.lockedRes = null; vis60Draw(r.res, r.uid, r.win); }
+    else vis60SetLoading();
+    // Mines Purchased: the mines already loaded (or the dashboard draws them when they land).
+    if (_buys60.lastMines) setBuys60(_buys60.lastMines, _buys60.lastOpts);
+    else setBuys60Loading();
+    loadReferrals60(ctx.uid, ctx.options).catch(function (err) { console.warn('[referrals] load failed:', err); });
+    loadMiniGames30(ctx.uid, ctx.options).catch(function (err) { console.warn('[mini-games] load failed:', err); });
+    loadMyCheckIns60(ctx.uid, ctx.options).catch(function (err) { console.warn('[my-checkins-60d] load failed:', err); });
+    // Keep keyboard focus in place: the clicked overlay is gone, its card stays.
+    if (card && document.activeElement === document.body) { card.setAttribute('tabindex', '-1'); card.focus({ preventScroll: true }); }
   }
   /** The users doc failed, so membership (and every graph) is unknown: stop the spinners. */
   function pioneerGateFailed(err) {
