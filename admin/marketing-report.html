@@ -454,6 +454,41 @@
       </div>
     </section>
 
+    <!-- Oct 4, 2026 (Scott) -- Meta Audience Network bids inside AdMob
+         mediation (since Oct 1) but pays its share directly, and AdMob's
+         network report above covers the AdMob Network only, so this revenue
+         is IN ADDITION to the AdMob total. Sourced from
+         meta_ad_revenue_snapshots, written daily by refreshMetaAdStats
+         (functions/src/index.ts) from Meta's Audience Network Reporting API. -->
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Ad Revenue</span>
+          <h2>Meta Audience Network</h2>
+        </div>
+        <p class="section-desc">Meta's estimated revenue from bidding in our ad mediation, plus fill rate and eCPM. Paid by Meta directly, so it's <strong>in addition to</strong> the AdMob total above. Reported ~1 day behind "today" (Meta's day is US Pacific time).</p>
+      </div>
+      <div class="panel panel-row">
+        <div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-2)"></span>Android</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>iOS</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="metaAdRevenueChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="metaAdRevenueTooltip"></div>
+          </div>
+          <div id="metaAdRevenueEmpty" class="empty-state" style="display:none;"></div>
+          <p id="metaAdRevenueNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+        </div>
+        <div>
+          <div class="side-stat"><div class="k">Meta revenue (period)</div><div class="v" id="metaRevTotal">—</div><div class="delta" id="metaRevTotalDelta"></div></div>
+          <div class="side-stat"><div class="k">Fill rate</div><div class="v" id="metaFillRate">—</div></div>
+          <div class="side-stat"><div class="k">eCPM</div><div class="v" id="metaEcpm">—</div></div>
+        </div>
+      </div>
+    </section>
+
     <section class="section">
       <div class="section-head">
         <div>
@@ -543,6 +578,7 @@
   let geoSnapshot = null; // {date, totalProperties, unresolvedProperties, countries: {CODE: count}} — latest only, not range-filtered
   let installsSnapshots = []; // [{date, androidInstalls, ...}], sorted ascending by date — iOS not tracked yet, see refreshInstalls
   let adRevenueSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue}], sorted ascending by date
+  let metaAdSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue, androidRequests, iosRequests, androidFilled, iosFilled, androidImpressions, iosImpressions}], sorted ascending by date
   let unityAdSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue, androidRequests, androidStarts, androidViews, iosRequests, iosStarts, iosViews}], sorted ascending by date
   let currentRange = 30;
   let customRange = null; // {start, end} (YYYY-MM-DD, inclusive) when the "Custom…" range is active, else null
@@ -560,13 +596,14 @@
     authErrEl.style.display = 'none';
 
     try {
-      const [snap, retentionSnap, geoSnap, installsSnap, adRevenueSnap, unityAdSnap] = await Promise.all([
+      const [snap, retentionSnap, geoSnap, installsSnap, adRevenueSnap, unityAdSnap, metaAdSnap] = await Promise.all([
         getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'retentionCohorts'), orderBy('cohortDate', 'desc'), limit(120))),
         getDocs(query(collection(db, 'geography_snapshots'), orderBy('date', 'desc'), limit(1))),
         getDocs(query(collection(db, 'installs_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'unity_ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
+        getDocs(query(collection(db, 'meta_ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
       ]);
       snapshots = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       retentionCohorts = retentionSnap.docs.map(d => d.data()).sort((a, b) => a.cohortDate.localeCompare(b.cohortDate));
@@ -574,6 +611,7 @@
       installsSnapshots = installsSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       adRevenueSnapshots = adRevenueSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       unityAdSnapshots = unityAdSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
+      metaAdSnapshots = metaAdSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       document.getElementById('asOf').textContent = snapshots.length
         ? `Data through ${snapshots[snapshots.length - 1].date}`
         : 'No data yet';
@@ -1309,6 +1347,44 @@
     noteEl.textContent = `From Unity's own Monetization Stats API directly (typically about 1 day behind "today" — most recent figure is for ${latest.date}). This revenue is already part of the AdMob total above, not in addition to it.`;
   }
 
+  function renderMetaAdStats() {
+    const slice = dateRangeSlice(metaAdSnapshots, 'date', currentRange);
+    const dates = slice.map(s => s.date);
+    const noteEl = document.getElementById('metaAdRevenueNote');
+
+    stackedBarChart('metaAdRevenueChart', 'metaAdRevenueTooltip', 'metaAdRevenueEmpty',
+      ['Android', 'iOS'],
+      [
+        slice.map(s => s.androidRevenue || 0),
+        slice.map(s => s.iosRevenue || 0),
+      ],
+      dates, 900, 180,
+      [styleOf('--cat-2'), styleOf('--cat-1')]);
+
+    const fmtUsd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const total = slice.reduce((sum, s) => sum + (s.androidRevenue || 0) + (s.iosRevenue || 0), 0);
+    document.getElementById('metaRevTotal').textContent = slice.length ? fmtUsd(total) : '—';
+
+    const prevSlice = priorWindowSlice(metaAdSnapshots, 'date', currentRange);
+    const prevTotal = prevSlice.reduce((sum, s) => sum + (s.androidRevenue || 0) + (s.iosRevenue || 0), 0);
+    applyDelta(document.getElementById('metaRevTotalDelta'), prevSlice.length ? computeDeltaPct(total, prevTotal) : null);
+
+    // Fill rate = filled requests / requests; eCPM = revenue per 1,000
+    // impressions. Both from period totals, like the Unity section.
+    const requests = slice.reduce((sum, s) => sum + (s.androidRequests || 0) + (s.iosRequests || 0), 0);
+    const filled = slice.reduce((sum, s) => sum + (s.androidFilled || 0) + (s.iosFilled || 0), 0);
+    const imps = slice.reduce((sum, s) => sum + (s.androidImpressions || 0) + (s.iosImpressions || 0), 0);
+    document.getElementById('metaFillRate').textContent = (slice.length && requests > 0) ? `${((filled / requests) * 100).toFixed(1)}%` : '—';
+    document.getElementById('metaEcpm').textContent = (slice.length && imps > 0) ? fmtUsd((total / imps) * 1000) : '—';
+
+    if (!slice.length) {
+      noteEl.textContent = 'No Meta Audience Network history yet — this fills in once refreshMetaAdStats has run (or after the backfill script).';
+      return;
+    }
+    const latest = slice[slice.length - 1];
+    noteEl.textContent = `From Meta's Audience Network Reporting API (most recent figure is for ${latest.date}). Estimates only — Meta's Monetization Manager is authoritative for payouts.`;
+  }
+
   function renderAll() {
     updateActiveRangeLabel();
     renderStats();
@@ -1320,6 +1396,7 @@
     renderInstalls();
     renderAdRevenue();
     renderUnityAdStats();
+    renderMetaAdStats();
     renderGeography();
     renderGeographyPlayers();
   }
@@ -1398,7 +1475,7 @@
       : `Showing: ${start} – ${end}`;
   }
 
-  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); renderUnityAdStats(); });
+  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); renderUnityAdStats(); renderMetaAdStats(); });
 </script>
 
 </body>
