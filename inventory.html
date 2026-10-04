@@ -341,7 +341,8 @@
     const byMine = RESOURCE_IMAGE_IDS[mineKey];
     const rk = normalizeRarity(item && item.rarity);
     if (byMine && rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
-    const names = [item && item.name, item && item._raw && typeof item._raw === 'object' ? (item._raw.id || item._raw.key) : ''];
+    const rawObj = item && item._raw && typeof item._raw === 'object' ? item._raw : {};
+    const names = [item && item.name, rawObj.id || rawObj.key, rawObj.itemId, rawObj.itemKey, rawObj.itemType, rawObj.type];
     for (const n of names) {
       const sl = itemSlug(n);
       if (!sl) continue;
@@ -349,6 +350,8 @@
       if (sl.indexOf('goggle') >= 0) return 'goggles';
       // any name containing "pumpkin" (pumpkins, Pumpkin, pumpkins_2026, halloweenPumpkin…)
       if (sl.indexOf('pumpkin') >= 0) return 'pumpkin';
+      // Jack-O-Lantern in any spelling (jackOLantern, jack_o_lantern, Jack-O-Lantern, jack o lantern, jackolanterns...)
+      if (sl.replace(/-/g, '').indexOf('jackolantern') >= 0) return 'pumpkin';
       if (ITEM_IMAGE_IDS.has(sl)) return sl;
       if (ITEM_IMAGE_ALIASES[sl]) return ITEM_IMAGE_ALIASES[sl];
       const sing = sl.replace(/s$/, '');
@@ -445,6 +448,9 @@
     if (Array.isArray(raw.list)) return raw.list;
     if (Array.isArray(raw.resources)) return raw.resources;
     if (Array.isArray(raw.entries)) return raw.entries;
+    // { items: { key: n, ... } } as the only field: use that map (Oct 4, 2026)
+    const only = Object.keys(raw);
+    if (only.length === 1 && /^(items|list|resources|entries)$/.test(only[0]) && raw[only[0]] && typeof raw[only[0]] === 'object') return toRawList(raw[only[0]]);
     return Object.keys(raw).map(k => {
       const v = raw[k];
       if (v != null && typeof v === 'object' && !Array.isArray(v)) {
@@ -461,7 +467,7 @@
     }
     if (typeof raw !== 'object') return null;
     const name = asString(pickFirst(raw, [
-      'name', 'title', 'displayName', 'itemName', 'label', 'resourceName', 'resource', 'type', 'id'
+      'name', 'title', 'displayName', 'itemName', 'label', 'itemId', 'itemKey', 'itemType', 'resourceName', 'resource', 'type', 'kind', 'id', 'key', 'slug'
     ])) || ('Item ' + (idx + 1));
     let rarity = normalizeRarity(pickFirst(raw, [
       'rarity', 'tier', 'quality', 'grade', 'rarityTier', 'rarityLevel'
@@ -485,7 +491,7 @@
       'value', 'tbValue', 'tb', 'price', 'worth', 'sellValue', 'terraBucks'
     ]));
     const count = asNum(pickFirst(raw, [
-      'count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total'
+      'count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total', 'held', 'num', 'units'
     ]));
     return { name, rarity, image, value, count, _raw: raw };
   }
@@ -493,7 +499,18 @@
   function parseGroupField(raw) {
     const list = toRawList(raw);
     const out = [];
+    const byStr = new Map();   // ['jackOLantern', 'jackOLantern'] -> one item x2 (Oct 4, 2026)
     list.forEach((entry, i) => {
+      if (typeof entry === 'string' && entry.trim()) {
+        const k = entry.trim();
+        const prev = byStr.get(k);
+        if (prev) { prev.count++; return; }
+        const it = parseItem(k, i);
+        it.count = 1;
+        byStr.set(k, it);
+        out.push(it);
+        return;
+      }
       const item = parseItem(entry, i);
       if (item && item.name) out.push(item);
     });
@@ -517,7 +534,116 @@
       // inventory: keep insertion / forEach order from parseGroupField
       result[g.key] = items;
     });
+    // + items the app stores elsewhere in the users doc (see extraInventoryItems)
+    result.inventory = (result.inventory || []).concat(extraInventoryItems(ud, result.inventory));
     return result;
+  }
+  // ── Items stored outside users.inventory (Oct 4, 2026) ──
+  // A Jack-O-Lantern found in the app did not show: the app keeps some
+  // collectibles outside users.inventory. Besides the known fields, the
+  // Inventory group also takes, from the same users doc (no extra read):
+  //  • container fields named like items (items, collectibles, seasonalItems,
+  //    eventItems, inventoryV2 …), any shape (array / map / nested map);
+  //  • top-level fields named after an item (jackOLanterns: 1, pumpkins: 3 …).
+  // Fields ABOUT an item (…Today, …Daily, last…, …At, …Limit, …Found, …Earned)
+  // are not items. Unknown items keep their raw key as the name ("No image").
+  const KNOWN_ITEM_FIELDS = new Set(GROUPS.map(g => g.field));
+  const EXTRA_CONTAINER_RE = /(inventor|^items?|items?$|collectible|seasonal|loot|treasure|trophies|consumable|powerups?$|boosts?$|backpack|stash|halloween)/;
+  const EXTRA_ITEM_WORD_RE = /(lantern|pumpkin|goggle|cand(y|ies)|collectible|halloween|ghost|skull)/;
+  const NOT_ITEM_RE = /(today|daily|perday|date|time|stamp|^last|reset|limit|^max|max$|cap$|cooldown|history|logs?$|streak|updated|created|expir|until|active|equipped|earned|traded|sold|spent|redeemed|found|enabled|unlocked|claimed|seen|shown|version|meta|settings|config|prefs?$|ids$|urls?$)/;
+  const STAMP_KEY_RE = /(At|_at|Ms|_ms|Ts|_ts)$/;
+  const SENSITIVE_KEY_RE = /(email|phone|token|fcm|password|secret|address|paypal|venmo|cashapp|iban|bank|card|ssn|ipaddr|device|auth|apikey|private|birth|location|geo)/i;
+  function normKey(k) { return String(k).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  function isStampLike(v) {
+    return !!v && typeof v === 'object' && (typeof v.toDate === 'function' || ('seconds' in v && 'nanoseconds' in v));
+  }
+  function isPlainMap(v) {
+    return !!v && typeof v === 'object' && !Array.isArray(v) && !isStampLike(v)
+      && !(v.latitude != null && v.longitude != null) && !(typeof v.path === 'string' && v.firestore);
+  }
+  function notItemKey(k) { return NOT_ITEM_RE.test(normKey(k)) || STAMP_KEY_RE.test(String(k)); }
+  const COUNT_KEYS = ['count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total', 'held', 'num', 'units'];
+  /** Items from one container field (array / map / nested map), any entry shape. */
+  function containerItems(field, raw) {
+    const out = [];
+    parseGroupField(raw).forEach(it => {
+      const key = it._raw && typeof it._raw === 'object' ? asString(it._raw.id) : '';
+      if (key && notItemKey(key)) return;                         // e.g. { updatedAt: … } inside the map
+      if (it._raw && typeof it._raw === 'object' && it._raw.id != null && it._raw.name === it._raw.id) {
+        const v = raw && !Array.isArray(raw) ? raw[it._raw.id] : undefined;
+        if (isStampLike(v) || typeof v === 'boolean' || (typeof v === 'string' && asNum(v) == null)) return;   // map of flags / dates, not counts
+      }
+      it._src = 'users.' + field;
+      out.push(it);
+    });
+    return out;
+  }
+  /** Items found in the users doc outside the known fields (Inventory group). */
+  function extraInventoryItems(ud, existing) {
+    const out = [];
+    const seen = new Set((existing || []).map(it => itemSlug(it.name).replace(/-/g, '')));
+    const add = it => {
+      const s = itemSlug(it.name).replace(/-/g, '');
+      if (!s || seen.has(s)) return;
+      seen.add(s);
+      out.push(it);
+    };
+    Object.keys(ud || {}).forEach(k => {
+      if (KNOWN_ITEM_FIELDS.has(k) || /Resources$/.test(k) || SENSITIVE_KEY_RE.test(k) || notItemKey(k)) return;
+      const v = ud[k];
+      const nk = normKey(k);
+      const itemish = EXTRA_ITEM_WORD_RE.test(nk);
+      if (EXTRA_CONTAINER_RE.test(nk) && (Array.isArray(v) || isPlainMap(v))) {
+        if (itemish && isPlainMap(v) && pickFirst(v, COUNT_KEYS) != null) {   // { count: 1, … } = one item
+          const it = parseItem(Object.assign({ id: k, name: k }, v), 0);
+          if (it) { it._src = 'users.' + k; add(it); }
+          return;
+        }
+        containerItems(k, v).forEach(add);
+        return;
+      }
+      if (!itemish) return;
+      if (typeof v === 'number' || (typeof v === 'string' && asNum(v) != null)) {
+        add({ name: k, rarity: '', image: '', value: null, count: asNum(v), _raw: { id: k }, _src: 'users.' + k });
+      } else if (isPlainMap(v)) {
+        if (pickFirst(v, COUNT_KEYS) != null || pickFirst(v, ['name', 'title', 'displayName', 'itemName'])) {
+          const it = parseItem(Object.assign({ id: k, name: k }, v), 0);
+          if (it) { it._src = 'users.' + k; add(it); }
+        } else containerItems(k, v).forEach(add);
+      } else if (Array.isArray(v)) containerItems(k, v).forEach(add);
+    });
+    return out;
+  }
+  /** Users-doc field names + types (no values; sensitive fields: type only) for the console. */
+  function usersDocShape(ud) {
+    const desc = function (x) {
+      if (x == null) return 'null';
+      if (Array.isArray(x)) return 'array';
+      if (isStampLike(x)) return 'timestamp';
+      if (typeof x === 'object') return 'map{' + Object.keys(x).slice(0, 8).join(',') + '}';
+      return typeof x;
+    };
+    const out = {};
+    Object.keys(ud || {}).sort().forEach(k => {
+      const v = ud[k];
+      const sens = SENSITIVE_KEY_RE.test(k);
+      if (v == null) out[k] = 'null';
+      else if (Array.isArray(v)) out[k] = 'array[' + v.length + ']' + (!sens && v.length ? ' of ' + Array.from(new Set(v.slice(0, 20).map(desc))).join(' | ') : '');
+      else if (isStampLike(v)) out[k] = 'timestamp';
+      else if (typeof v === 'object') out[k] = sens ? 'map(' + Object.keys(v).length + ' keys)' : 'map{' + Object.keys(v).slice(0, 30).join(',') + '}';
+      else out[k] = typeof v;
+    });
+    return out;
+  }
+  /** console.debug dump to confirm where the app stores items (DevTools → Verbose). */
+  function logInventorySources(tag, uid, ud, groups) {
+    try {
+      console.debug(tag + ' users/' + uid + ' fields (types only, no values): ' + JSON.stringify(usersDocShape(ud)));
+      const extra = (groups.inventory || []).filter(it => it._src);
+      console.debug(tag + ' items found outside users.inventory: ' + (extra.length
+        ? extra.map(it => it._src + ' → "' + it.name + '"' + (it.count != null ? ' ×' + it.count : '')).join('; ')
+        : 'none'));
+    } catch (_) {}
   }
 
   function matchesSearch(item, q) {
@@ -736,6 +862,19 @@
 
       groupData = buildGroupsFromUser(ud);
       loadedUid = user.uid;
+      logInventorySources('[inventory]', user.uid, ud, groupData);
+      // ?debugInventory=1: also list your own users/{uid}/inventory, /items and
+      // /collectibles subcollections (read-only; only with that URL flag) to
+      // find where the app keeps an item that does not show here.
+      if (/[?&]debugInventory=1(&|$)/.test(location.search)) {
+        ['inventory', 'items', 'collectibles'].forEach(name => {
+          const path = 'users/' + user.uid + '/' + name;
+          db.collection('users').doc(user.uid).collection(name).limit(50).get()
+            .then(snap => console.info('[inventory] debug: ' + path + ': ' + snap.size + ' doc(s)'
+              + (snap.size ? ' — ' + snap.docs.map(d => d.id + ' {' + Object.keys(d.data() || {}).join(',') + '}').join('; ') : '')))
+            .catch(err => console.info('[inventory] debug: ' + path + ' not readable (' + ((err && (err.code || err.message)) || err) + ')'));
+        });
+      }
 
       // Log observed shapes once (no secrets) for scaffolding diagnostics
       try {
