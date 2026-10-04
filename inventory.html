@@ -841,6 +841,7 @@
     }
   }
 
+  let loggedRawUsersDoc = false;
   async function loadPortal(user) {
     setToolbar(false);
     setStatus('Loading inventory…');
@@ -849,6 +850,8 @@
     try {
       const uSnap = await db.collection('users').doc(user.uid).get();
       const ud = uSnap.data() || {};
+      // One log per page load: the raw users/{uid} doc data exactly as returned.
+      if (!loggedRawUsersDoc) { loggedRawUsersDoc = true; console.log('[inventory] users doc data:', uSnap.data()); }
       const nick = ud.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
       $('nav-nickname').textContent = nick;
       $('sb-tb').textContent = fmtTBBalance(ud.tbBalance || 0);
