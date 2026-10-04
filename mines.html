@@ -1222,7 +1222,7 @@
         </div>
       </div>
       <div class="mine-toolbar" id="mine-toolbar">
-        <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Reverses the order of the mine type groups." aria-pressed="false" data-tip="Reverses the order of the mine type groups." disabled>
+        <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Reverse the order of the Mine Type Groups" aria-pressed="false" data-tip="Reverse the order of the Mine Type Groups" disabled>
           <span class="flip-type-order-arrows" aria-hidden="true">⇅</span>
         </button>
         <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
@@ -7802,8 +7802,10 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   let showcaseFollowTipTarget = null;
   let showcaseFollowTipX = 0;
   let showcaseFollowTipY = 0;
+  let showcaseFollowTipHide = null;   // touch: a tap shows the tip briefly, then this hides it
   function dismissShowcaseFollowTip() {
     if (showcaseFollowTipTimer) { clearTimeout(showcaseFollowTipTimer); showcaseFollowTipTimer = null; }
+    if (showcaseFollowTipHide) { clearTimeout(showcaseFollowTipHide); showcaseFollowTipHide = null; }
     showcaseFollowTipTarget = null;
     if (showcaseFollowTip) showcaseFollowTip.style.display = 'none';
   }
@@ -7837,8 +7839,12 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   function bindShowcaseFollowTip(btn) {
     if (!btn || btn.dataset.showcaseTipBound === '1') return;
     btn.dataset.showcaseTipBound = '1';
+    let touchAt = 0;
+    btn.addEventListener('touchstart', () => { touchAt = Date.now(); }, { passive: true });
     btn.addEventListener('mouseenter', (e) => {
       if (showcaseFollowTipTimer) { clearTimeout(showcaseFollowTipTimer); showcaseFollowTipTimer = null; }
+      if (showcaseFollowTipHide) { clearTimeout(showcaseFollowTipHide); showcaseFollowTipHide = null; }
+      const fromTap = Date.now() - touchAt < 1000;   // emulated mouseenter of a tap
       showcaseFollowTipTarget = btn;
       showcaseFollowTipX = e.clientX;
       showcaseFollowTipY = e.clientY;
@@ -7849,6 +7855,8 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
         showcaseFollowTipTimer = null;
         if (showcaseFollowTipTarget !== btn || !btn.isConnected) return;
         placeShowcaseFollowTip(showcaseFollowTipX, showcaseFollowTipY);
+        // Touch has no mouseleave: hide a tapped tip after a moment (the tap's action already ran).
+        if (fromTap) showcaseFollowTipHide = setTimeout(() => { if (showcaseFollowTipTarget === btn) dismissShowcaseFollowTip(); }, 1500);
       }, 200);
     });
     btn.addEventListener('mousemove', (e) => {
@@ -7865,6 +7873,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   }
   document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(bindShowcaseFollowTip);
   bindShowcaseFollowTip($('filter-unnamed-btn'));
+  bindShowcaseFollowTip($('flip-type-order'));   // same follow-the-mouse tip as the other filter-bar icons
   bindMineTitleInteractionsOnce();
   bindMineMapTitleInteractionsOnce();
 
