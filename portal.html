@@ -31,8 +31,8 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css" />
-  <link rel="stylesheet" href="portal-top-nav.css" />
+  <link rel="stylesheet" href="portal.css?v=20261003-2" />
+  <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
        ads here was a likely contributor to AdSense's "Low value content"
@@ -87,6 +87,7 @@
   <nav class="top-nav">
     <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
     <div class="nav-links" id="portal-nav-links">
+      <a href="/pioneer-pass.html" class="nav-pp"><picture class="nav-pp-pic"><source type="image/webp" srcset="/images/pioneer-pass-logo-44.webp 1x, /images/pioneer-pass-logo-88.webp 2x" /><img class="nav-pp-logo" src="/images/pioneer-pass-logo-44.png" srcset="/images/pioneer-pass-logo-44.png 1x, /images/pioneer-pass-logo-88.png 2x" width="107" height="44" alt="Pioneer Pass" decoding="async" /></picture><span class="nav-pp-text">Pioneer Pass</span></a>
       <a href="/portal.html" class="active">Dashboard</a>
       <a href="/mines.html">Mines</a>
       <a href="/inventory.html">Inventory</a>
@@ -201,37 +202,52 @@
           </div>
           <div class="stat-row-secondary">
             <div class="stat-card">
-              <div class="stat-card-label">Total Check-ins</div>
-              <div class="stat-card-value" id="stat-checkins">—</div>
-              <div class="stat-card-sub">Visits to your mines</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-label">Total Terra Bucks Earned</div>
-              <div class="stat-card-value amber" id="stat-tb-earned">—</div>
+              <div class="stat-card-label">Total TB Earned</div>
+              <div class="stat-card-value amber stat-card-value-tb"><img class="stat-tb-icon" src="images/mine-icons/terrabucks-small.png" alt="" aria-hidden="true" width="148" height="200" /><span id="stat-tb-earned">—</span></div>
               <div class="stat-card-sub">All-time</div>
             </div>
             <div class="stat-card">
-              <div class="stat-card-label">Mines Ready for Maintenance</div>
+              <div class="stat-card-label">Mine Maintenance</div>
               <div class="stat-card-value" id="stat-ready">—</div>
               <div class="stat-card-sub">Daily activity available</div>
             </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Total Check-ins</div>
+              <div class="stat-card-value" id="stat-checkins">—</div>
+              <div class="stat-card-sub">Last 90 days</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Distinct Visitors</div>
+              <div class="stat-card-value" id="stat-distinct">—</div>
+              <div class="stat-card-sub">Last 90 days</div>
+            </div>
           </div>
         </div>
-          </div>
-          <div class="dash-breakdown-col dash-breakdown-col-pie">
             <div class="stat-card dash-pie-card">
               <div class="stat-card-label">Mines by Type</div>
               <div class="dash-pie-wrap">
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
-</div>
+            </div>
+            <section class="dash-dominance-card" id="dash-dominance-card" aria-labelledby="dash-dominance-title">
+              <div class="dash-dominance-head">
+                <h2 class="dash-dominance-title" id="dash-dominance-title">Mine Dominance</h2>
+                <div class="dash-dominance-area" id="dash-dominance-area" aria-live="polite" title="Area covered by your Reach outline">&mdash;</div>
+              </div>
+              <div class="dash-dominance-body">
+                <div class="dash-dominance-map" id="dash-dominance-map" aria-label="Map of the overall area your mines cover"></div>
+                <div class="dash-dominance-msg" id="dash-dominance-msg" role="status">Loading map&hellip;</div>
+              </div>
+            </section>
           </div>
-          <div class="dash-breakdown-col dash-breakdown-col-slot">
+          <div class="dash-breakdown-col dash-breakdown-col-visits">
+            <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today, then Inventory (class names are grid slots: -visits = column 2, -slot = column 3) -->
             <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
               <div class="stat-card-label">TerraBucks Earned Today</div>
               <div class="tb-today" id="tb-today">
                 <div class="tb-today-section">
                   <div class="tb-today-section-title">Visitor check-ins to your mines</div>
+                  <div class="tb-today-visitor-avatars" id="tb-today-visitor-avatars" aria-label="Today&rsquo;s visitors" hidden></div>
                   <table class="tb-today-table" aria-label="Visitor check-ins today">
                     <tbody>
                       <tr>
@@ -245,7 +261,32 @@
                     </tbody>
                   </table>
                 </div>
-                <div class="tb-today-section">
+                <!-- Oct 1, 2026: live from gameResults (table built by renderMiniGamesTable, shared with the graph popup) -->
+                <div class="tb-today-section tb-today-section-games" id="tb-today-games">
+                  <div class="tb-today-section-title">Mini games today</div>
+                  <div class="tb-today-games-table" id="tb-today-games-table"></div>
+                  <div class="tb-today-ref-msg" id="tb-today-games-msg" role="status" hidden></div>
+                </div>
+                <!-- Oct 1, 2026: referral bonuses paid today (referralLogs.completedAt) -->
+                <div class="tb-today-section tb-today-section-refs" id="tb-today-refs">
+                  <div class="tb-today-section-title">Referral rewards paid today</div>
+                  <div class="tb-today-visitor-avatars" id="tb-today-ref-avatars" aria-label="Referrals paid today" hidden></div>
+                  <table class="tb-today-table" aria-label="Referral rewards paid today">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Referrals</th>
+                        <td id="tb-today-refs-count">—</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TB earned from them</th>
+                        <td id="tb-today-refs-tb">—</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="tb-today-ref-msg" id="tb-today-refs-msg" role="status" hidden></div>
+                </div>
+                <!-- Oct 1, 2026: your own check-ins moved to the bottom, above the total -->
+                <div class="tb-today-section" id="tb-today-yours">
                   <div class="tb-today-section-title">Your activity check-ins to other mines</div>
                   <table class="tb-today-table" aria-label="Your check-ins today">
                     <tbody>
@@ -260,40 +301,6 @@
                     </tbody>
                   </table>
                 </div>
-                <div class="tb-today-section tb-today-section-soon" aria-disabled="true">
-                  <div class="tb-today-section-title">Mini games today</div>
-                  <table class="tb-today-table tb-today-table-games" aria-label="Mini games today">
-                    <thead>
-                      <tr>
-                        <th scope="col">Type</th>
-                        <th scope="col">Played</th>
-                        <th scope="col">TB earned</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr data-game="rock">
-                        <th scope="row"><img src="/images/mine-icons/rock.svg" alt=""> Rock</th>
-                        <td id="tb-today-game-rock-plays">—</td>
-                        <td id="tb-today-game-rock-tb">—</td>
-                      </tr>
-                      <tr data-game="coal">
-                        <th scope="row"><img src="/images/mine-icons/coal.svg" alt=""> Coal</th>
-                        <td id="tb-today-game-coal-plays">—</td>
-                        <td id="tb-today-game-coal-tb">—</td>
-                      </tr>
-                      <tr data-game="gold">
-                        <th scope="row"><img src="/images/mine-icons/gold.svg" alt=""> Gold</th>
-                        <td id="tb-today-game-gold-plays">—</td>
-                        <td id="tb-today-game-gold-tb">—</td>
-                      </tr>
-                      <tr data-game="diamond">
-                        <th scope="row"><img src="/images/mine-icons/diamond.svg" alt=""> Diamond</th>
-                        <td id="tb-today-game-diamond-plays">—</td>
-                        <td id="tb-today-game-diamond-tb">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
                 <div class="tb-today-total">
                   <span>Known TB today</span>
                   <strong id="tb-today-known-total">—</strong>
@@ -301,6 +308,86 @@
                 <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
               </div>
             </div>
+            <!-- Oct 1, 2026: Inventory (same items, order and art as inventory.html; from the users doc already loaded) -->
+            <section class="dash-visits-card dash-inv-card" id="dash-inv-card" aria-labelledby="dash-inv-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-inv-title">Inventory</h2>
+                <div class="dash-visits-total" id="dash-inv-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body dash-inv-body">
+                <div class="dash-inv-grid" id="dash-inv-grid" role="list" aria-label="Inventory items and resources"></div>
+                <div class="dash-visits-msg dash-inv-msg is-loading" id="dash-inv-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+              </div>
+            </section>
+          </div>
+          <div class="dash-breakdown-col dash-breakdown-col-slot">
+            <!-- column 3 = the bar graphs: Visitors, Mines Purchased, Mini Games, Referrals, My Check-ins -->
+            <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
+            <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-visits-title">Visitors &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-visits-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-visits-wrap">
+                  <canvas id="dash-visits-chart" role="img" aria-label="Bar graph of visitor check-ins to your mines per day for the last 60 days"></canvas>
+                  <div class="dash-visits-msg" id="dash-visits-msg" role="status">Loading check-ins&hellip;</div>
+                </div>
+              </div>
+            </section>
+            <!-- Oct 1, 2026: your mines purchased per day (stacked by type), last 60 days -->
+            <section class="dash-visits-card dash-buys-card" id="dash-buys-card" aria-labelledby="dash-buys-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-buys-title">Mines Purchased &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-buys-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-buys-wrap">
+                  <canvas id="dash-buys-chart" role="img" aria-label="Stacked bar graph of mines you purchased per day for the last 60 days, by type"></canvas>
+                  <div class="dash-visits-msg is-loading" id="dash-buys-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+                </div>
+              </div>
+            </section>
+            <!-- Oct 1, 2026: mini games per day (games stacked by type + TB), last 30 days -->
+            <section class="dash-visits-card dash-games-card" id="dash-games-card" aria-labelledby="dash-games-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-games-title">Mini Games &mdash; Last 30 Days</h2>
+                <div class="dash-visits-total" id="dash-games-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-games-wrap">
+                  <canvas id="dash-games-chart" role="img" aria-label="Bar graph of mini games you played per day for the last 30 days, by type, with TB earned"></canvas>
+                  <div class="dash-visits-msg is-loading" id="dash-games-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+                </div>
+                <div class="dash-games-note" id="dash-games-note" role="note" hidden></div>
+              </div>
+            </section>
+            <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
+            <section class="dash-visits-card dash-refs-card" id="dash-refs-card" aria-labelledby="dash-refs-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-refs-title">Referrals &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-refs-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-refs-wrap">
+                  <canvas id="dash-refs-chart" role="img" aria-label="Bar graph of referral rewards paid to you per day for the last 60 days"></canvas>
+                  <div class="dash-visits-msg" id="dash-refs-msg" role="status">Loading referrals&hellip;</div>
+                </div>
+              </div>
+            </section>
+            <!-- Oct 1, 2026: your own check-ins at other players' mines per day, last 60 days -->
+            <section class="dash-visits-card dash-myci-card" id="dash-myci-card" aria-labelledby="dash-myci-title">
+              <div class="dash-visits-head">
+                <h2 class="dash-visits-title" id="dash-myci-title">My Check-ins &mdash; Last 60 Days</h2>
+                <div class="dash-visits-total" id="dash-myci-total" aria-live="polite">&mdash;</div>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-myci-wrap">
+                  <canvas id="dash-myci-chart" role="img" aria-label="Bar graph of your check-ins at other players&rsquo; mines per day for the last 60 days"></canvas>
+                  <div class="dash-visits-msg is-loading" id="dash-myci-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -315,6 +402,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/vendor/delaunator-5.1.0.min.js?v=5.1.0"></script>
+<script src="js/reach-hull.js?v=20260929-2"></script>
+<script src="js/mine-dominance.js?v=20260929-3"></script>
 
 <script>
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -447,19 +537,75 @@
     _pieIconCache[src] = p;
     return p;
   }
+  // Donut is a square min(PIE_MAX_PX, wrap content width); everything drawn
+  // on it (bubbles, icons, centre text, lines) scales with it (k = size/320,
+  // the size the layout was tuned at). Backing store is size × devicePixelRatio.
+  const PIE_MAX_PX = 580;
+  const _pieState = { counts: null, total: 0, w: 0, dpr: 0, ro: null, timer: 0, seq: 0 };
+  function pieAvailWidth(wrap) {
+    if (!wrap) return 280;
+    const cs = getComputedStyle(wrap);
+    return wrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  }
+  function bindPieResize(wrap) {
+    if (_pieState.ro || !wrap) return;
+    const redraw = function (force) {
+      clearTimeout(_pieState.timer);
+      _pieState.timer = setTimeout(function () {
+        if (!_pieState.counts) return;
+        const w = Math.round(pieAvailWidth(wrap));
+        const dpr = window.devicePixelRatio || 1;
+        if (force !== true && w === _pieState.w && dpr === _pieState.dpr) return;
+        renderMineTypePie(_pieState.counts, _pieState.total);
+      }, 100);
+    };
+    if (typeof ResizeObserver === 'function') {
+      _pieState.ro = new ResizeObserver(redraw);
+      _pieState.ro.observe(wrap);
+    } else {
+      _pieState.ro = true;
+    }
+    window.addEventListener('resize', redraw); // browser zoom changes the CSS width too
+    // canvas text doesn't re-render when Bebas Neue / DM Sans arrive — redraw then
+    if (document.fonts) {
+      if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', function () { redraw(true); });
+      if (document.fonts.ready) document.fonts.ready.then(function () { redraw(true); });
+    }
+    // DPR-only change (e.g. window dragged to a Retina screen): re-arm per ratio
+    (function watchDpr() {
+      if (!window.matchMedia) return;
+      const mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+      const onChange = function () {
+        if (mq.removeEventListener) mq.removeEventListener('change', onChange); else if (mq.removeListener) mq.removeListener(onChange);
+        redraw(); watchDpr();
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+    })();
+  }
   async function renderMineTypePie(counts, total) {
     const canvas = $('mine-type-pie');
     if (!canvas || !canvas.getContext) return;
     const wrap = canvas.parentElement;
+    _pieState.counts = counts; _pieState.total = total;
+    const seq = ++_pieState.seq;
+    bindPieResize(wrap);
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const boxW = (wrap && wrap.clientWidth) ? wrap.clientWidth : (canvas.clientWidth || 280);
-    // Fill the full width of the card
-    const cssSize = Math.max(140, Math.round(boxW));
+    const avail = Math.round(pieAvailWidth(wrap)) || (canvas.clientWidth || 280);
+    _pieState.w = Math.round(pieAvailWidth(wrap)); _pieState.dpr = dpr;
+    // Square: 580px, or the card's inner width when that is narrower
+    const cssSize = Math.max(120, Math.min(PIE_MAX_PX, avail));
+    const k = cssSize / 320;
+    const icons = {};
+    // load icons before touching the canvas so a redraw never flashes blank
+    await Promise.all(KNOWN_MINE_TYPES.filter(function(t) { return (counts[t] || 0) > 0; }).map(async function(t) {
+      icons[t] = await loadPieIcon(MINE_TYPE_PIE_ICONS[t]);
+    }));
+    if (seq !== _pieState.seq) return; // a newer render superseded this one
     canvas.width = Math.round(cssSize * dpr);
     canvas.height = Math.round(cssSize * dpr);
     canvas.style.width = cssSize + 'px';
-    canvas.style.height = cssSize + 'px';
+    canvas.style.height = ''; // CSS height:auto + aspect-ratio keeps it square
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssSize, cssSize);
 
@@ -472,7 +618,7 @@
     const cy = cssSize / 2;
     // Leave a thin outer margin so callout boxes can sit just inside the canvas
     const radius = cssSize * 0.38;
-    const holeR = Math.max(28, Math.min(radius * 0.42, cssSize * 0.145));
+    const holeR = Math.max(24, cssSize * 0.145);
     const innerLabelR = (holeR + radius) / 2;
     const OUTER_SWEEP = 0.28;
 
@@ -506,10 +652,10 @@
 
     // Vertical stack: icon above, percent below, inside rounded white box
     function drawLabelBox(lx, ly, img, pctText, anchor) {
-      const iconSz = Math.max(14, Math.min(24, cssSize * 0.075));
-      const padX = 7;
-      const padY = 5;
-      const gap = 2;
+      const iconSz = Math.max(12, 24 * k);
+      const padX = 7 * k;
+      const padY = 5 * k;
+      const gap = 2 * k;
       const fontPx = Math.max(8, Math.round(cssSize * 0.0304)); // 20% smaller than prior %
       ctx.font = '700 ' + fontPx + 'px DM Sans, sans-serif';
       const tw = ctx.measureText(pctText).width;
@@ -524,11 +670,11 @@
       by = Math.max(2, Math.min(cssSize - boxH - 2, by));
 
       ctx.save();
-      roundRect(bx, by, boxW2, boxH, 8);
+      roundRect(bx, by, boxW2, boxH, 8 * k);
       ctx.fillStyle = 'rgba(255,255,255,0.96)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(13,27,42,0.18)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = Math.max(1, k);
       ctx.stroke();
 
       let y = by + padY;
@@ -554,17 +700,13 @@
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
       ctx.fill();
       ctx.fillStyle = '#64748b';
-      ctx.font = '600 13px DM Sans, sans-serif';
+      ctx.font = '600 ' + Math.round(13 * k) + 'px DM Sans, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('No mines yet', cx, cy);
       return;
     }
 
-    const icons = {};
-    await Promise.all(slices.map(async function(s) {
-      icons[s.type] = await loadPieIcon(MINE_TYPE_PIE_ICONS[s.type]);
-    }));
 
     let angle = -Math.PI / 2;
     const labelJobs = [];
@@ -578,7 +720,7 @@
       ctx.fillStyle = sliceGradient(s.type);
       ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * k;
       ctx.stroke();
 
       labelJobs.push({
@@ -597,7 +739,7 @@
     ctx.fillStyle = 'rgba(255,255,255,0.96)';
     ctx.fill();
     const totalText = fmtNum(total || sum);
-    const totalFont = Math.max(14, Math.min(22, Math.round(holeR * 0.72)));
+    const totalFont = Math.max(12, Math.round(22 * k));
     ctx.fillStyle = '#0D1B2A';
     ctx.font = "700 " + totalFont + "px 'Bebas Neue', sans-serif";
     ctx.textAlign = 'center';
@@ -622,26 +764,26 @@
       const elbowR = radius + cssSize * 0.05;
       const elbowX = cx + Math.cos(j.mid) * elbowR;
       const elbowY = cy + Math.sin(j.mid) * elbowR;
-      const labelX = side > 0 ? cssSize - 6 : 6;
+      const labelX = side > 0 ? cssSize - 6 * k : 6 * k;
       let labelY = elbowY;
       for (let guard = 0; guard < 12; guard++) {
         let clash = false;
         for (let i = 0; i < usedYs.length; i++) {
-          if (Math.abs(usedYs[i] - labelY) < 34) { clash = true; break; }
+          if (Math.abs(usedYs[i] - labelY) < 34 * k) { clash = true; break; }
         }
         if (!clash) break;
-        labelY += (labelY >= cy ? 1 : -1) * 34;
+        labelY += (labelY >= cy ? 1 : -1) * 34 * k;
       }
-      labelY = Math.max(20, Math.min(cssSize - 20, labelY));
+      labelY = Math.max(20 * k, Math.min(cssSize - 20 * k, labelY));
       usedYs.push(labelY);
 
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(edgeX, edgeY);
       ctx.lineTo(elbowX, elbowY);
-      ctx.lineTo(labelX + (side > 0 ? -4 : 4), labelY);
+      ctx.lineTo(labelX + (side > 0 ? -4 : 4) * k, labelY);
       ctx.strokeStyle = 'rgba(13,27,42,0.45)';
-      ctx.lineWidth = 1.25;
+      ctx.lineWidth = 1.25 * k;
       ctx.stroke();
       ctx.restore();
 
@@ -1234,11 +1376,18 @@
     host.querySelectorAll('.mine-group-total').forEach(bindTotalsFollowTip);
   }
 
-  async function fetchPropertyDetailsForProps(props, batchSize = 40) {
+  // after = { count, done }: done() runs once the first `count` props have
+  // their details (callers put the props they are waiting on first).
+  async function fetchPropertyDetailsForProps(props, batchSize = 40, after = null) {
+    let fired = !after;
     for (let i = 0; i < props.length; i += batchSize) {
       const slice = props.slice(i, i + batchSize);
       const snaps = await Promise.all(slice.map(p => db.collection('propertyDetails').doc(p.id).get().catch(() => null)));
       snaps.forEach((s, j) => { slice[j]._details = (s && s.exists) ? (s.data() || {}) : {}; });
+      if (!fired && i + batchSize >= after.count) {
+        fired = true;
+        try { after.done(); } catch (e) { console.warn('propertyDetails progress callback failed:', e); }
+      }
     }
     return props;
   }
@@ -1303,8 +1452,75 @@
 
   // ── Dashboard load ────────────────────────────────────────────────────────
   async function loadDashboard(user, options = {}) {
+    setBuys60Loading();
+    setInventoryLoading();
+    // Loading UI right away (no fetch yet): the graph fetches wait for the
+    // users doc's Pioneer status, so nothing stale shows meanwhile.
+    if (!_vis60.locked) { _vis60.seq++; vis60SetLoading(); }   // a reload drops any in-flight graph result
+    ref60SetLoading();
+    mg30SetLoading();
+    myciSetLoading();
+    pioneerLocked = null;   // decided from the users doc below (column-3 graphs keep their spinners until then)
     try {
-      const userData = options.preview ? PREVIEW_USER_DATA : (await db.collection('users').doc(user.uid).get()).data() || {};
+      const userSnap = options.preview ? null : await db.collection('users').doc(user.uid).get();
+      const userData = options.preview ? PREVIEW_USER_DATA : (userSnap.data() || {});
+      // Pioneer Pass gate for the column-3 graphs (members: unchanged). Non-members
+      // get empty, blurred graphs with a "Requires Pioneer Pass" overlay and none
+      // of the graph-only queries; boxes outside the graphs still load.
+      const nonMember = !options.preview && !isPioneerMember(userData);
+      // Free trial opened earlier (this browser, still in the trial): load like a member.
+      const locked = nonMember && !ppTrialRemembered(user.uid);
+      ppCtx = locked ? { uid: user.uid, options: options } : null;
+      setPioneerGate(locked);
+      if (!locked) {
+        // Referrals: one shared referralLogs fetch feeds the TerraBucks Today
+        // "Referral rewards paid today" box and the Referrals 60-day graph.
+        loadReferrals60(user.uid, options).catch(function (err) {
+          console.warn('[referrals] load failed:', err);
+        });
+        // Mini games: one shared gameResults fetch feeds the "Mini games today"
+        // box and the Mini Games 30-day graph.
+        loadMiniGames30(user.uid, options).catch(function (err) {
+          console.warn('[mini-games] load failed:', err);
+        });
+        // My Check-ins: one shared fetch of your own check-ins (60 days) feeds the
+        // My Check-ins graph and the TerraBucks "Your activity" box (today).
+        loadMyCheckIns60(user.uid, options).catch(function (err) {
+          console.warn('[my-checkins-60d] load failed:', err);
+        });
+      } else {
+        // Locked: only today's referrals / mini games for the TerraBucks boxes;
+        // "Your activity" uses its own today query (no 60-day My Check-ins fetch).
+        myciToday = null;
+        loadReferralsTodayOnly(user.uid).catch(function (err) { console.warn('[referrals] today load failed:', err); });
+        loadMiniGamesTodayOnly(user.uid).catch(function (err) { console.warn('[mini-games] today load failed:', err); });
+      }
+      // Inventory card: same users-doc fields as inventory.html, no extra read.
+      try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, options); }
+      catch (invErr) { setInventoryError(invErr); }
+
+      // Debug: log the logged-in user's Auth basics + Firestore profile doc.
+      // Plain object only (no raw User / ID or refresh tokens).
+      try {
+        console.group('[TerraMine] Logged-in user');
+        console.log('Auth user:', {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          emailVerified: user.emailVerified,
+          providerData: (user.providerData || []).map(p => ({
+            providerId: p.providerId, uid: p.uid, email: p.email,
+            displayName: p.displayName, photoURL: p.photoURL, phoneNumber: p.phoneNumber
+          })),
+          metadata: {
+            creationTime: user.metadata && user.metadata.creationTime,
+            lastSignInTime: user.metadata && user.metadata.lastSignInTime
+          }
+        });
+        console.log('Firestore users doc id:', userSnap ? userSnap.id : '(preview)');
+        console.log('Firestore users doc data:', userSnap ? userSnap.data() : PREVIEW_USER_DATA);
+        console.groupEnd();
+      } catch (logErr) { try { console.groupEnd(); } catch (e) {} }
 
       const nickname = userData.nickname || user.displayName || user.email?.split('@')[0] || 'Miner';
       $('nav-nickname').textContent = nickname;
@@ -1313,7 +1529,12 @@
       $('sb-tb').textContent = fmtTBBalance(userData.tbBalance || 0);
       $('sb-usd').textContent = fmtUSDBalance(userData.usdEarnings || 0);
       $('stat-tb-earned').textContent = fmtNum(userData.totalTBEarned || 0);
-      $('stat-checkins').textContent  = fmtNum(userData.totalCheckIns || 0);
+      // Total Check-ins + Distinct Visitors (90 days) + the 60-day graph all
+      // come from one shared paged checkIns fetch (no extra query). Not
+      // awaited; the boxes show "—" until it lands.
+      loadVisitors60(user.uid, options).catch(function (err) {
+        console.warn('Visitors 60-day graph failed:', err);
+      });
 
       // Avatar: prefer Firestore profile avatar (same as Mines/Visitors/Activity),
       // then fall back to Auth photoURL, then initials.
@@ -1333,10 +1554,34 @@
             .get()).docs.map(d => ({ id: d.id, ...d.data(), _details: {} }));
       renderPropertyBreakdown(props);
 
+      // Column 2: "Mines Purchased — Last 60 Days", drawn right away from each
+      // property's own purchasedAt + mineType (no extra Firestore query). Only
+      // mines without their own purchasedAt wait for propertyDetails: their
+      // details are read first, then the graph redraws. The rest of the
+      // dashboard still waits for every mine's details, as before.
+      const buysWaiting = options.preview ? [] : props.filter(p => buysOwnPurchaseMs(p) == null);
+      setBuys60(props, { preview: options.preview, pending: buysWaiting.length > 0 });
       if (!options.preview) {
-        await fetchPropertyDetailsForProps(props);
+        const waitIds = new Set(buysWaiting.map(p => p.id));
+        const ordered = buysWaiting.length ? buysWaiting.concat(props.filter(p => !waitIds.has(p.id))) : props;
+        const t0 = performance.now();
+        await fetchPropertyDetailsForProps(ordered, 40, buysWaiting.length ? {
+          count: buysWaiting.length,
+          done: function () {
+            setBuys60(props, {});
+            console.info('[mines-purchased-60d] redrawn after the ' + fmtNum(buysWaiting.length) + ' undated mine(s) got their propertyDetails ('
+              + Math.round(performance.now() - t0) + ' ms); ' + fmtNum(props.length - buysWaiting.length) + ' more details still loading for the rest of the page.');
+          }
+        } : null);
       }
       allMines = props;
+      // Column 2: Mine Dominance (Reach outline map). Not awaited — Maps load
+      // must never hold up the rest of the dashboard.
+      if (window.TerraMineDominance) {
+        window.TerraMineDominance.render(props, { preview: !!options.preview }).catch(function (err) {
+          console.warn('Mine Dominance failed:', err);
+        });
+      }
       applyTypeOrderLayout();
       refreshGroupTotals();
 
@@ -1347,6 +1592,9 @@
       await loadTbTodayEarned(user, options);
 
     } catch(e) {
+      if (_buys60.status === 'loading') setBuys60Error(e);
+      if (_inv.status === 'loading') setInventoryError(e);
+      if (pioneerLocked === null) pioneerGateFailed(e);   // users doc failed: graphs can't load either
       console.error('Dashboard load error:', e);
       showToast('Error loading dashboard: ' + e.message, 'error');
     }
@@ -1418,19 +1666,29 @@
     }
   }
 
+  // "Known TB today" sums the boxes above it: check-ins (visitors + yours
+  // when known), mini games played today and referral bonuses paid today. Each part lands on its own
+  // fetch; a part that is still loading or failed is left out.
+  const tbTodayKnown = { checkIns: null, games: null, referrals: null };
+  function updateKnownTbTotal() {
+    const parts = [tbTodayKnown.checkIns, tbTodayKnown.games, tbTodayKnown.referrals].filter(function (v) { return v != null; });
+    setTbTodayCell('tb-today-known-total', parts.length ? parts.reduce(function (a, b) { return a + b; }, 0) : null, { tb: true });
+  }
   function renderTbTodayPreview() {
     setTbTodayCell('tb-today-visitors-count', 3);
+    setTbTodayVisitors([ // local preview only (no Firestore): 3 check-ins from 2 visitors
+      { data: { userId: 'pv-ada', nickname: 'Ada Lovelace', timestamp: new Date().toISOString() } },
+      { data: { userId: 'pv-ada', nickname: 'Ada Lovelace', timestamp: new Date().toISOString() } },
+      { data: { userId: 'pv-bo', nickname: 'Bo', timestamp: new Date().toISOString() } }
+    ], { preview: true });
     setTbTodayCell('tb-today-visitors-tb', 6, { tb: true });
     setTbTodayCell('tb-today-yours-count', 2);
     setTbTodayCell('tb-today-yours-tb', null);
-    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
-      setTbTodayCell('tb-today-game-' + t + '-plays', null);
-      setTbTodayCell('tb-today-game-' + t + '-tb', null);
-    });
-    setTbTodayCell('tb-today-known-total', 6, { tb: true });
+    tbTodayKnown.checkIns = 6;
+    updateKnownTbTotal();
     var note = $('tb-today-note');
     if (note) {
-      note.textContent = 'Preview: check-in counts are sample. Currently the database doesn\'t store minigame data. We hope to add this in the future.';
+      note.textContent = 'Preview: check-in, mini-game and referral numbers are sample data.';
     }
   }
 
@@ -1475,7 +1733,7 @@
     try {
       var both = await Promise.all([
         queryTodayCheckIns('propertyOwnerId', uid, startISO),
-        queryTodayCheckIns('userId', uid, startISO)
+        myCheckInsToday(uid, startISO)
       ]);
       visitorRows = both[0];
       yoursRows = both[1];
@@ -1496,6 +1754,7 @@
     });
 
     setTbTodayCell('tb-today-visitors-count', visitors.length);
+    setTbTodayVisitors(visitors);
     setTbTodayCell('tb-today-yours-count', yours.length);
 
     // Host reward is fixed at 2 TB per visitor check-in.
@@ -1510,14 +1769,9 @@
     setTbTodayCell('tb-today-visitors-tb', visitorsTbSum, { tb: true });
     setTbTodayCell('tb-today-yours-tb', yoursTbKnown ? yoursTbSum : null, { tb: true });
 
-    // Mini-games: no daily per-type collection exposed to the portal yet.
-    ['rock', 'coal', 'gold', 'diamond'].forEach(function (t) {
-      setTbTodayCell('tb-today-game-' + t + '-plays', null);
-      setTbTodayCell('tb-today-game-' + t + '-tb', null);
-    });
-
     var knownTotal = visitorsTbSum + (yoursTbKnown ? yoursTbSum : 0);
-    setTbTodayCell('tb-today-known-total', knownTotal, { tb: true });
+    tbTodayKnown.checkIns = knownTotal;
+    updateKnownTbTotal(); // + referral TB paid today once that fetch lands
 
     // Probe first few docs for unexpected keys (helps decide if TB is under another name).
     var sampleKeys = {};
@@ -1537,20 +1791,2941 @@
     var bits = [];
     bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
     bits.push('Visitor check-in TB is counted at 2 TB each.');
+    bits.push('Referral TB is the tbAwarded on referral bonuses paid today (referralLogs completedAt).');
     if (yours.length && !yoursTbKnown) {
       bits.push('Your check-in TB amounts were not on those docs, so that total stays blank.');
     } else if (yours.length && yoursTbKnown !== yours.length) {
       bits.push('Only some of your check-ins had a TB reward field; that total may be incomplete.');
     }
-    bits.push('Currently the database doesn\'t store minigame data. We hope to add this in the future.');
+    bits.push('Mini games are your gameResults for today (TB = rewardsEarned.tb).');
     note.textContent = bits.join(' ');
   }
 
 
 
+  // ── Column 3: Visitors — Last 60 Days (bar graph + per-day popup) ──────────
+  // Oct 1, 2026. Read-only. Query mirrors visitors.html loadVisitsPage():
+  //   checkIns.where('propertyOwnerId','==',uid).orderBy('timestamp','desc')
+  //           .limit(500).startAfter(lastDoc)
+  // Pages newest-first and stops once a page reaches past the 60-day window
+  // (no timestamp range filter, so mixed ISO-string / Timestamp values can't
+  // silently drop rows, and it needs only the index Visitors already uses).
+  // Days are browser-local; oldest day is the far-left slot, today the far right.
+  const VIS60_DAYS = 60;
+  const VIS60_PAGE = 500;
+  const VIS60_MAX_PAGES = 40;          // 20,000 check-ins — sanity cap
+  const VISIT_STATS_DAYS = 90;         // one fetch covers the 60-day graph + 90-day Distinct Visitors
+  const VIS60_TIP_DELAY_MS = 250;
+  const VIS60_TIP_TOUCH_MS = 3000;
+  const VIS60_TIP_MAX_ROWS = 12;
+  const VIS60_PROFILE_BATCH = 40;
+  const _vis60 = {
+    seq: 0, status: 'loading', days: null, axis: null, geom: null,
+    hover: -1, w: 0, dpr: 0, ro: null, timer: 0, capped: false, pages: 0, preview: false
+  };
+  // publicProfiles/{uid}: one read per uid per page load (cached, incl. misses).
+  const vis60ProfileCache = new Map();    // uid -> { nickname, avatarUrl } | null
+  const vis60ProfileInflight = new Map(); // uid -> Promise
+  let vis60ProfileWarned = false;
+
+  function vis60DayKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function vis60BuildDays(nowDate, nDays) {
+    const now = nowDate || new Date();
+    const days = [];
+    for (let i = (nDays || VIS60_DAYS) - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); // local midnight, DST-safe
+      days.push({ key: vis60DayKey(d), date: d, count: 0, visitors: new Map() });
+    }
+    const last = days[days.length - 1].date;
+    return {
+      days: days,
+      startMs: days[0].date.getTime(),
+      endMs: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime()
+    };
+  }
+  function vis60VisitorUid(v) {
+    let id = v.userId || v.uid || null;
+    if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
+    return (typeof id === 'string' && id) ? id : null;
+  }
+  function vis60CheckInNick(v) {
+    const n = v && (v.visitorNickname || v.nickname || v.userNickname);
+    return (typeof n === 'string' && n.trim()) ? n.trim().replace(/^@+/, '') : '';
+  }
+  function vis60CheckInAvatar(v) {
+    const c = [v.visitorAvatarUrl, v.visitorAvatarURL, v.visitorPhotoURL, v.visitorPhotoUrl, v.avatarUrl, v.avatarURL, v.userPhotoURL, v.userPhotoUrl];
+    for (let i = 0; i < c.length; i++) {
+      if (typeof c[i] === 'string' && c[i].trim().startsWith('https://')) return c[i].trim();
+    }
+    return '';
+  }
+  /** Bucket raw checkIn docs into the day slots. Same visitor filter as the
+   *  TerraBucks Today card: needs a visitor uid, and self check-ins are skipped. */
+  function vis60Aggregate(rows, ownerUid, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    rows.forEach(function (v) {
+      const ms = checkInTsMillis(v.timestamp);
+      if (!ms || ms < win.startMs || ms >= win.endMs) return;
+      const vUid = vis60VisitorUid(v);
+      if (!vUid || vUid === ownerUid) return;
+      const day = byKey[vis60DayKey(new Date(ms))];
+      if (!day) return;
+      day.count++;
+      let e = day.visitors.get(vUid);
+      if (!e) { e = { uid: vUid, count: 0, nick: '', avatar: '', lastMs: 0 }; day.visitors.set(vUid, e); }
+      e.count++;
+      if (ms >= e.lastMs) {
+        e.lastMs = ms;
+        const n = vis60CheckInNick(v); if (n) e.nick = n;
+        const a = vis60CheckInAvatar(v); if (a) e.avatar = a;
+      } else {
+        if (!e.nick) e.nick = vis60CheckInNick(v);
+        if (!e.avatar) e.avatar = vis60CheckInAvatar(v);
+      }
+    });
+    return win.days;
+  }
+  /** Y axis: max ≥ 10 with a tick every 1 up to 10; above that a 1/2/5×10ⁿ step
+   *  with at most 10 ticks (23 → 0..25 by 5, 11 → 0..12 by 2, 140 → 0..140 by 20... ). */
+  function niceDayAxis(maxCount, minTop) {
+    if (!(maxCount > minTop)) return { max: minTop, step: 1 };
+    for (let mag = 1; mag < 1e9; mag *= 10) {
+      const steps = [1, 2, 5];
+      for (let i = 0; i < steps.length; i++) {
+        const st = steps[i] * mag;
+        const top = Math.ceil(maxCount / st) * st;
+        if (top / st <= 10) return { max: top, step: st };
+      }
+    }
+    return { max: maxCount, step: maxCount };
+  }
+  function vis60Axis(maxCount) { return niceDayAxis(maxCount, 10); }
+
+
+  async function vis60FetchCheckIns(uid, win) {
+    const rows = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection('checkIns')
+        .where('propertyOwnerId', '==', uid)
+        .orderBy('timestamp', 'desc')
+        .limit(VIS60_PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      const docs = (snap && snap.docs) || [];
+      let lastMs = 0;
+      docs.forEach(function (d) {
+        const data = d.data() || {};
+        lastMs = checkInTsMillis(data.timestamp);
+        if (lastMs >= win.startMs) rows.push(data);
+      });
+      if (docs.length < VIS60_PAGE) break;                // no more check-ins
+      if (lastMs && lastMs < win.startMs) break;          // page reached past the window
+      if (pages >= VIS60_MAX_PAGES) { capped = true; break; }
+      cursor = docs[docs.length - 1];
+    }
+    if (capped) {
+      console.info('[visitors-60d] stopped at the ' + VIS60_MAX_PAGES + '-page cap (' + (VIS60_MAX_PAGES * VIS60_PAGE)
+        + ' check-ins) before reaching ' + VISIT_STATS_DAYS + ' days back; Total Check-ins / Distinct Visitors show "+" and the oldest graph days may be undercounted.');
+    }
+    return { rows: rows, pages: pages, capped: capped };
+  }
+
+  function vis60PreviewRows(win) {
+    // Local preview only (no Firestore): deterministic sample check-ins.
+    const people = [
+      { userId: 'pv-ada', nickname: 'Ada Lovelace' }, { userId: 'pv-bo', nickname: 'Bo' },
+      { userId: 'pv-cy', nickname: 'Cy Miner' }, { userId: 'pv-dee', nickname: '' }, { userId: 'pv-eli', nickname: 'Eli' }
+    ];
+    const rows = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 3 : ((i * 7 + 3) % 11 === 0 ? 0 : (i * 5 + 2) % 7);
+      for (let k = 0; k < n; k++) {
+        const p = people[(i + k * 2) % people.length];
+        rows.push({ userId: p.userId, nickname: p.nickname, timestamp: new Date(d.date.getTime() + (9 + k) * 3600000).toISOString() });
+      }
+    });
+    return rows;
+  }
+
+  function setVis60Msg(text, cls) {
+    const msg = $('dash-visits-msg');
+    if (!msg) return;
+    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
+    msg.textContent = text || '';
+    msg.hidden = !text;
+  }
+
+  /** Visitors graph loading UI (empty slots + spinner); also shown while the users doc decides the Pioneer gate. */
+  function vis60SetLoading(win) {
+    if (_vis60.locked) return;
+    _vis60.status = 'loading';
+    _vis60.days = (win || vis60BuildDays()).days;
+    setVis60Msg('Loading check-ins\u2026', 'is-loading');
+    const total = $('dash-visits-total'); if (total) total.textContent = '\u2014';
+    hideVis60Tip();
+    renderVisitors60();
+  }
+  async function loadVisitors60(uid, options) {
+    options = options || {};
+    const seq = ++_vis60.seq;
+    const win = vis60BuildDays();
+    const fetchWin = { startMs: visitStatsStartMs(), endMs: win.endMs };
+    setDistinctVisitors(undefined); // loading dash
+    setTotalCheckIns(undefined);
+    const locked = !!_vis60.locked;   // Pioneer gate: fetch for the stat boxes only, graph stays empty
+    const total = $('dash-visits-total');
+    if (!locked) {
+      _vis60.preview = !!options.preview;
+      vis60SetLoading(win);
+    }
+    let res;
+    try {
+      res = options.preview ? { rows: vis60PreviewRows(win), pages: 0, capped: false } : await vis60FetchCheckIns(uid, fetchWin);
+    } catch (err) {
+      if (seq !== _vis60.seq) return;
+      console.warn('[visitors-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
+      setDistinctVisitors(null);
+      setTotalCheckIns(null);
+      if (_vis60.locked) return;
+      _vis60.status = 'error';
+      setVis60Msg('Could not load check-ins.', 'is-error');
+      renderVisitors60();
+      return;
+    }
+    if (seq !== _vis60.seq) return;
+    const stats90 = countVisitStats(res.rows, uid, fetchWin);
+    setTotalCheckIns(stats90.checkIns, res.capped);
+    setDistinctVisitors(stats90.distinct, res.capped);
+    if (_vis60.locked) { _vis60.lockedRes = { res: res, uid: uid, win: win }; return; }   // Pioneer gate: no graph data (kept for a trial unlock)
+    vis60Draw(res, uid, win);
+  }
+  function vis60Draw(res, uid, win) {
+    const total = $('dash-visits-total');
+    vis60Aggregate(res.rows, uid, win);
+    _vis60.days = win.days;
+    _vis60.pages = res.pages;
+    _vis60.capped = res.capped;
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    _vis60.status = sum ? 'ready' : 'empty';
+    if (total) total.textContent = sum ? (fmtNum(sum) + (sum === 1 ? ' check-in' : ' check-ins')) : '0 check-ins';
+    setVis60Msg(sum ? '' : 'No check-ins in the last 60 days', '');
+    renderVisitors60();
+  }
+
+  // ── Stat boxes: Total Check-ins + Distinct Visitors (last 90 days) ────
+  // Both come from the shared 90-day fetch (loadVisitors60); no extra query.
+  function visitStatsStartMs() {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate() - (VISIT_STATS_DAYS - 1)).getTime(); // local midnight
+  }
+  /** Check-ins + unique visitor uids in [startMs, endMs); same exclusions as
+   *  the graph (no uid, or the owner checking in at their own mine). */
+  function countVisitStats(rows, ownerUid, w) {
+    const seen = new Set();
+    let checkIns = 0;
+    rows.forEach(function (v) {
+      const ms = checkInTsMillis(v.timestamp);
+      if (!ms || ms < w.startMs || ms >= w.endMs) return;
+      const vUid = vis60VisitorUid(v);
+      if (!vUid || vUid === ownerUid) return;
+      checkIns++;
+      seen.add(vUid);
+    });
+    return { checkIns: checkIns, distinct: seen.size };
+  }
+  /** undefined = loading, null = failed (both "—"); capped adds "+". */
+  function setStatCount(id, n, capped) {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = (n == null) ? '\u2014' : fmtNum(n) + (capped ? '+' : '');
+    if (n != null && capped) el.setAttribute('aria-label', fmtNum(n) + ' or more'); else el.removeAttribute('aria-label');
+  }
+  function setDistinctVisitors(n, capped) { setStatCount('stat-distinct', n, capped); }
+  function setTotalCheckIns(n, capped) { setStatCount('stat-checkins', n, capped); }
+
+  function vis60AvailWidth(wrap) {
+    return wrap ? wrap.clientWidth : 300;
+  }
+  /** Resize / font-load / DPR redraw for a day-bar chart (shared by the
+   *  Visitors and Mines Purchased graphs; each passes its own state). */
+  function bindDayBarResize(st, wrap, render) {
+    if (st.ro || !wrap) return;
+    const redraw = function (force) {
+      clearTimeout(st.timer);
+      st.timer = setTimeout(function () {
+        const w = Math.round(vis60AvailWidth(wrap));
+        const dpr = window.devicePixelRatio || 1;
+        const changed = w !== st.w || dpr !== st.dpr;
+        if (force !== true && !changed) return;
+        if (changed) hideVis60Tip(); // geometry moved; a font-load redraw keeps the popup
+        render();
+      }, 80);
+    };
+    if (typeof ResizeObserver === 'function') {
+      st.ro = new ResizeObserver(redraw);
+      st.ro.observe(wrap);
+    } else {
+      st.ro = true;
+    }
+    window.addEventListener('resize', redraw);
+    if (document.fonts) {
+      if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', function () { redraw(true); });
+      if (document.fonts.ready) document.fonts.ready.then(function () { redraw(true); });
+    }
+    (function watchDpr() {
+      if (!window.matchMedia) return;
+      const mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+      const onChange = function () {
+        if (mq.removeEventListener) mq.removeEventListener('change', onChange); else if (mq.removeListener) mq.removeListener(onChange);
+        redraw(); watchDpr();
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+    })();
+  }
+
+  function vis60ShortDate(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  /** Shared 60-slot day bar chart (canvas at CSS size × devicePixelRatio).
+   *  st: { days, hover, w, dpr, axis, geom, ro, timer, status }.
+   *  opts.total(day) = bar height; opts.segments(day, i, hovered) = stacked
+   *  pieces bottom → top [{ key, v, color }]; opts.hoverOutline draws an amber
+   *  outline around the hovered stack; opts.aria(sum, max) = canvas label;
+   *  opts.axis(max) = y axis (default vis60Axis: 0..10 minimum).
+   *  opts.second = { total(day), color, axis(max, nTicks) } adds a second
+   *  bar beside each day's bar on its own RIGHT axis (ticks aligned to the
+   *  left gridlines); second.gradient = [baseColor, topColor] fills each of
+   *  those bars with its own vertical gradient (base → its top) instead of
+   *  color; second.labelColor tints the right-axis labels and title; opts.titles = { left, right } draws small axis titles;
+   *  opts.hoverOutlineColor overrides the amber outline. */
+  function drawDayBars(canvas, st, opts) {
+    if (!canvas || !canvas.getContext) return;
+    const wrap = canvas.parentElement;
+    bindDayBarResize(st, wrap, opts.render);
+    const days = st.days || opts.emptyDays();
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = Math.max(120, Math.round(vis60AvailWidth(wrap)) || 300);
+    const cssH = Math.max(120, Math.round(wrap.clientHeight) || 220);
+    st.w = Math.round(vis60AvailWidth(wrap)); st.dpr = dpr;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    const px = function (v) { return Math.round(v * dpr) / dpr; };         // snap to device pixels
+    const hair = function (v) { return (Math.floor(v * dpr) + 0.5) / dpr; }; // crisp 1-device-px line
+
+    const maxCount = days.reduce(function (m, d) { return Math.max(m, opts.total(d)); }, 0);
+    const axis = (opts.axis || vis60Axis)(maxCount);
+    st.axis = axis;
+    const tickFont = '500 10px DM Sans, sans-serif';
+    ctx.font = tickFont;
+    const nTicks = Math.round(axis.max / axis.step);
+    const two = opts.second || null;
+    const max2 = two ? days.reduce(function (m, d) { return Math.max(m, two.total(d)); }, 0) : 0;
+    const axis2 = two ? two.axis(max2, nTicks) : null;
+    st.axis2 = axis2;
+    const yLabelW = Math.ceil(ctx.measureText(fmtNum(axis.max)).width);
+    const yLabelW2 = two ? Math.ceil(ctx.measureText(fmtNum(axis2.max)).width) : 0;
+    const padL = yLabelW + 8, padR = two ? yLabelW2 + 8 : 4, padT = opts.titles ? 18 : 8, padB = 22;
+    const plotW = Math.max(60, cssW - padL - padR);
+    const plotH = Math.max(40, cssH - padT - padB);
+    const x0 = padL, y0 = padT, yBase = padT + plotH;
+    const slotW = plotW / days.length;
+    const barW = Math.max(1 / dpr, Math.min(slotW - Math.max(1, slotW * 0.22), two ? 30 : 18));
+    const pairGap = two ? (slotW >= 10 ? 2 : 1) : 0;
+    const barW1 = two ? Math.max(1 / dpr, (barW - pairGap) / 2) : barW;
+    const yOf = function (v) { return yBase - (v / axis.max) * plotH; };
+    const yOf2 = function (v) { return yBase - (v / axis2.max) * plotH; };
+
+    // Grid + y labels (every tick 1..10 at the default scale)
+    const labelEvery = (plotH / nTicks) < 11 ? 2 : 1;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let t = 0; t <= nTicks; t++) {
+      const v = t * axis.step;
+      const y = hair(yOf(v));
+      ctx.beginPath();
+      ctx.moveTo(x0, y); ctx.lineTo(x0 + plotW, y);
+      ctx.strokeStyle = t === 0 ? 'rgba(92,51,23,0.55)' : 'rgba(139,115,85,0.18)';
+      ctx.lineWidth = 1 / dpr;
+      ctx.stroke();
+      if (t > 0 && (t % labelEvery === 0 || t === nTicks)) {
+        ctx.fillStyle = '#6b5a45';
+        ctx.fillText(fmtNum(v), padL - 5, yOf(v));
+        if (two) {                       // right axis: same gridline, its own value
+          ctx.textAlign = 'left';
+          ctx.fillStyle = two.labelColor || '#9a5b06';
+          ctx.fillText(fmtNum(t * axis2.step), x0 + plotW + 5, yOf(v));
+          ctx.textAlign = 'right';
+        }
+      }
+    }
+    if (opts.titles) {
+      ctx.font = '600 9px DM Sans, sans-serif';
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#6b5a45';
+      if (opts.titles.left) ctx.fillText(opts.titles.left, 0, 1);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = (two && two.labelColor) || '#9a5b06';
+      if (opts.titles.right) ctx.fillText(opts.titles.right, cssW, 1);
+      ctx.font = tickFont;
+    }
+
+    // Bars (every day has a slot; zero days just show the baseline).
+    // Stacked segments: each piece spans [sum below, sum below + v].
+    const geom = [];
+    days.forEach(function (d, i) {
+      const sx = x0 + i * slotW;
+      const bx = px(sx + (slotW - barW) / 2);
+      const bw = two ? Math.max(1 / dpr, px(bx + barW1) - bx) : Math.max(1 / dpr, px(sx + (slotW + barW) / 2) - bx);
+      const total = opts.total(d);
+      const top = px(yOf(total));
+      const g = { i: i, x: sx, w: slotW, bx: bx, bw: bw, top: top, segs: [] };
+      geom.push(g);
+      const hovered = i === st.hover;
+      const lw = Math.max(1, Math.round(1.5 * dpr)) / dpr;   // hover outline, drawn just outside the bar
+      if (hovered) {
+        ctx.fillStyle = 'rgba(245,158,11,0.16)';
+        ctx.fillRect(px(sx), y0, Math.max(1 / dpr, px(sx + slotW) - px(sx)), plotH);
+      }
+      if (two) {                         // second bar (right axis), right of the first
+        const v2 = two.total(d);
+        g.bx2 = px(bx + bw + pairGap);
+        g.bw2 = Math.max(1 / dpr, px(sx + (slotW + barW) / 2) - g.bx2);
+        g.v2 = v2;
+        g.top2 = px(yOf2(v2));
+        if (v2 > 0) {
+          if (two.gradient) {            // per bar: dark at its base → bright at its own top
+            const gr = ctx.createLinearGradient(0, px(yBase), 0, g.top2);
+            gr.addColorStop(0, two.gradient[0]);
+            gr.addColorStop(1, two.gradient[1]);
+            ctx.fillStyle = gr;
+          } else {
+            ctx.fillStyle = two.color;
+          }
+          ctx.fillRect(g.bx2, g.top2, g.bw2, px(yBase) - g.top2);
+          if (hovered && opts.hoverOutline) {
+            ctx.strokeStyle = opts.hoverOutlineColor || '#F59E0B';
+            ctx.lineWidth = lw;
+            ctx.strokeRect(g.bx2 - lw / 2, g.top2 - lw / 2, g.bw2 + lw, px(yBase) - g.top2 + lw / 2);
+          }
+        }
+      }
+      if (!total) return;
+      let acc = 0;
+      opts.segments(d, i, hovered).forEach(function (seg) {
+        if (!(seg.v > 0)) return;
+        const segTop = px(yOf(acc + seg.v)), segBot = px(yOf(acc));
+        ctx.fillStyle = seg.color;
+        ctx.fillRect(bx, segTop, bw, segBot - segTop);
+        g.segs.push({ key: seg.key, v: seg.v, top: segTop, bottom: segBot });
+        acc += seg.v;
+      });
+      if (hovered && opts.hoverOutline) {
+        ctx.strokeStyle = opts.hoverOutlineColor || '#F59E0B';
+        ctx.lineWidth = lw;
+        ctx.strokeRect(bx - lw / 2, top - lw / 2, bw + lw, px(yBase) - top + lw / 2);
+      }
+    });
+    st.geom = { x0: x0, y0: y0, plotW: plotW, plotH: plotH, slotW: slotW, cssW: cssW, cssH: cssH, yBase: yBase, bars: geom };
+
+    // X labels: today, then every 10 days back; skip any that would overlap.
+    ctx.font = tickFont;
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#6b5a45';
+    let leftLimit = Infinity;
+    for (let i = days.length - 1; i >= 0; i -= 10) {
+      const text = i === days.length - 1 ? 'Today' : vis60ShortDate(days[i].date);
+      const tw = ctx.measureText(text).width;
+      const cx = x0 + (i + 0.5) * slotW;
+      let lx = Math.min(cx - tw / 2, cssW - padR - tw);
+      lx = Math.max(0, lx);
+      if (lx + tw > leftLimit - 6) continue;
+      ctx.textAlign = 'left';
+      ctx.fillText(text, lx, yBase + 6);
+      ctx.beginPath();
+      ctx.moveTo(hair(cx), yBase); ctx.lineTo(hair(cx), yBase + 4);
+      ctx.strokeStyle = 'rgba(92,51,23,0.55)'; ctx.lineWidth = 1 / dpr; ctx.stroke();
+      leftLimit = lx;
+    }
+    const sum = days.reduce(function (a, d) { return a + opts.total(d); }, 0);
+    canvas.setAttribute('aria-label', st.locked ? 'Graph locked: requires the Pioneer Pass' : opts.aria(sum, maxCount));
+  }
+
+  function renderVisitors60() {
+    const last = (_vis60.days ? _vis60.days.length : VIS60_DAYS) - 1;
+    drawDayBars($('dash-visits-chart'), _vis60, {
+      render: renderVisitors60,
+      emptyDays: function () { return vis60BuildDays().days; },
+      total: function (d) { return d.count; },
+      segments: function (d, i, hovered) {
+        return [{ key: 'checkIns', v: d.count, color: hovered ? '#F59E0B' : (i === last ? '#A0522D' : '#8B7355') }];
+      },
+      aria: function (sum, max) {
+        return 'Bar graph of visitor check-ins to your mines per day for the last 60 days: '
+          + (_vis60.status === 'loading' ? 'loading' : fmtNum(sum) + ' check-ins, busiest day ' + fmtNum(max));
+      }
+    });
+  }
+
+  // ── Popup ──
+  function vis60NormProfile(p) {
+    if (!p || typeof p !== 'object') return null;
+    const nick = (typeof p.nickname === 'string') ? p.nickname.trim().replace(/^@+/, '') : '';
+    const url = (typeof p.avatarUrl === 'string') ? p.avatarUrl.trim() : '';
+    return { nickname: nick, avatarUrl: url.startsWith('https://') ? url : '' };
+  }
+  function vis60WarnProfile(kind, uid, err) {
+    if (vis60ProfileWarned) return;
+    vis60ProfileWarned = true;
+    console.warn('[visitors-60d] publicProfiles/' + uid + ' ' + kind
+      + (err ? ' (' + ((err && err.code) || (err && err.message) || err) + ')' : '')
+      + '; using check-in nicknames / initials. Further misses are not logged.');
+  }
+  function vis60FetchProfile(uid) {
+    if (!uid) return Promise.resolve(null);
+    if (vis60ProfileCache.has(uid)) return Promise.resolve(vis60ProfileCache.get(uid));
+    if (vis60ProfileInflight.has(uid)) return vis60ProfileInflight.get(uid);
+    const p = db.collection('publicProfiles').doc(uid).get().then(function (snap) {
+      const prof = (snap && snap.exists) ? vis60NormProfile(snap.data() || {}) : null;
+      if (!prof) vis60WarnProfile('is missing', uid);
+      vis60ProfileCache.set(uid, prof);
+      return prof;
+    }).catch(function (err) {
+      vis60WarnProfile('read failed or was denied', uid, err);
+      vis60ProfileCache.set(uid, null);
+      return null;
+    }).finally(function () { vis60ProfileInflight.delete(uid); });
+    vis60ProfileInflight.set(uid, p);
+    return p;
+  }
+  async function vis60EnsureProfiles(uids) {
+    const todo = uids.filter(function (u) { return u && !vis60ProfileCache.has(u); });
+    for (let i = 0; i < todo.length; i += VIS60_PROFILE_BATCH) {
+      await Promise.all(todo.slice(i, i + VIS60_PROFILE_BATCH).map(vis60FetchProfile));
+    }
+  }
+  function vis60SortedVisitors(day) {
+    return Array.from(day.visitors.values()).sort(function (a, b) {
+      return (b.count - a.count) || (b.lastMs - a.lastMs) || (a.uid < b.uid ? -1 : 1);
+    });
+  }
+
+  /** Visitor display: publicProfiles nickname → check-in nickname → "Anonymous Miner";
+   *  avatar = profile https avatarUrl → check-in https avatar → initials. */
+  function vis60VisitorIdentity(v) {
+    const prof = vis60ProfileCache.get(v.uid) || null;
+    const nick = (prof && prof.nickname) || v.nick || 'Anonymous Miner';
+    const url = (prof && prof.avatarUrl) || v.avatar || '';
+    return { nick: nick, url: (url && url.startsWith('https://')) ? url : '' };
+  }
+  /** Rounded-square avatar box (image, or initials when missing / it fails to load). */
+  function vis60AvatarEl(cls, id) {
+    const av = document.createElement('div');
+    av.className = cls;
+    const init = initials(id.nick);
+    if (id.url) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('error', function () { av.textContent = init; }, { once: true });
+      img.src = id.url;
+      av.appendChild(img);
+    } else {
+      av.textContent = init;
+    }
+    return av;
+  }
+  function vis60VisitorRow(v, countText) {
+    const id = vis60VisitorIdentity(v);
+    const row = document.createElement('div');
+    row.className = 'dash-visits-tip-row';
+    row.dataset.uid = v.uid;
+    const av = vis60AvatarEl('dash-visits-av', id);
+    const txt = document.createElement('div');
+    txt.className = 'dash-visits-tip-text';
+    const nk = document.createElement('div');
+    nk.className = 'dash-visits-tip-nick';
+    nk.textContent = id.nick;
+    const ct = document.createElement('div');
+    ct.className = 'dash-visits-tip-count';
+    ct.textContent = countText;
+    txt.append(nk, ct);
+    row.append(av, txt);
+    return row;
+  }
+
+  let vis60Tip = null, vis60TipTimer = null, vis60TouchTimer = null;
+  let tbAvTipUid = null; // uid whose TerraBucks-today icon popup is open (shares vis60Tip)
+  let refAvTipKey = null; // referralLogs doc id whose "paid today" icon popup is open (shares vis60Tip)
+  let invTipKey = null;   // Inventory tile index whose item-card popup is open (shares vis60Tip)
+  let vis60TipIdx = -1, vis60TipX = 0, vis60TipY = 0, vis60TouchOpen = false;
+  // Day-bar charts sharing the popup: { canvasId, canvas, st, render, fill }.
+  const DAY_CHARTS = [];
+  let vis60TipChart = null;  // chart whose day popup is open (null: none / TerraBucks icon popup)
+  let vis60InChart = null;   // chart the mouse is currently over
+  function ensureVis60Tip() {
+    if (vis60Tip) return vis60Tip;
+    vis60Tip = document.createElement('div');
+    vis60Tip.className = 'dash-visits-tip';
+    vis60Tip.id = 'dash-visits-tip';
+    vis60Tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(vis60Tip);
+    return vis60Tip;
+  }
+  function vis60TipShown() { return !!vis60Tip && vis60Tip.style.display === 'block'; }
+  function fillVis60Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _vis60.days && _vis60.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _vis60.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const uniq = day.visitors.size;
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(day.count);
+    const b2 = document.createElement('strong'); b2.textContent = fmtNum(uniq);
+    sum.append(b1, document.createTextNode(day.count === 1 ? ' check-in \u00b7 ' : ' check-ins \u00b7 '),
+      b2, document.createTextNode(uniq === 1 ? ' unique visitor' : ' unique visitors'));
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No visitors this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const list = vis60SortedVisitors(day);
+    const shown = list.slice(0, VIS60_TIP_MAX_ROWS);
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    shown.forEach(function (v) {
+      rows.appendChild(vis60VisitorRow(v, '\u00d7' + fmtNum(v.count) + (v.count === 1 ? ' check-in' : ' check-ins')));
+    });
+    tip.appendChild(rows);
+    if (list.length > shown.length) {
+      const more = document.createElement('div');
+      more.className = 'dash-visits-tip-more';
+      const n = list.length - shown.length;
+      more.textContent = 'and ' + fmtNum(n) + ' more ' + (n === 1 ? 'visitor' : 'visitors');
+      tip.appendChild(more);
+    }
+    // Profiles for the rows shown (one read per uid per page load; preview skips Firestore)
+    if (!_vis60.preview) {
+      const need = shown.map(function (v) { return v.uid; }).filter(function (u) { return !vis60ProfileCache.has(u); });
+      if (need.length) {
+        vis60EnsureProfiles(need).then(function () {
+          if (vis60TipChart === VIS60_CHART && vis60TipIdx === idx && vis60TipShown()) { fillVis60Tip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
+        });
+      }
+    }
+  }
+  function placeVis60Tip(x, y) {
+    const t = ensureVis60Tip();
+    t.classList.toggle('is-inv', invTipKey != null); // Inventory: the card itself, no dark frame
+    const gap = 14, edge = 8;
+    t.style.visibility = 'hidden';
+    t.style.display = 'block';
+    const w = t.offsetWidth, h = t.offsetHeight;
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    const vh = document.documentElement.clientHeight || window.innerHeight;
+    let left = x + gap, top = y + gap;
+    if (left + w > vw - edge) left = x - gap - w;
+    if (top + h > vh - edge) top = y - gap - h;
+    left = Math.max(edge, Math.min(left, vw - edge - w));
+    top = Math.max(edge, Math.min(top, vh - edge - h));
+    t.style.left = Math.round(left) + 'px';
+    t.style.top = Math.round(top) + 'px';
+    t.style.visibility = 'visible';
+  }
+  function dayChartSetHover(chart, idx) {
+    if (chart.st.hover === idx) return;
+    chart.st.hover = idx;
+    chart.render();
+  }
+  function hideVis60Tip() {
+    if (vis60TipTimer) { clearTimeout(vis60TipTimer); vis60TipTimer = null; }
+    if (vis60TouchTimer) { clearTimeout(vis60TouchTimer); vis60TouchTimer = null; }
+    vis60TouchOpen = false;
+    vis60TipIdx = -1;
+    vis60TipChart = null;
+    tbAvTipUid = null;
+    refAvTipKey = null;
+    invTipKey = null;
+    if (vis60Tip) vis60Tip.style.display = 'none';
+    DAY_CHARTS.forEach(function (c) { if (c.st.hover !== -1) dayChartSetHover(c, -1); });
+  }
+  function dayChartShowAt(chart, idx, x, y) {
+    invTipKey = null;
+    vis60TipChart = chart; vis60TipIdx = idx; vis60TipX = x; vis60TipY = y;
+    chart.fill(idx);
+    placeVis60Tip(x, y);
+  }
+  /** Day slot under a viewport point, or -1 outside the plot (x labels count). */
+  function dayChartIndexAt(chart, clientX, clientY) {
+    const st = chart.st, g = st.geom;
+    if (!g || !st.days || st.locked || st.status === 'loading' || st.status === 'error') return -1;
+    const r = chart.canvas.getBoundingClientRect();
+    const x = clientX - r.left, y = clientY - r.top;
+    if (x < g.x0 || x >= g.x0 + g.plotW || y < g.y0 - 4 || y > g.cssH) return -1;
+    return Math.max(0, Math.min(st.days.length - 1, Math.floor((x - g.x0) / g.slotW)));
+  }
+  /** Follow-the-mouse popup (≈250ms after entering, 14px offset, flips at the
+   *  viewport edges); touch/pen tap toggles and auto-hides after 3s. */
+  function bindDayBarTip(chart) {
+    const canvas = $(chart.canvasId);
+    if (!canvas) return;
+    chart.canvas = canvas;
+    DAY_CHARTS.push(chart);
+    function onMouse(e) {
+      const idx = dayChartIndexAt(chart, e.clientX, e.clientY);
+      vis60TipX = e.clientX; vis60TipY = e.clientY;
+      if (idx < 0) { if (vis60InChart === chart) { vis60InChart = null; hideVis60Tip(); } return; }
+      if (vis60InChart !== chart) {
+        // entering the graph: ~250ms before the popup appears
+        hideVis60Tip();
+        vis60InChart = chart;
+        dayChartSetHover(chart, idx);
+        vis60TipIdx = idx;
+        vis60TipTimer = setTimeout(function () {
+          vis60TipTimer = null;
+          if (vis60InChart !== chart) return;
+          dayChartShowAt(chart, chart.st.hover, vis60TipX, vis60TipY);
+        }, VIS60_TIP_DELAY_MS);
+        return;
+      }
+      dayChartSetHover(chart, idx);
+      if (vis60TipTimer) { vis60TipIdx = idx; return; } // still in the delay
+      if (idx !== vis60TipIdx || vis60TipChart !== chart) dayChartShowAt(chart, idx, e.clientX, e.clientY);
+      else placeVis60Tip(e.clientX, e.clientY);
+    }
+    canvas.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse') onMouse(e); });
+    canvas.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') onMouse(e); });
+    canvas.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      if (vis60InChart === chart) vis60InChart = null;
+      hideVis60Tip();
+    });
+    // Touch / pen: tap a bar toggles its popup; auto-hides after 3s or on scroll.
+    canvas.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse') return;
+      const idx = dayChartIndexAt(chart, e.clientX, e.clientY);
+      if (idx < 0) { hideVis60Tip(); return; }
+      const wasSame = vis60TouchOpen && vis60TipChart === chart && vis60TipIdx === idx && vis60TipShown();
+      hideVis60Tip();
+      if (wasSame) return;
+      dayChartSetHover(chart, idx);
+      vis60TouchOpen = true;
+      dayChartShowAt(chart, idx, e.clientX, e.clientY);
+      vis60TouchTimer = setTimeout(function () { vis60TouchTimer = null; if (vis60TouchOpen) hideVis60Tip(); }, VIS60_TIP_TOUCH_MS);
+    });
+  }
+  (function bindDayBarTipGlobals() {
+    document.addEventListener('pointerdown', function (e) {
+      if (!vis60TouchOpen) return;
+      if (DAY_CHARTS.some(function (c) { return e.target === c.canvas; })) return; // the chart's own handler decides
+      if (e.target && e.target.closest && e.target.closest('.tb-today-av, .dash-inv-tile')) return;
+      hideVis60Tip();
+    }, true);
+    window.addEventListener('scroll', function () { if (vis60TouchOpen) hideVis60Tip(); }, { passive: true, capture: true });
+    window.addEventListener('blur', function () { vis60InChart = null; hideVis60Tip(); });
+  })();
+  const VIS60_CHART = { canvasId: 'dash-visits-chart', st: _vis60, render: renderVisitors60, fill: fillVis60Tip };
+  bindDayBarTip(VIS60_CHART);
+  renderVisitors60(); // empty 60-slot frame under the "Loading…" message
+
+  // ── Mines Purchased — Last 60 Days (column 2, under Visitors) ────────────
+  // Oct 1, 2026. Your own mines bought per browser-local day, stacked by type
+  // (Rock bottom → Coal → Gold → Diamond top; donut palette). Built from the
+  // mines loadDashboard already loaded (properties + propertyDetails), so no
+  // extra Firestore query. Same renderer, y axis and popup as Visitors.
+  const BUYS60_STACK = ['rock', 'coal', 'gold', 'diamond'];   // bottom → top
+  const BUYS60_TIP_ORDER = BUYS60_STACK.slice().reverse();     // popup rows top → bottom
+  const _buys60 = {
+    status: 'loading', days: null, axis: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, skipped: null
+  };
+  // Purchase date = Bulk Rename "number by purchase date" (mines.html
+  // bulkRenamePurchaseMs): purchasedAt (doc, then _raw), _details.purchasedAt,
+  // _details.createdAt, then createdAt (doc, then _raw). Same value parsing.
+  function purchaseTsMs(value) {
+    if (value == null || value === '') return null;
+    if (value instanceof Date) {
+      const t = value.getTime();
+      return Number.isFinite(t) ? t : null;
+    }
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return null;
+      return Math.abs(value) < 1e12 ? value * 1000 : value;
+    }
+    if (typeof value === 'string') {
+      const t = value.trim();
+      if (!t) return null;
+      if (/^[+-]?\d+(\.\d+)?$/.test(t)) {
+        const n = Number(t);
+        if (!Number.isFinite(n)) return null;
+        return Math.abs(n) < 1e12 ? n * 1000 : n;
+      }
+      const parsed = Date.parse(t);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (typeof value === 'object') {
+      if (typeof value.toMillis === 'function') {
+        try { const ms = value.toMillis(); if (Number.isFinite(ms)) return ms; } catch (e) {}
+      }
+      if (typeof value.toDate === 'function') {
+        try {
+          const d = value.toDate();
+          const ms = d && typeof d.getTime === 'function' ? d.getTime() : NaN;
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      const sec = typeof value.seconds === 'number' ? value.seconds
+        : (typeof value._seconds === 'number' ? value._seconds : null);
+      if (sec != null && Number.isFinite(sec)) {
+        const ns = typeof value.nanoseconds === 'number' ? value.nanoseconds
+          : (typeof value._nanoseconds === 'number' ? value._nanoseconds : 0);
+        return sec * 1000 + (Number.isFinite(ns) ? Math.floor(ns / 1e6) : 0);
+      }
+    }
+    return null;
+  }
+  /** The mine's own purchase date (doc purchasedAt, then _raw.purchasedAt):
+   *  known as soon as the properties query returns. */
+  function buysOwnPurchaseMs(mine) {
+    if (!mine) return null;
+    const raw = (mine._raw && typeof mine._raw === 'object') ? mine._raw : {};
+    const a = purchaseTsMs(mine.purchasedAt);
+    return a != null ? a : purchaseTsMs(raw.purchasedAt);
+  }
+  function minePurchaseMs(mine) {
+    if (!mine) return null;
+    const raw = (mine._raw && typeof mine._raw === 'object') ? mine._raw : {};
+    const d = mine._details || {};
+    const tries = [mine.purchasedAt, raw.purchasedAt, d.purchasedAt, d.createdAt, mine.createdAt, raw.createdAt];
+    for (let i = 0; i < tries.length; i++) {
+      const ms = purchaseTsMs(tries[i]);
+      if (ms != null) return ms;
+    }
+    return null;
+  }
+  function buys60BuildDays() {
+    const win = vis60BuildDays();
+    win.days.forEach(function (d) { d.types = { rock: 0, coal: 0, gold: 0, diamond: 0 }; });
+    return win;
+  }
+  /** Bucket mines into the day slots by purchase date and type (mineType
+   *  normalized like the donut: blank → rock; unknown types are left out). */
+  function buys60Aggregate(mines, win, pending) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    const skipped = { noDate: 0, otherType: 0, waiting: 0 };
+    mines.forEach(function (m) {
+      // pending = propertyDetails not loaded yet: a mine without its own
+      // purchasedAt waits (its details' dates outrank the doc's createdAt).
+      const own = pending ? buysOwnPurchaseMs(m) : null;
+      if (pending && own == null) { skipped.waiting++; return; }
+      const ms = pending ? own : minePurchaseMs(m);
+      if (ms == null) { skipped.noDate++; return; }
+      if (ms < win.startMs || ms >= win.endMs) return;
+      const day = byKey[vis60DayKey(new Date(ms))];
+      if (!day) return;
+      const type = bucketMineType(m.mineType);
+      if (!type) { skipped.otherType++; return; }
+      day.types[type]++;
+      day.count++;
+    });
+    return skipped;
+  }
+  function buys60PreviewMines(win) {
+    // Local preview only (no Firestore): deterministic sample purchases.
+    const out = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 2 : ((i * 3 + 1) % 4 === 0 ? (i * 7) % 5 : 0);
+      for (let k = 0; k < n; k++) {
+        out.push({ id: 'pv-buy-' + i + '-' + k, mineType: ['rock', 'rock', 'coal', 'gold', 'diamond'][(i + k * 3) % 5],
+          purchasedAt: new Date(d.date.getTime() + (10 + k) * 3600000).toISOString() });
+      }
+    });
+    return out;
+  }
+  /** Shared loading indicator (spinner + "Loading…") for the Mines Purchased
+   *  and Mini Games graphs and the Mini games today box. */
+  function dashLoadingHtml() {
+    return '<span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading\u2026</span>';
+  }
+  function setDashMsg(msg, text, cls) {
+    if (!msg) return;
+    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
+    if (cls === 'is-loading') msg.innerHTML = dashLoadingHtml(); else msg.textContent = text || '';
+    msg.hidden = !text && cls !== 'is-loading';
+  }
+  function setBuys60Msg(text, cls) { setDashMsg($('dash-buys-msg'), text, cls); }
+  function setBuys60(mines, options) {
+    if (_buys60.locked) { _buys60.lastMines = mines; _buys60.lastOpts = options || {}; return; }   // Pioneer gate (kept for a trial unlock)
+    options = options || {};
+    const win = buys60BuildDays();
+    _buys60.preview = !!options.preview;
+    const list = options.preview ? buys60PreviewMines(win) : (mines || []);
+    const pending = !!options.pending && !options.preview;
+    _buys60.skipped = buys60Aggregate(list, win, pending);
+    _buys60.days = win.days;
+    _buys60.waiting = _buys60.skipped.waiting;
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    const waiting = _buys60.waiting > 0;
+    _buys60.status = sum ? (waiting ? 'partial' : 'ready') : (waiting ? 'loading' : 'empty');
+    const total = $('dash-buys-total');
+    if (total) total.textContent = (waiting && !sum) ? '\u2014' : fmtNum(sum) + (sum === 1 && !waiting ? ' mine' : ' mines') + (waiting ? '\u2026' : '');
+    if (sum) setBuys60Msg('', '');
+    else if (waiting) setBuys60Msg('', 'is-loading');
+    else setBuys60Msg('No mines purchased in the last 60 days', '');
+    if (pending) {
+      console.info('[mines-purchased-60d] drawn from properties: ' + fmtNum(list.length - _buys60.waiting) + ' mine(s) by their own purchasedAt; '
+        + fmtNum(_buys60.waiting) + ' without one wait for propertyDetails.');
+    } else if (_buys60.skipped.noDate || _buys60.skipped.otherType) {
+      console.info('[mines-purchased-60d] left out ' + _buys60.skipped.noDate + ' mine(s) with no purchase date and '
+        + _buys60.skipped.otherType + ' with an unknown mineType.');
+    }
+    renderBuys60();
+    if (vis60TipChart === BUYS60_CHART && _buys60.hover >= 0) BUYS60_CHART.fill(_buys60.hover);   // keep an open popup current
+  }
+  function setBuys60Loading() {
+    if (_buys60.locked) return;
+    _buys60.status = 'loading';
+    _buys60.days = buys60BuildDays().days; // empty slots while loading
+    const total = $('dash-buys-total'); if (total) total.textContent = '\u2014';
+    setBuys60Msg('', 'is-loading');
+    if (vis60TipChart === BUYS60_CHART) hideVis60Tip();
+    renderBuys60();
+  }
+  function setBuys60Error(err) {
+    if (_buys60.locked) return;
+    _buys60.status = 'error';
+    _buys60.days = buys60BuildDays().days;
+    const total = $('dash-buys-total'); if (total) total.textContent = '\u2014';
+    setBuys60Msg('Could not load mines.', 'is-error');
+    console.warn('[mines-purchased-60d] mines did not load:', err && (err.code || ''), err && err.message);
+    renderBuys60();
+  }
+  function renderBuys60() {
+    drawDayBars($('dash-buys-chart'), _buys60, {
+      render: renderBuys60,
+      emptyDays: function () { return buys60BuildDays().days; },
+      total: function (d) { return d.count; },
+      segments: function (d) {
+        return BUYS60_STACK.map(function (t) { return { key: t, v: d.types[t], color: MINE_TYPE_PIE_COLORS[t] }; });
+      },
+      hoverOutline: true,
+      aria: function (sum, max) {
+        return 'Stacked bar graph of mines you purchased per day for the last 60 days, by type: '
+          + (_buys60.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' mine' : ' mines') + ', most in one day ' + fmtNum(max));
+      }
+    });
+  }
+  function buys60TypeName(type, n) {
+    return (MINE_TYPE_PIE_LABELS[type] || type) + (n === 1 ? ' Mine' : ' Mines');
+  }
+  function fillBuys60Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _buys60.days && _buys60.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _buys60.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(day.count);
+    sum.append(b1, document.createTextNode(day.count === 1 ? ' mine purchased' : ' mines purchased'));
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No mines purchased this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    BUYS60_TIP_ORDER.forEach(function (t) {
+      const n = day.types[t];
+      if (!n) return;
+      const row = document.createElement('div');
+      row.className = 'dash-buys-tip-row';
+      row.dataset.type = t;
+      const ic = document.createElement('img');
+      ic.className = 'dash-buys-tip-icon';
+      ic.src = MINE_TYPE_PIE_ICONS[t];
+      ic.alt = '';
+      ic.width = 24; ic.height = 24;
+      const nm = document.createElement('span');
+      nm.className = 'dash-buys-tip-name';
+      nm.textContent = buys60TypeName(t, n);
+      const ct = document.createElement('span');
+      ct.className = 'dash-buys-tip-count';
+      ct.textContent = fmtNum(n);
+      row.append(ic, nm, ct);
+      rows.appendChild(row);
+    });
+    tip.appendChild(rows);
+  }
+  const BUYS60_CHART = { canvasId: 'dash-buys-chart', st: _buys60, render: renderBuys60, fill: fillBuys60Tip };
+  bindDayBarTip(BUYS60_CHART);
+  renderBuys60(); // empty 60-slot frame under the "Loading…" message
+
+  // ── TerraBucks Today: one avatar icon per unique visitor today ───────────
+  // Oct 1, 2026. Built from the same rows as the box's "Check-ins" number
+  // (visitor uid present, self check-ins skipped). Shares the graph popup
+  // element and the publicProfiles cache (one read per uid per page load).
+  let tbAvVisitors = [];       // [{ uid, count, nick, avatar, lastMs }] sorted count desc
+  let tbAvPreview = false;
+  function tbTodayVisitorList(rows) {
+    const map = new Map();
+    rows.forEach(function (row) {
+      const d = row.data || {};
+      const vUid = d.userId || d.uid || '';
+      if (!vUid) return;
+      const ms = checkInTsMillis(d.timestamp);
+      let e = map.get(vUid);
+      if (!e) { e = { uid: vUid, count: 0, nick: '', avatar: '', lastMs: 0 }; map.set(vUid, e); }
+      e.count++;
+      const n = vis60CheckInNick(d), a = vis60CheckInAvatar(d);
+      if (ms >= e.lastMs) { e.lastMs = ms; if (n) e.nick = n; if (a) e.avatar = a; }
+      else { if (!e.nick) e.nick = n; if (!e.avatar) e.avatar = a; }
+    });
+    return Array.from(map.values()).sort(function (a, b) {
+      return (b.count - a.count) || (b.lastMs - a.lastMs) || (a.uid < b.uid ? -1 : 1);
+    });
+  }
+  function tbAvCountText(v) {
+    return '\u00d7' + fmtNum(v.count) + (v.count === 1 ? ' check-in today' : ' check-ins today');
+  }
+  function renderTbTodayVisitorIcons() {
+    const host = $('tb-today-visitor-avatars');
+    if (!host) return;
+    host.replaceChildren();
+    host.hidden = !tbAvVisitors.length;
+    tbAvVisitors.forEach(function (v) {
+      const id = vis60VisitorIdentity(v);
+      const el = vis60AvatarEl('tb-today-av', id);
+      el.dataset.uid = v.uid;
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', id.nick + ', ' + tbAvCountText(v));
+      host.appendChild(el);
+    });
+  }
+  function setTbTodayVisitors(rows, opts) {
+    opts = opts || {};
+    tbAvPreview = !!opts.preview;
+    tbAvVisitors = tbTodayVisitorList(rows);
+    renderTbTodayVisitorIcons();
+    if (tbAvPreview || !tbAvVisitors.length) return;
+    const need = tbAvVisitors.map(function (v) { return v.uid; }).filter(function (u) { return !vis60ProfileCache.has(u); });
+    if (!need.length) return;
+    vis60EnsureProfiles(need).then(function () {
+      renderTbTodayVisitorIcons();
+      if (tbAvTipUid && vis60TipShown()) { fillTbAvTip(tbAvTipUid); placeVis60Tip(vis60TipX, vis60TipY); }
+    });
+  }
+  function fillTbAvTip(uid) {
+    const tip = ensureVis60Tip();
+    const v = tbAvVisitors.find(function (x) { return x.uid === uid; });
+    tip.replaceChildren();
+    if (!v) return;
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    rows.appendChild(vis60VisitorRow(v, tbAvCountText(v)));
+    tip.appendChild(rows);
+    if (!tbAvPreview && !vis60ProfileCache.has(uid)) {
+      vis60EnsureProfiles([uid]).then(function () {
+        if (tbAvTipUid === uid && vis60TipShown()) { fillTbAvTip(uid); placeVis60Tip(vis60TipX, vis60TipY); }
+      });
+    }
+  }
+  function showTbAvTip(uid, x, y) {
+    tbAvTipUid = uid; invTipKey = null; vis60TipX = x; vis60TipY = y;
+    fillTbAvTip(uid);
+    placeVis60Tip(x, y);
+  }
+  /** Hover/tap popup for a row of 30px avatar icons (shares vis60Tip):
+   *  ~250ms hover delay, follows the mouse; touch/pen tap toggles and
+   *  auto-hides after 3s, on scroll, or a tap elsewhere. */
+  function bindAvatarRowTip(host, api) {
+    if (!host) return;
+    let hoverEl = null;
+    const sel = api.selector || '.tb-today-av';
+    const iconAt = function (e) { const el = e.target && e.target.closest ? e.target.closest(sel) : null; return el && host.contains(el) ? el : null; };
+    host.addEventListener('pointerover', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      const el = iconAt(e);
+      if (!el || el === hoverEl) return;
+      hideVis60Tip();
+      hoverEl = el;
+      vis60TipX = e.clientX; vis60TipY = e.clientY;
+      vis60TipTimer = setTimeout(function () {
+        vis60TipTimer = null;
+        if (hoverEl === el && el.isConnected) api.show(api.keyOf(el), vis60TipX, vis60TipY);
+      }, VIS60_TIP_DELAY_MS);
+    });
+    host.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      const el = iconAt(e);
+      if (!el || el !== hoverEl) return;
+      vis60TipX = e.clientX; vis60TipY = e.clientY;
+      if (api.isOpen(api.keyOf(el)) && vis60TipShown() && !vis60TipTimer) placeVis60Tip(e.clientX, e.clientY);
+    });
+    host.addEventListener('pointerout', function (e) {
+      if (e.pointerType !== 'mouse' || !hoverEl) return;
+      const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest(sel) : null;
+      if (to === hoverEl) return;
+      hoverEl = null;
+      hideVis60Tip();
+    });
+    host.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse') return;
+      const el = iconAt(e);
+      if (!el) return;
+      const key = api.keyOf(el);
+      const wasSame = vis60TouchOpen && api.isOpen(key) && vis60TipShown();
+      hideVis60Tip();
+      if (wasSame) return;
+      vis60TouchOpen = true;
+      api.show(key, e.clientX, e.clientY);
+      vis60TouchTimer = setTimeout(function () { vis60TouchTimer = null; if (vis60TouchOpen) hideVis60Tip(); }, VIS60_TIP_TOUCH_MS);
+    });
+  }
+  bindAvatarRowTip($('tb-today-visitor-avatars'), {
+    keyOf: function (el) { return el.dataset.uid; },
+    isOpen: function (k) { return !!tbAvTipUid && tbAvTipUid === k; },
+    show: showTbAvTip
+  });
+
+  // ── Referrals: TerraBucks Today box + "Referrals — Last 60 Days" graph ────
+  // Oct 1, 2026. Read-only, one shared fetch. referralLogs docs (per the DB
+  // notes): referrerId, tbAwarded, completedAt (when the bonus was paid; docs
+  // without it are not paid yet and are skipped), referredNickname,
+  // referredCode, referredCreatedAt. completedAt may be a Timestamp, an ISO
+  // string or millis. The rules require the referrerId filter.
+  //  1) Ordered: where(referrerId == uid).orderBy(completedAt desc) with
+  //     startAt/endAt cursors bounding the 60-day window, one segment per
+  //     stored type (Firestore orders strings > timestamps > numbers, so a
+  //     plain "stop when older" scan could miss a lower-typed doc).
+  //     limit(100) pages, startAfter(lastDoc). Needs a composite index
+  //     (referrerId asc, completedAt desc).
+  //  2) Fallback if (1) fails (missing index / rules): the required plain
+  //     shape where(referrerId == uid).limit(100), paged with startAfter on
+  //     the last doc (document-id order) up to REF60_FALLBACK_MAX_PAGES,
+  //     filtered to the window client-side.
+  const REF60_PAGE = 100;
+  const REF60_MAX_PAGES = 20;          // ordered path: 2,000 paid referrals in 60 days
+  const REF60_FALLBACK_MAX_PAGES = 10; // fallback: 1,000 referral docs total
+  const REF60_TIP_MAX_ROWS = 12;
+  // Field names that might hold the referred user's uid (none are confirmed
+  // by the DB notes or any code in this repo; checked per doc).
+  const REF_UID_FIELDS = ['referredUserId', 'referredUid', 'referredUserUid', 'referredId', 'newUserId', 'userId', 'uid'];
+  const _ref60 = {
+    seq: 0, status: 'loading', days: null, axis: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', today: []
+  };
+  let ref60UidFieldLogged = false;
+  function ref60Axis(maxCount) { return niceDayAxis(maxCount, 3); }  // 0..3 minimum (ticks 1, 2, 3)
+  function ref60BuildDays() {
+    const win = vis60BuildDays();
+    win.days.forEach(function (d) { d.tb = 0; d.refs = []; });
+    return win;
+  }
+  function ref60ReferredUid(d, ownerUid) {
+    for (let i = 0; i < REF_UID_FIELDS.length; i++) {
+      let v = d[REF_UID_FIELDS[i]];
+      if (v && typeof v === 'object' && typeof v.id === 'string') v = v.id;
+      if (typeof v === 'string' && v.trim() && v.trim() !== ownerUid) return { uid: v.trim(), field: REF_UID_FIELDS[i] };
+    }
+    return null;
+  }
+  /** referralLogs doc → { id, uid, nick, code, tb, ms } (null = not paid yet). */
+  function ref60Entry(id, d, ownerUid) {
+    const ms = purchaseTsMs(d.completedAt);
+    if (ms == null) return null;
+    const u = ref60ReferredUid(d, ownerUid);
+    const tb = Number(d.tbAwarded);
+    const nick = (typeof d.referredNickname === 'string') ? d.referredNickname.trim().replace(/^@+/, '') : '';
+    const code = (typeof d.referredCode === 'string') ? d.referredCode.trim() : '';
+    return { id: id, uid: u ? u.uid : '', uidField: u ? u.field : '', nick: nick, code: code, avatar: '',
+      tb: Number.isFinite(tb) ? tb : 0, ms: ms, createdMs: purchaseTsMs(d.referredCreatedAt) };
+  }
+  // ── Shared windowed fetch (referrals, mini games) ─────────────────────
+  // spec: { tag, coll, field, uid, tsField, page, maxPages, fallbackMaxPages, days, onPage? }.
+  // Ordered: where(field == uid).orderBy(tsField desc), bounded to the window
+  // with startAt/endAt cursors, one segment per stored type (Firestore orders
+  // strings > timestamps > numbers, so a plain "stop once older" scan could
+  // miss a lower-typed doc). limit(page) pages, startAfter(lastDoc), at most
+  // maxPages in total. Needs a composite index (field asc, tsField desc).
+  // The newest page of every type is requested at once (round 1), so the
+  // newest days are complete after one round trip; older pages follow.
+  // spec.onPage(docs, { path, pages, completeFromMs }) runs after round 1 and
+  // after every later page: every doc with tsField >= completeFromMs has been
+  // read (window start = everything; Infinity = nothing guaranteed yet).
+  function fetchReport(spec, docs, info) {
+    if (!spec.onPage) return;
+    try { spec.onPage(docs, info); } catch (e) { console.warn(spec.tag + ' progress render failed:', e); }
+  }
+  async function fetchWindowOrdered(spec, win) {
+    const TS = firebase.firestore.Timestamp;
+    const segments = [
+      { type: 'string', hi: '\uf8ff', lo: new Date(win.startMs).toISOString() },
+      { type: 'timestamp', hi: TS.fromMillis(253402300799999), lo: TS.fromMillis(win.startMs) }, // max Timestamp (9999-12-31)
+      { type: 'number', hi: Number.MAX_SAFE_INTEGER, lo: win.startMs }
+    ].map(function (seg) { seg.cursor = null; seg.done = false; seg.lastMs = Infinity; return seg; });
+    const docs = [];
+    let pages = 0, capped = false;
+    const runPage = function (seg) {
+      let q = db.collection(spec.coll)
+        .where(spec.field, '==', spec.uid)
+        .orderBy(spec.tsField, 'desc');
+      q = seg.cursor ? q.startAfter(seg.cursor) : q.startAt(seg.hi);
+      q = q.endAt(seg.lo).limit(spec.page);
+      pages++;
+      return q.get();
+    };
+    const absorb = function (seg, snap) {
+      snap.docs.forEach(function (doc) { docs.push(doc); });
+      if (snap.docs.length < spec.page) { seg.done = true; return; }
+      seg.cursor = snap.docs[snap.docs.length - 1];
+      const ms = purchaseTsMs((seg.cursor.data() || {})[spec.tsField]);
+      if (ms != null) seg.lastMs = ms;
+    };
+    // Everything newer than each unfinished segment's last doc has been read.
+    const completeFrom = function () {
+      return segments.reduce(function (m, seg) { return Math.max(m, seg.done ? win.startMs : seg.lastMs + 1); }, win.startMs);
+    };
+    const first = await Promise.all(segments.map(runPage));
+    first.forEach(function (snap, i) { absorb(segments[i], snap); });
+    fetchReport(spec, docs, { path: 'ordered', pages: pages, completeFromMs: completeFrom() });
+    for (let s = 0; s < segments.length && !capped; s++) {
+      while (!segments[s].done) {
+        if (pages >= spec.maxPages) { capped = true; break; }
+        absorb(segments[s], await runPage(segments[s]));
+        fetchReport(spec, docs, { path: 'ordered', pages: pages, completeFromMs: completeFrom() });
+      }
+    }
+    return { docs: docs, pages: pages, capped: capped, completeFromMs: completeFrom() };
+  }
+  // Fallback: the plain required shape where(field == uid).limit(page), paged
+  // with startAfter on the last doc (document-id order) up to fallbackMaxPages;
+  // the caller filters to the window client-side.
+  async function fetchFilteredPages(spec) {
+    const docs = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection(spec.coll).where(spec.field, '==', spec.uid).limit(spec.page);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      snap.docs.forEach(function (doc) { docs.push(doc); });
+      if (snap.docs.length < spec.page) break;
+      if (pages >= spec.fallbackMaxPages) { capped = true; break; }
+      cursor = snap.docs[snap.docs.length - 1];
+      fetchReport(spec, docs, { path: 'fallback', pages: pages, completeFromMs: Infinity });   // doc-id order: nothing final until done
+    }
+    // Uncapped: the whole history was scanned. Capped: no day is guaranteed.
+    return { docs: docs, pages: pages, capped: capped, completeFromMs: capped ? Infinity : -Infinity };
+  }
+  async function fetchWindowWithFallback(spec, win) {
+    let res, path;
+    try {
+      res = await fetchWindowOrdered(spec, win);
+      path = 'ordered';
+      console.info(spec.tag + ' path: ordered — ' + spec.coll + ' where ' + spec.field + ' == uid, orderBy ' + spec.tsField + ' desc, '
+        + spec.days + '-day cursors per type, ' + res.pages + ' page(s) of ≤' + spec.page + ', ' + res.docs.length + ' doc(s)' + (res.capped ? ' (cap reached)' : ''));
+    } catch (err) {
+      console.warn(spec.tag + ' ordered query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err)
+        + '); falling back to where(' + spec.field + ' == uid).limit(' + spec.page + ') pages + client-side ' + spec.days + '-day filter.');
+      res = await fetchFilteredPages(spec);
+      path = 'fallback';
+      console.info(spec.tag + ' path: fallback — ' + res.pages + ' page(s) of ≤' + spec.page + ', ' + res.docs.length + ' doc(s) scanned'
+        + (res.capped ? ' (stopped at the ' + spec.fallbackMaxPages + '-page cap; older docs not read)' : ''));
+    }
+    res.path = path;
+    return res;
+  }
+  /** Shared fetch: paid referrals with completedAt in the 60-day window. */
+  async function ref60Fetch(uid, win) {
+    const res = await fetchWindowWithFallback({ tag: '[referrals]', coll: 'referralLogs', field: 'referrerId', uid: uid, tsField: 'completedAt',
+      page: REF60_PAGE, maxPages: REF60_MAX_PAGES, fallbackMaxPages: REF60_FALLBACK_MAX_PAGES, days: VIS60_DAYS }, win);
+    const path = res.path;
+    const seen = new Set(), rows = [];
+    let unpaid = 0;
+    res.docs.forEach(function (doc) {
+      if (seen.has(doc.id)) return;
+      seen.add(doc.id);
+      const e = ref60Entry(doc.id, doc.data() || {}, uid);
+      if (!e) { unpaid++; return; }
+      if (e.ms < win.startMs || e.ms >= win.endMs) return;
+      rows.push(e);
+    });
+    if (!ref60UidFieldLogged && res.docs.length) {
+      ref60UidFieldLogged = true;
+      const withUid = rows.find(function (r) { return r.uidField; });
+      console.info('[referrals] referred-user uid field: ' + (withUid ? withUid.uidField + ' (avatars/nicknames from publicProfiles)' : 'none found ('
+        + REF_UID_FIELDS.join(', ') + '); using referredNickname + initials') + '. Sample keys: '
+        + Object.keys(res.docs[0].data() || {}).sort().join(', '));
+    }
+    rows.sort(function (a, b) { return b.ms - a.ms; });
+    return { rows: rows, path: path, pages: res.pages, capped: res.capped, unpaid: unpaid };
+  }
+  function ref60PreviewRows(win) {
+    // Local preview only (no Firestore): deterministic sample referrals.
+    const names = ['Ada Lovelace', 'Bo', 'Cy Miner', 'Dee', 'Eli'];
+    const rows = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 2 : ((i * 5 + 2) % 9 === 0 ? 1 + (i % 2) : 0);
+      for (let k = 0; k < n; k++) {
+        rows.push({ id: 'pv-ref-' + i + '-' + k, uid: '', nick: names[(i + k) % names.length], code: '', avatar: '',
+          tb: 1000, ms: d.date.getTime() + (9 + k * 3) * 3600000, createdMs: null });
+      }
+    });
+    return rows.sort(function (a, b) { return b.ms - a.ms; });
+  }
+  function ref60Identity(r) {
+    const prof = r.uid ? (vis60ProfileCache.get(r.uid) || null) : null;
+    const nick = (prof && prof.nickname) || r.nick || r.code || 'New Miner';
+    const url = (prof && prof.avatarUrl) || r.avatar || '';
+    return { nick: nick, url: (url && url.startsWith('https://')) ? url : '' };
+  }
+  function ref60TbText(r) { return '+' + fmtNum(r.tb) + ' TB'; }
+  function ref60PaidText(ms) {
+    return 'Paid ' + new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  /** Popup row: 40px avatar, nickname, "+N TB" (+ optional paid date line). */
+  function ref60Row(r, withDate) {
+    const id = ref60Identity(r);
+    const row = document.createElement('div');
+    row.className = 'dash-visits-tip-row dash-refs-tip-row';
+    row.dataset.ref = r.id;
+    const av = vis60AvatarEl('dash-visits-av', id);
+    const txt = document.createElement('div');
+    txt.className = 'dash-visits-tip-text';
+    const nk = document.createElement('div');
+    nk.className = 'dash-visits-tip-nick';
+    nk.textContent = id.nick;
+    const ct = document.createElement('div');
+    ct.className = 'dash-visits-tip-count dash-refs-tip-tb';
+    ct.textContent = ref60TbText(r);
+    txt.append(nk, ct);
+    if (withDate) {
+      const dt = document.createElement('div');
+      dt.className = 'dash-refs-tip-paid';
+      dt.textContent = ref60PaidText(r.ms);
+      txt.appendChild(dt);
+    }
+    row.append(av, txt);
+    return row;
+  }
+  function ref60NeedProfiles(list) {
+    if (_ref60.preview) return [];
+    return list.map(function (r) { return r.uid; }).filter(function (u, i, a) { return u && a.indexOf(u) === i && !vis60ProfileCache.has(u); });
+  }
+  function setRef60Msg(text, cls) {
+    const msg = $('dash-refs-msg');
+    if (!msg) return;
+    msg.className = 'dash-visits-msg' + (cls ? ' ' + cls : '');
+    msg.textContent = text || '';
+    msg.hidden = !text;
+  }
+  function setRefTodayMsg(text) {
+    const m = $('tb-today-refs-msg');
+    if (!m) return;
+    m.textContent = text || '';
+    m.hidden = !text;
+  }
+  // ── TerraBucks Today: referral rewards paid today ──
+  function renderRefTodayIcons() {
+    const host = $('tb-today-ref-avatars');
+    if (!host) return;
+    host.replaceChildren();
+    const list = _ref60.today || [];
+    host.hidden = !list.length;
+    list.forEach(function (r) {
+      const id = ref60Identity(r);
+      const el = vis60AvatarEl('tb-today-av', id);
+      el.dataset.ref = r.id;
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', id.nick + ', ' + ref60TbText(r) + ', ' + ref60PaidText(r.ms));
+      host.appendChild(el);
+    });
+  }
+  function setRefToday(rows, todayStartMs) {
+    const today = rows.filter(function (r) { return r.ms >= todayStartMs; });
+    _ref60.today = today;
+    const tb = today.reduce(function (a, r) { return a + r.tb; }, 0);
+    setTbTodayCell('tb-today-refs-count', today.length);
+    setTbTodayCell('tb-today-refs-tb', tb, { tb: true });
+    setRefTodayMsg('');
+    tbTodayKnown.referrals = tb;
+    updateKnownTbTotal();
+    renderRefTodayIcons();
+    const need = ref60NeedProfiles(today);
+    if (need.length) {
+      vis60EnsureProfiles(need).then(function () {
+        renderRefTodayIcons();
+        if (refAvTipKey && vis60TipShown()) { fillRefAvTip(refAvTipKey); placeVis60Tip(vis60TipX, vis60TipY); }
+      });
+    }
+  }
+  function fillRefAvTip(key) {
+    const tip = ensureVis60Tip();
+    const r = (_ref60.today || []).find(function (x) { return x.id === key; });
+    tip.replaceChildren();
+    if (!r) return;
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    rows.appendChild(ref60Row(r, true));
+    tip.appendChild(rows);
+  }
+  function showRefAvTip(key, x, y) {
+    refAvTipKey = key; invTipKey = null; vis60TipX = x; vis60TipY = y;
+    fillRefAvTip(key);
+    placeVis60Tip(x, y);
+  }
+  bindAvatarRowTip($('tb-today-ref-avatars'), {
+    keyOf: function (el) { return el.dataset.ref; },
+    isOpen: function (k) { return !!refAvTipKey && refAvTipKey === k; },
+    show: showRefAvTip
+  });
+  // ── Graph ──
+  function renderReferrals60() {
+    drawDayBars($('dash-refs-chart'), _ref60, {
+      render: renderReferrals60,
+      emptyDays: function () { return ref60BuildDays().days; },
+      axis: ref60Axis,
+      total: function (d) { return d.count; },
+      segments: function (d, i, hovered) {
+        return [{ key: 'referrals', v: d.count, color: hovered ? '#F59E0B' : (i === VIS60_DAYS - 1 ? '#A0522D' : '#8B7355') }];
+      },
+      aria: function (sum, max) {
+        return 'Bar graph of referral rewards paid to you per day for the last 60 days: '
+          + (_ref60.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' referral' : ' referrals') + ', most in one day ' + fmtNum(max));
+      }
+    });
+  }
+  function fillRef60Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _ref60.days && _ref60.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _ref60.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(day.count);
+    const b2 = document.createElement('strong'); b2.textContent = fmtNum(day.tb) + ' TB';
+    sum.append(b1, document.createTextNode(day.count === 1 ? ' referral \u00b7 ' : ' referrals \u00b7 '), b2);
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No referral rewards paid this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const shown = day.refs.slice(0, REF60_TIP_MAX_ROWS);
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    shown.forEach(function (r) { rows.appendChild(ref60Row(r, false)); });
+    tip.appendChild(rows);
+    if (day.refs.length > shown.length) {
+      const more = document.createElement('div');
+      more.className = 'dash-visits-tip-more';
+      const n = day.refs.length - shown.length;
+      more.textContent = 'and ' + fmtNum(n) + ' more ' + (n === 1 ? 'referral' : 'referrals');
+      tip.appendChild(more);
+    }
+    const need = ref60NeedProfiles(shown);
+    if (need.length) {
+      vis60EnsureProfiles(need).then(function () {
+        if (vis60TipChart === REF60_CHART && vis60TipIdx === idx && vis60TipShown()) { fillRef60Tip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
+      });
+    }
+  }
+  function ref60Aggregate(rows, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    rows.forEach(function (r) {
+      const day = byKey[vis60DayKey(new Date(r.ms))];
+      if (!day) return;
+      day.count++;
+      day.tb += r.tb;
+      day.refs.push(r);   // rows arrive newest first
+    });
+  }
+  /** Loading UI for the box + graph (also shown as soon as loadDashboard starts). */
+  function ref60SetLoading(win) {
+    _ref60.status = 'loading';
+    _ref60.days = (win || ref60BuildDays()).days;
+    _ref60.today = [];
+    if (vis60TipChart === REF60_CHART || refAvTipKey) hideVis60Tip();
+    setRef60Msg('Loading referrals\u2026', 'is-loading');
+    const total = $('dash-refs-total'); if (total) total.textContent = '\u2014';
+    setTbTodayCell('tb-today-refs-count', null);
+    setTbTodayCell('tb-today-refs-tb', null);
+    setRefTodayMsg('');
+    renderRefTodayIcons();
+    tbTodayKnown.referrals = null;
+    renderReferrals60();
+  }
+  async function loadReferrals60(uid, options) {
+    options = options || {};
+    const seq = ++_ref60.seq;
+    const win = ref60BuildDays();
+    _ref60.preview = !!options.preview;
+    ref60SetLoading(win);
+    const total = $('dash-refs-total');
+    let res;
+    try {
+      res = options.preview ? { rows: ref60PreviewRows(win), path: 'preview', pages: 0, capped: false } : await ref60Fetch(uid, win);
+    } catch (err) {
+      if (seq !== _ref60.seq) return;
+      console.warn('[referrals] referralLogs query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      _ref60.status = 'error';
+      setRef60Msg('Could not load referrals.', 'is-error');
+      setRefTodayMsg('Could not load referrals; not included in Known TB today.');
+      updateKnownTbTotal();
+      renderReferrals60();
+      return;
+    }
+    if (seq !== _ref60.seq) return;
+    _ref60.path = res.path;
+    _ref60.capped = !!res.capped;
+    ref60Aggregate(res.rows, win);
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    _ref60.status = sum ? 'ready' : 'empty';
+    if (total) total.textContent = fmtNum(sum) + (res.capped ? '+' : '') + (sum === 1 ? ' referral' : ' referrals');
+    setRef60Msg(sum ? '' : 'No referral rewards paid in the last 60 days', '');
+    setRefToday(res.rows, win.days[win.days.length - 1].date.getTime());
+    renderReferrals60();
+  }
+  const REF60_CHART = { canvasId: 'dash-refs-chart', st: _ref60, render: renderReferrals60, fill: fillRef60Tip };
+  bindDayBarTip(REF60_CHART);
+  renderReferrals60(); // empty 60-slot frame under the "Loading…" message
+
+  // ── Mini games: "Mini games today" box + "Mini Games — Last 30 Days" ─────
+  // Oct 1, 2026. Read-only, one shared fetch. gameResults docs (per the DB
+  // notes): userId, mineType (rock/coal/gold/diamond), won, perfectGame,
+  // gameLevel, rewardsEarned.tb, timestamp (Timestamp, ISO string or millis).
+  // Very old docs without mineType are ignored everywhere. Rules require the
+  // userId filter: where(userId == uid).orderBy(timestamp desc).limit(500)
+  // pages bounded to the 30-day window (cap 30 pages = 15,000 docs), else the
+  // plain filtered pages + client-side window filter (fetchWindowWithFallback).
+  // Renders after every page: the newest page of each type comes first, so
+  // today is normally final after one round trip. If the cap is hit, totals
+  // and any day not fully read show "+", with a note in the graph card.
+  const MG30_DAYS = 30;
+  const MG30_PAGE = 500;               // Firestore accepts this; 50 was too slow for heavy players
+  const MG30_MAX_PAGES = 30;           // 15,000 games in 30 days
+  const MG30_FALLBACK_MAX_PAGES = 30;  // fallback scans at most 15,000 docs
+  // TB bars (right axis): solid bright green; right-axis labels / "TB" title
+  // in a darker green so the numbers stay readable on the light card.
+  const MG30_TB_COLOR = '#4CE04C';
+  const MG30_TB_LABEL = '#2E7D32';
+  const MG_TYPES = ['rock', 'coal', 'gold', 'diamond'];   // table rows + stack bottom → top
+  const _mg30 = {
+    seq: 0, status: 'loading', days: null, axis: null, axis2: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', skipped: null, completeFromMs: -Infinity
+  };
+  function mgEmptyTypes() {
+    const t = {};
+    MG_TYPES.forEach(function (k) { t[k] = { played: 0, tb: 0, won: 0, perfect: 0 }; });
+    return t;
+  }
+  function mg30BuildDays() {
+    const win = vis60BuildDays(null, MG30_DAYS);
+    win.days.forEach(function (d) { d.types = mgEmptyTypes(); d.played = 0; d.tb = 0; d.won = 0; d.perfect = 0; d.incomplete = false; });
+    return win;
+  }
+  /** gameResults doc → { type, ms, tb, won, perfect }, or a skip reason. */
+  function mgEntry(d) {
+    const raw = d.mineType;
+    if (raw == null || String(raw).trim() === '') return { skip: 'noType' };   // very old docs: ignored entirely
+    const type = String(raw).trim().toLowerCase();
+    if (MG_TYPES.indexOf(type) === -1) return { skip: 'otherType' };
+    const ms = purchaseTsMs(d.timestamp);
+    if (ms == null) return { skip: 'noTime' };
+    const tb = Number(d.rewardsEarned && typeof d.rewardsEarned === 'object' ? d.rewardsEarned.tb : NaN);
+    return { type: type, ms: ms, tb: Number.isFinite(tb) ? tb : 0, won: d.won === true, perfect: d.perfectGame === true };
+  }
+  function mg30Add(win, e) {
+    if (!win.byKey) { win.byKey = Object.create(null); win.days.forEach(function (d) { win.byKey[d.key] = d; }); }
+    if (e.ms < win.startMs || e.ms >= win.endMs) return;
+    const day = win.byKey[vis60DayKey(new Date(e.ms))];
+    if (!day) return;
+    const t = day.types[e.type];
+    t.played++; t.tb += e.tb; if (e.won) t.won++; if (e.perfect) t.perfect++;
+    day.played++; day.tb += e.tb; if (e.won) day.won++; if (e.perfect) day.perfect++;
+  }
+  function mg30Aggregate(entries, win) { entries.forEach(function (e) { mg30Add(win, e); }); }
+  function mgTbHtml(n, plus) {
+    return '<span class="tb-today-tb-val"><img src="images/mine-icons/terrabucks-small.png" alt="">' + fmtNum(n) + (plus ? '+' : '') + ' TB</span>';
+  }
+  /** The Mini games table for one day: Type / Played / TB earned rows for
+   *  Rock, Coal, Gold, Diamond, a Total row and a won / perfect line.
+   *  dayData null = not loaded ("—"). Used by the "Mini games today" box AND
+   *  the 30-day graph popup, so the two always match. */
+  function renderMiniGamesTable(dayData) {
+    const wrap = document.createElement('div');
+    wrap.className = 'mg-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'tb-today-table tb-today-table-games mg-table';
+    table.setAttribute('aria-label', 'Mini games');
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Played</th><th scope="col">TB earned</th></tr>';
+    const tbody = document.createElement('tbody');
+    const cell = function (td, v, isTb, plus) {
+      if (v == null) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); return; }
+      if (isTb) td.innerHTML = mgTbHtml(v, plus); else td.textContent = fmtNum(v) + (plus ? '+' : '');
+    };
+    const addRow = function (key, label, icon, played, tb, cls, plus) {
+      const tr = document.createElement('tr');
+      tr.dataset.game = key;
+      if (cls) tr.className = cls;
+      const th = document.createElement('th');
+      th.scope = 'row';
+      if (icon) { const im = document.createElement('img'); im.src = icon; im.alt = ''; th.appendChild(im); th.appendChild(document.createTextNode(' ')); }
+      th.appendChild(document.createTextNode(label));
+      const tdP = document.createElement('td'); tdP.dataset.col = 'played';
+      const tdT = document.createElement('td'); tdT.dataset.col = 'tb';
+      cell(tdP, played, false, plus); cell(tdT, tb, true, plus);
+      tr.append(th, tdP, tdT);
+      tbody.appendChild(tr);
+    };
+    MG_TYPES.forEach(function (t) {
+      const v = dayData ? dayData.types[t] : null;
+      addRow(t, MINE_TYPE_PIE_LABELS[t], '/images/mine-icons/' + t + '.svg', v ? v.played : null, v ? v.tb : null);
+    });
+    // "+" = this day may be undercounted (page cap reached before all of it was read)
+    addRow('total', 'Total', '', dayData ? dayData.played : null, dayData ? dayData.tb : null, 'mg-total-row', !!(dayData && dayData.incomplete));
+    table.append(thead, tbody);
+    wrap.appendChild(table);
+    const sum = document.createElement('div');   // always present, so loading → loaded doesn't shift the layout
+    sum.className = 'mg-summary';
+    sum.textContent = 'Won ' + (dayData ? fmtNum(dayData.won) : '\u2014') + ' \u00b7 Perfect ' + (dayData ? fmtNum(dayData.perfect) : '\u2014');
+    wrap.appendChild(sum);
+    return wrap;
+  }
+  function setMgTodayMsg(text) {
+    const m = $('tb-today-games-msg');
+    if (!m) return;
+    m.textContent = text || '';
+    m.hidden = !text;
+  }
+  /** loading: spinner overlay on top of the "—" table (same size, no shift). */
+  function renderMgToday(dayData, loading) {
+    const host = $('tb-today-games-table');
+    if (!host) return;
+    host.replaceChildren(renderMiniGamesTable(dayData));
+    if (loading) {
+      const ov = document.createElement('div');
+      ov.className = 'mg-loading';
+      ov.innerHTML = dashLoadingHtml();
+      host.appendChild(ov);
+    }
+  }
+  function setMg30Note(text) {
+    const n = $('dash-games-note');
+    if (!n) return;
+    n.textContent = text || '';
+    n.hidden = !text;
+  }
+  function setMg30Msg(text, cls) { setDashMsg($('dash-games-msg'), text, cls); }
+  /** Right (TB) axis: ticks on the left axis' gridlines (same count), step
+   *  the smallest 1/2/5×10ⁿ that fits the busiest TB day. */
+  function mg30AxisTb(maxTb, nTicks) {
+    const n = Math.max(1, nTicks || 10);
+    for (let mag = 1; mag < 1e12; mag *= 10) {
+      const steps = [1, 2, 5];
+      for (let i = 0; i < steps.length; i++) {
+        const st = steps[i] * mag;
+        if (st * n >= maxTb) return { max: st * n, step: st };
+      }
+    }
+    return { max: maxTb, step: maxTb / n };
+  }
+  function renderMiniGames30() {
+    drawDayBars($('dash-games-chart'), _mg30, {
+      render: renderMiniGames30,
+      emptyDays: function () { return mg30BuildDays().days; },
+      total: function (d) { return d.played; },
+      segments: function (d) {
+        return MG_TYPES.map(function (t) { return { key: t, v: d.types[t].played, color: MINE_TYPE_PIE_COLORS[t] }; });
+      },
+      second: { total: function (d) { return d.tb; }, color: MG30_TB_COLOR, labelColor: MG30_TB_LABEL, axis: mg30AxisTb },
+      titles: { left: 'Games', right: 'TB' },
+      hoverOutline: true,
+      hoverOutlineColor: '#5C3317',
+      aria: function (sum, max) {
+        const tb = (_mg30.days || []).reduce(function (a, d) { return a + d.tb; }, 0);
+        return 'Bar graph of mini games you played per day for the last 30 days (games by type on the left axis, TB earned on the right axis): '
+          + (_mg30.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' game, ' : ' games, ') + fmtNum(tb) + ' TB, most in one day ' + fmtNum(max));
+      }
+    });
+  }
+  function fillMg30Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _mg30.days && _mg30.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _mg30.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    tip.appendChild(renderMiniGamesTable(day));   // same table as the "Mini games today" box
+  }
+  function mg30PreviewDocs(win) {
+    // Local preview only (no Firestore): deterministic sample games.
+    const out = [];
+    win.days.forEach(function (d, i) {
+      const n = i === MG30_DAYS - 1 ? 4 : ((i * 7 + 2) % 5 === 0 ? 0 : (i * 3 + 1) % 6);
+      for (let k = 0; k < n; k++) {
+        const type = MG_TYPES[(i + k) % 4];
+        out.push({ type: type, ms: d.date.getTime() + (9 + k) * 3600000, tb: [5, 10, 25, 50][MG_TYPES.indexOf(type)] * (k % 2 ? 2 : 1),
+          won: k % 3 !== 2, perfect: k % 4 === 0 });
+      }
+    });
+    return out;
+  }
+  function mg30SetLoading(win) {
+    _mg30.status = 'loading';
+    _mg30.days = (win || mg30BuildDays()).days;
+    if (vis60TipChart === MG30_CHART) hideVis60Tip();
+    setMg30Msg('', 'is-loading');
+    const total = $('dash-games-total'); if (total) total.textContent = '\u2014';
+    setMg30Note('');
+    renderMgToday(null, true);
+    setMgTodayMsg('');
+    tbTodayKnown.games = null;
+    updateKnownTbTotal();
+    renderMiniGames30();
+  }
+  /** Paint the graph, title-bar summary and today box from what has been
+   *  read so far. completeFromMs: every game at/after it has been read. */
+  function mg30Show(win, completeFromMs, final) {
+    const todayIdx = win.days.length - 1;
+    win.days.forEach(function (d) { d.incomplete = d.date.getTime() < completeFromMs; });
+    const games = win.days.reduce(function (a, d) { return a + d.played; }, 0);
+    const tb = win.days.reduce(function (a, d) { return a + d.tb; }, 0);
+    const partial = completeFromMs > win.startMs;      // some day may be missing games
+    _mg30.days = win.days;
+    _mg30.completeFromMs = completeFromMs;
+    _mg30.status = final ? (games ? 'ready' : 'empty') : (games ? 'partial' : 'loading');
+    const plus = partial && final ? '+' : '';
+    const total = $('dash-games-total');
+    if (total && (final || games)) {
+      total.textContent = fmtNum(games) + plus + (games === 1 && !plus ? ' game' : ' games') + ' \u00b7 ' + fmtNum(tb) + plus + ' TB' + (final ? '' : '\u2026');
+    }
+    if (final) setMg30Msg(games ? '' : 'No mini games played in the last 30 days', '');
+    else if (games) setMg30Msg('', '');
+    if (final && partial) {
+      const firstFull = win.days.findIndex(function (d) { return !d.incomplete; });
+      const before = firstFull > 0 ? ' (days before ' + vis60ShortDate(win.days[firstFull].date) + ')' : '';
+      setMg30Note('Older days may be incomplete: read limit of ' + fmtNum(MG30_PAGE * MG30_MAX_PAGES) + ' games reached' + before + '.');
+    } else setMg30Note('');
+    // Today box: as soon as today is fully read (normally after the first round).
+    const today = win.days[todayIdx];
+    if (final || !today.incomplete) {
+      if (!_mg30.todayShown || final) {
+        renderMgToday(today);
+        tbTodayKnown.games = today.tb;
+        updateKnownTbTotal();
+      }
+      if (!_mg30.todayShown && !final) console.info('[mini-games] today rendered after ' + (_mg30.pagesSoFar || 0) + ' page(s), before older pages finished.');
+      _mg30.todayShown = true;
+    }
+    renderMiniGames30();
+    if (vis60TipChart === MG30_CHART && _mg30.hover >= 0) fillMg30Tip(_mg30.hover);   // keep an open popup current
+  }
+  async function loadMiniGames30(uid, options) {
+    options = options || {};
+    const seq = ++_mg30.seq;
+    let win = mg30BuildDays();
+    _mg30.preview = !!options.preview;
+    _mg30.todayShown = false;
+    _mg30.pagesSoFar = 0;
+    mg30SetLoading(win);
+    let res = null;
+    // Incremental: each progress call hands the growing docs array; only new
+    // docs are parsed. A new array (ordered → fallback) starts over.
+    let src = null, used = 0, seen = new Set(), skipped = { noType: 0, otherType: 0, noTime: 0 };
+    const consume = function (docs) {
+      if (docs !== src) { src = docs; used = 0; seen = new Set(); skipped = { noType: 0, otherType: 0, noTime: 0 }; win = mg30BuildDays(); }
+      for (; used < docs.length; used++) {
+        const doc = docs[used];
+        if (seen.has(doc.id)) continue;
+        seen.add(doc.id);
+        const e = mgEntry(doc.data() || {});
+        if (e.skip) { skipped[e.skip]++; continue; }
+        mg30Add(win, e);
+      }
+    };
+    try {
+      if (options.preview) {
+        mg30Aggregate(mg30PreviewDocs(win), win);
+      } else {
+        res = await fetchWindowWithFallback({ tag: '[mini-games]', coll: 'gameResults', field: 'userId', uid: uid, tsField: 'timestamp',
+          page: MG30_PAGE, maxPages: MG30_MAX_PAGES, fallbackMaxPages: MG30_FALLBACK_MAX_PAGES, days: MG30_DAYS,
+          onPage: function (docs, info) {
+            if (seq !== _mg30.seq) return;
+            _mg30.pagesSoFar = info.pages;
+            consume(docs);
+            mg30Show(win, info.completeFromMs, false);
+          } }, win);
+        consume(res.docs);
+        _mg30.skipped = skipped;
+        if (skipped.noType || skipped.otherType || skipped.noTime) {
+          console.info('[mini-games] ignored ' + skipped.noType + ' doc(s) with no mineType, ' + skipped.otherType
+            + ' with an unknown mineType, ' + skipped.noTime + ' with no timestamp.');
+        }
+      }
+    } catch (err) {
+      if (seq !== _mg30.seq) return;
+      console.warn('[mini-games] gameResults query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      _mg30.status = 'error';
+      _mg30.days = mg30BuildDays().days;
+      setMg30Note('');
+      const total = $('dash-games-total'); if (total) total.textContent = '\u2014';
+      setMg30Msg('Could not load mini games.', 'is-error');
+      renderMgToday(null);
+      tbTodayKnown.games = null;
+      updateKnownTbTotal();
+      setMgTodayMsg('Could not load mini games; not included in Known TB today.');
+      renderMiniGames30();
+      return;
+    }
+    if (seq !== _mg30.seq) return;
+    _mg30.path = res ? res.path : 'preview';
+    _mg30.capped = !!(res && res.capped);
+    const completeFromMs = res ? Math.max(win.startMs, res.completeFromMs) : win.startMs;
+    if (_mg30.capped) {
+      console.warn('[mini-games] page cap reached: ' + res.pages + ' pages of ≤' + MG30_PAGE + ' (' + fmtNum(res.docs.length) + ' docs read, '
+        + _mg30.path + ' path); ' + (completeFromMs === Infinity ? 'any day' : 'days before ' + new Date(completeFromMs).toLocaleString())
+        + ' may be incomplete, so totals show "+".');
+    }
+    mg30Show(win, completeFromMs, true);
+  }
+  const MG30_CHART = { canvasId: 'dash-games-chart', st: _mg30, render: renderMiniGames30, fill: fillMg30Tip };
+  bindDayBarTip(MG30_CHART);
+  renderMgToday(null, true);
+  renderMiniGames30(); // empty 30-slot frame under the "Loading…" message
+
+  // ── My Check-ins — Last 60 Days (column 3, last) ──────────────────────────
+  // Oct 1, 2026. Read-only. Your own check-ins at other players' mines, per
+  // browser-local day. Same query as activity.html loadVisitsPage() (so the
+  // live composite index userId asc + timestamp desc already exists):
+  //   checkIns.where('userId','==',uid).orderBy('timestamp','desc')
+  //           .limit(500).startAfter(lastDoc)
+  // newest-first, stopping once a page reaches past the 60-day window (cap 40
+  // pages), like Visitors. If the ordered query fails (missing index / rules),
+  // falls back to where(userId == uid).limit(500) pages + a client-side window
+  // filter. Owner = the check-in's propertyOwnerId (same fallbacks as
+  // activity.html); self check-ins (your own mines) and docs with no owner are
+  // left out, exactly like the TerraBucks "Your activity" box, which reads its
+  // today rows from this same fetch (myCheckInsToday).
+  const MYCI_PAGE = 500;
+  const MYCI_MAX_PAGES = 40;           // 20,000 check-ins in 60 days — sanity cap
+  const MYCI_FALLBACK_MAX_PAGES = 40;
+  const MYCI_TIP_MAX_ROWS = 12;
+  const _myci = {
+    seq: 0, status: 'loading', days: null, axis: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, capped: false, pages: 0, path: '', preview: false, skipped: null
+  };
+  let myciToday = null;  // { uid, promise } → today's own check-in rows [{ id, data }]
+  function myciOwnerUid(v) {
+    const c = [v.propertyOwnerId, v.ownerId, v.ownerID, v.mineOwnerId, v.propertyOwnerUid, v.ownerUid, v.ownerUID];
+    for (let i = 0; i < c.length; i++) {
+      let id = c[i];
+      if (id && typeof id === 'object' && typeof id.id === 'string') id = id.id;
+      if (typeof id === 'string' && id.trim()) return id.trim();
+    }
+    return null;
+  }
+  function myciOwnerNick(v) {
+    const n = v && (v.propertyOwnerNickname || v.ownerNickname || v.ownerName || v.propertyOwnerName);
+    return (typeof n === 'string' && n.trim()) ? n.trim().replace(/^@+/, '') : '';
+  }
+  function myciBuildDays() {
+    const win = vis60BuildDays();
+    win.days.forEach(function (d) { d.owners = new Map(); });
+    return win;
+  }
+  /** rows [{ id, data }] → day.count (check-ins) + day.owners (ownerId → mines). */
+  function myciAggregate(rows, uid, win) {
+    const byKey = Object.create(null);
+    win.days.forEach(function (d) { byKey[d.key] = d; });
+    const skipped = { self: 0, noOwner: 0 };
+    rows.forEach(function (r) {
+      const v = r.data || {};
+      const ms = checkInTsMillis(v.timestamp);
+      if (!ms || ms < win.startMs || ms >= win.endMs) return;
+      const owner = myciOwnerUid(v);
+      if (!owner) { skipped.noOwner++; return; }
+      if (owner === uid) { skipped.self++; return; }
+      const day = byKey[vis60DayKey(new Date(ms))];
+      if (!day) return;
+      day.count++;
+      let e = day.owners.get(owner);
+      if (!e) { e = { uid: owner, count: 0, checkIns: 0, mines: new Set(), nick: '', avatar: '', lastMs: 0 }; day.owners.set(owner, e); }
+      e.checkIns++;
+      e.mines.add(String(v.propertyId || v.mineId || r.id));
+      e.count = e.mines.size;                       // that owner's mines checked into this day
+      if (ms >= e.lastMs) e.lastMs = ms;
+      if (!e.nick) e.nick = myciOwnerNick(v);
+    });
+    return skipped;
+  }
+  async function myciFetchOrdered(uid, win, report) {
+    const rows = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection('checkIns')
+        .where('userId', '==', uid)
+        .orderBy('timestamp', 'desc')
+        .limit(MYCI_PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      const docs = (snap && snap.docs) || [];
+      let lastMs = 0;
+      docs.forEach(function (d) {
+        const data = d.data() || {};
+        lastMs = checkInTsMillis(data.timestamp);
+        if (lastMs >= win.startMs) rows.push({ id: d.id, data: data });
+      });
+      report(rows, docs.length < MYCI_PAGE || (lastMs && lastMs < win.todayMs));   // today complete?
+      if (docs.length < MYCI_PAGE) break;                // no more check-ins
+      if (lastMs && lastMs < win.startMs) break;         // page reached past the window
+      if (pages >= MYCI_MAX_PAGES) { capped = true; break; }
+      cursor = docs[docs.length - 1];
+    }
+    return { rows: rows, pages: pages, capped: capped };
+  }
+  async function myciFetchFallback(uid, win) {
+    const rows = [];
+    let cursor = null, pages = 0, capped = false;
+    for (;;) {
+      let q = db.collection('checkIns').where('userId', '==', uid).limit(MYCI_PAGE);
+      if (cursor) q = q.startAfter(cursor);
+      const snap = await q.get();
+      pages++;
+      const docs = (snap && snap.docs) || [];
+      docs.forEach(function (d) {
+        const data = d.data() || {};
+        if (checkInTsMillis(data.timestamp) >= win.startMs) rows.push({ id: d.id, data: data });
+      });
+      if (docs.length < MYCI_PAGE) break;
+      if (pages >= MYCI_FALLBACK_MAX_PAGES) { capped = true; break; }
+      cursor = docs[docs.length - 1];
+    }
+    return { rows: rows, pages: pages, capped: capped };
+  }
+  /** onToday(rows) fires once today's own check-ins are fully read (normally
+   *  after the first page), for the TerraBucks "Your activity" box. */
+  async function myciFetch(uid, win, onToday) {
+    let sent = false;
+    const todayRows = function (rows) { return rows.filter(function (r) { return checkInTsMillis(r.data.timestamp) >= win.todayMs; }); };
+    const report = function (rows, todayDone) { if (!sent && todayDone) { sent = true; onToday(todayRows(rows)); } };
+    let res, path;
+    try {
+      res = await myciFetchOrdered(uid, win, report);
+      path = 'ordered';
+      console.info('[my-checkins-60d] path: ordered — checkIns where userId == uid, orderBy timestamp desc, ' + res.pages + ' page(s) of ≤'
+        + MYCI_PAGE + ', ' + res.rows.length + ' check-in(s) in the window' + (res.capped ? ' (stopped at the ' + MYCI_MAX_PAGES + '-page cap)' : ''));
+    } catch (err) {
+      console.warn('[my-checkins-60d] ordered query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err)
+        + '); falling back to where(userId == uid).limit(' + MYCI_PAGE + ') pages + client-side 60-day filter.');
+      res = await myciFetchFallback(uid, win);
+      path = 'fallback';
+      console.info('[my-checkins-60d] path: fallback — ' + res.pages + ' page(s) of ≤' + MYCI_PAGE + ', ' + res.rows.length + ' check-in(s) in the window'
+        + (res.capped ? ' (stopped at the ' + MYCI_FALLBACK_MAX_PAGES + '-page cap; older docs not read)' : ''));
+    }
+    report(res.rows, true);
+    res.path = path;
+    return res;
+  }
+  /** Today's own check-ins for the TerraBucks "Your activity" box: from the
+   *  shared 60-day fetch, else (not started / failed) its own today query. */
+  function myCheckInsToday(uid, startISO) {
+    if (!myciToday || myciToday.uid !== uid) return queryTodayCheckIns('userId', uid, startISO);
+    return myciToday.promise.catch(function (err) {
+      console.warn('[my-checkins-60d] shared fetch failed; Your activity uses its own today query:', err && (err.code || err.message || err));
+      return queryTodayCheckIns('userId', uid, startISO);
+    });
+  }
+  function myciPreviewRows(win) {
+    // Local preview only (no Firestore): deterministic sample check-ins.
+    const owners = ['pv-ada', 'pv-bo', 'pv-cy', 'pv-dee'];
+    const rows = [];
+    win.days.forEach(function (d, i) {
+      const n = i === VIS60_DAYS - 1 ? 4 : ((i * 5 + 1) % 7 === 0 ? 0 : (i * 3 + 2) % 6);
+      for (let k = 0; k < n; k++) {
+        rows.push({ id: 'pv-ci-' + i + '-' + k, data: { userId: 'me', propertyOwnerId: owners[(i + k) % owners.length], propertyId: 'pv-m' + ((i + k) % 9),
+          timestamp: new Date(d.date.getTime() + (8 + k) * 3600000).toISOString() } });
+      }
+    });
+    return rows;
+  }
+  function setMyciMsg(text, cls) { setDashMsg($('dash-myci-msg'), text, cls); }
+  function myciSetLoading(win) {
+    _myci.status = 'loading';
+    _myci.days = (win || myciBuildDays()).days;
+    if (vis60TipChart === MYCI_CHART) hideVis60Tip();
+    setMyciMsg('', 'is-loading');
+    const total = $('dash-myci-total'); if (total) total.textContent = '\u2014';
+    renderMyCheckIns60();
+  }
+  function renderMyCheckIns60() {
+    const last = (_myci.days ? _myci.days.length : VIS60_DAYS) - 1;
+    drawDayBars($('dash-myci-chart'), _myci, {
+      render: renderMyCheckIns60,
+      emptyDays: function () { return myciBuildDays().days; },
+      total: function (d) { return d.count; },
+      segments: function (d, i, hovered) {
+        return [{ key: 'checkIns', v: d.count, color: hovered ? '#F59E0B' : (i === last ? '#A0522D' : '#8B7355') }];
+      },
+      aria: function (sum, max) {
+        return 'Bar graph of your check-ins at other players\u2019 mines per day for the last 60 days: '
+          + (_myci.status === 'loading' ? 'loading' : fmtNum(sum) + ' check-ins, busiest day ' + fmtNum(max));
+      }
+    });
+  }
+  function myciSortedOwners(day) {
+    return Array.from(day.owners.values()).sort(function (a, b) {
+      return (b.count - a.count) || (b.checkIns - a.checkIns) || (b.lastMs - a.lastMs) || (a.uid < b.uid ? -1 : 1);
+    });
+  }
+  function fillMyciTip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _myci.days && _myci.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _myci.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const sum = document.createElement('div');
+    sum.className = 'dash-visits-tip-sum';
+    const uniq = day.owners.size;
+    const b1 = document.createElement('strong'); b1.textContent = fmtNum(uniq);
+    const b2 = document.createElement('strong'); b2.textContent = fmtNum(day.count);
+    sum.append(b1, document.createTextNode(uniq === 1 ? ' mine owner \u00b7 ' : ' mine owners \u00b7 '),
+      b2, document.createTextNode(day.count === 1 ? ' check-in' : ' check-ins'));
+    tip.appendChild(sum);
+    if (!day.count) {
+      const e = document.createElement('div');
+      e.className = 'dash-visits-tip-empty';
+      e.textContent = 'No check-ins this day.';
+      tip.appendChild(e);
+      return;
+    }
+    const list = myciSortedOwners(day);
+    const shown = list.slice(0, MYCI_TIP_MAX_ROWS);
+    const rows = document.createElement('div');
+    rows.className = 'dash-visits-tip-rows';
+    shown.forEach(function (o) {
+      rows.appendChild(vis60VisitorRow(o, '\u00d7' + fmtNum(o.count) + (o.count === 1 ? ' mine' : ' mines')));
+    });
+    tip.appendChild(rows);
+    if (list.length > shown.length) {
+      const more = document.createElement('div');
+      more.className = 'dash-visits-tip-more';
+      const n = list.length - shown.length;
+      more.textContent = 'and ' + fmtNum(n) + ' more ' + (n === 1 ? 'owner' : 'owners');
+      tip.appendChild(more);
+    }
+    // Owner profiles for the rows shown: the shared publicProfiles cache (one read per uid per page load)
+    if (!_myci.preview) {
+      const need = shown.map(function (o) { return o.uid; }).filter(function (u) { return !vis60ProfileCache.has(u); });
+      if (need.length) {
+        vis60EnsureProfiles(need).then(function () {
+          if (vis60TipChart === MYCI_CHART && vis60TipIdx === idx && vis60TipShown()) { fillMyciTip(idx); placeVis60Tip(vis60TipX, vis60TipY); }
+        });
+      }
+    }
+  }
+  async function loadMyCheckIns60(uid, options) {
+    options = options || {};
+    const seq = ++_myci.seq;
+    const win = myciBuildDays();
+    win.todayMs = win.days[win.days.length - 1].date.getTime();
+    _myci.preview = !!options.preview;
+    myciSetLoading(win);
+    const total = $('dash-myci-total');
+    let resolveToday, rejectToday;
+    const todayP = new Promise(function (res, rej) { resolveToday = res; rejectToday = rej; });
+    todayP.catch(function () {});        // handled by myCheckInsToday
+    if (!options.preview) myciToday = { uid: uid, promise: todayP };
+    let res;
+    try {
+      res = options.preview ? { rows: myciPreviewRows(win), pages: 0, capped: false, path: 'preview' }
+        : await myciFetch(uid, win, function (rows) { resolveToday(rows); });
+    } catch (err) {
+      rejectToday(err);
+      if (seq !== _myci.seq) return;
+      console.warn('[my-checkins-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
+      _myci.status = 'error';
+      setMyciMsg('Could not load your check-ins.', 'is-error');
+      renderMyCheckIns60();
+      return;
+    }
+    if (seq !== _myci.seq) return;
+    _myci.skipped = myciAggregate(res.rows, uid, win);
+    _myci.days = win.days;
+    _myci.pages = res.pages;
+    _myci.capped = res.capped;
+    _myci.path = res.path;
+    const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    _myci.status = sum ? 'ready' : 'empty';
+    if (total) total.textContent = fmtNum(sum) + (res.capped ? '+' : '') + (sum === 1 && !res.capped ? ' check-in' : ' check-ins');
+    setMyciMsg(sum ? '' : 'No check-ins in the last 60 days', '');
+    renderMyCheckIns60();
+    if (vis60TipChart === MYCI_CHART && _myci.hover >= 0) { fillMyciTip(_myci.hover); placeVis60Tip(vis60TipX, vis60TipY); }
+  }
+  const MYCI_CHART = { canvasId: 'dash-myci-chart', st: _myci, render: renderMyCheckIns60, fill: fillMyciTip };
+  bindDayBarTip(MYCI_CHART);
+  renderMyCheckIns60(); // empty 60-slot frame under the spinner
+
+  // ── Inventory card (column 2, under TerraBucks Earned Today) ─────────────
+  // Oct 1, 2026. Read-only. One tile per item/resource exactly as the portal
+  // Inventory page (inventory.html) lists them: same source (the users/{uid}
+  // doc fields inventory, rockResources, coalResources, goldResources,
+  // diamondResources, which loadDashboard already reads, so no extra query),
+  // same parsing, order (Inventory items in stored order, then each mine's
+  // resources by rarity), names and art (images/items/<id>-240.webp|png).
+  // No group headings. Hover/tap popup = that page's item card, built by the
+  // same renderCard() code below (ported verbatim; CSS scoped to the popup).
+  const INV_PAGE = (function () {
+    'use strict';
+    // ---- begin: verbatim from inventory.html (Sep 29, 2026 item art) ----
+    const ICONS = {
+      rock: 'images/mine-icons/rock.svg',
+      coal: 'images/mine-icons/coal.svg',
+      gold: 'images/mine-icons/gold.svg',
+      diamond: 'images/mine-icons/diamond.svg',
+      inventory: 'images/mine-icons/backpack-transparent.png'
+    };
+    const GROUPS = [
+      { key: 'inventory', field: 'inventory', title: 'Inventory', icon: ICONS.inventory, sortByRarity: false },
+      { key: 'rock', field: 'rockResources', title: 'Rock Mine Resources', icon: ICONS.rock, sortByRarity: true },
+      { key: 'coal', field: 'coalResources', title: 'Coal Mine Resources', icon: ICONS.coal, sortByRarity: true },
+      { key: 'gold', field: 'goldResources', title: 'Gold Mine Resources', icon: ICONS.gold, sortByRarity: true },
+      { key: 'diamond', field: 'diamondResources', title: 'Diamond Mine Resources', icon: ICONS.diamond, sortByRarity: true }
+    ];
+    const RARITY_RANK = { common: 0, uncommon: 1, rare: 2, epic: 3 };
+    /** Static display names for mine resource rarities (mine key → rarity → label). */
+    const RESOURCE_DISPLAY_NAMES = {
+      rock: { common: 'Gravel', uncommon: 'Slate', rare: 'Granite', epic: 'Marble' },
+      coal: { common: 'Coal Dust', uncommon: 'Lignite', rare: 'Anthracite', epic: 'Diamond Coal' },
+      gold: { common: 'Gold Flakes', uncommon: 'Gold Nugget', rare: 'Gold Bar', epic: 'Gold Ingot' },
+      diamond: { common: 'Diamond Chip', uncommon: 'Raw Diamond', rare: 'Cut Diamond', epic: 'Flawless Diamond' }
+    };
+
+    /** Item art (images/items/<id>[-240].webp|png), keyed like RESOURCE_DISPLAY_NAMES. */
+    const RESOURCE_IMAGE_IDS = {
+      rock: { common: 'gravel', uncommon: 'slate', rare: 'granite', epic: 'marble' },
+      coal: { common: 'coal-dust', uncommon: 'lignite', rare: 'anthracite', epic: 'diamond-coal' },
+      gold: { common: 'gold-flakes', uncommon: 'gold-nugget', rare: 'gold-bar', epic: 'gold-ingot' },
+      diamond: { common: 'diamond-chip', uncommon: 'raw-diamond', rare: 'cut-diamond', epic: 'flawless-diamond' }
+    };
+    const ITEM_IMAGE_IDS = new Set(['goggles', 'pumpkin']);
+    Object.keys(RESOURCE_IMAGE_IDS).forEach(k => Object.values(RESOURCE_IMAGE_IDS[k]).forEach(id => ITEM_IMAGE_IDS.add(id)));
+    const ITEM_IMAGE_ALIASES = { granit: 'granite', 'mining-goggles': 'goggles', goggle: 'goggles', pumpkins: 'pumpkin' };
+    function itemSlug(s) {
+      return String(s == null ? '' : s).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    }
+    /** Local art id for an item: resources by mine + rarity, otherwise by name. '' = none. */
+    function itemImageId(item, mineKey) {
+      const byMine = RESOURCE_IMAGE_IDS[mineKey];
+      const rk = normalizeRarity(item && item.rarity);
+      if (byMine && rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
+      const names = [item && item.name, item && item._raw && typeof item._raw === 'object' ? (item._raw.id || item._raw.key) : ''];
+      for (const n of names) {
+        const sl = itemSlug(n);
+        if (!sl) continue;
+        // any name containing "goggle" (Safety Goggles, Miner's Goggles, NightGoggles…)
+        if (sl.indexOf('goggle') >= 0) return 'goggles';
+        // any name containing "pumpkin" (pumpkins, Pumpkin, pumpkins_2026, halloweenPumpkin…)
+        if (sl.indexOf('pumpkin') >= 0) return 'pumpkin';
+        if (ITEM_IMAGE_IDS.has(sl)) return sl;
+        if (ITEM_IMAGE_ALIASES[sl]) return ITEM_IMAGE_ALIASES[sl];
+        const sing = sl.replace(/s$/, '');
+        if (ITEM_IMAGE_IDS.has(sing)) return sing;
+      }
+      return '';
+    }
+
+    function resourceDisplayName(mineKey, rarity, fallback) {
+      const byMine = RESOURCE_DISPLAY_NAMES[mineKey];
+      if (!byMine) return fallback;
+      const rk = normalizeRarity(rarity);
+      if (rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
+      return fallback;
+    }
+    function fmtNum(n) {
+      if (n === undefined || n === null || n === '') return '0';
+      const x = Number(n);
+      if (!Number.isFinite(x)) return '0';
+      return Math.round(x).toLocaleString('en-US');
+    }
+    function pickFirst(obj, keys) {
+      if (!obj || typeof obj !== 'object') return undefined;
+      for (const k of keys) {
+        if (obj[k] != null && obj[k] !== '') return obj[k];
+      }
+      return undefined;
+    }
+    function asString(v) {
+      if (v == null) return '';
+      if (typeof v === 'string') return v.trim();
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+      return '';
+    }
+    function asNum(v) {
+      if (v == null || v === '') return null;
+      if (typeof v === 'number' && isFinite(v)) return v;
+      if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+      return null;
+    }
+    function asUrl(v) {
+      const s = asString(v);
+      if (!s) return '';
+      if (/^https?:\/\//i.test(s) || s.startsWith('/') || s.startsWith('data:')) return s;
+      return '';
+    }
+    function normalizeRarity(v) {
+      const s = asString(v).toLowerCase();
+      if (!s) return '';
+      if (RARITY_RANK.hasOwnProperty(s)) return s;
+      if (s.indexOf('epic') >= 0) return 'epic';
+      if (s.indexOf('rare') >= 0) return 'rare';
+      if (s.indexOf('uncommon') >= 0) return 'uncommon';
+      if (s.indexOf('common') >= 0) return 'common';
+      return s;
+    }
+    function rarityRank(r) {
+      const k = normalizeRarity(r);
+      return RARITY_RANK.hasOwnProperty(k) ? RARITY_RANK[k] : 99;
+    }
+
+    /** Coerce Firestore field (array | map | nested) into a flat list of raw entries. */
+    function toRawList(raw) {
+      if (raw == null) return [];
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw !== 'object') return [raw];
+      if (Array.isArray(raw.items)) return raw.items;
+      if (Array.isArray(raw.list)) return raw.list;
+      if (Array.isArray(raw.resources)) return raw.resources;
+      if (Array.isArray(raw.entries)) return raw.entries;
+      return Object.keys(raw).map(k => {
+        const v = raw[k];
+        if (v != null && typeof v === 'object' && !Array.isArray(v)) {
+          return Object.assign({ id: k }, v);
+        }
+        return { id: k, name: k, count: v };
+      });
+    }
+
+    function parseItem(raw, idx) {
+      if (raw == null) return null;
+      if (typeof raw === 'string' || typeof raw === 'number') {
+        return { name: String(raw), rarity: '', image: '', value: null, count: null, _raw: raw };
+      }
+      if (typeof raw !== 'object') return null;
+      const name = asString(pickFirst(raw, [
+        'name', 'title', 'displayName', 'itemName', 'label', 'resourceName', 'resource', 'type', 'id'
+      ])) || ('Item ' + (idx + 1));
+      let rarity = normalizeRarity(pickFirst(raw, [
+        'rarity', 'tier', 'quality', 'grade', 'rarityTier', 'rarityLevel'
+      ]));
+      // Map form { common: N, ... }: keys are rarity tiers with no rarity field.
+      // Fall back to name / map key when it is itself a known rarity.
+      if (!rarity) {
+        const fromName = normalizeRarity(name);
+        if (RARITY_RANK.hasOwnProperty(fromName)) {
+          rarity = fromName;
+        } else {
+          const fromKey = normalizeRarity(asString(pickFirst(raw, ['id', 'key'])));
+          if (RARITY_RANK.hasOwnProperty(fromKey)) rarity = fromKey;
+        }
+      }
+      const image = asUrl(pickFirst(raw, [
+        'image', 'imageUrl', 'imageURL', 'img', 'photo', 'photoUrl', 'photoURL',
+        'icon', 'iconUrl', 'iconURL', 'url', 'thumbnail', 'thumb', 'assetUrl', 'assetURL'
+      ]));
+      const value = asNum(pickFirst(raw, [
+        'value', 'tbValue', 'tb', 'price', 'worth', 'sellValue', 'terraBucks'
+      ]));
+      const count = asNum(pickFirst(raw, [
+        'count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total'
+      ]));
+      return { name, rarity, image, value, count, _raw: raw };
+    }
+
+    function parseGroupField(raw) {
+      const list = toRawList(raw);
+      const out = [];
+      list.forEach((entry, i) => {
+        const item = parseItem(entry, i);
+        if (item && item.name) out.push(item);
+      });
+      return out;
+    }
+
+    function sortResourceItems(items) {
+      return items.slice().sort((a, b) => {
+        const ra = rarityRank(a.rarity);
+        const rb = rarityRank(b.rarity);
+        if (ra !== rb) return ra - rb;
+        return String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' });
+      });
+    }
+
+    function buildGroupsFromUser(ud) {
+      const result = {};
+      GROUPS.forEach(g => {
+        let items = parseGroupField(ud[g.field]);
+        if (g.sortByRarity) items = sortResourceItems(items);
+        // inventory: keep insertion / forEach order from parseGroupField
+        result[g.key] = items;
+      });
+      return result;
+    }
+    function metaLine(item) {
+      const parts = [];
+      if (item.count != null) parts.push(fmtNum(item.count));
+      if (item.value != null) {
+        parts.push(item.count != null
+          ? ('· value ' + fmtNum(item.value))
+          : fmtNum(item.value));
+      }
+      return parts.join(' ');
+    }
+
+    function renderCard(item, opts) {
+      opts = opts || {};
+      const art = document.createElement('article');
+      art.className = 'inv-card';
+      art.dataset.name = item.name || '';
+      if (opts.orderByRarity) {
+        const rk = normalizeRarity(item.rarity);
+        art.classList.add(RARITY_RANK.hasOwnProperty(rk) ? ('rarity-' + rk) : 'rarity-unknown');
+      }
+
+      const title = document.createElement('div');
+      title.className = 'inv-card-title';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'inv-card-name';
+      const fallbackName = item.name || 'Untitled';
+      // Resource groups: map mine type + rarity → display name; inventory unchanged.
+      const mappedName = (opts.mineKey && opts.mineKey !== 'inventory')
+        ? resourceDisplayName(opts.mineKey, item.rarity, fallbackName)
+        : fallbackName;
+      nameEl.textContent = mappedName;
+      title.appendChild(nameEl);
+      if (item.rarity) {
+        const r = document.createElement('span');
+        const rk = normalizeRarity(item.rarity);
+        r.className = 'inv-card-rarity' + (RARITY_RANK.hasOwnProperty(rk) ? (' r-' + rk) : '');
+        r.textContent = item.rarity;
+        title.appendChild(r);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'inv-card-body';
+      const artId = itemImageId(item, opts.mineKey);
+      if (artId) {
+        renderArtBody(body, item, artId, mappedName);
+        art.append(title, body);
+        return art;
+      }
+      renderLegacyBody(body, item);
+      art.append(title, body);
+      return art;
+    }
+
+    /** Full-width item art + quantity overlay. Falls back to the item's own
+     *  image URL, then to the legacy 72px icon body, if the art fails to load. */
+    function renderArtBody(body, item, artId, label) {
+      body.classList.add('has-art');
+      const wrap = document.createElement('div');
+      wrap.className = 'inv-art';
+      wrap.dataset.art = artId;
+      const pic = document.createElement('picture');
+      const sizes = '(max-width: 480px) 50vw, 200px';
+      const src = document.createElement('source');
+      src.type = 'image/webp';
+      src.srcset = 'images/items/' + artId + '-240.webp 240w, images/items/' + artId + '.webp 480w';
+      src.sizes = sizes;
+      const img = document.createElement('img');
+      img.alt = label || '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.width = 240;
+      img.height = 240;
+      img.sizes = sizes;
+      img.srcset = 'images/items/' + artId + '-240.png 240w, images/items/' + artId + '.png 480w';
+      img.src = 'images/items/' + artId + '-240.png';
+      let triedOwn = false;
+      img.addEventListener('error', () => {
+        if (!triedOwn && item.image) {
+          triedOwn = true;
+          wrap.dataset.art = 'own';
+          if (src.parentNode) src.remove();
+          img.removeAttribute('srcset');
+          img.removeAttribute('sizes');
+          img.src = item.image;
+          return;
+        }
+        body.classList.remove('has-art');
+        body.innerHTML = '';
+        renderLegacyBody(body, Object.assign({}, item, { image: '' }));
+      });
+      pic.append(src, img);
+      wrap.appendChild(pic);
+      if (item.count != null) {
+        const q = document.createElement('div');
+        q.className = 'inv-qty';
+        q.textContent = fmtNum(item.count);
+        q.setAttribute('aria-label', 'Quantity ' + fmtNum(item.count));
+        wrap.appendChild(q);
+      }
+      body.appendChild(wrap);
+      // Other info (value) stays below the art; the count now lives in the overlay.
+      let line = '';
+      if (item.count == null) line = metaLine(item) || '—';
+      else if (item.value != null) line = 'value ' + fmtNum(item.value);
+      if (line) {
+        const meta = document.createElement('div');
+        meta.className = 'inv-card-meta';
+        meta.textContent = line;
+        body.appendChild(meta);
+      }
+    }
+
+    /** Previous card body: 72px icon (item image URL or "No image") + meta line. */
+    function renderLegacyBody(body, item) {
+      const photo = document.createElement('div');
+      photo.className = 'mine-photo';
+      if (item.image) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        img.src = item.image;
+        img.addEventListener('error', () => {
+          photo.classList.remove('has-img');
+          photo.textContent = 'No image';
+        });
+        photo.classList.add('has-img');
+        photo.appendChild(img);
+      } else {
+        photo.textContent = 'No image';
+      }
+      const meta = document.createElement('div');
+      meta.className = 'inv-card-meta';
+      const line = metaLine(item);
+      meta.textContent = line || '—';
+      body.append(photo, meta);
+    }
+    // ---- end: verbatim from inventory.html ----
+    return { GROUPS: GROUPS, buildGroupsFromUser: buildGroupsFromUser, renderCard: renderCard,
+      itemImageId: itemImageId, resourceDisplayName: resourceDisplayName };
+  })();
+  const _inv = { status: 'loading', tiles: [], preview: false };
+  // Local preview only (no Firestore)
+  const INV_PREVIEW_USER = {
+    inventory: [{ name: 'nightVisionGoggles_1min', count: 3 }, { name: 'Lucky Pickaxe', count: 1 }],
+    rockResources: { common: 12, uncommon: 4, rare: 1, epic: 0 },
+    coalResources: { common: 7, uncommon: 2 },
+    goldResources: { common: 3 },
+    diamondResources: { common: 1, rare: 1 }
+  };
+  function setInvMsg(text, cls) { setDashMsg($('dash-inv-msg'), text, cls); }
+  function setInventoryLoading() {
+    _inv.status = 'loading';
+    _inv.tiles = [];
+    if (invTipKey != null) hideVis60Tip();
+    const grid = $('dash-inv-grid'); if (grid) { grid.replaceChildren(); grid.hidden = true; }
+    const total = $('dash-inv-total'); if (total) total.textContent = '\u2014';
+    setInvMsg('', 'is-loading');
+  }
+  function setInventoryError(err) {
+    console.warn('[inventory-card] could not load inventory:', err && (err.code || ''), err && err.message);
+    _inv.status = 'error';
+    _inv.tiles = [];
+    if (invTipKey != null) hideVis60Tip();
+    const grid = $('dash-inv-grid'); if (grid) { grid.replaceChildren(); grid.hidden = true; }
+    const total = $('dash-inv-total'); if (total) total.textContent = '\u2014';
+    setInvMsg('Could not load inventory.', 'is-error');
+  }
+  /** Tiles in inventory.html's order: GROUPS (Inventory, Rock … Diamond), items as that page sorts them. */
+  function invBuildTiles(ud) {
+    const groups = INV_PAGE.buildGroupsFromUser(ud || {});
+    const tiles = [];
+    INV_PAGE.GROUPS.forEach(function (g) {
+      (groups[g.key] || []).forEach(function (item) {
+        const fallback = item.name || 'Untitled';
+        tiles.push({
+          item: item, group: g, mineKey: g.key,
+          name: g.key !== 'inventory' ? INV_PAGE.resourceDisplayName(g.key, item.rarity, fallback) : fallback,
+          artId: INV_PAGE.itemImageId(item, g.key)
+        });
+      });
+    });
+    return tiles;
+  }
+  function invTileEl(t, i) {
+    const el = document.createElement('div');
+    el.className = 'dash-inv-tile';
+    el.dataset.key = String(i);
+    el.dataset.name = t.name;
+    el.setAttribute('role', 'listitem');
+    el.setAttribute('aria-label', t.name + (t.item.count != null ? ', ' + fmtNum(t.item.count) : ''));
+    const noPic = function () {
+      el.replaceChildren();
+      el.classList.add('no-pic');
+      el.dataset.art = '';
+      const tx = document.createElement('span');
+      tx.className = 'dash-inv-nopic';
+      tx.textContent = 'No picture';
+      el.appendChild(tx);
+    };
+    const own = t.item.image || '';
+    if (!t.artId && !own) { noPic(); return el; }
+    const img = document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    img.width = 50;
+    img.height = 50;
+    if (t.artId) {
+      el.dataset.art = t.artId;
+      const pic = document.createElement('picture');
+      const src = document.createElement('source');
+      src.type = 'image/webp';
+      src.srcset = 'images/items/' + t.artId + '-240.webp';
+      img.src = 'images/items/' + t.artId + '-240.png';
+      let triedOwn = false;
+      img.addEventListener('error', function () {      // same fallback chain as inventory.html
+        if (!triedOwn && own) { triedOwn = true; el.dataset.art = 'own'; src.remove(); img.src = own; return; }
+        noPic();
+      });
+      pic.append(src, img);
+      el.appendChild(pic);
+    } else {
+      el.dataset.art = 'own';
+      img.src = own;
+      img.addEventListener('error', noPic, { once: true });
+      el.appendChild(img);
+    }
+    return el;
+  }
+  function renderInventoryCard(ud, options) {
+    options = options || {};
+    _inv.preview = !!options.preview;
+    const tiles = invBuildTiles(ud);
+    _inv.tiles = tiles;
+    if (invTipKey != null) hideVis60Tip();
+    const grid = $('dash-inv-grid');
+    const total = $('dash-inv-total');
+    if (grid) { grid.replaceChildren.apply(grid, tiles.map(invTileEl)); grid.hidden = !tiles.length; }
+    if (total) total.textContent = fmtNum(tiles.length) + (tiles.length === 1 ? ' item' : ' items');
+    _inv.status = tiles.length ? 'ready' : 'empty';
+    setInvMsg(tiles.length ? '' : 'No inventory or mine resources found.', '');
+    if (!options.preview) {
+      const noPicN = tiles.filter(function (t) { return !t.artId && !t.item.image; }).length;
+      console.info('[inventory-card] ' + tiles.length + ' tile(s) from the users doc (same fields/order as inventory.html); '
+        + noPicN + ' without a picture.');
+    }
+  }
+  function fillInvTip(key) {
+    const tip = ensureVis60Tip();
+    tip.replaceChildren();
+    const t = _inv.tiles[Number(key)];
+    if (!t) return;
+    const card = INV_PAGE.renderCard(t.item, { orderByRarity: !!t.group.sortByRarity, mineKey: t.mineKey });
+    card.querySelectorAll('img').forEach(function (im) { im.loading = 'eager'; }); // shown right away
+    tip.appendChild(card);
+  }
+  function showInvTip(key, x, y) {
+    vis60TipChart = null; tbAvTipUid = null; refAvTipKey = null;
+    invTipKey = key; vis60TipX = x; vis60TipY = y;
+    fillInvTip(key);
+    placeVis60Tip(x, y);
+  }
+  bindAvatarRowTip($('dash-inv-grid'), {
+    selector: '.dash-inv-tile',
+    keyOf: function (el) { return el.dataset.key; },
+    isOpen: function (k) { return invTipKey != null && invTipKey === k; },
+    show: showInvTip
+  });
+
+  // ── Pioneer Pass gate: column-3 bar graphs ────────────────────────────────
+  // Oct 3, 2026. Membership = users/{uid}.isPioneerMember === true, the same
+  // check as account.html's Pioneer Pass box. There is no expiry field: per
+  // admin-users.html, isPioneerMember is the only field anything should check
+  // (memberships are granted/revoked by hand; pioneerMemberSince is only the
+  // grant date). Non-members: each graph card keeps its title bar, draws empty
+  // axes (default scale, total "—"), is blurred, and gets a link overlay
+  // (lock · "Requires" · Pioneer Pass logo) to /pioneer-pass.html, the page the
+  // nav item and the account page's "Get the Pioneer Pass" link use. Graph-only
+  // queries are skipped: My Check-ins' 60-day fetch ("Your activity" uses its own
+  // today query), and Referrals / Mini Games read today only (for the TerraBucks
+  // boxes). Visitors' 90-day fetch still runs for Total Check-ins / Distinct
+  // Visitors; Mines Purchased never had queries of its own.
+  const PIONEER_PASS_URL = '/pioneer-pass.html';
+  // Free trial for non-members: until this absolute instant (client clock) the
+  // locked graphs offer a one-click unlock. Change the date to move it; set it
+  // to '' to remove the trial (then the plain lock overlay shows).
+  const PIONEER_TRIAL_END = '2026-10-10T00:00:00-04:00';   // end of Oct 9, America/New_York
+  const PIONEER_TRIAL_END_MS = PIONEER_TRIAL_END ? Date.parse(PIONEER_TRIAL_END) : NaN;
+  // Overlay text, from the end date: the last trial day in New York ("October 9").
+  const PIONEER_TRIAL_LABEL = isFinite(PIONEER_TRIAL_END_MS)
+    ? 'Free trial until ' + new Date(PIONEER_TRIAL_END_MS - 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' })
+    : '';
+  let pioneerLocked = null;   // null until the users doc decides
+  let ppCtx = null;           // { uid, options } of the locked load (trial unlock reuses it)
+  let ppTrialTimer = 0;
+  function ppTrialActive() { return isFinite(PIONEER_TRIAL_END_MS) && Date.now() < PIONEER_TRIAL_END_MS; }
+  // Remembered per user (this browser) for the rest of the trial, so a reload
+  // keeps the graphs open; ignored once the trial ends or the end date changes.
+  function ppTrialKey(uid) { return 'tmPioneerTrialOpen:' + uid; }
+  function ppTrialRemembered(uid) {
+    try {
+      const v = localStorage.getItem(ppTrialKey(uid));
+      if (v == null) return false;
+      if (ppTrialActive() && v === String(PIONEER_TRIAL_END_MS)) return true;
+      localStorage.removeItem(ppTrialKey(uid));   // stale (trial over / date changed)
+    } catch (e) {}
+    return false;
+  }
+  function ppTrialRemember(uid) { try { localStorage.setItem(ppTrialKey(uid), String(PIONEER_TRIAL_END_MS)); } catch (e) {} }
+  function isPioneerMember(ud) { return !!ud && ud.isPioneerMember === true; }
+  function ppGraphs() {
+    return [
+      { key: 'visitors', card: 'dash-visits-card', wrap: 'dash-visits-wrap', msg: 'dash-visits-msg', total: 'dash-visits-total', st: _vis60, chart: VIS60_CHART, empty: function () { return vis60BuildDays().days; }, render: renderVisitors60 },
+      { key: 'buys', card: 'dash-buys-card', wrap: 'dash-buys-wrap', msg: 'dash-buys-msg', total: 'dash-buys-total', st: _buys60, chart: BUYS60_CHART, empty: function () { return buys60BuildDays().days; }, render: renderBuys60 },
+      { key: 'games', card: 'dash-games-card', wrap: 'dash-games-wrap', msg: 'dash-games-msg', total: 'dash-games-total', note: 'dash-games-note', st: _mg30, chart: MG30_CHART, empty: function () { return mg30BuildDays().days; }, render: renderMiniGames30 },
+      { key: 'refs', card: 'dash-refs-card', wrap: 'dash-refs-wrap', msg: 'dash-refs-msg', total: 'dash-refs-total', st: _ref60, chart: REF60_CHART, empty: function () { return ref60BuildDays().days; }, render: renderReferrals60 },
+      { key: 'myci', card: 'dash-myci-card', wrap: 'dash-myci-wrap', msg: 'dash-myci-msg', total: 'dash-myci-total', st: _myci, chart: MYCI_CHART, empty: function () { return myciBuildDays().days; }, render: renderMyCheckIns60 }
+    ];
+  }
+  function ppLockOverlay() {
+    const trial = ppTrialActive();
+    // Trial: a button that opens the graphs here; otherwise a link to the Pioneer Pass page.
+    const a = document.createElement(trial ? 'button' : 'a');
+    a.className = 'dash-pp-lock' + (trial ? ' is-trial' : '');
+    if (trial) {
+      a.type = 'button';
+      a.setAttribute('aria-label', PIONEER_TRIAL_LABEL + ': show the Pioneer Pass graphs');
+      a.addEventListener('click', function (e) { e.preventDefault(); ppTrialUnlock(a); });
+    } else {
+      a.href = PIONEER_PASS_URL;
+      a.setAttribute('aria-label', 'This graph requires the Pioneer Pass. Get the Pioneer Pass');
+    }
+    a.innerHTML =
+      '<svg class="dash-pp-lock-icon' + (trial ? ' is-open' : '') + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+      + (trial
+        ? '<path d="M7 10V6.6a5 5 0 0 1 9.7-1.7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'   // shackle swung open
+        : '<path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>')
+      + '<rect x="4" y="10" width="16" height="12" rx="2.5" fill="currentColor"/>'
+      + '<circle cx="12" cy="15.4" r="1.7" fill="#fff8ec"/><rect x="11.1" y="16" width="1.8" height="3.2" rx=".9" fill="#fff8ec"/></svg>'
+      + '<span class="dash-pp-lock-req">' + (trial ? '' : 'Requires') + '</span>'
+      + '<picture class="dash-pp-lock-logo"><source type="image/webp" srcset="/images/pioneer-pass-logo-88.webp 1x, /images/pioneer-pass-logo-176.webp 2x" />'
+      + '<img src="/images/pioneer-pass-logo-88.png" srcset="/images/pioneer-pass-logo-88.png 1x, /images/pioneer-pass-logo.png 2x" width="175" height="72" alt="Pioneer Pass" decoding="async" /></picture>';
+    if (trial) a.querySelector('.dash-pp-lock-req').textContent = PIONEER_TRIAL_LABEL;
+    return a;
+  }
+  function ppLockGraph(g) {
+    const st = g.st;
+    st.locked = true;
+    st.seq++;                             // drop any in-flight graph result
+    st.status = 'locked';
+    st.hover = -1;
+    st.days = g.empty();
+    if (vis60TipChart === g.chart || vis60InChart === g.chart) { vis60InChart = null; hideVis60Tip(); }
+    const total = $(g.total); if (total) total.textContent = '\u2014';
+    const msg = $(g.msg); if (msg) { msg.textContent = ''; msg.hidden = true; }
+    if (g.note) { const n = $(g.note); if (n) { n.textContent = ''; n.hidden = true; } }
+    const card = $(g.card); if (card) card.classList.add('is-pp-locked');
+    const wrap = $(g.wrap);
+    if (wrap && !wrap.querySelector('.dash-pp-lock')) wrap.appendChild(ppLockOverlay());
+    g.render();
+  }
+  function ppUnlockGraph(g) {
+    g.st.locked = false;
+    const card = $(g.card); if (card) card.classList.remove('is-pp-locked');
+    const wrap = $(g.wrap); const o = wrap && wrap.querySelector('.dash-pp-lock'); if (o) o.remove();
+  }
+  function setPioneerGate(locked) {
+    pioneerLocked = !!locked;
+    _vis60.lockedRes = null; _buys60.lastMines = null;   // this load's data lands after the decision
+    // A lock created before a reload must not keep the old overlay kind (trial / plain).
+    if (locked) ppGraphs().forEach(function (g) { const o = $(g.wrap) && $(g.wrap).querySelector('.dash-pp-lock'); if (o) o.remove(); });
+    ppGraphs().forEach(function (g) { (locked ? ppLockGraph : ppUnlockGraph)(g); });
+    clearTimeout(ppTrialTimer);
+    if (locked) {
+      console.info('[pioneer] not a Pioneer Pass member (users doc isPioneerMember !== true): column-3 graphs locked; skipped the My Check-ins 60-day fetch, '
+        + 'Referrals / Mini Games read today only, Visitors keeps its 90-day fetch for the stat boxes.'
+        + (ppTrialActive() ? ' Free trial until ' + PIONEER_TRIAL_END + ': clicking a graph opens them all.' : ''));
+      // Trial ends while the page is open and nothing was clicked: back to the plain lock.
+      if (ppTrialActive()) {
+        ppTrialTimer = setTimeout(function check() {
+          if (pioneerLocked !== true) return;
+          const left = PIONEER_TRIAL_END_MS - Date.now();
+          if (left > 0) { ppTrialTimer = setTimeout(check, Math.min(left + 50, 0x7fffffff)); return; }
+          ppRefreshOverlays();
+        }, Math.min(PIONEER_TRIAL_END_MS - Date.now() + 50, 0x7fffffff));
+      }
+    }
+  }
+  /** Re-create the overlays of the locked graphs (trial ↔ plain lock). */
+  function ppRefreshOverlays() {
+    ppGraphs().forEach(function (g) {
+      const wrap = $(g.wrap); if (!wrap || !g.st.locked) return;
+      const o = wrap.querySelector('.dash-pp-lock'); if (o) o.remove();
+      wrap.appendChild(ppLockOverlay());
+    });
+  }
+  /** Free trial: one click opens all five graphs and runs the member loads that
+   *  were skipped (Visitors / Mines Purchased reuse the data already loaded). */
+  function ppTrialUnlock(fromEl) {
+    if (pioneerLocked !== true || !ppCtx) return;
+    if (!ppTrialActive()) { ppRefreshOverlays(); return; }   // trial just ended: plain lock, no unlock
+    const ctx = ppCtx;
+    const card = fromEl && fromEl.closest ? fromEl.closest('.dash-visits-card') : null;
+    ppTrialRemember(ctx.uid);
+    pioneerLocked = false;               // in-flight today-only reads drop their results (full loads own the boxes)
+    clearTimeout(ppTrialTimer);
+    ppGraphs().forEach(ppUnlockGraph);
+    console.info('[pioneer] free trial: graphs opened; loading the Pioneer Pass graph data.');
+    // Visitors: the 90-day rows already fetched for the stat boxes (or still on their way).
+    if (_vis60.lockedRes) { const r = _vis60.lockedRes; _vis60.lockedRes = null; vis60Draw(r.res, r.uid, r.win); }
+    else vis60SetLoading();
+    // Mines Purchased: the mines already loaded (or the dashboard draws them when they land).
+    if (_buys60.lastMines) setBuys60(_buys60.lastMines, _buys60.lastOpts);
+    else setBuys60Loading();
+    loadReferrals60(ctx.uid, ctx.options).catch(function (err) { console.warn('[referrals] load failed:', err); });
+    loadMiniGames30(ctx.uid, ctx.options).catch(function (err) { console.warn('[mini-games] load failed:', err); });
+    loadMyCheckIns60(ctx.uid, ctx.options).catch(function (err) { console.warn('[my-checkins-60d] load failed:', err); });
+    // Keep keyboard focus in place: the clicked overlay is gone, its card stays.
+    if (card && document.activeElement === document.body) { card.setAttribute('tabindex', '-1'); card.focus({ preventScroll: true }); }
+  }
+  /** The users doc failed, so membership (and every graph) is unknown: stop the spinners. */
+  function pioneerGateFailed(err) {
+    ppGraphs().forEach(function (g) {
+      if (g.st.locked) return;
+      g.st.seq++;
+      g.st.status = 'error';
+      g.st.days = g.empty();
+      const total = $(g.total); if (total) total.textContent = '\u2014';
+      setDashMsg($(g.msg), 'Could not load.', 'is-error');
+      g.render();
+    });
+    renderMgToday(null);
+    setMgTodayMsg('Could not load mini games; not included in Known TB today.');
+    setRefTodayMsg('Could not load referrals; not included in Known TB today.');
+  }
+  // Locked users: today's referrals only (TerraBucks "Referral rewards paid today" + Known TB).
+  async function loadReferralsTodayOnly(uid) {
+    const win = ref60BuildDays();
+    const todayMs = win.days[win.days.length - 1].date.getTime();
+    _ref60.today = [];
+    setTbTodayCell('tb-today-refs-count', null);
+    setTbTodayCell('tb-today-refs-tb', null);
+    setRefTodayMsg('');
+    renderRefTodayIcons();
+    tbTodayKnown.referrals = null;
+    let res;
+    try {
+      res = await ref60Fetch(uid, { days: win.days, startMs: todayMs, endMs: win.endMs });
+    } catch (err) {
+      console.warn('[referrals] today-only referralLogs query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      setRefTodayMsg('Could not load referrals; not included in Known TB today.');
+      updateKnownTbTotal();
+      return;
+    }
+    if (!pioneerLocked) return;          // gate changed meanwhile (full load owns the box)
+    setRefToday(res.rows, todayMs);
+  }
+  // Locked users: today's mini games only (TerraBucks "Mini games today" + Known TB).
+  async function loadMiniGamesTodayOnly(uid) {
+    const win = mg30BuildDays();
+    const todayIdx = win.days.length - 1;
+    const todayMs = win.days[todayIdx].date.getTime();
+    renderMgToday(null, true);
+    setMgTodayMsg('');
+    tbTodayKnown.games = null;
+    updateKnownTbTotal();
+    let res;
+    try {
+      res = await fetchWindowWithFallback({ tag: '[mini-games]', coll: 'gameResults', field: 'userId', uid: uid, tsField: 'timestamp',
+        page: MG30_PAGE, maxPages: MG30_MAX_PAGES, fallbackMaxPages: MG30_FALLBACK_MAX_PAGES, days: 1 },
+        { days: win.days, startMs: todayMs, endMs: win.endMs });
+    } catch (err) {
+      console.warn('[mini-games] today-only gameResults query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      renderMgToday(null);
+      setMgTodayMsg('Could not load mini games; not included in Known TB today.');
+      return;
+    }
+    if (!pioneerLocked) return;
+    const seen = new Set();
+    res.docs.forEach(function (doc) {
+      if (seen.has(doc.id)) return;
+      seen.add(doc.id);
+      const e = mgEntry(doc.data() || {});
+      if (!e.skip && e.ms >= todayMs) mg30Add(win, e);
+    });
+    const today = win.days[todayIdx];
+    today.incomplete = !!res.capped;
+    renderMgToday(today);
+    tbTodayKnown.games = today.tb;
+    updateKnownTbTotal();
+  }
+
   applyTypeOrderLayout();
   initPageSettings();
   bindMineTotalsFollowTips();
+
+  // Dashboard "Mines by Type" pie: hover popup with the % chance to get each
+  // mine type. Follows the mouse (fixed, 14px right/below, clamped to the
+  // viewport). The pie canvas has no tooltip of its own, so this binds to the
+  // graph container (.dash-pie-wrap). Touch/pen: tap toggles, tap elsewhere hides.
+  const MINE_TYPE_ODDS = { rock: 60, coal: 30, gold: 9, diamond: 1 };
+  (function bindMineTypeOddsTip() {
+    var wrap = document.querySelector('.dash-pie-card .dash-pie-wrap');
+    if (!wrap || wrap.dataset.oddsTipBound === '1') return;
+    wrap.dataset.oddsTipBound = '1';
+    var tip = null, lastX = 0, lastY = 0, touchOpen = false, lastPointer = 'mouse';
+    function ensureTip() {
+      if (tip) return tip;
+      tip = document.createElement('div');
+      tip.className = 'dash-odds-tip';
+      tip.id = 'dash-odds-tip';
+      tip.setAttribute('role', 'tooltip');
+      var title = document.createElement('div');
+      title.className = 'dash-odds-tip-title';
+      title.textContent = '% chance to get each mine type';
+      tip.appendChild(title);
+      var rows = document.createElement('div');
+      rows.className = 'dash-odds-tip-rows';
+      KNOWN_MINE_TYPES.forEach(function (type) {
+        var pct = MINE_TYPE_ODDS[type] || 0;
+        var grad = MINE_TYPE_PIE_GRADIENTS[type];
+        var color = MINE_TYPE_PIE_COLORS[type] || '#94a3b8';
+        var row = document.createElement('div');
+        row.className = 'dash-odds-row';
+        row.dataset.type = type;
+        var img = document.createElement('img');
+        img.src = MINE_TYPE_PIE_ICONS[type];
+        img.alt = '';
+        img.width = 18; img.height = 18;
+        var name = document.createElement('span');
+        name.className = 'dash-odds-name';
+        name.textContent = MINE_TYPE_PIE_LABELS[type] || type;
+        var track = document.createElement('span');
+        track.className = 'dash-odds-track';
+        var bar = document.createElement('span');
+        bar.className = 'dash-odds-bar';
+        bar.style.display = 'block';
+        bar.style.width = pct + '%';
+        bar.style.background = grad
+          ? 'linear-gradient(90deg, ' + grad.inner + ', ' + color + ')'
+          : color;
+        track.appendChild(bar);
+        var val = document.createElement('span');
+        val.className = 'dash-odds-pct';
+        val.textContent = pct + '%';
+        row.appendChild(img); row.appendChild(name); row.appendChild(track); row.appendChild(val);
+        rows.appendChild(row);
+      });
+      tip.appendChild(rows);
+      document.body.appendChild(tip);
+      wrap.setAttribute('aria-describedby', tip.id);
+      return tip;
+    }
+    function place(x, y) {
+      var t = ensureTip();
+      var gap = 14, edge = 8;
+      t.style.visibility = 'hidden';
+      t.style.display = 'block';
+      var w = t.offsetWidth, h = t.offsetHeight;
+      var vw = document.documentElement.clientWidth || window.innerWidth;
+      var vh = document.documentElement.clientHeight || window.innerHeight;
+      var left = x + gap, top = y + gap;
+      if (left + w > vw - edge) left = x - gap - w;
+      if (top + h > vh - edge) top = y - gap - h;
+      left = Math.max(edge, Math.min(left, vw - edge - w));
+      top = Math.max(edge, Math.min(top, vh - edge - h));
+      t.style.left = Math.round(left) + 'px';
+      t.style.top = Math.round(top) + 'px';
+      t.style.visibility = 'visible';
+    }
+    function hide() {
+      touchOpen = false;
+      if (tip) tip.style.display = 'none';
+    }
+    function isShown() { return !!tip && tip.style.display === 'block'; }
+    wrap.addEventListener('pointerdown', function (e) { lastPointer = e.pointerType || 'mouse'; });
+    wrap.addEventListener('pointerenter', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      lastX = e.clientX; lastY = e.clientY;
+      place(lastX, lastY);
+    });
+    wrap.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      lastX = e.clientX; lastY = e.clientY;
+      place(lastX, lastY);
+    });
+    wrap.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      hide();
+    });
+    // Touch / pen (no hover): tap the graph to toggle the popup.
+    wrap.addEventListener('click', function (e) {
+      var noHover = window.matchMedia && window.matchMedia('(hover: none)').matches;
+      if (lastPointer === 'mouse' && !noHover) return;
+      if (touchOpen && isShown()) { hide(); return; }
+      touchOpen = true;
+      place(e.clientX, e.clientY);
+    });
+    // Tap anywhere else hides it.
+    document.addEventListener('pointerdown', function (e) {
+      if (!isShown()) return;
+      if (wrap.contains(e.target)) return;
+      hide();
+    }, true);
+    window.addEventListener('scroll', function () { if (touchOpen) hide(); }, { passive: true });
+    window.addEventListener('resize', function () { if (isShown()) hide(); });
+    window.addEventListener('blur', hide);
+  })();
 
   (function bindNavPillFollowTips() {
     var DELAY = 320;

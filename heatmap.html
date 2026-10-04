@@ -21,8 +21,12 @@
       --surface: rgba(255,255,255,0.03);
       --border:  rgba(255,255,255,0.08);
     }
-    html, body { height: 100%; overflow: hidden; }
+    /* Sep 29, 2026: page now scrolls so the shared site footer sits below the
+       map; the map stage keeps a viewport-sized height (see .heatmap-stage). */
+    html, body { min-height: 100%; overflow-x: hidden; }
     body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; }
+    .heatmap-stage { position: relative; flex: 0 0 auto; display: flex; flex-direction: column; height: max(420px, calc(100vh - 250px)); height: max(420px, calc(100svh - 250px)); }
+    @media (max-width: 1330px) { .heatmap-stage { height: max(380px, calc(100svh - 300px)); } }
 
     /* ── Ad banner (top, below header, above toolbar) — Aug 24, 2026 ──
        A real flex row, not an overlay on top of #map — keeps it out of
@@ -98,7 +102,8 @@
     }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="home-page/site-nav.css" />
+  <link rel="stylesheet" href="home-page/site-nav.css?v=20260929-1" />
+  <link rel="stylesheet" href="home-page/site-footer.css" />
   <style>
     /* Keep map flex layout: nav in document flow at portal height */
     body.heatmap-page.has-site-nav { padding-top: 0; }
@@ -119,13 +124,12 @@
 <nav class="site-nav">
   <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" /></a>
   <div class="nav-links" id="nav-links-menu">
-      <a href="/pioneer-pass.html">Pioneer Pass</a>
+      <a href="/pioneer-pass.html" class="nav-pp"><picture class="nav-pp-pic"><source type="image/webp" srcset="/images/pioneer-pass-logo-44.webp 1x, /images/pioneer-pass-logo-88.webp 2x" /><img class="nav-pp-logo" src="/images/pioneer-pass-logo-44.png" srcset="/images/pioneer-pass-logo-44.png 1x, /images/pioneer-pass-logo-88.png 2x" width="107" height="44" alt="Pioneer Pass" decoding="async" /></picture><span class="nav-pp-text">Pioneer Pass</span></a>
       <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch</a>
       <a href="/heatmap.html" class="is-active">World Map</a>
       <a href="/guide.html">Guide</a>
       <a href="/faq.html">FAQ</a>
-      <a href="/privacy.html">Privacy</a>
-      <a href="/terms.html">Terms</a>
+      <a href="/exchange-rates.html">Rates</a>
   </div>
   <div class="nav-actions">
     <a href="/portal.html" class="nav-login">My Portal</a>
@@ -171,7 +175,7 @@
     </div>
   </div>
 
-  <div style="position:relative; flex:1; min-height:0; display:flex; flex-direction:column;">
+  <div class="heatmap-stage">
     <div id="map"></div>
 
     <div id="loading-overlay">
@@ -190,8 +194,24 @@
   </div>
 
   <div class="map-footer">
-    <span id="freshness-note">Loading…</span> &nbsp;·&nbsp; <a href="index.html">terramine.app</a>
+    <span id="freshness-note">Loading…</span>
   </div>
+
+<!-- ── SITE FOOTER (shared; keep identical on all public pages · styles: home-page/site-footer.css) ── -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <a class="site-footer-logo" href="/" aria-label="TerraMine home"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" width="673" height="200" loading="lazy" decoding="async" /></a>
+    <div class="site-footer-links" role="navigation" aria-label="Footer">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/portal.html">Portal</a>
+      <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch</a>
+    </div>
+    <p class="site-footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
+  </div>
+</footer>
 
   <script>
     // ── Data source ────────────────────────────────────────────────────────

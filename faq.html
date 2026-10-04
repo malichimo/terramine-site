@@ -257,37 +257,19 @@
     }
     .btn-app:hover { background: var(--gold2); }
 
-    /* ── FOOTER ── */
-    footer {
-      position: relative;
-      z-index: 1;
-      border-top: 1px solid var(--border);
-      padding: 36px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-    .footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--gold); text-decoration: none; }
-    .footer-links { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
-    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-    .footer-links a:hover { color: var(--white); }
-    .footer-copy { font-size: 13px; color: var(--muted); }
-
     /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
       .hero { padding: 48px 20px 36px; }
       .page-layout { grid-template-columns: 1fr; padding: 0 20px 60px; gap: 0; }
       .toc { display: none; }
       .cta-banner { margin: 0 20px 48px; padding: 24px 20px; }
-      footer { padding: 28px 20px; flex-direction: column; align-items: flex-start; }
       .update-item { flex-direction: column; gap: 6px; }
       .update-tag { width: auto; display: inline-block; padding: 3px 10px; }
     }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="home-page/site-nav.css" />
+  <link rel="stylesheet" href="home-page/site-nav.css?v=20260929-1" />
+  <link rel="stylesheet" href="home-page/site-footer.css" />
 </head>
 <body class="has-site-nav">
 
@@ -295,13 +277,12 @@
 <nav class="site-nav">
   <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" /></a>
   <div class="nav-links" id="nav-links-menu">
-      <a href="/pioneer-pass.html">Pioneer Pass</a>
+      <a href="/pioneer-pass.html" class="nav-pp"><picture class="nav-pp-pic"><source type="image/webp" srcset="/images/pioneer-pass-logo-44.webp 1x, /images/pioneer-pass-logo-88.webp 2x" /><img class="nav-pp-logo" src="/images/pioneer-pass-logo-44.png" srcset="/images/pioneer-pass-logo-44.png 1x, /images/pioneer-pass-logo-88.png 2x" width="107" height="44" alt="Pioneer Pass" decoding="async" /></picture><span class="nav-pp-text">Pioneer Pass</span></a>
       <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch</a>
       <a href="/heatmap.html">World Map</a>
       <a href="/guide.html">Guide</a>
       <a href="/faq.html" class="is-active">FAQ</a>
-      <a href="/privacy.html">Privacy</a>
-      <a href="/terms.html">Terms</a>
+      <a href="/exchange-rates.html">Rates</a>
   </div>
   <div class="nav-actions">
     <a href="/portal.html" class="nav-login">My Portal</a>
@@ -548,19 +529,20 @@
   <a href="https://discord.gg/QTSJuT2GgP" class="btn-app" target="_blank" rel="noopener">💬 Join Discord</a>
 </div>
 
-<footer>
-  <a class="footer-logo" href="index.html">⛏ TerraMine</a>
-  <div class="footer-links">
-    <a href="faq.html">FAQ</a>
-    <a href="guide.html">Player's Guide</a>
-    <a href="heatmap.html">World Map</a>
-    <a href="privacy.html">Privacy Policy</a>
-    <a href="terms.html">Terms of Service</a>
-    <a href="portal.html">My Portal</a>
-    <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
-    <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+<!-- ── SITE FOOTER (shared; keep identical on all public pages · styles: home-page/site-footer.css) ── -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <a class="site-footer-logo" href="/" aria-label="TerraMine home"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine" width="673" height="200" loading="lazy" decoding="async" /></a>
+    <div class="site-footer-links" role="navigation" aria-label="Footer">
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/portal.html">Portal</a>
+      <a href="https://apps.apple.com/app/terramine/id6761272864" target="_blank" rel="noopener">App Store</a>
+      <a href="https://play.google.com/store/apps/details?id=com.terramine.app" target="_blank" rel="noopener">Google Play</a>
+      <a href="https://terramine-merch-store.printify.me/" target="_blank" rel="noopener">Merch</a>
+    </div>
+    <p class="site-footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
   </div>
-  <p class="footer-copy">&copy; 2026 TerraMine. All rights reserved.</p>
 </footer>
 
 <script>

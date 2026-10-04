@@ -941,45 +941,6 @@ img.mine-icon { font-size: 0; }
 }
 .scroll-top-btn.visible { display: flex; }
 
-/* ── FOOTER ── */
-footer {
-  position: relative;
-  z-index: 1;
-  border-top: 1px solid var(--border);
-  max-width: 920px;
-  width: 100%;
-  margin: clamp(12px, 2vw, 24px) auto 0;
-  padding: 48px clamp(36px, 4.5vw, 56px) 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-.footer-logo {
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 20px;
-  color: var(--gold);
-  text-decoration: none;
-}
-.footer-logo img { display:block; height:60px; width:auto; }
-.footer-links {
-  display: flex;
-  gap: 28px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.footer-links a {
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 13px;
-  transition: color 0.18s;
-}
-.footer-links a:hover { color: var(--white); }
-.footer-copy { font-size: 13px; color: var(--muted); }
-
 /* ── ANIMATIONS ── */
 @keyframes rise {
   from { opacity: 0; transform: translateY(22px); }
@@ -1149,7 +1110,6 @@ footer {
   .community-panel,
   .community-card { padding: 16px; }
   .community-copy { font-size: 15px; margin-bottom: 18px; }
-  footer { flex-direction: column; align-items: flex-start; padding: 32px 16px 24px; }
   .scroll-top-btn { right: 16px; bottom: 16px; width: 44px; height: 44px; font-size: 20px; }
 }
 /* ≤500px: logo centered on its own row; buttons left, menu toggle right below it */
@@ -1171,4 +1131,47 @@ footer {
     margin-left: 0;
   }
   nav .nav-menu-toggle { margin-left: auto; }
+}
+
+/* ── Pioneer Pass nav link (Sep 29, 2026) ──
+   Desktop (>1330px): wooden-sign logo, 44px tall, vertically centered with the
+   text links. ≤1330px hamburger menu: plain text "Pioneer Pass" instead.
+   Only one of logo / text is ever displayed (the other is display:none, so it
+   is also out of the accessibility tree). Same rules in site-nav.css and
+   home-page.css (index.html has its own nav styles). */
+.nav-links a.nav-pp {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25;
+}
+.nav-pp-pic { display: block; line-height: 0; }
+.nav-pp-logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  transition: filter 0.2s ease;
+}
+.nav-pp-text { display: none; }
+.nav-links a.nav-pp:hover .nav-pp-logo,
+.nav-links a.nav-pp:focus-visible .nav-pp-logo {
+  filter: brightness(1.15) contrast(1.15);
+}
+/* current page (pioneer-pass.html): soft gold glow that follows the sign's shape */
+.nav-links a.nav-pp.is-active .nav-pp-logo {
+  filter: drop-shadow(0 0 5px rgba(245, 197, 66, 0.55));
+}
+.nav-links a.nav-pp.is-active:hover .nav-pp-logo,
+.nav-links a.nav-pp.is-active:focus-visible .nav-pp-logo {
+  filter: brightness(1.15) contrast(1.15) drop-shadow(0 0 5px rgba(245, 197, 66, 0.55));
+}
+.nav-links a.nav-pp:focus-visible { outline: 2px solid var(--sn-cyan, #5BE5D0); outline-offset: 3px; border-radius: 6px; }
+@media (min-width: 1331px) {
+  /* room above/below the 44px sign so the glow / focus ring aren't clipped by
+     .nav-links' overflow-x:auto (row is still well inside the 80px bar) */
+  .nav-links { padding-top: 8px; padding-bottom: 8px; }
+}
+@media (max-width: 1330px) {
+  .nav-links a.nav-pp { display: inline; }
+  .nav-pp-pic { display: none; }
+  .nav-pp-text { display: inline; }
 }

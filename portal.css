@@ -142,6 +142,35 @@ body.auth-pending #portal {
   max-width:min(280px, calc(100vw - 16px));
 }
 
+/* Dashboard "Mines by Type" graph: mine-type odds popup that follows the mouse */
+.dash-odds-tip {
+  position:fixed; left:0; top:0; z-index:600; pointer-events:none; display:none;
+  background:rgba(15,23,42,.94); color:#f8fafc; border:1px solid rgba(255,215,0,.35);
+  border-radius:8px; padding:8px 10px 9px; box-shadow:0 12px 28px rgba(6,10,16,.45);
+  font:500 13px/1.35 'DM Sans',sans-serif; text-align:left;
+  width:240px; max-width:calc(100vw - 16px); box-sizing:border-box;
+}
+.dash-odds-tip-title {
+  font-weight:700; font-size:12.5px; color:#fde68a; letter-spacing:.01em;
+  padding-bottom:6px; margin-bottom:6px; border-bottom:1px solid rgba(255,255,255,.12);
+  white-space:normal; overflow-wrap:anywhere;
+}
+.dash-odds-tip-rows { display:flex; flex-direction:column; gap:5px; }
+.dash-odds-row {
+  display:grid; grid-template-columns:18px 54px minmax(0,1fr) 34px;
+  align-items:center; column-gap:6px;
+}
+.dash-odds-row img { width:18px; height:18px; display:block; }
+.dash-odds-name { font-size:12px; color:#e2e8f0; white-space:nowrap; }
+.dash-odds-track {
+  height:9px; border-radius:5px; background:rgba(255,255,255,.08); overflow:hidden; min-width:0;
+}
+.dash-odds-bar {
+  height:100%; min-width:4px; border-radius:5px; box-sizing:border-box;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.28);
+}
+.dash-odds-pct { font-size:12px; font-weight:700; text-align:right; white-space:nowrap; }
+
 
 .layout {
   display: block;
@@ -468,7 +497,8 @@ body.auth-pending #portal {
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   margin-bottom: 28px;
-  align-items: stretch;
+  /* Sep 29, 2026: columns keep their natural height (no equal-height stretch) */
+  align-items: start;
 }
 .dash-breakdown-col {
   min-width: 0;
@@ -500,6 +530,119 @@ body.auth-pending #portal {
   height: auto;
 }
 .dash-pie-legend { display: none !important; }
+
+/* Oct 1, 2026 layout: column 1 = stat stack, "Mines by Type" donut, then the
+   Mine Dominance map; column 2 (.dash-breakdown-col-visits) = TerraBucks
+   Earned Today; column 3 (.dash-breakdown-col-slot) = the bar graphs:
+   Visitors, Mines Purchased, Mini Games, Referrals. (The class names are grid
+   slots kept from the earlier layout.) 721–1100px: column 1 on the left,
+   TerraBucks then the graphs stacked on the right. Stacked (<=720) follows the
+   DOM: stats, donut, dominance, TerraBucks, graphs.
+   The donut canvas is square: min(580px, the wrap's width) — see
+   renderMineTypePie(); it redraws when the wrap's width changes. */
+.dash-breakdown-col-stats { gap: 12px; }
+.dash-breakdown-col-stats .stat-stack { flex: 0 0 auto; }
+.dash-breakdown-col .dash-pie-card { flex: 0 0 auto; height: auto; min-height: 600px; }
+/* donut centered in the card; a 580px donut + label is taller than 600, so the
+   card grows to fit (min 600) */
+.dash-breakdown-col .dash-pie-card .dash-pie-wrap { flex: 1 1 auto; align-items: center; padding: 4px 0; min-width: 0; }
+/* cards in a column no longer grow to fill a stretched column */
+.dash-breakdown-col > .dash-slot-card,
+.dash-breakdown-col > .dash-dominance-card { flex: 0 0 auto; }
+.dash-breakdown-col .dash-pie-wrap {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+}
+.dash-breakdown-col .dash-pie-wrap canvas {
+  flex: 0 0 auto;
+  max-width: 100%;
+  height: auto;          /* square via the canvas's own aspect ratio */
+  aspect-ratio: 1 / 1;
+}
+
+/* ── Column 1 (below the stats): Mine Dominance (Reach outline map) ──
+   Browns from the :root "Brown app palette": --brown title bar + border,
+   --brown-dark text shadow, --bg (light tan) title text. */
+.dash-dominance-card {
+  flex: 0 0 auto;
+  height: 500px; /* fixed: title bar + map, all widths (border-box) */
+  /* always the full width of its grid column — never capped or clipped */
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 2px solid var(--brown);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.85);
+}
+.dash-dominance-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 9px 14px 8px;
+  background: var(--brown);
+  border-bottom: 2px solid var(--brown-dark);
+  color: var(--bg);
+}
+.dash-dominance-title {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  color: #fff8ec;
+  text-shadow: 0 1px 0 var(--brown-dark);
+  white-space: nowrap;
+}
+.dash-dominance-area {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--bg);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-dominance-body {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: #e6e6e6; /* matches the muted map base while tiles load */
+}
+.dash-dominance-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.dash-dominance-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-mid);
+  background: rgba(230, 230, 230, 0.92);
+  pointer-events: none;
+  z-index: 2;
+}
+.dash-dominance-msg[hidden] { display: none; }
+.dash-dominance-msg.is-error { color: #8a2c1c; }
 
 .dash-slot-placeholder {
   flex: 1;
@@ -536,6 +679,29 @@ body.auth-pending #portal {
   letter-spacing: 0.02em;
   margin-bottom: 4px;
 }
+/* Oct 1, 2026: one 30px rounded-square avatar per unique visitor today
+   (hover/tap popup = the Visitors graph popup). Hidden when nobody visited. */
+.tb-today-visitor-avatars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0 6px;
+  min-width: 0;
+}
+.tb-today-visitor-avatars[hidden] { display: none; }
+.tb-today-av {
+  width: 30px; height: 30px; flex: 0 0 30px; border-radius: 6px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brown-mid); color: #fff8ec;
+  font: 700 11px/1 'DM Sans', sans-serif; letter-spacing: .02em;
+  border: 1px solid rgba(92, 51, 23, 0.25); box-sizing: border-box;
+  cursor: default; user-select: none; -webkit-user-select: none;
+}
+.tb-today-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Oct 1, 2026: "Referral rewards paid today" uses the same section, icon row
+   (one icon per referral paid today) and table styles as the boxes above. */
+.tb-today-ref-msg { font-size: 11px; line-height: 1.35; color: #8a2c1c; margin: 2px 0 2px; }
+.tb-today-ref-msg[hidden] { display: none; }
 .tb-today-table {
   width: 100%;
   border-collapse: collapse;
@@ -608,15 +774,165 @@ body.auth-pending #portal {
   line-height: 1.35;
   color: #64748b;
 }
+/* ── Column 3 (below TerraBucks Earned Today): Visitors — Last 60 Days ──
+   Oct 1, 2026. Same card shell as Mine Dominance (brown title bar + border).
+   Canvas is redrawn at the card's width × devicePixelRatio (see
+   renderVisitors60() in portal.html). */
+.dash-breakdown-col-slot,
+.dash-breakdown-col-visits { gap: 12px; }
+.dash-visits-card {
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--brown);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.85);
+}
+.dash-visits-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 9px 14px 8px;
+  background: var(--brown);
+  border-bottom: 2px solid var(--brown-dark);
+  color: var(--bg);
+}
+.dash-visits-title {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  color: #fff8ec;
+  text-shadow: 0 1px 0 var(--brown-dark);
+  white-space: nowrap;
+}
+.dash-visits-total {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--bg);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-visits-body { padding: 10px 10px 8px; min-width: 0; }
+.dash-visits-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 220px;
+}
+.dash-visits-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 220px;
+  max-width: 100%;
+  touch-action: pan-y;   /* vertical page scroll still works over the graph */
+  cursor: default;
+}
+.dash-visits-msg {
+  position: absolute;
+  inset: 0 0 22px 0;     /* keep the x-axis labels visible under the message */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-mid);
+  pointer-events: none;
+}
+.dash-visits-msg[hidden] { display: none; }
+.dash-visits-msg.is-loading { background: rgba(255, 255, 255, 0.55); border-radius: 6px; }
+.dash-visits-msg.is-error { color: #8a2c1c; }
+@media (max-width: 400px) {
+  .dash-visits-head { padding: 8px 12px 7px; }
+  .dash-visits-total { font-size: 12px; }
+  .dash-visits-body { padding: 8px 6px 6px; }
+  .dash-visits-wrap, .dash-visits-wrap canvas { height: 200px; }
+}
+
+/* Visitors graph hover/tap popup (follows the mouse like the odds popup) */
+.dash-visits-tip {
+  position: fixed; left: 0; top: 0; z-index: 600; pointer-events: none; display: none;
+  background: rgba(15,23,42,.95); color: #f8fafc; border: 1px solid rgba(255,215,0,.35);
+  border-radius: 8px; padding: 8px 10px 9px; box-shadow: 0 12px 28px rgba(6,10,16,.45);
+  font: 500 13px/1.35 'DM Sans', sans-serif; text-align: left;
+  width: 260px; max-width: calc(100vw - 16px); box-sizing: border-box;
+}
+.dash-visits-tip-date { font-weight: 700; font-size: 13px; color: #fde68a; }
+.dash-visits-tip-sum {
+  font-size: 12px; color: #e2e8f0;
+  padding: 2px 0 6px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.dash-visits-tip-sum strong { color: #fff; font-variant-numeric: tabular-nums; }
+.dash-visits-tip-rows { display: flex; flex-direction: column; gap: 5px; }
+.dash-visits-tip-row {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; column-gap: 8px;
+}
+.dash-visits-av {
+  width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brown-mid); color: #fff8ec;
+  font: 700 14px/1 'DM Sans', sans-serif; letter-spacing: .02em;
+  border: 1px solid rgba(255,255,255,.25); box-sizing: border-box;
+}
+.dash-visits-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dash-visits-tip-text { min-width: 0; }
+.dash-visits-tip-nick {
+  font-weight: 700; font-size: 13px; color: #f8fafc;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-visits-tip-count { font-size: 12px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
+.dash-visits-tip-more { margin-top: 6px; font-size: 12px; color: #cbd5e1; font-style: italic; }
+.dash-visits-tip-empty { font-size: 12px; color: #cbd5e1; }
+/* Referrals popups: "+N TB" in gold, optional "Paid …" date line */
+.dash-refs-tip-tb { color: #fde68a; font-weight: 700; }
+.dash-refs-tip-paid { font-size: 11px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
+/* Mines Purchased — Last 60 Days (same card shell, renderer and popup as
+   Visitors; sits under it in column 2). Popup rows: type icon, name, count. */
+.dash-buys-tip-row {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; column-gap: 8px;
+}
+.dash-buys-tip-icon { width: 24px; height: 24px; display: block; object-fit: contain; }
+.dash-buys-tip-name {
+  font-weight: 700; font-size: 13px; color: #f8fafc;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-buys-tip-count { font-size: 13px; font-weight: 700; color: #fde68a; font-variant-numeric: tabular-nums; text-align: right; }
+
 @media (max-width: 1100px) {
   .dash-breakdown-row {
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0,…) so min-content (pie canvas, TB table) can't blow a column out */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .dash-breakdown-col-slot { grid-column: 1 / -1; }
+  /* column 1 spans both rows on the left; TerraBucks and the graphs
+     stack on the right (row 2 is 1fr so column 1's height lands there, not
+     as a gap under the graph) */
+  .dash-breakdown-row { grid-template-rows: auto 1fr; }
+  .dash-breakdown-col-stats { grid-column: 1; grid-row: 1 / span 2; }
+  .dash-breakdown-col-visits { grid-column: 2; grid-row: 1; }
+  .dash-breakdown-col-slot { grid-column: 2; grid-row: 2; }
 }
 @media (max-width: 720px) {
-  .dash-breakdown-row { grid-template-columns: 1fr; }
-  .dash-breakdown-col-slot { grid-column: auto; }
+  .dash-breakdown-row { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .dash-breakdown-col-stats,
+  .dash-breakdown-col-visits,
+  .dash-breakdown-col-slot { grid-column: auto; grid-row: auto; }
+}
+@media (max-width: 400px) {
+  .dash-dominance-head { padding: 8px 12px 7px; }
+  .dash-dominance-area { font-size: 12px; }
 }
 
 .stat-stack {
@@ -652,9 +968,13 @@ body.auth-pending #portal {
 .stat-card-value.amber { color: var(--amber2); }
 .stat-card-sub { font-size: 11px; color: var(--text-mid); margin-top: 4px; }
 
+/* Oct 1, 2026: 4 boxes. Sized by the stat stack's own width (container
+   query): 4 across when it is >= 540px, 2×2 below that, 1 column under 280px.
+   Without container-query support it stays 2×2. */
+.stat-stack { container-type: inline-size; }
 .stat-row-secondary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
 }
@@ -666,6 +986,29 @@ body.auth-pending #portal {
 .stat-row-secondary .stat-card-sub {
   text-align: center;
 }
+/* Total TB Earned: money-bag icon (same image as the nav TB pill) left of
+   the orange number, 32px tall. The row keeps the number's 1em line box so
+   the four boxes' numbers/subtitles still line up; the taller icon overflows
+   it evenly, and top:-0.07em lifts it onto the digits' optical center
+   (Bebas Neue ink sits ~0.07em above the line-box center). */
+.stat-card-value-tb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2em;
+  min-width: 0;
+  height: 1em;
+}
+.stat-card-value-tb .stat-tb-icon {
+  height: 32px;
+  width: auto;
+  flex: 0 0 auto;
+  display: block;
+  object-fit: contain;
+  position: relative;
+  top: -0.07em;
+}
+.stat-card-value-tb #stat-tb-earned { min-width: 0; white-space: nowrap; }
 
 
 /* Properties card type breakdown — icons match Mines page SVGs. */
@@ -721,8 +1064,11 @@ body.auth-pending #portal {
   text-align: center;
 }
 
-@media (max-width: 720px) {
-  .stat-row-secondary { grid-template-columns: 1fr; }
+@container (min-width: 540px) {
+  .stat-row-secondary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container (max-width: 279px) {
+  .stat-row-secondary { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── Section header ── */
@@ -956,9 +1302,224 @@ body.auth-pending #portal {
   width: 28px;
   height: 28px;
 }
-.tb-today-section-soon {
-  filter: grayscale(1);
-  opacity: 0.48;
+/* Oct 1, 2026: Mini games table (renderMiniGamesTable) — shared by the
+   "Mini games today" box and the Mini Games 30-day graph popup. */
+.mg-table .mg-total-row { border-top: 1px solid rgba(139, 115, 85, 0.2); }
+.mg-table .mg-total-row th,
+.mg-table .mg-total-row td { padding-top: 5px; }
+.mg-table .mg-total-row th[scope="row"] { font-weight: 700; color: #1e293b; }
+.mg-summary {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 15px;
+  color: #64748b;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.mg-table td { white-space: nowrap; }
+/* Same row height for "—" (loading) and "<TB icon> N TB" (loaded): fixed
+   27px rows (border-box) with ≤18px content, so loading → loaded never shifts. */
+.mg-table tbody th,
+.mg-table tbody td,
+.tb-today-section-refs .tb-today-table th,
+.tb-today-section-refs .tb-today-table td { height: 27px; }
+.mg-table tbody th,
+.mg-table tbody td { line-height: 18px; }
+.mg-table td .tb-today-tb-val { display: flex; height: 18px; }
+.dash-visits-tip .mg-table-wrap { margin-top: 6px; }
+.dash-visits-tip .mg-table td:nth-child(2) { width: auto; padding-left: 8px; }
+.dash-visits-tip .mg-table td:nth-child(3) { width: auto; padding-left: 10px; }
+.dash-visits-tip .mg-table { font-size: 12px; color: #e2e8f0; }
+.dash-visits-tip .mg-table th[scope="row"] { color: #cbd5e1; }
+.dash-visits-tip .mg-table td { color: #f8fafc; }
+.dash-visits-tip .mg-table thead th { color: #94a3b8; border-bottom-color: rgba(255, 255, 255, 0.16); }
+.dash-visits-tip .mg-table .mg-total-row { border-top-color: rgba(255, 255, 255, 0.16); }
+.dash-visits-tip .mg-table .mg-total-row th[scope="row"] { color: #fff; }
+.dash-visits-tip .mg-table .tb-today-tb-val img { width: 15px; height: 15px; }
+.dash-visits-tip .mg-summary { color: #cbd5e1; }
+
+/* Oct 1, 2026: Mini Games graph note when the gameResults page cap is hit */
+.dash-games-note {
+  margin: 4px 2px 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #8a5a1c;
+  font-style: italic;
+}
+.dash-games-note[hidden] { display: none; }
+
+/* Oct 1, 2026: shared loading indicator — Mines Purchased graph, Mini Games
+   graph, Mini games today box. Overlays only, so heights never change. */
+.dash-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-mid);
+}
+.dash-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid rgba(139, 115, 85, 0.25);
+  border-top-color: #8B4513;
+  animation: dash-spin 0.8s linear infinite;
+}
+@keyframes dash-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dash-spinner { animation-duration: 2.4s; } }
+.tb-today-games-table { position: relative; }
+.mg-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+}
+
+/* ── Inventory card (column 2, under TerraBucks Earned Today) ── Oct 1, 2026
+   Tiles mirror inventory.html (same items, order, art). The TerraBucks card
+   keeps its natural height so Inventory sits directly under it. */
+.dash-breakdown-col-visits > .dash-slot-card { flex: 0 0 auto; }
+.dash-inv-body { position: relative; min-height: 78px; box-sizing: border-box; }
+.dash-inv-body > .dash-visits-msg { inset: 0; }
+.dash-inv-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.dash-inv-grid[hidden] { display: none; }
+.dash-inv-tile {
+  width: 60px; height: 60px; flex: 0 0 60px; box-sizing: border-box;
+  padding: 4px; border: 1px solid #c9b29a; border-radius: 8px; background: #fff;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  cursor: default; user-select: none; -webkit-user-select: none;
+  box-shadow: 0 1px 2px rgba(92, 51, 23, 0.12);
+}
+.dash-inv-tile picture { display: block; width: 50px; height: 50px; }
+.dash-inv-tile img { display: block; width: 50px; height: 50px; object-fit: contain; }
+.dash-inv-nopic {
+  font: 600 10px/1.15 'DM Sans', sans-serif; color: #8899AA; text-align: center;
+}
+
+/* Popup = inventory.html's item card (styles ported from that page, scoped). */
+.dash-visits-tip.is-inv {
+  width: auto; padding: 0; background: transparent; border: 0; box-shadow: none;
+  font: 16px 'DM Sans', sans-serif; color: #0D1B2A; /* inventory.html body font, so the card inherits the same */
+}
+.dash-visits-tip.is-inv .inv-card {
+  width: 200px; max-width: 100%; flex: 0 0 auto;
+  background: #fff; border: 1px solid #e3e7ee; border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(13,27,42,.08), 0 12px 28px rgba(6,10,16,.30); overflow: hidden; color: #0D1B2A;
+}
+.dash-visits-tip.is-inv .inv-card-title {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; background: #1b2430; color: #fff; min-height: 40px;
+}
+.dash-visits-tip.is-inv .inv-card-name { font-size: 13px; font-weight: 700; line-height: 1.2; flex: 1; min-width: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dash-visits-tip.is-inv .inv-card-rarity { font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: #c5ced8; white-space: nowrap; flex-shrink: 0; }
+.dash-visits-tip.is-inv .inv-card-rarity.r-common { color: #94a3b8; }
+.dash-visits-tip.is-inv .inv-card-rarity.r-uncommon { color: #4ade80; }
+.dash-visits-tip.is-inv .inv-card-rarity.r-rare { color: #60a5fa; }
+.dash-visits-tip.is-inv .inv-card-rarity.r-epic { color: #c084fc; }
+.dash-visits-tip.is-inv .inv-card-body { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 10px 14px; }
+.dash-visits-tip.is-inv .mine-photo {
+  width: 72px; height: 72px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+  background: #eef1f4; border: 1px dashed #c5ced8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; letter-spacing: .4px; text-transform: uppercase; color: #8899AA; text-align: center;
+}
+.dash-visits-tip.is-inv .mine-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dash-visits-tip.is-inv .mine-photo.has-img { border-style: solid; border-color: #d0d5dc; background: #fff; }
+.dash-visits-tip.is-inv .inv-card-meta { font-size: 13px; font-weight: 700; color: #334155; text-align: center; font-variant-numeric: tabular-nums; }
+.dash-visits-tip.is-inv .inv-card-meta .muted { color: #64748b; font-weight: 600; font-size: 11px; }
+.dash-visits-tip.is-inv .inv-card-body.has-art { padding: 0 0 12px; gap: 8px; }
+.dash-visits-tip.is-inv .inv-card-body.has-art .inv-card-meta { padding: 0 10px; }
+.dash-visits-tip.is-inv .inv-art { position: relative; width: 100%; aspect-ratio: 1 / 1; background: #fff; overflow: hidden; }
+.dash-visits-tip.is-inv .inv-art picture { display: block; width: 100%; height: 100%; }
+.dash-visits-tip.is-inv .inv-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.dash-visits-tip.is-inv .inv-qty {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  max-width: calc(100% - 16px); box-sizing: border-box;
+  padding: 3px 14px; border-radius: 999px;
+  background: rgba(255,255,255,.5);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.65);
+  box-shadow: 0 1px 4px rgba(13,27,42,.18);
+  font: 800 18px/1.25 'DM Sans', sans-serif; color: #0D1B2A;
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 0 rgba(255,255,255,.7);
   pointer-events: none;
-  user-select: none;
+}
+@media (max-width: 480px) {
+  /* phones: inventory.html's phone card at 360px (calc(50% - 6px) = 158px) and pill size */
+  .dash-visits-tip.is-inv .inv-card { width: 158px; }
+  .dash-visits-tip.is-inv .inv-qty { font-size: 16px; padding: 2px 12px; bottom: 6px; }
+}
+
+/* ── Pioneer Pass gate: locked column-3 graphs ── Oct 3, 2026
+   Empty graph, blurred, with a link overlay: lock · "Requires" · Pioneer Pass logo. */
+.dash-visits-card.is-pp-locked .dash-visits-wrap { container-type: size; }
+.dash-visits-card.is-pp-locked .dash-visits-wrap > canvas,
+.dash-visits-card.is-pp-locked .dash-visits-msg,
+.dash-visits-card.is-pp-locked .dash-games-note {
+  filter: blur(3px);
+  user-select: none; -webkit-user-select: none;
+}
+.dash-pp-lock {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(2px, 2.2cqh, 8px);
+  padding: 8px;
+  text-decoration: none; color: var(--brown-dark, #5C3317);
+  background: rgba(255, 248, 236, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dash-pp-lock:hover { background: rgba(255, 248, 236, 0.5); }
+.dash-pp-lock:focus-visible { outline: 3px solid #F59E0B; outline-offset: -3px; }
+.dash-pp-lock-icon {
+  width: clamp(30px, 24cqh, 56px); height: clamp(30px, 24cqh, 56px);
+  color: var(--brown, #8B4513);
+  filter: drop-shadow(0 2px 3px rgba(92, 51, 23, 0.35));
+  flex: 0 0 auto;
+}
+.dash-pp-lock-req {
+  font: 700 clamp(12px, 7cqh, 16px)/1.1 'DM Sans', sans-serif;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--brown-dark, #5C3317);
+  text-shadow: 0 1px 0 rgba(255, 248, 236, 0.9);
+}
+.dash-pp-lock-logo { display: block; flex: 0 0 auto; }
+.dash-pp-lock-logo img {
+  display: block; width: auto; height: clamp(34px, 26cqh, 64px); max-width: 80cqw;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(13, 27, 42, 0.35));
+}
+.dash-pp-lock:hover .dash-pp-lock-logo img { transform: scale(1.04); }
+@supports not (height: 1cqh) {
+  .dash-pp-lock-icon { width: 44px; height: 44px; }
+  .dash-pp-lock-req { font-size: 14px; }
+  .dash-pp-lock-logo img { height: 48px; max-width: 80%; }
+}
+
+/* ── Pioneer Pass free trial (non-members, until PIONEER_TRIAL_END) ── Oct 3, 2026
+   Same overlay as a <button>: open padlock · "Free trial until October 9" · logo.
+   One click opens all five graphs (member view) for this page / browser. */
+button.dash-pp-lock {
+  -webkit-appearance: none; appearance: none;
+  margin: 0; border: 0; width: 100%; height: 100%;
+  font: inherit; text-align: center;
+}
+.dash-pp-lock.is-trial .dash-pp-lock-req {
+  max-width: 92%;
+  font-size: clamp(11px, min(6.5cqh, 4.6cqw), 15px);
+  letter-spacing: .04em;
+  text-wrap: balance;
+}
+.dash-visits-card[tabindex="-1"]:focus { outline: none; }
+@supports not (height: 1cqh) {
+  .dash-pp-lock.is-trial .dash-pp-lock-req { font-size: 13px; }
 }

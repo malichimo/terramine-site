@@ -30,7 +30,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal-top-nav.css" />
+  <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -228,6 +228,22 @@
       font-size:13px; line-height:1.35; font-weight:500; text-align:left;
       max-width:min(280px, calc(100vw - 16px));
     }
+    .vo-mine-tip.is-owner { padding:8px 10px; width:max-content; min-width:180px; }
+    .vo-owner-tip-mine { display:flex; align-items:center; gap:6px; min-width:0; font-size:12px; font-weight:700; padding-bottom:6px; margin-bottom:7px; border-bottom:1px solid rgba(255,255,255,.14); }
+    .vo-owner-tip-mine img { width:18px; height:18px; object-fit:contain; flex-shrink:0; display:block; }
+    .vo-owner-tip-mine span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+    .vo-owner-tip-row { display:flex; align-items:center; gap:10px; min-width:0; }
+    .vo-owner-tip-avatar {
+      width:44px; height:44px; border-radius:8px; background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.4); display:flex; align-items:center; justify-content:center;
+      font-size:15px; font-weight:700; color:#c5ced8; flex-shrink:0; overflow:hidden;
+    }
+    .vo-owner-tip-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+    .vo-owner-tip-text { min-width:0; display:flex; flex-direction:column; gap:1px; }
+    .vo-owner-tip-label { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--cyan); }
+    .vo-owner-tip-nick { font-size:14px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .vo-owner-tip-count { font-size:12px; color:rgba(255,255,255,.8); }
+    .vo-owner-tip-count:empty { display:none; }
     .vo-showcase-flash {
       position:fixed; z-index:350; pointer-events:none; display:none;
       left:50%; transform:translateX(-50%);
@@ -470,7 +486,7 @@
     }
     .mine-map-select-layer {
       position:absolute; inset:0; z-index:8; cursor:crosshair;
-      background:transparent;
+      background:transparent; touch-action:none;
     }
     .mine-map-select-layer[hidden] { display:none !important; }
     .mine-map-select-rect {
@@ -562,6 +578,11 @@
     .mine-map-bulk-rename-form label.bulk-seq-pad-label[hidden] {
       display:none !important;
     }
+    .mine-map-bulk-rename-item .mine-map-bulk-rename-item-num {
+      flex:0 0 auto; min-width:1.5em; text-align:right;
+      font:700 12px/1.3 'DM Sans',sans-serif; color:rgba(255,255,255,.65);
+      font-variant-numeric:tabular-nums;
+    }
     .mine-map-bulk-rename-apply-wrap {
       align-self:flex-start; margin-top:4px;
       display:flex; flex-direction:column; align-items:flex-start; gap:8px;
@@ -576,6 +597,87 @@
     .mine-map-bulk-rename-progress {
       font:600 13px/1.3 'DM Sans',sans-serif; color:rgba(255,255,255,.92);
       letter-spacing:.2px; min-height:1.3em;
+    }
+    .mine-map-bulk-rename-preview {
+      font:500 12px/1.4 'DM Sans',sans-serif; color:rgba(255,255,255,.72);
+      overflow-wrap:anywhere; word-break:break-word; min-width:0;
+    }
+    .mine-map-bulk-rename-preview:empty { display:none; }
+    .mine-map-bulk-rename-preview b { color:#fff; font-weight:700; }
+    .mine-map-bulk-rename-preview.is-error { color:#ffab91; font-weight:600; }
+    /* Random Mine Names: checkbox + Reroll; dims the (overridden) name field; list shows new names */
+    .mine-map-bulk-rename-form .bulk-random-row {
+      display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; min-width:0;
+    }
+    .mine-map-bulk-rename-form .bulk-random-row[hidden] { display:none !important; }
+    .mine-map-bulk-rename-form .bulk-random-row label.bulk-seq-label { flex:0 1 auto; min-width:0; }
+    .mine-map-bulk-rename-reroll {
+      flex:0 0 auto; display:inline-flex; align-items:center; gap:4px;
+      border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.12);
+      color:#fff; border-radius:999px; padding:3px 10px; cursor:pointer;
+      font:700 12px/1.3 'DM Sans',sans-serif; letter-spacing:.2px;
+    }
+    .mine-map-bulk-rename-reroll:hover { background:rgba(79,195,247,.35); }
+    .mine-map-bulk-rename-reroll:disabled { opacity:.55; cursor:not-allowed; }
+    .mine-map-bulk-rename-reroll[hidden] { display:none !important; }
+    .mine-map-bulk-rename-form label.bulk-name-label.is-overridden { opacity:.45; }
+    .mine-map-bulk-rename-form label.bulk-name-label.is-overridden input { cursor:not-allowed; }
+    .mine-map-bulk-rename-item .mine-map-bulk-rename-item-names {
+      flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;
+    }
+    .mine-map-bulk-rename-item .mine-map-bulk-rename-item-names span { flex:0 0 auto; }
+    .mine-map-bulk-rename-item .mine-map-bulk-rename-item-new {
+      font:600 11px/1.3 'DM Sans',sans-serif; color:#b3e5fc;
+      overflow-wrap:anywhere; word-break:break-word;
+    }
+    .mine-map-bulk-rename-item .mine-map-bulk-rename-item-new:empty { display:none; }
+    /* ── Bulk Greeting (reuses the Bulk Rename box-select + dialog shell) ── */
+    .mine-map-bulk-greet-btn { display:inline-flex; align-items:center; gap:5px; }
+    .mine-map-bulk-greet-btn svg { width:15px; height:15px; flex-shrink:0; display:block; margin:-2px 0; }
+    .mine-map-bulk-greet-item { align-items:flex-start; }
+    .mine-map-bulk-greet-item img { margin-top:1px; }
+    .mine-map-bulk-greet-item .mine-map-bulk-rename-item-remove { margin-top:-1px; }
+    .mine-map-bulk-greet-item .mine-map-bulk-greet-text {
+      flex:1; min-width:0; white-space:normal; overflow:hidden; overflow-wrap:anywhere;
+      display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3;
+    }
+    .mine-map-bulk-greet-current {
+      font-style:italic; font-weight:500; color:rgba(255,255,255,.62);
+    }
+    .mine-map-bulk-greet-current.is-empty { color:rgba(255,255,255,.45); }
+    .mine-map-bulk-rename-form textarea.mine-map-bulk-greet-input {
+      width:100%; box-sizing:border-box; min-height:84px; resize:vertical;
+      border:1px solid rgba(255,255,255,.35); border-radius:8px;
+      background:rgba(15,23,42,.45); color:#fff;
+      padding:10px 12px; font:500 14px/1.4 'DM Sans',sans-serif; letter-spacing:0;
+      outline:none;
+    }
+    .mine-map-bulk-rename-form textarea.mine-map-bulk-greet-input:focus { border-color:#4FC3F7; }
+    .mine-map-bulk-rename-form textarea.mine-map-bulk-greet-input:disabled { opacity:.7; }
+    .mine-map-bulk-greet-meta {
+      display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:-6px;
+      font:500 11px/1.2 'DM Sans',sans-serif; color:rgba(255,255,255,.7);
+    }
+    .mine-map-bulk-greet-count.is-max { color:#ffcc80; }
+    .mine-map-bulk-greet .mine-map-bulk-rename-progress.is-error { color:#ffab91; }
+    .mine-map-bulk-greet .mine-map-bulk-rename-item-remove:disabled,
+    .mine-map-bulk-greet .mine-map-bulk-rename-x:disabled { opacity:.45; cursor:not-allowed; }
+    @media (max-width:600px) {
+      /* Phones: let the map tool buttons wrap instead of running off the right edge. */
+      .mine-map-head { flex-wrap:wrap; row-gap:8px; }
+      .mine-map-head .mine-map-title { flex:1 1 calc(100% - 40px); }
+      .mine-map-bulk-greet { left:8px; right:8px; top:8px; max-height:calc(100% - 16px); }
+      .mine-map-bulk-greet .mine-map-bulk-rename-inner {
+        flex-direction:column; max-height:none; overflow-y:auto; overflow-x:hidden;
+        padding:44px 12px 12px 12px;
+      }
+      .mine-map-bulk-greet .mine-map-bulk-rename-list {
+        flex:0 0 auto; max-height:34vh; padding-right:0; padding-bottom:10px;
+        border-right:0; border-bottom:1px solid rgba(255,255,255,.18);
+      }
+      .mine-map-bulk-greet .mine-map-bulk-rename-form { padding-left:0; padding-top:12px; }
+      /* Bulk Rename: dialog body scrolls vertically so Apply stays reachable with every option on. */
+      #mine-map-bulk-rename .mine-map-bulk-rename-inner { overflow-y:auto; overflow-x:hidden; }
     }
     
   
@@ -614,6 +716,7 @@
       <nav class="top-nav">
     <a class="nav-logo" href="/"><img src="/images/terramine-logo-horizontal-small.png" alt="TerraMine"></a>
     <div class="nav-links" id="portal-nav-links">
+      <a href="/pioneer-pass.html" class="nav-pp"><picture class="nav-pp-pic"><source type="image/webp" srcset="/images/pioneer-pass-logo-44.webp 1x, /images/pioneer-pass-logo-88.webp 2x" /><img class="nav-pp-logo" src="/images/pioneer-pass-logo-44.png" srcset="/images/pioneer-pass-logo-44.png 1x, /images/pioneer-pass-logo-88.png 2x" width="107" height="44" alt="Pioneer Pass" decoding="async" /></picture><span class="nav-pp-text">Pioneer Pass</span></a>
       <a href="/portal.html">Dashboard</a>
       <a href="/mines.html">Mines</a>
       <a href="/inventory.html">Inventory</a>
@@ -687,6 +790,7 @@
           <div class="mine-map-head">
             <img class="mine-map-type-icon" id="mine-map-type-icon" src="images/mine-icons/rock.svg" alt="" width="26" height="26" hidden>
             <div class="mine-map-title" id="mine-map-title">Mine map</div>
+            <button type="button" class="mine-map-labels mine-map-bulk-greet-btn" id="mine-map-bulk-greet-btn" data-tip="Bulk Greeting: draw a rectangle to select mines on the map (Load Area first for nearby mines), then set one greeting on all of them." aria-label="Bulk Greeting: draw a rectangle to select mines on the map (Load Area first for nearby mines), then set one greeting on all of them." aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M12 3.5c-4.97 0-9 3.36-9 7.5 0 2.2 1.14 4.18 2.95 5.55L5.2 20.5l4.3-2.2c.8.18 1.64.28 2.5.28 4.97 0 9-3.36 9-7.5S16.97 3.5 12 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8" cy="11" r="1.3" fill="currentColor"/><circle cx="12" cy="11" r="1.3" fill="currentColor"/><circle cx="16" cy="11" r="1.3" fill="currentColor"/></svg><span>Bulk Greeting</span></button>
             <button type="button" class="mine-map-labels" id="mine-map-bulk-rename-btn" data-tip="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-label="Draw a rectangle to select mines on the map (Load Area first for nearby mines), then rename them." aria-pressed="false">Bulk Rename</button>
             <button type="button" class="mine-map-labels" id="mine-map-load-area" data-tip="Load Area shows nearby owned mines and a purple radius ring. Use Radius to set 0.25–2 miles." aria-label="Load Area shows nearby owned mines and a purple radius ring. Use Radius to set 0.25–2 miles." aria-pressed="false">Load Area</button>
             <label class="mine-map-radius" id="mine-map-radius-field" hidden>
@@ -729,8 +833,15 @@
                 <div class="mine-map-bulk-rename-list" id="mine-map-bulk-rename-list"></div>
                 <div class="mine-map-bulk-rename-form">
                   <label class="bulk-name-label" for="mine-map-bulk-rename-input">New name
-                    <input type="text" id="mine-map-bulk-rename-input" autocomplete="off" spellcheck="false">
+                    <input type="text" id="mine-map-bulk-rename-input" autocomplete="off" spellcheck="false" placeholder="Optional if appending type or number" aria-describedby="mine-map-bulk-rename-preview">
                   </label>
+                  <div class="bulk-random-row" id="mine-map-bulk-rename-random-row">
+                    <label class="bulk-seq-label">
+                      <input type="checkbox" id="mine-map-bulk-rename-random">
+                      <span>Random Mine Names</span>
+                    </label>
+                    <button type="button" class="mine-map-bulk-rename-reroll" id="mine-map-bulk-rename-reroll" hidden aria-label="Reroll random mine names" title="Reroll random mine names">&#x21bb; Reroll</button>
+                  </div>
                   <label class="bulk-seq-label">
                     <input type="checkbox" id="mine-map-bulk-rename-append-type">
                     <span>Append the Mine Type Name to the end of the mine name</span>
@@ -743,9 +854,33 @@
                     <input type="checkbox" id="mine-map-bulk-rename-pad">
                     <span>Left-pad the count with zeros</span>
                   </label>
+                  <label class="bulk-seq-label bulk-seq-pad-label" id="mine-map-bulk-rename-bydate-wrap" hidden>
+                    <input type="checkbox" id="mine-map-bulk-rename-bydate" disabled>
+                    <span>Number in order of purchase date</span>
+                  </label>
+                  <div class="mine-map-bulk-rename-preview" id="mine-map-bulk-rename-preview" aria-live="polite"></div>
                   <div class="mine-map-bulk-rename-apply-wrap">
                     <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-rename-apply">Apply</button>
                     <div class="mine-map-bulk-rename-progress" id="mine-map-bulk-rename-progress" hidden aria-live="polite"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mine-map-bulk-rename mine-map-bulk-greet" id="mine-map-bulk-greet" hidden aria-hidden="true" role="dialog" aria-label="Bulk greeting for mines">
+              <button type="button" class="mine-map-bulk-rename-x" id="mine-map-bulk-greet-x" aria-label="Cancel bulk greeting">×</button>
+              <div class="mine-map-bulk-rename-inner">
+                <div class="mine-map-bulk-rename-list" id="mine-map-bulk-greet-list"></div>
+                <div class="mine-map-bulk-rename-form">
+                  <label class="bulk-name-label" for="mine-map-bulk-greet-input">New greeting
+                    <textarea class="mine-map-bulk-greet-input" id="mine-map-bulk-greet-input" maxlength="100" rows="3" placeholder="Greeting for visitors…"></textarea>
+                  </label>
+                  <div class="mine-map-bulk-greet-meta">
+                    <span class="mine-map-bulk-greet-scope" id="mine-map-bulk-greet-scope"></span>
+                    <span class="mine-map-bulk-greet-count" id="mine-map-bulk-greet-count">0/100</span>
+                  </div>
+                  <div class="mine-map-bulk-rename-apply-wrap">
+                    <button type="button" class="mine-map-bulk-rename-apply" id="mine-map-bulk-greet-apply">Apply</button>
+                    <div class="mine-map-bulk-rename-progress" id="mine-map-bulk-greet-progress" hidden aria-live="polite"></div>
                   </div>
                 </div>
               </div>
@@ -756,6 +891,7 @@
     </main>
   </div>
 </div>
+<script src="js/random-mine-names.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -1141,6 +1277,10 @@
   let bulkRenameStartY = 0;
   let bulkRenameSelected = [];
   let bulkRenameLayerBound = false;
+  let bulkRenameRandomById = null; // Random Mine Names: mine id -> generated base name
+  let bulkToolKind = 'rename'; // which tool owns the shared box-select: 'rename' | 'greet'
+  let bulkGreetSelected = [];
+  let bulkGreetSaving = false;
   const MINE_MAP_ZOOM_KEY = 'terramine.mineMap.zoom';
   const MINE_MAP_BUILDINGS_KEY = 'terramine.mineMap.buildings';
   const MINE_MAP_ZOOM_MIN = 10;
@@ -1392,9 +1532,11 @@
     if (iconEl) iconEl.src = icon;
     const titleInput = $('mine-map-edit-title');
     if (titleInput) titleInput.value = mineTitle(mine, null) || String(mine.id || '');
+    if (titleInput) titleInput.dataset.initial = titleInput.value;
     const greetInput = $('mine-map-edit-greeting');
     if (greetInput) {
       greetInput.value = greetingOf(mine).slice(0, 100);
+      greetInput.dataset.initial = greetInput.value;
     }
     updateMineMapEditCount();
     dlg.hidden = false;
@@ -1422,7 +1564,13 @@
     }
     if (applyBtn) applyBtn.disabled = true;
     try {
-      await safeUpdatePropertyDetails(mine.id, { customName: nextTitle, greeting: nextGreeting }, null);
+      // Send only what changed (a greeting-only edit writes just { greeting }).
+      const initialTitle = titleInput ? String(titleInput.dataset.initial || '').replace(/\s+/g, ' ').trim() : '';
+      const initialGreeting = greetInput ? String(greetInput.dataset.initial || '').trim() : '';
+      const changes = {};
+      if (nextTitle !== initialTitle) changes.customName = nextTitle;
+      if (nextGreeting !== initialGreeting) changes.greeting = nextGreeting;
+      if (Object.keys(changes).length) await safeUpdatePropertyDetails(mine.id, changes, null, mine);
       if (typeof syncLocalMineCustomName === 'function') syncLocalMineCustomName(mine.id, nextTitle);
       else {
         if (!mine._details) mine._details = {};
@@ -1849,10 +1997,19 @@
     return null;
   }
   function updateBulkRenameBtn() {
+    // One shared box-select mode; bulkToolKind says which tool button is active.
+    const renameOn = !!bulkRenameMode && bulkToolKind !== 'greet';
+    const greetOn = !!bulkRenameMode && bulkToolKind === 'greet';
     const btn = $('mine-map-bulk-rename-btn');
-    if (!btn) return;
-    btn.setAttribute('aria-pressed', bulkRenameMode ? 'true' : 'false');
-    btn.classList.toggle('is-bulk-rename-active', !!bulkRenameMode);
+    if (btn) {
+      btn.setAttribute('aria-pressed', renameOn ? 'true' : 'false');
+      btn.classList.toggle('is-bulk-rename-active', renameOn);
+    }
+    const greetBtn = $('mine-map-bulk-greet-btn');
+    if (greetBtn) {
+      greetBtn.setAttribute('aria-pressed', greetOn ? 'true' : 'false');
+      greetBtn.classList.toggle('is-bulk-rename-active', greetOn);
+    }
   }
   function clearBulkRenameSelectRect() {
     const rect = $('mine-map-select-rect');
@@ -1882,9 +2039,16 @@
     if (pad) pad.checked = false;
     const padWrap = $('mine-map-bulk-rename-pad-wrap');
     if (padWrap) padWrap.hidden = true;
+    const randomEl = $('mine-map-bulk-rename-random');
+    if (randomEl) randomEl.checked = false;
+    syncBulkRenameRandomUi();
+    syncBulkRenameByDateUi();
     const apply = $('mine-map-bulk-rename-apply');
     if (apply) apply.disabled = false;
+    const reroll = $('mine-map-bulk-rename-reroll');
+    if (reroll) reroll.disabled = false;
     bulkRenameSelected = [];
+    updateBulkRenamePreview(false);
   }
   function stopBulkRenameDrawLayer() {
     const layer = $('mine-map-select-layer');
@@ -1897,6 +2061,7 @@
     bulkRenameDragging = false;
     stopBulkRenameDrawLayer();
     hideBulkRenameDialog();
+    hideBulkGreetDialog();
     updateBulkRenameBtn();
   }
   function latLngBoundsFromSelectPixels(layer, x1, y1, x2, y2) {
@@ -1929,12 +2094,108 @@
     bounds.extend(pxToLatLng(right, bottom));
     return bounds;
   }
+  // Bulk Rename "Number in order of purchase date". Purchase date mirrors full-map's newest-mine
+  // logic: purchasedAt on the properties doc, then _details.purchasedAt, then createdAt.
+  function bulkRenameTsMs(value) {
+    if (value == null || value === '') return null;
+    if (value instanceof Date) {
+      const t = value.getTime();
+      return Number.isFinite(t) ? t : null;
+    }
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return null;
+      return Math.abs(value) < 1e12 ? value * 1000 : value;
+    }
+    if (typeof value === 'string') {
+      const t = value.trim();
+      if (!t) return null;
+      if (/^[+-]?\d+(\.\d+)?$/.test(t)) {
+        const n = Number(t);
+        if (!Number.isFinite(n)) return null;
+        return Math.abs(n) < 1e12 ? n * 1000 : n;
+      }
+      const parsed = Date.parse(t);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (typeof value === 'object') {
+      if (typeof value.toMillis === 'function') {
+        try {
+          const ms = value.toMillis();
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      if (typeof value.toDate === 'function') {
+        try {
+          const d = value.toDate();
+          const ms = d && typeof d.getTime === 'function' ? d.getTime() : NaN;
+          if (Number.isFinite(ms)) return ms;
+        } catch (e) {}
+      }
+      const sec = typeof value.seconds === 'number' ? value.seconds
+        : (typeof value._seconds === 'number' ? value._seconds : null);
+      if (sec != null && Number.isFinite(sec)) {
+        const ns = typeof value.nanoseconds === 'number' ? value.nanoseconds
+          : (typeof value._nanoseconds === 'number' ? value._nanoseconds : 0);
+        return sec * 1000 + (Number.isFinite(ns) ? Math.floor(ns / 1e6) : 0);
+      }
+    }
+    return null;
+  }
+  function bulkRenamePurchaseMs(mine) {
+    if (!mine) return null;
+    const raw = (mine._raw && typeof mine._raw === 'object') ? mine._raw : {};
+    const d = mine._details || {};
+    const tries = [mine.purchasedAt, raw.purchasedAt, d.purchasedAt, d.createdAt, mine.createdAt, raw.createdAt];
+    for (let i = 0; i < tries.length; i++) {
+      const ms = bulkRenameTsMs(tries[i]);
+      if (ms != null) return ms;
+    }
+    return null;
+  }
+  function bulkRenameTitleCompare(a, b) {
+    const na = String(mineTitle(a, null) || '').localeCompare(String(mineTitle(b, null) || ''), undefined, { sensitivity: 'base', numeric: true });
+    if (na) return na;
+    return String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true });
+  }
+  function bulkRenameUsesPurchaseOrder() {
+    const seq = $('mine-map-bulk-rename-seq');
+    const byDate = $('mine-map-bulk-rename-bydate');
+    return !!(seq && seq.checked && byDate && byDate.checked && !byDate.disabled);
+  }
+  // Apply order: by name (existing behavior); with purchase order on, oldest purchase first,
+  // mines without a date last in their name order.
+  function bulkRenameOrderedMines(byDate) {
+    const titled = bulkRenameSelected.slice().sort(bulkRenameTitleCompare);
+    if (!byDate) return titled;
+    return titled.map(function (m, i) { return { m: m, i: i, ms: bulkRenamePurchaseMs(m) }; })
+      .sort(function (a, b) {
+        const ha = a.ms != null, hb = b.ms != null;
+        if (ha && hb && a.ms !== b.ms) return a.ms - b.ms;
+        if (ha !== hb) return ha ? -1 : 1;
+        return a.i - b.i;
+      })
+      .map(function (x) { return x.m; });
+  }
+  function syncBulkRenameByDateUi() {
+    const seq = $('mine-map-bulk-rename-seq');
+    const wrap = $('mine-map-bulk-rename-bydate-wrap');
+    const byDate = $('mine-map-bulk-rename-bydate');
+    const on = !!(seq && seq.checked);
+    if (wrap) wrap.hidden = !on;
+    if (byDate) {
+      byDate.disabled = !on;
+      if (!on) byDate.checked = false;
+    }
+  }
   function renderBulkRenameList() {
     const list = $('mine-map-bulk-rename-list');
     if (!list) return;
     list.innerHTML = '';
-    for (let i = 0; i < bulkRenameSelected.length; i++) {
-      const m = bulkRenameSelected[i];
+    const byDate = bulkRenameUsesPurchaseOrder();
+    const rows = byDate ? bulkRenameOrderedMines(true) : bulkRenameSelected;
+    const randomOn = bulkRenameRandomOn();
+    for (let i = 0; i < rows.length; i++) {
+      const m = rows[i];
       const type = typeKeyOf(m || {});
       const row = document.createElement('div');
       row.className = 'mine-map-bulk-rename-item';
@@ -1962,18 +2223,41 @@
         }
         renderBulkRenameList();
       });
+      if (byDate) {
+        const num = document.createElement('b');
+        num.className = 'mine-map-bulk-rename-item-num';
+        num.textContent = String(i + 1);
+        row.appendChild(num);
+        const ms = bulkRenamePurchaseMs(m);
+        row.title = ms != null ? ('Purchased ' + new Date(ms).toLocaleDateString()) : 'No purchase date (numbered last)';
+      }
       row.appendChild(img);
-      row.appendChild(span);
+      if (randomOn) {
+        // Random Mine Names: current name + the new (generated) name underneath.
+        const names = document.createElement('div');
+        names.className = 'mine-map-bulk-rename-item-names';
+        const nn = document.createElement('small');
+        nn.className = 'mine-map-bulk-rename-item-new';
+        names.appendChild(span);
+        names.appendChild(nn);
+        row.appendChild(names);
+      } else {
+        row.appendChild(span);
+      }
       row.appendChild(remove);
       list.appendChild(row);
     }
     const apply = $('mine-map-bulk-rename-apply');
     if (apply) apply.disabled = bulkRenameSelected.length === 0;
+    updateBulkRenamePreview(false);
   }
   function openBulkRenameDialog(mines) {
     bulkRenameSelected = mines.slice();
     const dlg = $('mine-map-bulk-rename');
     if (!dlg) return;
+    const randomEl = $('mine-map-bulk-rename-random');
+    if (randomEl) randomEl.checked = false;
+    syncBulkRenameRandomUi();
     renderBulkRenameList();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
@@ -1982,6 +2266,9 @@
       input.value = '';
       setTimeout(function () { try { input.focus(); } catch (e) {} }, 0);
     }
+    const preview = $('mine-map-bulk-rename-preview');
+    if (preview) preview.classList.remove('is-error');
+    updateBulkRenamePreview(false);
   }
 
   function finishBulkRenameSelection(bounds) {
@@ -2009,15 +2296,18 @@
     // Keep mode active while dialog is open
     bulkRenameMode = true;
     updateBulkRenameBtn();
-    openBulkRenameDialog(selected);
+    if (bulkToolKind === 'greet') openBulkGreetDialog(selected);
+    else openBulkRenameDialog(selected);
   }
-  function startBulkRenameDrawMode() {
+  function startBulkRenameDrawMode(kind) {
+    bulkToolKind = (kind === 'greet') ? 'greet' : 'rename';
     closeMineMapEdit();
     if (!mineMapInstance) {
       showMineMapMsg('Map is not ready yet.', true);
       return;
     }
     hideBulkRenameDialog();
+    hideBulkGreetDialog();
     bulkRenameMode = true;
     bulkRenameDragging = false;
     updateBulkRenameBtn();
@@ -2027,13 +2317,18 @@
     clearBulkRenameSelectRect();
     showMineMapMsg('Draw a rectangle to select mines. Esc cancels.', true);
   }
-  function toggleBulkRenameFromButton() {
+  function toggleBulkRenameFromButton(kind) {
+    const k = (kind === 'greet') ? 'greet' : 'rename';
+    if (bulkGreetSaving) return;
     if (bulkRenameMode) {
+      const same = bulkToolKind === k;
       exitBulkRenameMode();
-      showMineMapMsg('', true);
-      return;
+      if (same) {
+        showMineMapMsg('', true);
+        return;
+      }
     }
-    startBulkRenameDrawMode();
+    startBulkRenameDrawMode(k);
   }
   function handleMineMapEscape() {
     const editDlg = $('mine-map-edit');
@@ -2046,6 +2341,11 @@
       exitBulkRenameMode();
       return true;
     }
+    const greetDlg = $('mine-map-bulk-greet');
+    if (greetDlg && !greetDlg.hidden) {
+      if (!bulkGreetSaving) exitBulkRenameMode();
+      return true;
+    }
     if (bulkRenameMode) {
       exitBulkRenameMode();
       showMineMapMsg('', true);
@@ -2053,28 +2353,161 @@
     }
     return false;
   }
-  async function applyBulkRename() {
+  // Bulk Rename name builder. The title may be blank only when "Append mine type" and/or
+  // "Append sequential numbering" is on; the result is then just those parts ("Gold 01", "01",
+  // "Gold"). Blank title + no append option is blocked (never saves an empty name).
+  const BULK_RENAME_NEED_NAME_MSG = 'Enter a new name, or check \u201cAppend the Mine Type Name\u201d or \u201cAppend sequential numbering\u201d to name mines by type/number only.';
+  function bulkRenameBaseValue() {
     const input = $('mine-map-bulk-rename-input');
+    return input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
+  }
+  // "Random Mine Names" (js/random-mine-names.js): one Mad Libs base name per selected mine
+  // ("The Rusty Pickaxe Mine"), rolled once when checked / on Reroll and kept by mine id, so the
+  // preview and Apply use the SAME names. It overrides the typed title (field dimmed + disabled);
+  // mine type / numbering appends still follow the random name.
+  function bulkRenameRandomGen() {
+    const g = window.TerraMineRandomNames;
+    return (g && typeof g.batch === 'function') ? g : null;
+  }
+  function bulkRenameRandomOn() {
+    const el = $('mine-map-bulk-rename-random');
+    return !!(el && el.checked && bulkRenameRandomGen());
+  }
+  function bulkRenameMineKey(m) { return String(m && m.id != null ? m.id : ''); }
+  function bulkRenameRollRandomNames(avoidPrevious) {
+    const gen = bulkRenameRandomGen();
+    const prev = bulkRenameRandomById || {};
+    const avoid = avoidPrevious ? Object.keys(prev).map(function (k) { return prev[k]; }) : [];
+    const mines = bulkRenameOrderedMines(bulkRenameUsesPurchaseOrder());
+    const names = gen ? gen.batch(mines.length, { avoid: avoid }) : [];
+    const map = {};
+    mines.forEach(function (m, i) { map[bulkRenameMineKey(m)] = names[i] || ''; });
+    bulkRenameRandomById = map;
+  }
+  function bulkRenameRandomFor(mine) {
+    const key = bulkRenameMineKey(mine);
+    if (!bulkRenameRandomById) bulkRenameRandomById = {};
+    if (!bulkRenameRandomById[key]) {
+      const gen = bulkRenameRandomGen();
+      const map = bulkRenameRandomById;
+      bulkRenameRandomById[key] = gen ? gen.one({ avoid: Object.keys(map).map(function (k) { return map[k]; }) }) : '';
+    }
+    return bulkRenameRandomById[key];
+  }
+  function syncBulkRenameRandomUi() {
+    const el = $('mine-map-bulk-rename-random');
+    const row = $('mine-map-bulk-rename-random-row');
+    if (row) row.hidden = !bulkRenameRandomGen();
+    if (el && !bulkRenameRandomGen()) el.checked = false;
+    const on = bulkRenameRandomOn();
+    const input = $('mine-map-bulk-rename-input');
+    if (input) {
+      input.disabled = on;
+      input.placeholder = on ? 'Using random mine names' : 'Optional if appending type or number';
+      const lab = input.closest ? input.closest('label') : null;
+      if (lab) lab.classList.toggle('is-overridden', on);
+    }
+    const reroll = $('mine-map-bulk-rename-reroll');
+    if (reroll) reroll.hidden = !on;
+    if (!on) bulkRenameRandomById = null;
+  }
+  function bulkRenameNameOpts(total) {
     const seq = $('mine-map-bulk-rename-seq');
     const appendTypeEl = $('mine-map-bulk-rename-append-type');
     const padEl = $('mine-map-bulk-rename-pad');
+    const useSeq = !!(seq && seq.checked);
+    return {
+      useSeq: useSeq,
+      useRandom: bulkRenameRandomOn(),
+      useType: !!(appendTypeEl && appendTypeEl.checked),
+      usePad: !!(useSeq && padEl && padEl.checked),
+      padWidth: Math.max(2, String(total || 0).length)
+    };
+  }
+  function bulkRenameComposeName(base, mine, i, o) {
+    const parts = [];
+    if (o.useRandom) base = bulkRenameRandomFor(mine); // overrides the typed title
+    if (base) parts.push(base);
+    if (o.useType) {
+      const tk = typeKeyOf(mine || {});
+      parts.push((TYPE_LABEL && TYPE_LABEL[tk]) ? TYPE_LABEL[tk] : (tk || 'Rock'));
+    }
+    if (o.useSeq) {
+      const n = i + 1;
+      parts.push(o.usePad ? String(n).padStart(o.padWidth, '0') : String(n));
+    }
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+  function bulkRenameNameIsValid(base, o) {
+    return !!(o.useRandom || base || o.useType || o.useSeq);
+  }
+  // Live preview line: first (and last) resulting name in apply order, or the inline
+  // "need a name" message. showError=true (Apply attempt) switches the message to error style.
+  function updateBulkRenamePreview(showError) {
+    const el = $('mine-map-bulk-rename-preview');
+    if (!el) return;
+    const dlg = $('mine-map-bulk-rename');
+    if (!bulkRenameSelected.length || (dlg && dlg.hidden)) {
+      el.textContent = '';
+      el.classList.remove('is-error');
+      el.removeAttribute('role');
+      return;
+    }
+    const base = bulkRenameBaseValue();
+    const mines = bulkRenameOrderedMines(bulkRenameUsesPurchaseOrder());
+    const o = bulkRenameNameOpts(mines.length);
+    if (!bulkRenameNameIsValid(base, o)) {
+      const wasErr = el.classList.contains('is-error');
+      el.textContent = BULK_RENAME_NEED_NAME_MSG;
+      el.classList.toggle('is-error', !!showError || wasErr);
+      if (showError || wasErr) el.setAttribute('role', 'alert'); else el.removeAttribute('role');
+      return;
+    }
+    el.classList.remove('is-error');
+    el.removeAttribute('role');
+    el.textContent = '';
+    if (o.useRandom) {
+      // Show each mine's generated name in the list (same names Apply will save).
+      const byId = {};
+      mines.forEach(function (m, k) { byId[bulkRenameMineKey(m)] = bulkRenameComposeName(base, m, k, o); });
+      const list = $('mine-map-bulk-rename-list');
+      if (list) list.querySelectorAll('.mine-map-bulk-rename-item').forEach(function (row) {
+        const nn = row.querySelector('.mine-map-bulk-rename-item-new');
+        if (!nn) return;
+        const nm = byId[row.dataset.mineId] || '';
+        nn.textContent = nm ? '\u2192 ' + nm : '';
+        nn.title = nm;
+      });
+    }
+    const first = bulkRenameComposeName(base, mines[0], 0, o);
+    const lastIdx = mines.length - 1;
+    const last = lastIdx > 0 ? bulkRenameComposeName(base, mines[lastIdx], lastIdx, o) : '';
+    el.appendChild(document.createTextNode('Preview: '));
+    const b1 = document.createElement('b');
+    b1.textContent = first;
+    el.appendChild(b1);
+    if (last && last !== first) {
+      el.appendChild(document.createTextNode(lastIdx > 1 ? ' \u2026 ' : ', '));
+      const b2 = document.createElement('b');
+      b2.textContent = last;
+      el.appendChild(b2);
+    } else if (lastIdx > 0) {
+      el.appendChild(document.createTextNode(' (all ' + mines.length + ')'));
+    }
+  }
+  async function applyBulkRename() {
+    const input = $('mine-map-bulk-rename-input');
     const applyBtn = $('mine-map-bulk-rename-apply');
-    const base = input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
-    if (!base) {
-      flashShowcaseNote('Enter a new name.');
+    const base = bulkRenameBaseValue();
+    const mines = bulkRenameOrderedMines(bulkRenameUsesPurchaseOrder());
+    const total = mines.length;
+    const nameOpts = bulkRenameNameOpts(total);
+    if (!bulkRenameNameIsValid(base, nameOpts)) {
+      updateBulkRenamePreview(true);
       if (input) input.focus();
       return;
     }
-    const mines = bulkRenameSelected.slice().sort((a, b) => {
-      const na = String(mineTitle(a, null) || '').localeCompare(String(mineTitle(b, null) || ''), undefined, { sensitivity: 'base', numeric: true });
-      if (na) return na;
-      return String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true });
-    });
-    const useSeq = !!(seq && seq.checked);
-    const useType = !!(appendTypeEl && appendTypeEl.checked);
-    const usePad = !!(useSeq && padEl && padEl.checked);
-    const total = mines.length;
-    const padWidth = Math.max(2, String(total).length);
+    if (!total) return;
     if (applyBtn) applyBtn.disabled = true;
     const progress = $('mine-map-bulk-rename-progress');
     if (progress) {
@@ -2082,20 +2515,16 @@
       progress.textContent = '0 of ' + total + ' done';
     }
     let ok = 0, fail = 0;
+    // Snapshot names up front (random names = exactly what the preview showed).
+    const finalNames = mines.map(function (m, i) { return bulkRenameComposeName(base, m, i, nameOpts); });
+    const reroll = $('mine-map-bulk-rename-reroll');
+    if (reroll) reroll.disabled = true;
     for (let i = 0; i < mines.length; i++) {
-      const parts = [base];
-      if (useType) {
-        const tk = typeKeyOf(mines[i] || {});
-        parts.push((TYPE_LABEL && TYPE_LABEL[tk]) ? TYPE_LABEL[tk] : (tk || 'Rock'));
-      }
-      if (useSeq) {
-        const n = i + 1;
-        parts.push(usePad ? String(n).padStart(padWidth, '0') : String(n));
-      }
-      const name = parts.join(' ');
+      const name = finalNames[i];
+      if (!name) { fail++; continue; }
       const id = mines[i].id;
       try {
-        await safeUpdatePropertyDetails(id, { customName: name }, null);
+        await safeUpdatePropertyDetails(id, { customName: name }, null, mines[i]);
         syncLocalMineCustomName(id, name);
         ok++;
       } catch (err) {
@@ -2109,13 +2538,206 @@
     else if (fail && !ok) flashShowcaseNote('Could not rename selected mines.');
     else if (ok) showMineMapMsg('Renamed ' + ok + ' mine' + (ok === 1 ? '' : 's') + '.', true);
   }
+  // ── Bulk Greeting ──
+  // Shares the Bulk Rename box-select (bulkRenameMode, select layer, finishBulkRenameSelection);
+  // bulkToolKind decides which dialog opens. Saves propertyDetails/{id}.greeting through
+  // safeUpdatePropertyDetails (merge), same normalization as the single-mine greeting editor.
+  const BULK_GREET_MAX = 100;
+  function bulkGreetIdOf(m) { return String(m && m.id != null ? m.id : ''); }
+  function setBulkGreetBusy(busy) {
+    bulkGreetSaving = !!busy;
+    const dlg = $('mine-map-bulk-greet');
+    if (dlg) dlg.classList.toggle('is-saving', !!busy);
+    const ta = $('mine-map-bulk-greet-input');
+    if (ta) ta.disabled = !!busy;
+    const x = $('mine-map-bulk-greet-x');
+    if (x) x.disabled = !!busy;
+    const list = $('mine-map-bulk-greet-list');
+    if (list) list.querySelectorAll('.mine-map-bulk-rename-item-remove').forEach(function (b) { b.disabled = !!busy; });
+    const apply = $('mine-map-bulk-greet-apply');
+    if (apply) {
+      apply.disabled = !!busy || bulkGreetSelected.length === 0;
+      apply.textContent = busy ? 'Saving\u2026' : 'Apply';
+    }
+  }
+  function updateBulkGreetCount() {
+    const ta = $('mine-map-bulk-greet-input');
+    const count = $('mine-map-bulk-greet-count');
+    if (ta && count) {
+      const n = String(ta.value || '').length;
+      count.textContent = n + '/' + BULK_GREET_MAX;
+      count.classList.toggle('is-max', n >= BULK_GREET_MAX);
+    }
+    const scope = $('mine-map-bulk-greet-scope');
+    if (scope) {
+      const k = bulkGreetSelected.length;
+      scope.textContent = 'Applies to ' + k + ' mine' + (k === 1 ? '' : 's');
+    }
+  }
+  function setBulkGreetProgress(text, isError) {
+    const progress = $('mine-map-bulk-greet-progress');
+    if (!progress) return;
+    progress.hidden = !text;
+    progress.textContent = text || '';
+    progress.classList.toggle('is-error', !!isError);
+  }
+  function hideBulkGreetDialog() {
+    const dlg = $('mine-map-bulk-greet');
+    if (dlg) {
+      dlg.hidden = true;
+      dlg.setAttribute('aria-hidden', 'true');
+    }
+    const list = $('mine-map-bulk-greet-list');
+    if (list) list.innerHTML = '';
+    const ta = $('mine-map-bulk-greet-input');
+    if (ta) ta.value = '';
+    bulkGreetSelected = [];
+    setBulkGreetBusy(false);
+    setBulkGreetProgress('', false);
+    updateBulkGreetCount();
+  }
+  function renderBulkGreetList() {
+    const list = $('mine-map-bulk-greet-list');
+    if (!list) return;
+    list.innerHTML = '';
+    for (let i = 0; i < bulkGreetSelected.length; i++) {
+      const m = bulkGreetSelected[i];
+      const type = typeKeyOf(m || {});
+      const title = mineTitle(m) || bulkGreetIdOf(m);
+      const greeting = String(greetingOf(m) || '').trim();
+      const row = document.createElement('div');
+      row.className = 'mine-map-bulk-rename-item mine-map-bulk-greet-item';
+      row.dataset.mineId = bulkGreetIdOf(m);
+      const img = document.createElement('img');
+      img.src = ICONS[type] || ICONS.rock;
+      img.alt = '';
+      const text = document.createElement('span');
+      text.className = 'mine-map-bulk-greet-text';
+      const t = document.createElement('span');
+      t.className = 'mine-map-bulk-greet-title';
+      t.textContent = title;
+      const g = document.createElement('em');
+      g.className = 'mine-map-bulk-greet-current' + (greeting ? '' : ' is-empty');
+      g.textContent = greeting ? ('\u201c' + greeting + '\u201d') : '(no greeting)';
+      text.appendChild(t);
+      text.appendChild(document.createTextNode(' '));
+      text.appendChild(g);
+      text.title = greeting ? (title + ' \u2014 ' + greeting) : (title + ' \u2014 no greeting');
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'mine-map-bulk-rename-item-remove';
+      remove.setAttribute('aria-label', 'Remove from greeting list');
+      remove.textContent = '\u00d7';
+      remove.disabled = !!bulkGreetSaving;
+      remove.addEventListener('click', function (ev) {
+        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        if (bulkGreetSaving) return;
+        const id = bulkGreetIdOf(m);
+        bulkGreetSelected = bulkGreetSelected.filter(function (x) { return bulkGreetIdOf(x) !== id; });
+        if (!bulkGreetSelected.length) {
+          exitBulkRenameMode();
+          showMineMapMsg('No mines left to update.', true);
+          return;
+        }
+        renderBulkGreetList();
+      });
+      row.appendChild(img);
+      row.appendChild(text);
+      row.appendChild(remove);
+      list.appendChild(row);
+    }
+    const apply = $('mine-map-bulk-greet-apply');
+    if (apply) apply.disabled = !!bulkGreetSaving || bulkGreetSelected.length === 0;
+    updateBulkGreetCount();
+  }
+  // Read-only: some mines' details may still be loading; never show "(no greeting)" over a real one.
+  function refreshBulkGreetFromDb(list) {
+    if (typeof db === 'undefined' || !db || typeof db.collection !== 'function') return;
+    const missing = (list || []).filter(function (m) { return m && m.id != null && !m._details; }).slice(0, 200);
+    missing.forEach(function (m) {
+      try {
+        db.collection('propertyDetails').doc(String(m.id)).get().then(function (snap) {
+          if (m._details) return;
+          m._details = (snap && snap.exists) ? (snap.data() || {}) : {};
+          if (snap) m._detailsExists = !!snap.exists;
+          const dlg = $('mine-map-bulk-greet');
+          if (!dlg || dlg.hidden || bulkGreetSaving) return;
+          const id = bulkGreetIdOf(m);
+          if (bulkGreetSelected.some(function (x) { return bulkGreetIdOf(x) === id; })) renderBulkGreetList();
+        }).catch(function () {});
+      } catch (err) {}
+    });
+  }
+  function openBulkGreetDialog(list) {
+    const dlg = $('mine-map-bulk-greet');
+    if (!dlg) return;
+    bulkGreetSelected = (list || []).slice();
+    setBulkGreetBusy(false);
+    setBulkGreetProgress('', false);
+    const ta = $('mine-map-bulk-greet-input');
+    if (ta) ta.value = '';
+    renderBulkGreetList();
+    dlg.hidden = false;
+    dlg.setAttribute('aria-hidden', 'false');
+    if (ta) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
+    refreshBulkGreetFromDb(bulkGreetSelected);
+  }
+  async function applyBulkGreet() {
+    if (bulkGreetSaving) return;
+    const ta = $('mine-map-bulk-greet-input');
+    // Same normalization as applyMineMapEdit / applyMineGreetModal: trim, cap at 100 (newlines kept).
+    let next = ta ? String(ta.value || '').trim() : '';
+    if (next.length > BULK_GREET_MAX) next = next.slice(0, BULK_GREET_MAX);
+    const list = bulkGreetSelected.slice();
+    const total = list.length;
+    if (!total) return;
+    if (!next) {
+      const sure = window.confirm('The greeting box is empty. Clear the greeting on ' + total + ' mine' + (total === 1 ? '' : 's') + '?');
+      if (!sure) {
+        if (ta) { try { ta.focus(); } catch (e) {} }
+        return;
+      }
+    }
+    setBulkGreetBusy(true);
+    setBulkGreetProgress('0 of ' + total + ' done', false);
+    let ok = 0;
+    const failed = [];
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      const id = m.id;
+      try {
+        await safeUpdatePropertyDetails(id, { greeting: next }, null, m);
+        syncLocalMineGreeting(id, next);
+        if (!m._details) m._details = {};
+        m._details.greeting = next;
+        ok++;
+      } catch (err) {
+        failed.push(m);
+        console.warn('[activity] bulk greeting failed', id, err);
+      }
+      setBulkGreetProgress((i + 1) + ' of ' + total + ' done', false);
+    }
+    const verb = next ? 'updated' : 'cleared';
+    if (!failed.length) {
+      exitBulkRenameMode();
+      showMineMapMsg('Greeting ' + verb + ' on ' + ok + ' mine' + (ok === 1 ? '' : 's') + '.', true);
+      return;
+    }
+    // Keep the dialog (and the typed greeting) open with only the mines that failed, so Apply retries them.
+    bulkGreetSelected = failed;
+    setBulkGreetBusy(false);
+    renderBulkGreetList();
+    setBulkGreetProgress((ok ? ('Greeting ' + verb + ' on ' + ok + ' mine' + (ok === 1 ? '' : 's') + '. ') : '')
+      + failed.length + ' failed \u2014 still listed; Apply to retry.', true);
+  }
   function bindBulkRenameLayerOnce() {
     if (bulkRenameLayerBound) return;
     bulkRenameLayerBound = true;
     const layer = $('mine-map-select-layer');
     const rect = $('mine-map-select-rect');
     if (!layer || !rect) return;
-    layer.addEventListener('mousedown', e => {
+    // Pointer events (mouse + touch/pen), like full-map.html, so box-select also works on phones.
+    layer.addEventListener('pointerdown', e => {
       if (!bulkRenameMode || e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
@@ -2128,8 +2750,9 @@
       rect.style.top = bulkRenameStartY + 'px';
       rect.style.width = '0px';
       rect.style.height = '0px';
+      try { layer.setPointerCapture(e.pointerId); } catch (err) {}
     });
-    layer.addEventListener('mousemove', e => {
+    layer.addEventListener('pointermove', e => {
       if (!bulkRenameDragging) return;
       e.preventDefault();
       const r = layer.getBoundingClientRect();
@@ -2152,9 +2775,10 @@
       clearBulkRenameSelectRect();
       finishBulkRenameSelection(bounds);
     }
-    layer.addEventListener('mouseup', endDrag);
-    layer.addEventListener('mouseleave', e => {
-      if (bulkRenameDragging) endDrag(e);
+    layer.addEventListener('pointerup', endDrag);
+    layer.addEventListener('pointercancel', () => {
+      bulkRenameDragging = false;
+      clearBulkRenameSelectRect();
     });
   }
 
@@ -2534,6 +3158,16 @@
     bindMineMapTitleInteractionsOnce();
     const closeBtn = $('mine-map-close');
     if (closeBtn) closeBtn.addEventListener('click', e => { e.preventDefault(); closeMineMap(); });
+    // Esc for the map + Bulk Rename / Bulk Greeting. The visitor-detail keydown handler does the
+    // same, but only binds once that overlay has been opened; this covers the map before that.
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || voDetailBound) return;
+      const mapOverlay = $('mine-map-overlay');
+      if (!mapOverlay || mapOverlay.hidden) return;
+      e.preventDefault();
+      if (handleMineMapEscape()) return;
+      closeMineMap();
+    });
     const zoomSlider = $('mine-map-zoom');
     if (zoomSlider) {
       syncMineMapZoomSlider(getSavedMineMapZoom());
@@ -2594,6 +3228,32 @@
       });
       bindLoadAreaFollowTip(bulkRenameBtn);
     }
+    const bulkGreetBtn = $('mine-map-bulk-greet-btn');
+    if (bulkGreetBtn) {
+      bulkGreetBtn.removeAttribute('title');
+      bulkGreetBtn.removeAttribute('alt');
+      bulkGreetBtn.addEventListener('click', e => {
+        e.preventDefault();
+        toggleBulkRenameFromButton('greet');
+      });
+      bindLoadAreaFollowTip(bulkGreetBtn);
+    }
+    const bulkGreetX = $('mine-map-bulk-greet-x');
+    if (bulkGreetX) bulkGreetX.addEventListener('click', e => { e.preventDefault(); if (!bulkGreetSaving) exitBulkRenameMode(); });
+    const bulkGreetApply = $('mine-map-bulk-greet-apply');
+    if (bulkGreetApply) bulkGreetApply.addEventListener('click', e => { e.preventDefault(); applyBulkGreet(); });
+    const bulkGreetInput = $('mine-map-bulk-greet-input');
+    if (bulkGreetInput) {
+      bulkGreetInput.addEventListener('input', updateBulkGreetCount);
+      bulkGreetInput.addEventListener('keydown', e => {
+        // Enter = newline (like the single editor); Ctrl/Cmd+Enter applies.
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          applyBulkGreet();
+        }
+      });
+    }
     bindBulkRenameLayerOnce();
     const bulkRenameX = $('mine-map-bulk-rename-x');
     if (bulkRenameX) bulkRenameX.addEventListener('click', e => { e.preventDefault(); exitBulkRenameMode(); });
@@ -2606,8 +3266,35 @@
         const pad = $('mine-map-bulk-rename-pad');
         if (padWrap) padWrap.hidden = !bulkRenameSeq.checked;
         if (!bulkRenameSeq.checked && pad) pad.checked = false;
+        syncBulkRenameByDateUi();
+        const dlg = $('mine-map-bulk-rename');
+        if (dlg && !dlg.hidden) renderBulkRenameList();
       });
     }
+    const bulkRenameByDate = $('mine-map-bulk-rename-bydate');
+    if (bulkRenameByDate) bulkRenameByDate.addEventListener('change', function () { renderBulkRenameList(); });
+    const bulkRenameRandom = $('mine-map-bulk-rename-random');
+    if (bulkRenameRandom) {
+      bulkRenameRandom.addEventListener('change', function () {
+        syncBulkRenameRandomUi();
+        if (bulkRenameRandomOn()) bulkRenameRollRandomNames(false);
+        const dlg = $('mine-map-bulk-rename');
+        if (dlg && !dlg.hidden) renderBulkRenameList();
+      });
+    }
+    const bulkRenameReroll = $('mine-map-bulk-rename-reroll');
+    if (bulkRenameReroll) {
+      bulkRenameReroll.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (!bulkRenameRandomOn() || bulkRenameReroll.disabled) return;
+        bulkRenameRollRandomNames(true);
+        updateBulkRenamePreview(false);
+      });
+    }
+    ['mine-map-bulk-rename-input', 'mine-map-bulk-rename-append-type', 'mine-map-bulk-rename-pad'].forEach(function (bid) {
+      const el = $(bid);
+      if (el) el.addEventListener(bid === 'mine-map-bulk-rename-input' ? 'input' : 'change', function () { updateBulkRenamePreview(false); });
+    });
     const bulkRenameInput = $('mine-map-bulk-rename-input');
     if (bulkRenameInput) {
       bulkRenameInput.addEventListener('keydown', e => {
@@ -2864,38 +3551,128 @@
       if (showcaseFlashEl) showcaseFlashEl.style.display = 'none';
     }, 3200);
   }
-  async function safeUpdatePropertyDetails(mineId, updates, removeFields) {
-    const detailsRef = db.collection('propertyDetails').doc(String(mineId));
+  // Website edits (greeting, title, Bulk Greeting / Bulk Rename, map popup, showcase photo pin).
+  // Sept 30, 2026:
+  //  * Existing propertyDetails doc -> update() with ONLY the edited fields. No updatedAt / lastUpdated /
+  //    createdAt / lastDailyReset: lastUpdated is the mine-activity clock (180-day maintenance, "At risk").
+  //  * No doc yet (new mines) -> quietly create it with the same field set the original create path used
+  //    (rules accept that shape), but every date = the mine's purchasedAt (properties doc, then _raw), so
+  //    the maintenance clock is exactly what it was (the no-details fallback is purchasedAt too).
+  //    No purchasedAt -> now, with a console warning.
+  //  * Create runs in a transaction (get + set only if still missing), so an existing doc is never overwritten.
+  //  * update() failing with permission-denied / not-found (rules can't evaluate a missing doc) retries once as the create.
+  function detailsMineObjects(id, hint) {
+    const out = [];
+    const add = m => { if (m && typeof m === 'object' && m.id != null && String(m.id) === id && out.indexOf(m) === -1) out.push(m); };
+    add(hint);
+    try { if (typeof allMines !== 'undefined' && Array.isArray(allMines)) allMines.forEach(add); } catch (e) {}
+    try { if (typeof mineMap !== 'undefined' && mineMap) add(mineMap[id]); } catch (e) {}
+    try { if (typeof ownedMineMap !== 'undefined' && ownedMineMap) add(ownedMineMap[id]); } catch (e) {}
+    try { if (typeof mineMapCurrentMine !== 'undefined') add(mineMapCurrentMine); } catch (e) {}
+    try { if (typeof getMineMapDrawnMines === 'function') getMineMapDrawnMines().forEach(add); } catch (e) {}
+    return out;
+  }
+  function detailsIsoFromValue(v) {
+    const ms = bulkRenameTsMs(v);
+    if (ms == null || !Number.isFinite(ms)) return null;
+    try { return new Date(ms).toISOString(); } catch (e) { return null; }
+  }
+  async function purchasedAtIsoForDetails(id, objs) {
+    for (let i = 0; i < objs.length; i++) {
+      const m = objs[i];
+      const raw = (m._raw && typeof m._raw === 'object') ? m._raw : {};
+      const iso = detailsIsoFromValue(m.purchasedAt) || detailsIsoFromValue(raw.purchasedAt);
+      if (iso) return iso;
+    }
+    try { // read-only fallback: the owner's properties doc
+      const ps = await db.collection('properties').doc(id).get();
+      const iso = ps && ps.exists ? detailsIsoFromValue((ps.data() || {}).purchasedAt) : null;
+      if (iso) return iso;
+    } catch (e) {}
     const now = new Date().toISOString();
-    const existing = await detailsRef.get();
-    const payload = Object.assign({}, updates || {});
+    console.warn('[propertyDetails] no purchasedAt for mine ' + id + '; new details doc dates use now (' + now + ')');
+    return now;
+  }
+  function markDetailsInMemory(objs, fullDoc, updates, removeFields) {
+    objs.forEach(m => {
+      if (fullDoc) m._details = Object.assign({}, m._details || {}, fullDoc);
+      else {
+        if (!m._details || typeof m._details !== 'object') m._details = {};
+        Object.assign(m._details, updates || {});
+        (removeFields || []).forEach(k => { delete m._details[k]; });
+      }
+      m._detailsLoaded = true;
+      m._detailsExists = true;
+    });
+  }
+  function isMissingOrDeniedWrite(err) {
+    const code = err && err.code ? String(err.code) : '';
+    const msg = String(err && err.message ? err.message : err);
+    return code === 'not-found' || code === 'permission-denied'
+      || /No document to update|Missing or insufficient permissions/i.test(msg);
+  }
+  async function safeUpdatePropertyDetails(mineId, updates, removeFields, mineHint) {
+    const id = String(mineId);
+    const detailsRef = db.collection('propertyDetails').doc(id);
+    const fields = Object.assign({}, updates || {});
+    const payload = Object.assign({}, fields);
     if (removeFields && removeFields.length) {
-      removeFields.forEach(k => {
-        payload[k] = firebase.firestore.FieldValue.delete();
+      removeFields.forEach(k => { payload[k] = firebase.firestore.FieldValue.delete(); });
+    }
+    if (!Object.keys(payload).length) return;
+    const objs = detailsMineObjects(id, mineHint);
+    let createDoc = null;
+    // Transaction: existing doc -> update(only edited fields); missing -> create (dates = purchasedAt).
+    async function upsert() {
+      const purchasedIso = await purchasedAtIsoForDetails(id, objs);
+      return db.runTransaction(async tx => {
+        const snap = await tx.get(detailsRef);
+        if (snap.exists) { tx.update(detailsRef, payload); return 'updated'; }
+        if (!Object.keys(fields).length) return 'nothing'; // only clearing fields on a missing doc
+        createDoc = Object.assign({
+          propertyId: id,
+          productionLevel: 1,
+          gameLevel: 1,
+          gameXP: 0,
+          gamesPlayed: 0,
+          gamesWon: 0,
+          dailyActivitiesRemaining: 1,
+          doubleRewardAvailable: true,
+          lastDailyReset: purchasedIso,
+          createdAt: purchasedIso,
+          lastUpdated: purchasedIso
+        }, fields, { updatedAt: purchasedIso });
+        tx.set(detailsRef, createDoc);
+        return 'created';
       });
     }
-    payload.updatedAt = now;
-    if (!existing.exists) {
-      if (removeFields && removeFields.length && (!updates || !Object.keys(updates).length)) {
-        return;
+    const knownExists = objs.some(m => m._detailsExists === true);
+    let result;
+    if (knownExists) {
+      try {
+        await detailsRef.update(payload);
+        result = 'updated';
+      } catch (err) {
+        if (!isMissingOrDeniedWrite(err)) throw err;
+        result = await upsert(); // retry once as the create
       }
-      await detailsRef.set(Object.assign({
-        propertyId: String(mineId),
-        productionLevel: 1,
-        gameLevel: 1,
-        gameXP: 0,
-        gamesPlayed: 0,
-        gamesWon: 0,
-        dailyActivitiesRemaining: 1,
-        doubleRewardAvailable: true,
-        lastDailyReset: now,
-        createdAt: now,
-        lastUpdated: now
-      }, payload));
     } else {
-      payload.lastUpdated = now;
-      await detailsRef.set(payload, { merge: true });
+      try {
+        result = await upsert();
+      } catch (err) {
+        // Transaction read not allowed? Fall back to a plain fields-only update once.
+        console.warn('[propertyDetails] details transaction failed for ' + id + '; trying update()', err);
+        await detailsRef.update(payload);
+        result = 'updated';
+      }
     }
+    if (result === 'created') {
+      markDetailsInMemory(objs, createDoc, null, null);
+      console.info('[propertyDetails] created details doc for ' + id + ' (dates = purchasedAt ' + createDoc.createdAt + ')');
+    } else if (result === 'updated') {
+      markDetailsInMemory(objs, null, fields, removeFields);
+    }
+    try { if (typeof refreshMaintBoxes === 'function') refreshMaintBoxes([id]); } catch (e) {}
   }
   /** Update local cache + pin active styles for ONE mine only (never other mines). */
   function syncLocalShowcaseState(mineId, url) {
@@ -3232,6 +4009,181 @@
       closeVoDetail();
     });
   }
+  // ---- publicProfiles/{uid} (read-only) ----
+  // Other players' users/{uid} docs are private; publicProfiles/{uid} is the readable subset:
+  // { nickname, avatarUrl, propertyCount }. Deduped per uid, cached in a Map, fetched in
+  // parallel chunks with Promise.all. Missing docs / denied reads cache null (fallbacks apply).
+  const PUBLIC_PROFILE_FETCH = 40;
+  const publicProfileCache = new Map(); // uid -> { nickname, avatarUrl, propertyCount } | null
+  const publicProfileInflight = new Map(); // uid -> Promise
+  let publicProfileDeniedNoted = false;
+  function normalizePublicProfile(p) {
+    if (!p || typeof p !== 'object') return null;
+    const nick = (typeof p.nickname === 'string') ? p.nickname.trim().replace(/^@+/, '') : '';
+    const url = (typeof p.avatarUrl === 'string') ? p.avatarUrl.trim() : '';
+    const cnt = Number(p.propertyCount);
+    return {
+      nickname: nick,
+      avatarUrl: url.startsWith('https://') ? url : '',
+      propertyCount: (p.propertyCount != null && Number.isFinite(cnt) && cnt >= 0) ? Math.round(cnt) : null
+    };
+  }
+  function cachedPublicProfile(uid) {
+    return uid ? (publicProfileCache.get(uid) || null) : null;
+  }
+  function isFirestorePermissionError(err) {
+    const code = err && err.code ? String(err.code) : '';
+    const msg = String(err && err.message ? err.message : err);
+    return code === 'permission-denied' || /insufficient permissions|permission-denied|Missing or insufficient/i.test(msg);
+  }
+  function fetchPublicProfile(uid) {
+    if (!uid) return Promise.resolve(null);
+    if (publicProfileCache.has(uid)) return Promise.resolve(publicProfileCache.get(uid));
+    if (publicProfileInflight.has(uid)) return publicProfileInflight.get(uid);
+    const p = db.collection('publicProfiles').doc(uid).get().then(snap => {
+      const prof = (snap && snap.exists) ? normalizePublicProfile(snap.data() || {}) : null;
+      publicProfileCache.set(uid, prof);
+      return prof;
+    }).catch(err => {
+      if (isFirestorePermissionError(err)) {
+        if (!publicProfileDeniedNoted) {
+          publicProfileDeniedNoted = true;
+          console.warn('[activity] publicProfiles/{uid} read denied by Firestore rules (' + ((err && err.code) || 'permission-denied')
+            + '); showing check-in names / initials instead. First denied uid:', uid);
+        }
+      } else {
+        console.warn('[activity] publicProfiles read failed', uid, err);
+      }
+      publicProfileCache.set(uid, null);
+      return null;
+    }).finally(() => { publicProfileInflight.delete(uid); });
+    publicProfileInflight.set(uid, p);
+    return p;
+  }
+  /** Fetch uncached profiles for uids (deduped); onLoaded(uid, profile|null) per uid. Resolves to # fetched. */
+  async function ensurePublicProfiles(uids, onLoaded) {
+    const todo = [];
+    const seen = new Set();
+    (uids || []).forEach(uid => {
+      if (!uid || typeof uid !== 'string' || seen.has(uid) || publicProfileCache.has(uid)) return;
+      seen.add(uid);
+      todo.push(uid);
+    });
+    for (let i = 0; i < todo.length; i += PUBLIC_PROFILE_FETCH) {
+      const slice = todo.slice(i, i + PUBLIC_PROFILE_FETCH);
+      await Promise.all(slice.map(uid => fetchPublicProfile(uid).then(prof => {
+        if (onLoaded) { try { onLoaded(uid, prof); } catch (e) { console.warn('[activity] profile apply failed', uid, e); } }
+      })));
+    }
+    return todo.length;
+  }
+  function uidSelectorValue(uid) {
+    return (window.CSS && CSS.escape) ? CSS.escape(uid) : String(uid).replace(/["\\]/g, '\\$&');
+  }
+  /** Put avatar img (or initials) into an avatar box; img errors fall back to data-initials. */
+  function setAvatarBox(el, url, init) {
+    if (!el) return;
+    if (init) el.setAttribute('data-initials', init);
+    if (url) {
+      const existing = el.querySelector('img');
+      if (existing && existing.getAttribute('src') === url) return;
+      const img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', () => {
+        el.textContent = el.getAttribute('data-initials') || '?';
+      }, { once: true });
+      img.src = url;
+      el.replaceChildren(img);
+    } else if (!el.querySelector('img')) {
+      el.textContent = el.getAttribute('data-initials') || '?';
+    }
+  }
+  function fmtMineCount(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '';
+    const v = Math.round(Number(n));
+    return v.toLocaleString('en-US') + (v === 1 ? ' mine' : ' mines');
+  }
+
+  /** Mine owners (checkIns.propertyOwnerId) -> publicProfiles; refresh reply labels + open popup. */
+  function ensureOwnerProfiles(list) {
+    if (!list || !list.length) return Promise.resolve(0);
+    const uids = list.map(v => ownerIdOf(mineMap[v.propertyId] || null, v));
+    return ensurePublicProfiles(uids, applyOwnerProfileToDom);
+  }
+  function applyOwnerProfileToDom(uid, prof) {
+    if (!uid) return;
+    const sel = '[data-owner-id="' + uidSelectorValue(uid) + '"]';
+    const nick = (prof && prof.nickname) || '';
+    if (nick) {
+      document.querySelectorAll('.vo-mine-badge' + sel).forEach(b => {
+        if (!b.getAttribute('data-owner-nick')) b.setAttribute('data-owner-nick', nick);
+      });
+      document.querySelectorAll('.vo-owner-reply' + sel).forEach(r => {
+        if (r.getAttribute('data-owner-nick')) return;
+        r.setAttribute('data-owner-nick', nick);
+        const span = r.querySelector('.vo-owner-reply-label span');
+        const dateStr = r.getAttribute('data-reply-date') || '';
+        if (span) span.textContent = '@' + nick + ' reply' + (dateStr ? ' (' + dateStr + ')' : '');
+      });
+    }
+    if (mineTipTarget && mineTip && mineTip.style.display === 'block'
+      && mineTipTarget.getAttribute('data-owner-id') === uid) {
+      showMineTip(mineTipTarget);
+    }
+  }
+  const OWNER_TIP_DELAY_MS = 250;
+  const OWNER_TIP_TOUCH_MS = 3000;
+  let ownerTipTouchTimer = null;
+  let ownerTipTouchSuppressUntil = 0;
+  /** Owner popup body for a .vo-mine-badge: mine title, owner avatar, nickname, propertyCount. */
+  function renderOwnerTip(tip, badge) {
+    const ownerId = badge.getAttribute('data-owner-id') || '';
+    const mineName = mineBadgeTipText(badge);
+    const icon = badge.querySelector('img.vo-type-icon');
+    const loaded = ownerId && publicProfileCache.has(ownerId);
+    const prof = loaded ? publicProfileCache.get(ownerId) : null;
+    const nick = (prof && prof.nickname) || (badge.getAttribute('data-owner-nick') || '').trim()
+      || (loaded || !ownerId ? 'Unknown owner' : 'Loading owner\u2026');
+    const init = (prof && prof.nickname) || badge.getAttribute('data-owner-nick') ? initials(nick) : '?';
+    tip.className = 'vo-mine-tip is-owner';
+    tip.replaceChildren();
+    const head = document.createElement('div');
+    head.className = 'vo-owner-tip-mine';
+    if (icon && icon.getAttribute('src')) {
+      const im = document.createElement('img');
+      im.alt = '';
+      im.src = icon.getAttribute('src');
+      head.appendChild(im);
+    }
+    const hs = document.createElement('span');
+    hs.textContent = mineName;
+    head.appendChild(hs);
+    tip.appendChild(head);
+    const row = document.createElement('div');
+    row.className = 'vo-owner-tip-row';
+    const av = document.createElement('div');
+    av.className = 'vo-owner-tip-avatar';
+    setAvatarBox(av, (prof && prof.avatarUrl) || '', init);
+    const txt = document.createElement('div');
+    txt.className = 'vo-owner-tip-text';
+    const lab = document.createElement('div');
+    lab.className = 'vo-owner-tip-label';
+    lab.textContent = 'Owner';
+    const nk = document.createElement('div');
+    nk.className = 'vo-owner-tip-nick';
+    nk.textContent = nick;
+    const ct = document.createElement('div');
+    ct.className = 'vo-owner-tip-count';
+    ct.textContent = prof ? fmtMineCount(prof.propertyCount) : '';
+    txt.append(lab, nk, ct);
+    row.append(av, txt);
+    tip.appendChild(row);
+    if (ownerId && !loaded) {
+      fetchPublicProfile(ownerId).then(p => applyOwnerProfileToDom(ownerId, p));
+    }
+  }
   let mineBadgeClickBound = false;
   let mineTip = null;
   let mineTipTimer = null;
@@ -3240,6 +4192,7 @@
   let mineTipY = 0;
   function dismissMineTip() {
     if (mineTipTimer) { clearTimeout(mineTipTimer); mineTipTimer = null; }
+    if (ownerTipTouchTimer) { clearTimeout(ownerTipTouchTimer); ownerTipTouchTimer = null; }
     mineTipTarget = null;
     if (mineTip) mineTip.style.display = 'none';
   }
@@ -3291,9 +4244,15 @@
   }
   function showMineTip(badge) {
     if (mineTipTarget !== badge || !badge.isConnected) return;
+    const tip = ensureMineTip();
+    if (badge.classList.contains('vo-mine-badge') && badge.getAttribute('data-owner-id')) {
+      renderOwnerTip(tip, badge);
+      placeMineTip(mineTipX, mineTipY);
+      return;
+    }
     const text = mineBadgeTipText(badge);
     if (!text) return;
-    const tip = ensureMineTip();
+    tip.className = 'vo-mine-tip';
     tip.textContent = text;
     placeMineTip(mineTipX, mineTipY);
   }
@@ -3306,10 +4265,11 @@
     mineTipX = e.clientX;
     mineTipY = e.clientY;
     if (mineTip) mineTip.style.display = 'none';
+    const isOwnerBadge = badge.classList.contains('vo-mine-badge') && !!badge.getAttribute('data-owner-id');
     mineTipTimer = setTimeout(() => {
       mineTipTimer = null;
       showMineTip(badge);
-    }, 1000);
+    }, isOwnerBadge ? OWNER_TIP_DELAY_MS : 1000);
   }
   function navigateToMineFromBadge(badge) {
     if (!badge) return;
@@ -3350,10 +4310,37 @@
       navigateToMineFromBadge(badge);
     });
     // mouseover/mouseout bubble — works for badges appended later (scroll/filter)
+    // Touch: tap a mine title toggles the owner popup briefly (no hover on phones).
+    board.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'touch') return;
+      const badge = e.target.closest('.vo-mine-badge');
+      ownerTipTouchSuppressUntil = Date.now() + 900;
+      if (!badge || !board.contains(badge) || !badge.getAttribute('data-owner-id')) {
+        if (mineTip && mineTip.style.display === 'block') dismissMineTip();
+        return;
+      }
+      const wasOpen = mineTipTarget === badge && mineTip && mineTip.style.display === 'block';
+      dismissMineTip();
+      if (wasOpen) return;
+      dismissShowcaseTip();
+      dismissVoImgTip();
+      mineTipTarget = badge;
+      mineTipX = e.clientX;
+      mineTipY = e.clientY;
+      showMineTip(badge);
+      ownerTipTouchTimer = setTimeout(() => {
+        ownerTipTouchTimer = null;
+        if (mineTipTarget === badge) dismissMineTip();
+      }, OWNER_TIP_TOUCH_MS);
+    });
+    window.addEventListener('scroll', () => {
+      if (ownerTipTouchTimer && mineTip && mineTip.style.display === 'block') dismissMineTip();
+    }, { passive: true, capture: true });
     board.addEventListener('mouseover', e => {
       const badge = e.target.closest('.vo-mine-badge, .vo-tb-earned');
       if (!badge || !board.contains(badge)) return;
       if (mineTipTarget === badge) return;
+      if (Date.now() < ownerTipTouchSuppressUntil) return; // emulated mouse after a tap
       beginMineTipFor(badge, e);
     });
     board.addEventListener('mousemove', e => {
@@ -3408,7 +4395,10 @@
     return '';
   }
   function ownerLabelOf(mine, v) {
-    return ownerNickFromVisit(v);
+    const fromVisit = ownerNickFromVisit(v);
+    if (fromVisit) return fromVisit;
+    const prof = cachedPublicProfile(ownerIdOf(mine, v));
+    return (prof && prof.nickname) ? prof.nickname : '';
   }
   function mineOwnedByTip(mine, v) {
     return mineTitle(mine, v) || 'Mine';
@@ -3607,6 +4597,7 @@
     }
     board.innerHTML = '<div class="visitors-grid">' + list.map(v => renderVisitCard(v, mineMap[v.propertyId] || null)).join('') + '</div>';
     ensureVisitorAvatars(list);
+    ensureOwnerProfiles(list);
     bindVisitorPhotoTips();
     bindShowcasePinTips(board);
     bindShowcasePinClicksOnce();
@@ -3653,6 +4644,7 @@
       ));
       snaps.forEach((s, j) => {
         applyDetailsToMineMap(slice[j], (s && s.exists) ? (s.data() || {}) : {});
+        if (s && mineMap[slice[j]]) mineMap[slice[j]]._detailsExists = !!s.exists;
       });
       if (onProgress) onProgress(Math.min(i + DETAILS_FETCH, list.length), list.length);
     }
