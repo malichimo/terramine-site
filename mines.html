@@ -152,6 +152,10 @@
     .flip-type-order-btn:disabled { opacity:.55; cursor:not-allowed; }
     .flip-type-order-btn[aria-pressed="true"] { border-color:#4FC3F7; background:#e8f7fe; }
     .flip-type-order-btn .flip-type-order-arrows { font-size:18px; line-height:1; }
+    .group-toggle-btn svg { width:22px; height:22px; display:block; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+    .group-toggle-btn .group-toggle-ico-merged { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-grouped { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-merged { display:block; }
 
 
     .toolbar-follow-tip {
@@ -161,6 +165,8 @@
       font-size:13px; line-height:1.35; font-weight:500; text-align:left;
       max-width:min(280px, calc(100vw - 16px));
     }
+    /* Red variant: same colors as the Visitor Count sort tip (.visitors-sort-tip) */
+    .toolbar-follow-tip.is-red { background:#8B1E1E; color:#fff; border-color:rgba(255,255,255,.22); box-shadow:0 12px 28px rgba(6,10,16,.55); }
     .tool-search { flex:1; min-width:160px; }
     .mine-count { margin-left:auto; font-size:12px; color:#64748b; font-weight:600; }
     .page-settings { position:absolute; top:10px; right:12px; z-index:3; }
@@ -199,6 +205,15 @@
     .mine-group-head img { width:36px; height:36px; object-fit:contain; }
     .mine-group-head h2 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); }
     .mine-group-count { font-size:12px; color:#64748b; font-weight:700; }
+    /* Ungrouped view: one header bar listing every shown mine type with its count */
+    .mine-group-head.is-all { flex-wrap:wrap; column-gap:18px; row-gap:4px; }
+    .mine-group-head-type { display:inline-flex; align-items:center; gap:8px; }
+    .mine-group-head-label { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); line-height:1.1; }
+    @media (max-width:600px) {
+      .mine-group-head.is-all { column-gap:12px; }
+      .mine-group-head.is-all img { width:28px; height:28px; }
+      .mine-group-head.is-all .mine-group-head-label { font-size:24px; }
+    }
     .mine-totals-bar {
       display:flex; flex-wrap:wrap; align-items:center; gap:8px;
       margin:0;
@@ -1225,6 +1240,10 @@
         <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Reverse the order of the Mine Type Groups" aria-pressed="false" data-tip="Reverse the order of the Mine Type Groups" disabled>
           <span class="flip-type-order-arrows" aria-hidden="true">⇅</span>
         </button>
+        <button type="button" class="flip-type-order-btn group-toggle-btn" id="group-toggle" aria-label="Display all mines in 1 group" aria-pressed="false" data-tip="Display all mines in 1 group" data-tip-variant="red" disabled>
+          <svg class="group-toggle-ico-grouped" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="18" height="4.5" rx="1.2"></rect><rect x="3" y="9.75" width="18" height="4.5" rx="1.2"></rect><rect x="3" y="16" width="18" height="4.5" rx="1.2"></rect></svg>
+          <svg class="group-toggle-ico-merged" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="18" height="17" rx="2"></rect><path d="M7 8.5h10M7 12h10M7 15.5h10"></path></svg>
+        </button>
         <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
           <button type="button" class="type-filter-btn" data-type="diamond" aria-label="Filter Diamond" aria-pressed="false" disabled>
             <img src="images/mine-icons/diamond.svg" alt="">
@@ -1503,6 +1522,25 @@
       flipBtn.setAttribute('aria-pressed', typeOrderFlipped ? 'true' : 'false');
       flipBtn.classList.toggle('is-flipped', !!typeOrderFlipped);
     }
+  }
+  // Grouped by mine type (default) vs. all mines in one group; kept per tab like the other filter-bar settings.
+  const UNGROUPED_KEY = 'terramine.mines.ungrouped';
+  const GROUP_TOGGLE_TIPS = { grouped: 'Display all mines in 1 group', ungrouped: 'Re-group all mines by their Mine Type' };
+  let minesUngrouped = (function () { try { return sessionStorage.getItem(UNGROUPED_KEY) === '1'; } catch (e) { return false; } })();
+  function updateGroupToggleButton() {
+    const btn = $('group-toggle');
+    if (!btn) return;
+    const tip = minesUngrouped ? GROUP_TOGGLE_TIPS.ungrouped : GROUP_TOGGLE_TIPS.grouped;
+    btn.setAttribute('aria-pressed', minesUngrouped ? 'true' : 'false');
+    btn.setAttribute('aria-label', tip);
+    btn.setAttribute('data-tip', tip);
+    btn.classList.toggle('active', minesUngrouped);
+  }
+  function toggleMineGrouping() {
+    minesUngrouped = !minesUngrouped;
+    try { sessionStorage.setItem(UNGROUPED_KEY, minesUngrouped ? '1' : '0'); } catch (e) {}
+    updateGroupToggleButton();
+    renderFromFilters();
   }
   function flipTypeOrder() {
     typeOrderFlipped = !typeOrderFlipped;
@@ -4617,6 +4655,18 @@
   function buildFlat() {
     const mines = visibleMines();
     const items = [];
+    if (minesUngrouped) {
+      // One group: the active sort runs across every shown mine; the header lists each type's count (types with 0 shown are left out, like empty groups).
+      const counts = {};
+      TYPE_ORDER.forEach(t => { counts[t] = 0; });
+      const all = sortGroup(mines.filter(p => Object.prototype.hasOwnProperty.call(counts, typeKey(p))));
+      all.forEach(p => { counts[typeKey(p)]++; });
+      if (all.length) {
+        items.push({ kind: 'header', type: 'all', count: all.length, counts: counts });
+        all.forEach(m => items.push({ kind: 'card', mine: m }));
+      }
+      return { items, matchCount: mines.length };
+    }
     TYPE_ORDER.forEach(t => {
       const group = sortGroup(mines.filter(p => typeKey(p) === t));
       if (!group.length) return;
@@ -6955,7 +7005,40 @@ function updateSortButtons() {
     slot.appendChild(img);
     bindLandPhotoInteractions(slot);
   }
+  function appendAllTypesHeader(item) {
+    const sec = document.createElement('section');
+    sec.className = 'mine-group all-types';
+    const head = document.createElement('div');
+    head.className = 'mine-group-head is-all';
+    head.setAttribute('role', 'heading');
+    head.setAttribute('aria-level', '2');
+    TYPE_ORDER.forEach(t => {
+      const n = item.counts[t] || 0;
+      if (!n) return;
+      const part = document.createElement('span');
+      part.className = 'mine-group-head-type';
+      part.dataset.type = t;
+      const img = document.createElement('img');
+      img.src = ICONS[t];
+      img.alt = '';
+      img.width = 36;
+      img.height = 36;
+      const label = document.createElement('span');
+      label.className = 'mine-group-head-label';
+      label.textContent = TYPE_LABEL[t];
+      const c = document.createElement('span');
+      c.className = 'mine-group-count';
+      c.textContent = String(n);
+      part.append(img, label, c);
+      head.appendChild(part);
+    });
+    currentGrid = document.createElement('div');
+    currentGrid.className = 'mine-grid';
+    sec.append(head, currentGrid);
+    $('mine-board').appendChild(sec);
+  }
   function appendHeader(item) {
+    if (item.type === 'all') { appendAllTypesHeader(item); return; }
     const sec = document.createElement('section');
     sec.className = 'mine-group';
     sec.classList.add(String(item.type).toLowerCase().replace(/\s+/g, ''));
@@ -7742,6 +7825,15 @@ function updateSortButtons() {
     });
   }
   applyTypeOrderLayout();
+  const groupToggleBtn = $('group-toggle');
+  if (groupToggleBtn) {
+    groupToggleBtn.addEventListener('click', function () {
+      if (groupToggleBtn.disabled) return;
+      toggleMineGrouping();
+      refreshShowcaseFollowTipText(groupToggleBtn);   // tip under the cursor now names the next action
+    });
+  }
+  updateGroupToggleButton();
 
 document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -7836,6 +7928,11 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     tip.style.top = top + 'px';
     tip.style.visibility = 'visible';
   }
+  function refreshShowcaseFollowTipText(btn) {
+    if (showcaseFollowTipTarget !== btn || !showcaseFollowTip) return;
+    showcaseFollowTip.textContent = SHOWCASE_TIPS[btn.dataset.showcase] || (btn.getAttribute('data-tip') || '').trim();
+    if (showcaseFollowTip.style.display === 'block') placeShowcaseFollowTip(showcaseFollowTipX, showcaseFollowTipY);
+  }
   function bindShowcaseFollowTip(btn) {
     if (!btn || btn.dataset.showcaseTipBound === '1') return;
     btn.dataset.showcaseTipBound = '1';
@@ -7850,6 +7947,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
       showcaseFollowTipY = e.clientY;
       const tip = ensureShowcaseFollowTip();
       tip.textContent = SHOWCASE_TIPS[btn.dataset.showcase] || (btn.getAttribute('data-tip') || '').trim();
+      tip.classList.toggle('is-red', btn.dataset.tipVariant === 'red');
       tip.style.display = 'none';
       showcaseFollowTipTimer = setTimeout(() => {
         showcaseFollowTipTimer = null;
@@ -7874,6 +7972,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(bindShowcaseFollowTip);
   bindShowcaseFollowTip($('filter-unnamed-btn'));
   bindShowcaseFollowTip($('flip-type-order'));   // same follow-the-mouse tip as the other filter-bar icons
+  bindShowcaseFollowTip($('group-toggle'));       // same tip, red variant (Visitor Count sort tip colors)
   bindMineTitleInteractionsOnce();
   bindMineMapTitleInteractionsOnce();
 
