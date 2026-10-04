@@ -32,7 +32,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261003-2" />
+  <link rel="stylesheet" href="portal.css?v=20261004-1" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -172,7 +172,8 @@
                 <div class="dash-breakdown-row">
           <div class="dash-breakdown-col dash-breakdown-col-stats">
 <div class="stat-stack">
-          <div class="stat-card stat-card-properties">
+          <div class="stat-card stat-card-properties has-share" id="dash-props-card">
+            <button type="button" class="dash-share-btn" data-share-card="dash-props-card" data-tip="Share this on Discord" aria-label="Share this on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
             <div class="stat-card-head">
               <div class="stat-card-label">TerraMines Owned</div>
               <div class="stat-card-value cyan" id="stat-props">—</div>
@@ -224,16 +225,18 @@
             </div>
           </div>
         </div>
-            <div class="stat-card dash-pie-card">
+            <div class="stat-card dash-pie-card has-share" id="dash-pie-card">
               <div class="stat-card-label">Mines by Type</div>
+              <button type="button" class="dash-share-btn" data-share-card="dash-pie-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               <div class="dash-pie-wrap">
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
             </div>
             <section class="dash-dominance-card" id="dash-dominance-card" aria-labelledby="dash-dominance-title">
-              <div class="dash-dominance-head">
+              <div class="dash-dominance-head has-share">
                 <h2 class="dash-dominance-title" id="dash-dominance-title">Mine Dominance</h2>
                 <div class="dash-dominance-area" id="dash-dominance-area" aria-live="polite" title="Area covered by your Reach outline">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-dominance-card" data-tip="Share this map on Discord" aria-label="Share this map on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               </div>
               <div class="dash-dominance-body">
                 <div class="dash-dominance-map" id="dash-dominance-map" aria-label="Map of the overall area your mines cover"></div>
@@ -243,8 +246,9 @@
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-visits">
             <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today, then Inventory (class names are grid slots: -visits = column 2, -slot = column 3) -->
-            <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
+            <div class="stat-card dash-slot-card has-share" id="dash-slot-card" aria-label="TerraBucks earned today">
               <div class="stat-card-label">TerraBucks Earned Today</div>
+              <button type="button" class="dash-share-btn" data-share-card="dash-slot-card" data-tip="Share this box on Discord" aria-label="Share this box on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               <div class="tb-today" id="tb-today">
                 <div class="tb-today-section">
                   <div class="tb-today-section-title">Visitor check-ins to your mines</div>
@@ -325,9 +329,10 @@
             <!-- column 3 = the bar graphs: Visitors, Mines Purchased, Mini Games, Referrals, My Check-ins -->
             <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
             <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-visits-title">Visitors &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-visits-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-visits-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-visits-wrap">
@@ -338,9 +343,10 @@
             </section>
             <!-- Oct 1, 2026: your mines purchased per day (stacked by type), last 60 days -->
             <section class="dash-visits-card dash-buys-card" id="dash-buys-card" aria-labelledby="dash-buys-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-buys-title">Mines Purchased &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-buys-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-buys-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-buys-wrap">
@@ -351,9 +357,10 @@
             </section>
             <!-- Oct 1, 2026: mini games per day (games stacked by type + TB), last 30 days -->
             <section class="dash-visits-card dash-games-card" id="dash-games-card" aria-labelledby="dash-games-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-games-title">Mini Games &mdash; Last 30 Days</h2>
                 <div class="dash-visits-total" id="dash-games-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-games-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-games-wrap">
@@ -365,9 +372,10 @@
             </section>
             <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
             <section class="dash-visits-card dash-refs-card" id="dash-refs-card" aria-labelledby="dash-refs-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-refs-title">Referrals &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-refs-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-refs-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-refs-wrap">
@@ -378,9 +386,10 @@
             </section>
             <!-- Oct 1, 2026: your own check-ins at other players' mines per day, last 60 days -->
             <section class="dash-visits-card dash-myci-card" id="dash-myci-card" aria-labelledby="dash-myci-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-myci-title">My Check-ins &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-myci-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-myci-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-myci-wrap">
@@ -1371,6 +1380,204 @@
       if (totalsFollowTipTarget === box) dismissTotalsFollowTip();
     });
   }
+  // ── Share a dashboard card on Discord (Oct 4, 2026) ──────────────────────
+  // Share button (top-right of the title bar) on TerraMines Owned, Mines by
+  // Type, Mine Dominance (map tiles are captured: Google serves them with CORS),
+  // TerraBucks Earned Today and the five column-3 graphs. Click: capture the card to a PNG
+  // (html2canvas, loaded on first use; chart cards fall back to their canvas),
+  // then shareToDiscord(). For now that copies the image to the clipboard, also
+  // downloads it, and opens the TerraMine Discord so it can be pasted in
+  // #general. Set DISCORD_SHARE_ENDPOINT later to POST it to a server instead.
+  const DISCORD_SHARE_ENDPOINT = '';   // '' = copy + download + open Discord (no server)
+  const DISCORD_INVITE_URL = 'https://discord.gg/vJq4QF9d7v';
+  const HTML2CANVAS_SRC = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+  let html2canvasLoad = null;
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (!html2canvasLoad) {
+      html2canvasLoad = new Promise((resolve, reject) => {
+        const sc = document.createElement('script');
+        sc.src = HTML2CANVAS_SRC;
+        sc.async = true;
+        sc.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error('html2canvas missing'));
+        sc.onerror = () => { html2canvasLoad = null; reject(new Error('html2canvas failed to load')); };
+        document.head.appendChild(sc);
+      });
+    }
+    return html2canvasLoad;
+  }
+  function dashCardTitle(card) {
+    const h = card && card.querySelector('.dash-visits-title, .dash-dominance-title, .stat-card-label');
+    return h ? h.textContent.replace(/\s+/g, ' ').trim() : 'TerraMine';
+  }
+  function canvasToPngBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      try { canvas.toBlob(b => (b && b.size) ? resolve(b) : reject(new Error('empty image')), 'image/png'); }
+      catch (e) { reject(e); }
+    });
+  }
+  // Fallback for chart cards when html2canvas can't load: title bar + the chart canvas.
+  function composeChartCardCanvas(card) {
+    const src = card && card.querySelector('canvas');
+    if (!src || !src.width || !src.height) return null;
+    const scale = src.width / Math.max(1, src.getBoundingClientRect().width || src.width);
+    const headH = Math.round(40 * scale), pad = Math.round(10 * scale);
+    const out = document.createElement('canvas');
+    out.width = src.width + pad * 2;
+    out.height = src.height + headH + pad * 2;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, out.width, out.height);
+    const head = card.querySelector('.dash-visits-head');
+    ctx.fillStyle = head ? getComputedStyle(head).backgroundColor : '#8B5A2B';
+    ctx.fillRect(0, 0, out.width, headH);
+    ctx.fillStyle = '#fff8ec';
+    ctx.textBaseline = 'middle';
+    ctx.font = Math.round(18 * scale) + "px 'Bebas Neue', sans-serif";
+    ctx.fillText(dashCardTitle(card).toUpperCase(), pad, headH / 2);
+    const total = card.querySelector('.dash-visits-total');
+    if (total && total.textContent.trim()) {
+      ctx.font = Math.round(13 * scale) + "px 'DM Sans', sans-serif";
+      ctx.textAlign = 'right';
+      ctx.fillText(total.textContent.trim(), out.width - pad, headH / 2);
+      ctx.textAlign = 'left';
+    }
+    ctx.drawImage(src, pad, headH + pad);
+    return out;
+  }
+  async function captureDashCard(card) {
+    try {
+      const h2c = await loadHtml2Canvas();
+      const canvas = await h2c(card, {
+        backgroundColor: '#ffffff',
+        scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1)),
+        useCORS: true,
+        logging: false,
+        // leave out the share button, Pioneer lock overlay and the Google map zoom buttons
+        // (map tiles + "Map data ©Google" attribution stay in)
+        ignoreElements: el => !!(el.classList && (el.classList.contains('dash-share-btn') || el.classList.contains('dash-pp-lock')
+          || el.classList.contains('gmnoprint') && !!el.querySelector('button[aria-label*="Zoom" i]')))
+      });
+      return await canvasToPngBlob(canvas);
+    } catch (e) {
+      const c = composeChartCardCanvas(card);
+      if (c) return canvasToPngBlob(c);
+      throw e;
+    }
+  }
+  function dashShareFileName(title) {
+    const d = new Date();
+    const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const slug = String(title || 'dashboard').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'dashboard';
+    return 'terramine-' + slug + '-' + ymd + '.png';
+  }
+  // The one place a share goes out. Today: clipboard + download + open Discord.
+  // Later: with DISCORD_SHARE_ENDPOINT set, POST multipart {image, title, nickname, cardId}.
+  async function shareToDiscord(cardId, blob, title) {
+    const fileName = dashShareFileName(title);
+    if (DISCORD_SHARE_ENDPOINT) {
+      const fd = new FormData();
+      fd.append('image', blob, fileName);
+      fd.append('title', title || '');
+      fd.append('nickname', (($('nav-nickname') || {}).textContent || '').trim());
+      fd.append('cardId', cardId || '');
+      const res = await fetch(DISCORD_SHARE_ENDPOINT, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Share failed (' + res.status + ')');
+      showToast('Shared on Discord');
+      return 'posted';
+    }
+    let copied = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem === 'function') {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        copied = true;
+      }
+    } catch (e) { copied = false; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    showToast(copied ? 'Image copied \u2014 paste it in Discord #general' : 'Image saved \u2014 upload it in Discord #general');
+    window.open(DISCORD_INVITE_URL, '_blank', 'noopener');
+    return copied ? 'copied' : 'downloaded';
+  }
+  function bindShareFollowTip(btn) {
+    if (!btn || btn.dataset.shareTipBound === '1') return;
+    btn.dataset.shareTipBound = '1';
+    btn.removeAttribute('title');
+    let touchAt = 0, hideTimer = null;
+    btn.addEventListener('touchstart', () => { touchAt = Date.now(); }, { passive: true });
+    btn.addEventListener('mouseenter', (e) => {
+      if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      const fromTap = Date.now() - touchAt < 1000;   // emulated mouseenter of a tap
+      totalsFollowTipTarget = btn;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      const tip = ensureTotalsFollowTip();
+      tip.textContent = (btn.getAttribute('data-tip') || '').trim();
+      tip.style.display = 'none';
+      totalsFollowTipTimer = setTimeout(() => {
+        totalsFollowTipTimer = null;
+        if (totalsFollowTipTarget !== btn || !btn.isConnected) return;
+        tip.textContent = (btn.getAttribute('data-tip') || '').trim();
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+        // Touch has no mouseleave: hide a tapped tip after a moment (the tap's action already ran).
+        if (fromTap) hideTimer = setTimeout(() => { if (totalsFollowTipTarget === btn) dismissTotalsFollowTip(); }, 1500);
+      }, 200);
+    });
+    btn.addEventListener('mousemove', (e) => {
+      if (totalsFollowTipTarget !== btn) return;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      if (totalsFollowTip && totalsFollowTip.style.display === 'block' && !totalsFollowTipTimer) {
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (totalsFollowTipTarget === btn && Date.now() - touchAt >= 1000) dismissTotalsFollowTip();
+    });
+  }
+  async function onDashShareClick(btn) {
+    const card = $(btn.dataset.shareCard);
+    if (!card || btn.disabled || card.classList.contains('is-pp-locked')) return;
+    btn.disabled = true;
+    btn.classList.add('is-busy');
+    btn.setAttribute('aria-busy', 'true');
+    const title = dashCardTitle(card);
+    try {
+      const blob = await captureDashCard(card);
+      await shareToDiscord(card.id, blob, title);
+    } catch (e) {
+      console.error('Discord share failed:', e);
+      showToast('Could not make the image \u2014 please try again', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('is-busy');
+      btn.removeAttribute('aria-busy');
+    }
+  }
+  function initDashShareButtons() {
+    document.querySelectorAll('.dash-share-btn[data-share-card]').forEach(btn => {
+      if (btn.dataset.shareBound === '1') return;
+      btn.dataset.shareBound = '1';
+      bindShareFollowTip(btn);
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();   // the graphs' own click (trial unlock / popup) stays separate
+        if (Date.now() - (btn._tapAt || 0) > 1000) dismissTotalsFollowTip();
+        onDashShareClick(btn);
+      });
+      btn.addEventListener('touchstart', () => { btn._tapAt = Date.now(); }, { passive: true });
+    });
+  }
+  initDashShareButtons();
+
   function bindMineTotalsFollowTips() {
     const host = $('mine-totals-rows');
     if (!host) return;
@@ -1601,17 +1808,46 @@
     }
   }
 
+  // Mine Maintenance "Daily activity available" (Oct 4, 2026). The app resets
+  // propertyDetails.dailyActivitiesRemaining lazily (only when the mine is next
+  // used), so a 0 left over from an earlier day still reads 0. A mine counts as
+  // available when remaining (default 1) > 0, OR its lastDailyReset is before
+  // the start of today in the player's own time zone (browser local midnight).
+  // With no lastDailyReset, a 0 counts as available only if lastUpdated is also
+  // before local midnight; with neither, the 0 is trusted (not available).
+  function anyTimeMs(v) {
+    if (v == null || v === '') return NaN;
+    if (typeof v === 'number') return v < 1e11 ? v * 1000 : v;          // seconds or ms
+    if (typeof v === 'string') { const t = Date.parse(v); return isFinite(t) ? t : NaN; }
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (typeof v.toDate === 'function') return v.toDate().getTime();
+    if (v instanceof Date) return v.getTime();
+    if (typeof v.seconds === 'number') return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
+    if (typeof v._seconds === 'number') return v._seconds * 1000;
+    return NaN;
+  }
+  function localMidnightMs(now) {
+    const d = now != null ? new Date(now) : new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  }
+  function mineDailyActivityAvailable(p, midnightMs, usePropFallback) {
+    const d = (p && p._details) || {};
+    const pick = k => (d[k] != null && d[k] !== '') ? d[k] : (usePropFallback ? p[k] : undefined);
+    const remaining = pick('dailyActivitiesRemaining');
+    if ((remaining ?? 1) > 0) return true;
+    const reset = anyTimeMs(pick('lastDailyReset'));
+    if (isFinite(reset)) return reset < midnightMs;
+    const updated = anyTimeMs(pick('lastUpdated'));
+    return isFinite(updated) && updated < midnightMs;
+  }
   function updateReadyStat(props, options = {}) {
     if (!props.length) {
       $('stat-ready').textContent = '0';
       return;
     }
-    if (options.preview) {
-      const readyCount = props.filter(p => ((p._details && p._details.dailyActivitiesRemaining) ?? p.dailyActivitiesRemaining ?? 1) > 0).length;
-      $('stat-ready').textContent = readyCount;
-      return;
-    }
-    const readyCount = props.filter(p => ((p._details || {}).dailyActivitiesRemaining ?? 1) > 0).length;
+    const midnight = localMidnightMs();
+    // Preview data keeps the fields on the property itself, so it also falls back to those.
+    const readyCount = props.filter(p => mineDailyActivityAvailable(p, midnight, !!options.preview)).length;
     $('stat-ready').textContent = readyCount;
   }
 
@@ -1693,27 +1929,19 @@
     }
   }
 
+  // Oct 4, 2026: the date-ranged query (field == uid AND timestamp >= today) was
+  // always refused live (permission-denied) and fell through to this path, so go
+  // straight to it: newest 200 check-ins for the field, filtered to today here.
   async function queryTodayCheckIns(field, uid, startISO) {
-    try {
-      var snap = await db.collection('checkIns')
-        .where(field, '==', uid)
-        .where('timestamp', '>=', startISO)
-        .orderBy('timestamp', 'desc')
-        .get();
-      return snap.docs.map(function (d) { return { id: d.id, data: d.data() || {} }; });
-    } catch (err) {
-      // Missing composite index or timestamp type mismatch — fall back to recent page + client filter.
-      console.warn('tb-today query with date failed (' + field + '):', err && err.message);
-      var snap2 = await db.collection('checkIns')
-        .where(field, '==', uid)
-        .orderBy('timestamp', 'desc')
-        .limit(200)
-        .get();
-      var startMs = new Date(startISO).getTime();
-      return snap2.docs
-        .map(function (d) { return { id: d.id, data: d.data() || {} }; })
-        .filter(function (row) { return checkInTsMillis(row.data.timestamp) >= startMs; });
-    }
+    var snap = await db.collection('checkIns')
+      .where(field, '==', uid)
+      .orderBy('timestamp', 'desc')
+      .limit(200)
+      .get();
+    var startMs = new Date(startISO).getTime();
+    return snap.docs
+      .map(function (d) { return { id: d.id, data: d.data() || {} }; })
+      .filter(function (row) { return checkInTsMillis(row.data.timestamp) >= startMs; });
   }
 
   async function loadTbTodayEarned(user, options) {

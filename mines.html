@@ -6421,14 +6421,16 @@ function updateSortButtons() {
     const c = findCorners(mine);
     return !!(c && c.path && c.path.length >= 3);
   }
+  // Custom follow tip text for card map pins (js/map-pin-tip.js shows it; no native title).
+  function mapPinTipText(id) { return 'Show the Mine on the map (' + id + ')'; }
   function voMapPinHtml(mine, fallbackId) {
     const id = (mine && mine.id != null) ? String(mine.id)
       : (fallbackId != null ? String(fallbackId) : '');
     if (mineHasMapLocation(mine) && id) {
       return '<button type="button" class="vo-pin" data-mine-id="' + escapeHtml(id)
-        + '" title="Show mine map" aria-label="Show mine map">' + pinSvgHtml() + '</button>';
+        + '" data-tip="' + escapeHtml(mapPinTipText(id)) + '" aria-label="' + escapeHtml(mapPinTipText(id)) + '">' + pinSvgHtml() + '</button>';
     }
-    return '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
+    return '<span class="vo-pin is-missing" aria-hidden="true">' + pinSvgHtml() + '</span>';
   }
 
   function renderMineLandDetailCard(mine, photoSrc) {
@@ -7110,8 +7112,9 @@ function updateSortButtons() {
       pinEl = document.createElement('button');
       pinEl.type = 'button';
       pinEl.className = 'gps-pin';
-      pinEl.title = 'Show mine map';
-      pinEl.setAttribute('aria-label', 'Show mine map');
+      if (mine && mine.id != null) pinEl.dataset.mineId = String(mine.id);
+      pinEl.setAttribute('data-tip', mapPinTipText(mine && mine.id != null ? String(mine.id) : ''));
+      pinEl.setAttribute('aria-label', mapPinTipText(mine && mine.id != null ? String(mine.id) : ''));
       pinEl.appendChild(pinSvg());
       pinEl.addEventListener('click', e => {
         e.preventDefault();
@@ -7123,7 +7126,6 @@ function updateSortButtons() {
     } else {
       pinEl = pinSvg();
       pinEl.classList.add('gps-pin', 'is-missing');
-      pinEl.setAttribute('title', 'No location');
     }
 
     // Missing productionLevel / gameLevel => 1 on cards (same as totals / app).
@@ -8101,5 +8103,6 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
 
 </script>
   <script src="portal-nav.js" defer></script>
+<script src="/js/map-pin-tip.js?v=20261004-1"></script>
 </body>
 </html>

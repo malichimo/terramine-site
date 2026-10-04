@@ -1523,3 +1523,45 @@ button.dash-pp-lock {
 @supports not (height: 1cqh) {
   .dash-pp-lock.is-trial .dash-pp-lock-req { font-size: 13px; }
 }
+
+/* Oct 4, 2026: share-on-Discord button, top-right corner of the title bar on
+   TerraMines Owned, Mines by Type, Mine Dominance, TerraBucks Earned Today and
+   the five column-3 graphs.
+   Absolutely placed; the head / label reserves room on the right so it never
+   overlaps the totals (e.g. "11,558 check-ins"), even when the head wraps. */
+.dash-visits-head.has-share,
+.dash-dominance-head.has-share { position: relative; padding-right: 48px; }
+.dash-share-btn {
+  position: absolute; top: 4px; right: 8px; z-index: 2;
+  width: 30px; height: 30px; padding: 0; margin: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 248, 236, 0.35); border-radius: 8px;
+  background: transparent; color: #fff; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dash-share-btn svg {
+  width: 20px; height: 20px; display: block; pointer-events: none;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.dash-share-btn:hover { background: rgba(255, 248, 236, 0.16); border-color: rgba(255, 248, 236, 0.75); }
+.dash-share-btn:focus-visible { outline: 2px solid #fff8ec; outline-offset: 1px; }
+.dash-share-btn.is-busy, .dash-share-btn:disabled { opacity: 0.6; cursor: progress; }
+/* white cards (Mines by Type, TerraBucks): brown chip so the white glyph shows */
+.stat-card.has-share { position: relative; }
+.stat-card.has-share > .stat-card-label { padding-right: 38px; }
+.stat-card.has-share > .dash-share-btn {
+  top: 6px; right: 8px; width: 26px; height: 26px;
+  background: var(--brown); border-color: var(--brown-dark);
+}
+.stat-card.has-share > .dash-share-btn svg { width: 17px; height: 17px; }
+.stat-card.has-share > .dash-share-btn:hover { background: var(--brown-dark); }
+.stat-card.has-share > .dash-share-btn:focus-visible { outline-color: var(--brown-dark); }
+/* TerraMines Owned has no title bar: chip in the box's top-right corner; the
+   centered label/number keep equal side room so they stay centered and clear */
+.stat-card-properties.has-share > .stat-card-head { padding: 0 34px; }
+/* Pioneer Pass graphs: no sharing while locked */
+.is-pp-locked .dash-share-btn { display: none; }
+@media (max-width: 400px) {
+  .dash-visits-head.has-share, .dash-dominance-head.has-share { padding-right: 46px; }
+  .dash-share-btn { top: 3px; right: 6px; }
+}
