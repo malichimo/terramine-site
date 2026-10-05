@@ -29,6 +29,7 @@
     'terramine.mines.typeOrderFlipped': 'mf',   // mines + dashboard: Reverse (type group order)
     'terramine.mines.ungrouped': 'mu',          // mines: all mines in 1 group
     'terramine.mines.filterTypes': 'mt',        // mines: type filter buttons
+    'terramine.mines.typesVer': 'tv',           // one-time heal for type-filter defaults
     'terramine.mines.filterShowcase': 'ms',     // mines: visitor pinned image filter
     'terramine.mines.filterUnnamed': 'mn',      // mines: Unnamed filter
     'terramine.mines.sort': 'mo',               // mines: sort key + direction
@@ -52,8 +53,10 @@
   function code(key) { return ALIAS[key] || String(key); }
   function store(kind) { try { return w[kind]; } catch (e) { return null; } }
 
+  // Fully encode the JSON (quotes, commas, braces). Partial decode of {}[]: made
+  // some browsers/proxies mangle values; full encodeURIComponent is safe in document.cookie.
   function encode(obj) {
-    return encodeURIComponent(JSON.stringify(obj)).replace(/%(7B|7D|5B|5D|3A)/g, function (m) { return decodeURIComponent(m); });
+    return encodeURIComponent(JSON.stringify(obj));
   }
   function rawCookie() {
     var m = String(d.cookie || '').match(new RegExp('(?:^|;\\s*)' + NAME + '=([^;]*)'));
@@ -212,10 +215,23 @@
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', bindBulkTools);
   else bindBulkTools();
 
+  // Mine type filter chips: all four ON when unset. tv=1 marks the one-time heal after
+  // the first cookie launch (partial mt lists without "diamond" were sticky for 1 year).
+  var MINE_TYPES = ['diamond', 'gold', 'coal', 'rock'];
+  var TYPES_VER = 1;
+  function healMineTypeFilters() {
+    var ver = get('terramine.mines.typesVer', null);
+    if (ver === TYPES_VER) return;
+    // Reset mt to all four once so a leftover session/cookie subset cannot hide Diamond.
+    set('terramine.mines.filterTypes', MINE_TYPES.slice());
+    set('terramine.mines.typesVer', TYPES_VER);
+  }
+  try { healMineTypeFilters(); } catch (e) {}
+
   w.TMPrefs = {
-    NAME: NAME, ALIAS: ALIAS,
+    NAME: NAME, ALIAS: ALIAS, MINE_TYPES: MINE_TYPES,
     get: get, set: set, remove: remove, getItem: getItem, setItem: setItem,
     all: readAll, size: function () { return (rawCookie() || '').length; },
-    bindBulkTools: bindBulkTools
+    bindBulkTools: bindBulkTools, healMineTypeFilters: healMineTypeFilters
   };
 })(window, document);

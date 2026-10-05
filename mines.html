@@ -3,7 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
-  <script src="/js/tm-prefs.js?v=20261005-1"></script>
+  <script src="/js/tm-prefs.js?v=20261005-2"></script>
     <script>
   (function () {
     try {
@@ -1582,14 +1582,21 @@
   function saveUnnamedOnly() {
     try { TMPrefs.setItem(FILTER_UNNAMED_KEY, unnamedOnly ? '1' : '0'); } catch (e) {}
   }
+  function allMineTypeSet() {
+    return new Set(TYPE_ORDER_DEFAULT.slice());
+  }
   function loadSelectedTypes() {
+    // Default: all four types ON (show every mine). Empty / missing / invalid cookie → all ON.
+    // A non-empty saved list is restored as-is (after tm-prefs one-time heal to all four).
     try {
+      if (window.TMPrefs && typeof TMPrefs.healMineTypeFilters === 'function') TMPrefs.healMineTypeFilters();
       const raw = TMPrefs.getItem(FILTER_TYPES_KEY);
-      if (!raw) return new Set();
+      if (!raw) return allMineTypeSet();
       const arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) return new Set();
-      return new Set(arr.filter(t => TYPE_ORDER.indexOf(t) !== -1));
-    } catch (e) { return new Set(); }
+      if (!Array.isArray(arr) || !arr.length) return allMineTypeSet();
+      const next = new Set(arr.filter(t => TYPE_ORDER_DEFAULT.indexOf(t) !== -1));
+      return next.size ? next : allMineTypeSet();
+    } catch (e) { return allMineTypeSet(); }
   }
   function saveSelectedTypes() {
     try {
@@ -4554,7 +4561,7 @@
     if (!focus) return;
     focusMineId = focus.id;
     // Leave types/showcase=all so the focused mine is not hidden by saved chip sets.
-    selectedTypes = new Set();
+    selectedTypes = allMineTypeSet();
     saveSelectedTypes();
     selectedShowcase = new Set();
     saveSelectedShowcase();
@@ -7869,6 +7876,8 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
       const t = btn.dataset.type;
       if (selectedTypes.has(t)) selectedTypes.delete(t);
       else selectedTypes.add(t);
+      // Never leave every type off — fall back to all four ON (show all mines).
+      if (!selectedTypes.size) selectedTypes = allMineTypeSet();
       saveSelectedTypes();
       updateTypeFilterButtons();
       if (loadedUid) renderFromFilters();

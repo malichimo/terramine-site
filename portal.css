@@ -1553,7 +1553,7 @@ button.dash-pp-lock {
   top: 6px; right: 8px; width: 26px; height: 26px;
   background: var(--brown); border-color: var(--brown-dark);
 }
-.stat-card.has-share > .dash-share-btn svg { width: 17px; height: 17px; }
+.stat-card.has-share > .dash-share-btn svg { width: 17px; height: 17px; margin: -2px 0 0 -0.5px; }
 .stat-card.has-share > .dash-share-btn:hover { background: var(--brown-dark); }
 .stat-card.has-share > .dash-share-btn:focus-visible { outline-color: var(--brown-dark); }
 /* TerraMines Owned has no title bar: chip in the box's top-right corner; the
