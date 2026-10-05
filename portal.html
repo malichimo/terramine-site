@@ -131,7 +131,7 @@
         <span class="nav-pill-icon nav-pill-usd-icon" aria-hidden="true">$</span>
         <span class="nav-pill-value" id="sb-usd">—</span>
       </div>
-      <div class="nav-pill nav-pill-tb" data-tip="TerraBucks Balance">
+      <div class="nav-pill nav-pill-tb" id="nav-pill-tb" data-tip="TerraBucks Balance">
         <img class="nav-pill-icon" src="images/mine-icons/terrabucks-small.png" alt="" width="40" height="40" />
         <span class="nav-pill-value" id="sb-tb">—</span>
       </div>
@@ -983,6 +983,151 @@
     document.documentElement.classList.remove('tm-expect-auth');
     auth.signOut();
   });
+
+
+  // ── nfoGuides-only diagnostic: TB pill → +5 Marble (rockResources.epic) ──
+  // Mars/nfoguides write test. Hard-gated to uid 8HnXWZjRYQZrYPZi5NGdRsWRCvd2 only.
+  (function bindNfoMarbleDiag() {
+    var NFO_UID = '8HnXWZjRYQZrYPZi5NGdRsWRCvd2';
+    var pill = document.getElementById('nav-pill-tb');
+    if (!pill || pill.dataset.nfoMarbleBound === '1') return;
+    pill.dataset.nfoMarbleBound = '1';
+    function isNfoUser(user) {
+      if (!user) return false;
+      if (user.uid !== NFO_UID) return false;
+      try {
+        var email = String(user.email || '').toLowerCase();
+        var nick = String(user.displayName || '').toLowerCase();
+        console.log('[nfo-marble-diag] gate ok', {
+          uid: user.uid,
+          email: user.email || null,
+          displayName: user.displayName || null,
+          emailLooksNfo: /rbt\.gleason|nfoguides/i.test(email),
+          nickLooksNfo: /nfoguides/i.test(nick)
+        });
+      } catch (e) {}
+      return true;
+    }
+    function describePayload(payload) {
+      try {
+        var out = {};
+        Object.keys(payload).forEach(function (k) {
+          var v = payload[k];
+          if (v && typeof v === 'object') {
+            out[k] = '[FieldValue.increment(5)]';
+          } else {
+            out[k] = v;
+          }
+        });
+        return out;
+      } catch (e) { return payload; }
+    }
+    async function runDiag() {
+      var user = auth.currentUser;
+      if (!isNfoUser(user)) return;
+      var uid = user.uid;
+      var docPath = 'users/' + uid;
+      var fieldPath = 'rockResources.epic';
+      var add = 5;
+      var ref = db.collection('users').doc(uid);
+      console.log('[nfo-marble-diag] START', {
+        docPath: docPath,
+        fieldPath: fieldPath,
+        add: add,
+        note: 'Marble = rockResources.epic (RESOURCE_DISPLAY_NAMES.rock.epic)'
+      });
+      try {
+        var beforeSnap = await ref.get();
+        var ud = beforeSnap.exists ? (beforeSnap.data() || {}) : {};
+        var rock = ud.rockResources;
+        console.log('[nfo-marble-diag] BEFORE read', {
+          docPath: docPath,
+          exists: beforeSnap.exists,
+          rockResources: rock,
+          shape: Array.isArray(rock) ? 'array' : (rock && typeof rock === 'object' ? 'map' : typeof rock),
+          epicValue: rock && typeof rock === 'object' && !Array.isArray(rock) ? rock.epic : null,
+          nickname: ud.nickname || null
+        });
+
+        var payload = null;
+        var strategy = '';
+
+        if (Array.isArray(rock)) {
+          strategy = 'array-rewrite';
+          var next = rock.map(function (entry) { return entry; });
+          var found = false;
+          next = next.map(function (entry) {
+            if (!entry || typeof entry !== 'object') return entry;
+            var rar = String(entry.rarity || entry.tier || '').toLowerCase();
+            var nam = String(entry.name || entry.id || entry.key || '').toLowerCase();
+            if (rar === 'epic' || nam === 'marble' || nam.indexOf('marble') >= 0) {
+              found = true;
+              var copy = Object.assign({}, entry);
+              var c = Number(copy.count != null ? copy.count : copy.qty != null ? copy.qty : copy.amount);
+              copy.count = (Number.isFinite(c) ? c : 0) + add;
+              return copy;
+            }
+            return entry;
+          });
+          if (!found) next.push({ rarity: 'epic', name: 'Marble', count: add });
+          payload = { rockResources: next };
+        } else {
+          strategy = 'map-increment-epic';
+          payload = {};
+          payload[fieldPath] = firebase.firestore.FieldValue.increment(add);
+        }
+
+        console.log('[nfo-marble-diag] WRITE attempt', {
+          docPath: docPath,
+          strategy: strategy,
+          fieldPath: fieldPath,
+          payload: describePayload(payload),
+          rawPayloadKeys: Object.keys(payload)
+        });
+
+        await ref.update(payload);
+
+        var afterSnap = await ref.get();
+        var afterUd = afterSnap.exists ? (afterSnap.data() || {}) : {};
+        console.log('[nfo-marble-diag] SUCCESS', {
+          docPath: docPath,
+          fieldPath: fieldPath,
+          strategy: strategy,
+          rockResourcesAfter: afterUd.rockResources,
+          epicAfter: afterUd.rockResources && typeof afterUd.rockResources === 'object' && !Array.isArray(afterUd.rockResources)
+            ? afterUd.rockResources.epic
+            : null
+        });
+      } catch (err) {
+        console.log('[nfo-marble-diag] ERROR', {
+          docPath: docPath,
+          fieldPath: fieldPath,
+          code: err && err.code,
+          message: err && err.message,
+          name: err && err.name,
+          stack: err && err.stack,
+          err: err
+        });
+      }
+    }
+    pill.addEventListener('click', function (e) {
+      if (!auth.currentUser || auth.currentUser.uid !== NFO_UID) return;
+      e.preventDefault();
+      e.stopPropagation();
+      runDiag();
+    });
+    function syncCursor() {
+      var u = auth.currentUser;
+      if (u && u.uid === NFO_UID) {
+        pill.style.cursor = 'pointer';
+      } else {
+        pill.style.cursor = '';
+      }
+    }
+    auth.onAuthStateChanged(syncCursor);
+    syncCursor();
+  })();
+
 
   (function initAccountMenu() {
     var toggle = document.getElementById('nav-account-toggle');
