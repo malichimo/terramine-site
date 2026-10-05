@@ -228,6 +228,19 @@
       .pp-card-sub { font-size:12px; }
     }
 
+    /* ── Vanity referral code card ── */
+    .vc-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #f0f0f0; }
+    .vc-code { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:15px; font-weight:700; color:var(--brown-dark); letter-spacing:1px; overflow-wrap:anywhere; }
+    .vc-copy { background:white; border:2px solid var(--brown-mid); color:var(--brown); border-radius:8px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; flex:0 0 auto; }
+    .vc-copy:hover { border-color:var(--brown); }
+    .vc-input-wrap { display:flex; align-items:stretch; border:2px solid var(--brown-mid); border-radius:8px; overflow:hidden; background:white; }
+    .vc-input-wrap:focus-within { border-color:var(--brown); }
+    .vc-prefix { display:flex; align-items:center; padding:0 10px; background:var(--off-white); color:var(--text-mid); font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight:700; font-size:14px; border-right:1px solid var(--brown-light); }
+    .vc-input { flex:1 1 auto; min-width:0; border:none; outline:none; padding:10px 12px; font-size:14px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-transform:uppercase; letter-spacing:1px; color:var(--text-dark); }
+    .vc-price { font-size:13px; color:var(--text-mid); margin-top:14px; }
+    .vc-price strong { color:var(--text-dark); }
+    .vc-free { color:#2E7D32; font-weight:700; }
+
     /* ── Password card ── */
     .pw-card-header { background:var(--brown-mid); }
     .pw-card-header .app-card-title { color:white; }
@@ -403,6 +416,39 @@
             <div class="pp-card-text">
               <div class="pp-card-status">Status: <span class="pp-card-status-value" id="pp-status">—</span></div>
               <div class="pp-card-sub" id="pp-sub"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vanity referral code (setVanityReferralCode Cloud Function; free for Pioneer Pass, 5,000 TB otherwise) -->
+        <div class="app-card" id="vanity-card">
+          <div class="app-card-header">
+            <span class="app-card-title">🏷️ Vanity Referral Code</span>
+          </div>
+          <div class="app-card-body">
+            <div class="field-hint" style="font-size:13px; margin-top:0;">
+              Pick a custom referral code that's easy to share, like <strong>TM-GOLDRUSH</strong>. Your regular code keeps working too.
+            </div>
+            <div class="vc-row">
+              <span class="info-label">Your regular code</span>
+              <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-primary">—</span><button class="vc-copy" id="vc-primary-copy" type="button">Copy</button></span>
+            </div>
+            <div class="vc-row" style="border-bottom:none;">
+              <span class="info-label">Your vanity code</span>
+              <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-current">None yet</span><button class="vc-copy" id="vc-current-copy" type="button" style="display:none;">Copy</button></span>
+            </div>
+            <div class="field-group" style="margin-top:14px; margin-bottom:0;">
+              <label class="field-label" for="vc-input" id="vc-input-label">Choose your code</label>
+              <div class="vc-input-wrap">
+                <span class="vc-prefix">TM-</span>
+                <input class="vc-input" type="text" id="vc-input" maxlength="10" placeholder="GOLDRUSH" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+              </div>
+              <div class="field-hint">4–10 letters or numbers. You can change it once per calendar month. Changing it releases your old vanity code.</div>
+            </div>
+            <div class="vc-price" id="vc-price"></div>
+            <div class="save-row">
+              <button class="btn-save" id="vc-btn" onclick="claimVanityCode()">Claim code</button>
+              <span class="save-status" id="vc-status"></span>
             </div>
           </div>
         </div>
@@ -601,6 +647,9 @@
 
     // Pioneer Pass (same users/{uid} read as above — no extra Firestore read)
     renderPioneerPass(ud);
+
+    // Vanity referral code (same users/{uid} read)
+    renderVanityCode(ud);
   }
 
   /** Firestore Timestamp | {seconds} | ISO string | millis/seconds number -> Date or null */
@@ -841,6 +890,112 @@
 
   // ── Linked apps (Calculator partner API) ─────────────────────────
   const fns = firebase.functions();
+
+  // ── Vanity referral code ─────────────────────────────────────────
+  // Server (setVanityReferralCode) is the source of truth for price, availability
+  // and the once-per-month limit; this UI only mirrors those rules for messaging.
+  const VANITY_PRICE_TB = 5000;
+  const VANITY_RE = /^[A-Z0-9]{4,10}$/;
+  let vcUser = {};
+
+  function estYearMonth(d) {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York', year:'numeric', month:'2-digit' }).formatToParts(d);
+    return parts.find(p => p.type === 'year').value + '-' + parts.find(p => p.type === 'month').value;
+  }
+  function nextMonthLabel(d) {
+    const ym = estYearMonth(d).split('-').map(Number);
+    const y = ym[1] === 12 ? ym[0] + 1 : ym[0], m = ym[1] === 12 ? 1 : ym[1] + 1;
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  }
+  function copyText(text, label) {
+    if (!text) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+      .then(() => showToast(label + ' copied', 'success'))
+      .catch(() => showToast(text));
+  }
+
+  function renderVanityCode(ud) {
+    vcUser = ud || {};
+    const isPioneer = vcUser.isPioneerMember === true;
+    const primary = vcUser.referralCode || '';
+    const vanity = vcUser.vanityCode || '';
+    $('vc-primary').textContent = primary || '—';
+    $('vc-primary-copy').style.display = primary ? 'inline-block' : 'none';
+    $('vc-primary-copy').onclick = () => copyText(primary, 'Code');
+    $('vc-current').textContent = vanity || 'None yet';
+    $('vc-current-copy').style.display = vanity ? 'inline-block' : 'none';
+    $('vc-current-copy').onclick = () => copyText(vanity, 'Code');
+    $('vc-input-label').textContent = vanity ? 'Change your code' : 'Choose your code';
+    $('vc-btn').textContent = vanity ? 'Change code' : 'Claim code';
+
+    const tb = Number(vcUser.tbBalance) || 0;
+    if (isPioneer) {
+      $('vc-price').innerHTML = 'Price: <span class="vc-free">Free with your Pioneer Pass ⭐</span>';
+    } else {
+      $('vc-price').innerHTML = 'Price: <strong>' + VANITY_PRICE_TB.toLocaleString('en-US') + ' TB</strong> (you have ' + fmtTBBalance(tb) + ' TB) · ' +
+        '<a class="pp-card-link" href="/pioneer-pass.html">Free with the Pioneer Pass →</a>';
+    }
+
+    const setAt = toDateLoose(vcUser.vanityCodeSetAt);
+    const lockedThisMonth = !!setAt && estYearMonth(setAt) === estYearMonth(new Date());
+    const status = $('vc-status');
+    status.className = 'save-status';
+    status.textContent = '';
+    $('vc-input').disabled = lockedThisMonth;
+    $('vc-btn').disabled = lockedThisMonth;
+    if (lockedThisMonth) {
+      status.textContent = 'You can change it again on ' + nextMonthLabel(new Date()) + '.';
+    } else if (!isPioneer && tb < VANITY_PRICE_TB) {
+      $('vc-btn').disabled = true;
+      status.textContent = 'You need ' + VANITY_PRICE_TB.toLocaleString('en-US') + ' TB.';
+    }
+  }
+
+  $('vc-input').addEventListener('input', e => {
+    const v = e.target.value.toUpperCase().replace(/^TM-/, '').replace(/[^A-Z0-9]/g, '').slice(0, 10);
+    if (e.target.value !== v) e.target.value = v;
+  });
+  $('vc-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !$('vc-btn').disabled) claimVanityCode(); });
+
+  window.claimVanityCode = async function () {
+    const status = $('vc-status');
+    const body = $('vc-input').value.trim().toUpperCase().replace(/^TM-/, '');
+    status.className = 'save-status';
+    if (!VANITY_RE.test(body)) {
+      status.className = 'save-status error';
+      status.textContent = 'Use 4–10 letters or numbers.';
+      return;
+    }
+    const code = 'TM-' + body;
+    const isPioneer = vcUser.isPioneerMember === true;
+    const lines = ['Set your vanity referral code to ' + code + '?'];
+    if (!isPioneer) lines.push('', VANITY_PRICE_TB.toLocaleString('en-US') + ' TB will be taken from your balance.');
+    if (vcUser.vanityCode) lines.push('', 'Your current code ' + vcUser.vanityCode + ' will be released and stop working for new sign-ups. Referrals you already have are kept.');
+    lines.push('', 'You can only change it once per calendar month.');
+    if (!confirm(lines.join('\n'))) return;
+
+    const btn = $('vc-btn');
+    btn.disabled = true;
+    status.textContent = 'Saving…';
+    try {
+      const r = await fns.httpsCallable('setVanityReferralCode')({ code: body });
+      const d = r.data || {};
+      vcUser.vanityCode = d.vanityCode;
+      vcUser.vanityCodeSetAt = d.vanityCodeSetAt;
+      if (typeof d.newTbBalance === 'number') {
+        vcUser.tbBalance = d.newTbBalance;
+        $('sb-tb').textContent = fmtTBBalance(d.newTbBalance);
+      }
+      $('vc-input').value = '';
+      renderVanityCode(vcUser);
+      showToast('Your code is now ' + d.vanityCode + (d.tbCharged ? ' (−' + Number(d.tbCharged).toLocaleString('en-US') + ' TB)' : ''), 'success');
+    } catch (e) {
+      btn.disabled = false;
+      status.className = 'save-status error';
+      status.textContent = e.message || 'Could not set your code. Please try again.';
+    }
+  };
+
   let linkTimer = null;
 
   window.generateLinkCode = async function () {
