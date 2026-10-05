@@ -1,0 +1,697 @@
+/* Portal 3-way theme: Day / Dusk / Mine (Oct 5, 2026). html[data-theme]. */
+
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+html[data-theme="day"],
+html:not([data-theme]) {
+  --tm-overlay: rgba(238, 241, 244, 0.7);
+  --tm-body-bg: #0D1B2A;
+  --tm-card: rgba(255, 255, 255, 0.92);
+  --tm-card-solid: #ffffff;
+  --tm-card-border: rgba(139, 115, 85, 0.45);
+  --tm-text: #1a2330;
+  --tm-text-muted: #556070;
+  --tm-head-bg: #5C3317;
+  --tm-head-fg: #fff8ec;
+  --tm-toolbar-bg: rgba(255, 255, 255, 0.88);
+  --tm-toolbar-border: rgba(92, 51, 23, 0.25);
+  --tm-chip-bg: rgba(255, 255, 255, 0.9);
+  --tm-chip-fg: #333;
+  --tm-chip-on-bg: var(--brown-dark, #5C3317);
+  --tm-chip-on-fg: #fff;
+  --tm-input-bg: #fff;
+  --tm-input-fg: #1a2330;
+  --tm-input-border: rgba(92, 51, 23, 0.3);
+  --tm-tip-bg: #0f172a;
+  --tm-tip-fg: #f8fafc;
+  --tm-map-panel: rgba(15, 23, 42, 0.96);
+  --tm-map-chrome: #0f172a;
+  --tm-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --tm-rock-fg: #1565c0;
+  --tm-coal-fg: #455a64;
+  --tm-status: #334155;
+  --tm-empty: #64748b;
+}
+
+html[data-theme="dusk"],
+html[data-theme="mine"] {
+  /* Mine keeps its own data-theme value (flashlight later) but matches dusk palette for now. */
+  --tm-overlay: rgba(10, 18, 30, 0.78);
+  --tm-body-bg: #070d16;
+  --tm-card: rgba(22, 38, 58, 0.94);
+  --tm-card-solid: #16263a;
+  --tm-card-border: rgba(79, 195, 247, 0.22);
+  --tm-text: #e8eef6;
+  --tm-text-muted: #9aadc2;
+  --tm-head-bg: #1a3350;
+  --tm-head-fg: #e8f4ff;
+  --tm-toolbar-bg: rgba(17, 31, 48, 0.94);
+  --tm-toolbar-border: rgba(79, 195, 247, 0.2);
+  --tm-chip-bg: rgba(30, 48, 70, 0.95);
+  --tm-chip-fg: #d7e6f5;
+  --tm-chip-on-bg: #4FC3F7;
+  --tm-chip-on-fg: #0a1522;
+  --tm-input-bg: #0f1c2c;
+  --tm-input-fg: #e8eef6;
+  --tm-input-border: rgba(79, 195, 247, 0.28);
+  --tm-tip-bg: #0b1624;
+  --tm-tip-fg: #f0f6fc;
+  --tm-map-panel: rgba(10, 18, 30, 0.97);
+  --tm-map-chrome: #0b1624;
+  --tm-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --tm-rock-fg: #90CAF9;
+  --tm-coal-fg: #CFD8DC;
+  --tm-status: #b6c7d9;
+  --tm-empty: #8a9bb0;
+  --text-dark: #e8eef6;
+  --text-mid: #9aadc2;
+  --white: #e8eef6;
+}
+
+/* ── Surfaces ─────────────────────────────────────────────────────────────── */
+html[data-theme="dusk"] body,
+html[data-theme="mine"] body { background-color: var(--tm-body-bg); color: var(--tm-text); }
+
+html[data-theme="dusk"] .backgroundoverlaycolor,
+html[data-theme="mine"] .backgroundoverlaycolor { background: var(--tm-overlay); }
+
+html[data-theme="dusk"] .portalbackground,
+html[data-theme="mine"] .portalbackground { filter: saturate(0.85) brightness(0.55); }
+
+/* Cards / panels (dashboard, mines, inventory, visitors, activity, account) */
+html[data-theme="dusk"] .stat-card,
+html[data-theme="mine"] .stat-card,
+html[data-theme="dusk"] .dash-slot-card,
+html[data-theme="mine"] .dash-slot-card,
+html[data-theme="dusk"] .dash-pie-card,
+html[data-theme="mine"] .dash-pie-card,
+html[data-theme="dusk"] .dash-visits-card,
+html[data-theme="mine"] .dash-visits-card,
+html[data-theme="dusk"] .dash-inv-card,
+html[data-theme="mine"] .dash-inv-card,
+html[data-theme="dusk"] .mine-card,
+html[data-theme="mine"] .mine-card,
+html[data-theme="dusk"] .inv-card,
+html[data-theme="mine"] .inv-card,
+html[data-theme="dusk"] .vo-card,
+html[data-theme="mine"] .vo-card,
+html[data-theme="dusk"] .account-card,
+html[data-theme="mine"] .account-card,
+html[data-theme="dusk"] .mine-group-total,
+html[data-theme="mine"] .mine-group-total {
+  background: var(--tm-card) !important;
+  border-color: var(--tm-card-border) !important;
+  color: var(--tm-text) !important;
+  box-shadow: var(--tm-shadow);
+}
+
+html[data-theme="dusk"] .stat-card-label,
+html[data-theme="mine"] .stat-card-label,
+html[data-theme="dusk"] .stat-card-value,
+html[data-theme="mine"] .stat-card-value,
+html[data-theme="dusk"] .mine-card-title,
+html[data-theme="mine"] .mine-card-title,
+html[data-theme="dusk"] .inv-card-name,
+html[data-theme="mine"] .inv-card-name,
+html[data-theme="dusk"] .inv-card-meta,
+html[data-theme="mine"] .inv-card-meta,
+html[data-theme="dusk"] .vo-name,
+html[data-theme="mine"] .vo-name { color: var(--tm-text) !important; }
+
+html[data-theme="dusk"] .dash-visits-head,
+html[data-theme="mine"] .dash-visits-head,
+html[data-theme="dusk"] .dash-dominance-head,
+html[data-theme="mine"] .dash-dominance-head {
+  background: var(--tm-head-bg) !important;
+  color: var(--tm-head-fg) !important;
+  border-color: var(--tm-card-border) !important;
+}
+
+/* Mines + Inventory group heads (dusk/mine): transparent bar; labels slate-blue.
+   Inventory reuses .mine-group-head / h2; .inv-group-head mirrored if present. */
+html[data-theme="dusk"] .mine-group-head,
+html[data-theme="mine"] .mine-group-head,
+html[data-theme="dusk"] .inv-group-head,
+html[data-theme="mine"] .inv-group-head,
+html[data-theme="dusk"] #inv-board .mine-group-head,
+html[data-theme="mine"] #inv-board .mine-group-head {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #345d7b !important;
+}
+html[data-theme="dusk"] .mine-group-head-label,
+html[data-theme="mine"] .mine-group-head-label,
+html[data-theme="dusk"] .mine-group-head h2,
+html[data-theme="mine"] .mine-group-head h2,
+html[data-theme="dusk"] .inv-group-head-label,
+html[data-theme="mine"] .inv-group-head-label,
+html[data-theme="dusk"] .inv-group-head h2,
+html[data-theme="mine"] .inv-group-head h2,
+html[data-theme="dusk"] #inv-board .mine-group-head h2,
+html[data-theme="mine"] #inv-board .mine-group-head h2 {
+  color: #345d7b !important;
+}
+
+/* Filter / toolbars */
+html[data-theme="dusk"] .mine-toolbar,
+html[data-theme="mine"] .mine-toolbar,
+html[data-theme="dusk"] #inv-toolbar,
+html[data-theme="mine"] #inv-toolbar,
+html[data-theme="dusk"] #visitors-toolbar,
+html[data-theme="mine"] #visitors-toolbar,
+html[data-theme="dusk"] .page-settings-panel,
+html[data-theme="mine"] .page-settings-panel {
+  background: var(--tm-toolbar-bg) !important;
+  border-color: var(--tm-toolbar-border) !important;
+  color: var(--tm-text) !important;
+}
+
+html[data-theme="dusk"] .sort-btn,
+html[data-theme="mine"] .sort-btn,
+html[data-theme="dusk"] .type-filter-btn,
+html[data-theme="mine"] .type-filter-btn,
+html[data-theme="dusk"] .flip-type-order-btn,
+html[data-theme="mine"] .flip-type-order-btn,
+html[data-theme="dusk"] .page-settings-btn,
+html[data-theme="mine"] .page-settings-btn {
+  background: var(--tm-chip-bg) !important;
+  color: var(--tm-chip-fg) !important;
+  border-color: var(--tm-toolbar-border) !important;
+}
+html[data-theme="dusk"] .sort-btn.active,
+html[data-theme="mine"] .sort-btn.active,
+html[data-theme="dusk"] .type-filter-btn.active,
+html[data-theme="mine"] .type-filter-btn.active,
+html[data-theme="dusk"] .type-filter-btn[aria-pressed="true"],
+html[data-theme="mine"] .type-filter-btn[aria-pressed="true"],
+html[data-theme="dusk"] .flip-type-order-btn[aria-pressed="true"],
+html[data-theme="mine"] .flip-type-order-btn[aria-pressed="true"],
+html[data-theme="dusk"] .group-toggle-btn[aria-pressed="true"],
+html[data-theme="mine"] .group-toggle-btn[aria-pressed="true"] {
+  background: var(--tm-chip-on-bg) !important;
+  color: var(--tm-chip-on-fg) !important;
+}
+
+html[data-theme="dusk"] .tool-search,
+html[data-theme="mine"] .tool-search,
+html[data-theme="dusk"] .input-field,
+html[data-theme="mine"] .input-field,
+html[data-theme="dusk"] select,
+html[data-theme="mine"] select,
+html[data-theme="dusk"] textarea,
+html[data-theme="mine"] textarea {
+  background: var(--tm-input-bg) !important;
+  color: var(--tm-input-fg) !important;
+  border-color: var(--tm-input-border) !important;
+}
+
+html[data-theme="dusk"] .mine-status,
+html[data-theme="mine"] .mine-status,
+html[data-theme="dusk"] .inv-status,
+html[data-theme="mine"] .inv-status,
+html[data-theme="dusk"] .mine-count,
+html[data-theme="mine"] .mine-count,
+html[data-theme="dusk"] .inv-empty,
+html[data-theme="mine"] .inv-empty { color: var(--tm-status) !important; }
+
+/* Follow tips / popups */
+html[data-theme="dusk"] .toolbar-follow-tip,
+html[data-theme="mine"] .toolbar-follow-tip,
+html[data-theme="dusk"] .mine-greet-tip,
+html[data-theme="mine"] .mine-greet-tip {
+  background: var(--tm-tip-bg) !important;
+  color: var(--tm-tip-fg) !important;
+  border-color: var(--tm-card-border) !important;
+}
+
+/* Map chrome */
+html[data-theme="dusk"] .mine-map-overlay,
+html[data-theme="mine"] .mine-map-overlay,
+html[data-theme="dusk"] .visitors-overlay,
+html[data-theme="mine"] .visitors-overlay {
+  background: rgba(0, 0, 0, 0.72) !important;
+}
+html[data-theme="dusk"] .mine-map-panel,
+html[data-theme="mine"] .mine-map-panel,
+html[data-theme="dusk"] .mine-map-chrome,
+html[data-theme="mine"] .mine-map-chrome,
+html[data-theme="dusk"] .mine-map-bulk-rename,
+html[data-theme="mine"] .mine-map-bulk-rename,
+html[data-theme="dusk"] .mine-map-bulk-greet,
+html[data-theme="mine"] .mine-map-bulk-greet,
+html[data-theme="dusk"] .mine-map-edit,
+html[data-theme="mine"] .mine-map-edit {
+  background: var(--tm-map-panel) !important;
+  color: var(--tm-text) !important;
+  border-color: var(--tm-card-border) !important;
+}
+html[data-theme="dusk"] #mine-map-body,
+html[data-theme="mine"] #mine-map-body,
+html[data-theme="dusk"] #full-map-canvas,
+html[data-theme="mine"] #full-map-canvas {
+  background: var(--tm-map-chrome) !important;
+}
+
+
+/* Login card on themed pages */
+html[data-theme="dusk"] .login-card,
+html[data-theme="mine"] .login-card {
+  background: var(--tm-card-solid) !important;
+  color: var(--tm-text) !important;
+  border-color: var(--tm-card-border) !important;
+}
+
+/* Dashboard share / compare bits */
+html[data-theme="dusk"] .compare-pill,
+html[data-theme="mine"] .compare-pill {
+  background: var(--tm-chip-bg) !important;
+  color: var(--tm-chip-fg) !important;
+  border-color: var(--tm-toolbar-border) !important;
+}
+html[data-theme="dusk"] .dash-share-btn,
+html[data-theme="mine"] .dash-share-btn { color: #354355; }
+
+/* ── Theme toggle pill ────────────────────────────────────────────────────── */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+}
+.theme-toggle-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #c5d0dc;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-toggle-btn svg,
+.theme-toggle-btn img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  pointer-events: none;
+}
+.theme-toggle-btn img { filter: brightness(1.25); }
+.theme-toggle-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.theme-toggle-btn[aria-pressed="true"] {
+  background: rgba(79, 195, 247, 0.22);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(79, 195, 247, 0.45);
+}
+.theme-toggle-btn:focus-visible { outline: 2px solid #4FC3F7; outline-offset: 1px; }
+
+@media (max-width: 700px) {
+  .theme-toggle-btn { width: 30px; height: 30px; }
+  .theme-toggle-btn svg, .theme-toggle-btn img { width: 16px; height: 16px; }
+}
+@media (max-width: 400px) {
+  .theme-toggle { gap: 0; padding: 2px; }
+  .theme-toggle-btn { width: 28px; height: 28px; }
+}
+
+
+/* ── Dusk/Mine dashboard polish (mine matches dusk; Oct 5, 2026) ──────────── */
+html[data-theme="dusk"],
+html[data-theme="mine"] {
+  --tm-usd-green: #22C55E;
+  --tm-graph-blue: rgba(22, 38, 58, 0.94);
+  --tm-graph-blue-border: rgba(79, 195, 247, 0.35);
+}
+
+/* A) Production calculation bars */
+html[data-theme="dusk"] .mine-totals-bar,
+html[data-theme="mine"] .mine-totals-bar {
+  background: var(--tm-graph-blue) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+}
+/* Period corner titles removed — hide if present */
+.mine-totals-period-label { display: none !important; }
+html[data-theme="dusk"] .mine-group-total,
+html[data-theme="mine"] .mine-group-total {
+  background: var(--tm-graph-blue) !important;
+  color: #fff !important;
+}
+/* Type boxes (Diamond/Gold/Coal/Rock) — not All Mines */
+html[data-theme="dusk"] .mine-group-total:not([data-group-type="all"]) .mine-group-total-title,
+html[data-theme="mine"] .mine-group-total:not([data-group-type="all"]) .mine-group-total-title {
+  color: #9caec2 !important;
+}
+html[data-theme="dusk"] .mine-group-total:not([data-group-type="all"]) .mine-group-total-value,
+html[data-theme="mine"] .mine-group-total:not([data-group-type="all"]) .mine-group-total-value {
+  color: #d3b021 !important;
+}
+html[data-theme="dusk"] .mine-group-total[data-group-type="all"],
+html[data-theme="mine"] .mine-group-total[data-group-type="all"] {
+  background: var(--tm-graph-blue) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+}
+html[data-theme="dusk"] .mine-group-total[data-group-type="all"] .mine-group-total-title,
+html[data-theme="mine"] .mine-group-total[data-group-type="all"] .mine-group-total-title {
+  color: var(--tm-usd-green) !important;
+}
+html[data-theme="dusk"] .mine-group-total[data-group-type="all"] .mine-group-total-value,
+html[data-theme="mine"] .mine-group-total[data-group-type="all"] .mine-group-total-value {
+  color: #fff !important;
+}
+
+/* B) Camera share icons — slate #354355; hover icon white (border stays) */
+html[data-theme="dusk"] .dash-share-btn,
+html[data-theme="mine"] .dash-share-btn,
+html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn,
+html[data-theme="mine"] .stat-card.has-share > .dash-share-btn {
+  background: transparent !important;
+  border-color: #354355 !important;
+  color: #354355 !important;
+}
+html[data-theme="dusk"] .dash-share-btn:hover,
+html[data-theme="mine"] .dash-share-btn:hover,
+html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn:hover,
+html[data-theme="mine"] .stat-card.has-share > .dash-share-btn:hover {
+  background: transparent !important;
+  border-color: #354355 !important;
+  color: #fff !important;
+}
+
+
+/* C) Earned TerraBucks Today — value uses USD green */
+html[data-theme="dusk"] .tb-today-total,
+html[data-theme="mine"] .tb-today-total {
+  background: rgba(34, 197, 94, 0.16) !important;
+  border-color: rgba(34, 197, 94, 0.55) !important;
+  color: var(--tm-text) !important;
+}
+html[data-theme="dusk"] .tb-today-total strong,
+html[data-theme="mine"] .tb-today-total strong,
+html[data-theme="dusk"] .tb-today-total .tb-today-tb-val,
+html[data-theme="mine"] .tb-today-total .tb-today-tb-val {
+  color: var(--tm-usd-green) !important;
+}
+
+/* D) Mine Dominance — blue border like bar graphs */
+html[data-theme="dusk"] .dash-dominance-card,
+html[data-theme="mine"] .dash-dominance-card {
+  border-color: var(--tm-graph-blue-border) !important;
+  background: var(--tm-graph-blue) !important;
+}
+html[data-theme="dusk"] .dash-visits-card,
+html[data-theme="mine"] .dash-visits-card {
+  border-color: var(--tm-graph-blue-border) !important;
+}
+
+/* E) TerraBucks Earned Today — left labels match right values */
+html[data-theme="dusk"] .tb-today-section,
+html[data-theme="mine"] .tb-today-section {
+  background: rgba(15, 28, 44, 0.72) !important;
+  border-color: var(--tm-card-border) !important;
+}
+html[data-theme="dusk"] .tb-today-section-title,
+html[data-theme="mine"] .tb-today-section-title {
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .tb-today-table,
+html[data-theme="mine"] .tb-today-table,
+html[data-theme="dusk"] .tb-today-table th[scope="row"],
+html[data-theme="mine"] .tb-today-table th[scope="row"],
+html[data-theme="dusk"] .tb-today-table td,
+html[data-theme="mine"] .tb-today-table td {
+  color: var(--tm-text) !important;
+}
+html[data-theme="dusk"] .tb-today-table thead th,
+html[data-theme="mine"] .tb-today-table thead th {
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .tb-today-note,
+html[data-theme="mine"] .tb-today-note {
+  color: var(--tm-text-muted) !important;
+}
+
+/* Theme toggle beside gear on dashboard (light chrome over photo) */
+.mine-totals-controls .theme-toggle {
+  background: rgba(13, 27, 42, 0.55);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+html[data-theme="dusk"] .mine-totals-controls .theme-toggle,
+html[data-theme="mine"] .mine-totals-controls .theme-toggle {
+  background: rgba(10, 18, 30, 0.75);
+  border-color: rgba(79, 195, 247, 0.28);
+}
+
+
+/* F) TerraMines Owned (dusk) — type counts gold, separator slate */
+html[data-theme="dusk"] #dash-props-card .prop-type-count,
+html[data-theme="mine"] #dash-props-card .prop-type-count {
+  color: #d3b021 !important;
+}
+html[data-theme="dusk"] #dash-props-card .prop-breakdown,
+html[data-theme="mine"] #dash-props-card .prop-breakdown {
+  border-top-color: #6b7b8e !important;
+}
+
+
+/* G) Visitors + Activity cards (dusk) — graph blue bodies; message text slate */
+html[data-theme="dusk"] .vo-card,
+html[data-theme="mine"] .vo-card,
+html[data-theme="dusk"] .vo-card-body,
+html[data-theme="mine"] .vo-card-body {
+  background: var(--tm-graph-blue) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+}
+html[data-theme="dusk"] .vo-message,
+html[data-theme="mine"] .vo-message {
+  color: #9caec2 !important;
+}
+
+
+/* Mine theme miner icon (colored SVG — keep fills, not currentColor wash) */
+.theme-toggle-btn[data-theme-set="mine"] svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  overflow: visible;
+}
+
+
+/* Mine theme miner PNG (cropped character) */
+.theme-toggle-btn[data-theme-set="mine"] img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+  display: block;
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .theme-toggle-btn[data-theme-set="mine"] img { width: 18px; height: 18px; }
+}
+
+/* ── Mine headlamp overlay (viewport-locked; Easy Mine cone) ──────────────── */
+#mine-headlamp-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+#mine-headlamp-root.is-visible { opacity: 1; }
+
+/* Darkness blocks clicks only where visible; clip-path hole = click-through cone */
+.mine-headlamp-dark {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.94);
+  pointer-events: auto;
+  z-index: 2;
+}
+
+/* Warm wash inside the cone (visual only) */
+.mine-headlamp-cone-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(circle at center,
+    rgba(255, 230, 150, 0.2) 0%,
+    rgba(246, 200, 80, 0.08) 35%,
+    rgba(246, 200, 80, 0) 70%);
+}
+
+.mine-headlamp-apex-glow {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(circle,
+    rgba(255, 236, 170, 0.7) 0%,
+    rgba(240, 193, 74, 0.25) 40%,
+    rgba(240, 193, 74, 0) 70%);
+}
+
+.mine-headlamp-miner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: auto;
+  height: 140px;
+  max-width: 42vw;
+  max-height: 28vh;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  pointer-events: auto; /* hover tip; does not cover whole viewport */
+  cursor: default;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 0 10px rgba(255, 220, 120, 0.45));
+  z-index: 4;
+}
+@media (max-width: 700px) {
+  .mine-headlamp-miner { height: 110px; }
+}
+@media (max-width: 400px) {
+  .mine-headlamp-miner { height: 92px; }
+}
+
+/* Theme pill punch-through above headlamp so Mine can be exited */
+html.mine-headlamp-on .theme-toggle,
+html[data-theme="mine"] .theme-toggle {
+  position: relative;
+  z-index: 10060;
+  pointer-events: auto;
+}
+html.mine-headlamp-on .mine-totals-controls,
+html[data-theme="mine"] .mine-totals-controls {
+  position: relative;
+  z-index: 10060;
+}
+html.mine-headlamp-on .nav-right,
+html[data-theme="mine"] .nav-right {
+  position: relative;
+  z-index: 10060;
+}
+@media (prefers-reduced-motion: reduce) {
+  #mine-headlamp-root { transition: opacity 0.2s linear; }
+}
+
+/* Theme / miner mouse-follow tips above headlamp overlay */
+.toolbar-follow-tip.theme-follow-tip {
+  z-index: 10070;
+  max-width: min(320px, calc(100vw - 16px));
+}
+
+/* Account page cards (app-card) — match dashboard graph-blue boxes */
+html[data-theme="dusk"] .app-card,
+html[data-theme="mine"] .app-card {
+  background: var(--tm-graph-blue) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+  color: var(--tm-text) !important;
+  box-shadow: var(--tm-shadow);
+}
+html[data-theme="dusk"] .app-card-header,
+html[data-theme="mine"] .app-card-header {
+  border-bottom-color: var(--tm-graph-blue-border) !important;
+  background: rgba(15, 28, 44, 0.45) !important;
+}
+html[data-theme="dusk"] .app-card-title,
+html[data-theme="mine"] .app-card-title,
+html[data-theme="dusk"] .pp-card-status,
+html[data-theme="mine"] .pp-card-status,
+html[data-theme="dusk"] .linked-app-name,
+html[data-theme="mine"] .linked-app-name,
+html[data-theme="dusk"] .info-value,
+html[data-theme="mine"] .info-value {
+  color: var(--tm-text) !important;
+}
+html[data-theme="dusk"] .pp-card-status-value,
+html[data-theme="mine"] .pp-card-status-value,
+html[data-theme="dusk"] .pp-card-sub,
+html[data-theme="mine"] .pp-card-sub,
+html[data-theme="dusk"] .info-label,
+html[data-theme="mine"] .info-label,
+html[data-theme="dusk"] .linked-app-meta,
+html[data-theme="mine"] .linked-app-meta,
+html[data-theme="dusk"] .field-label,
+html[data-theme="mine"] .field-label,
+html[data-theme="dusk"] .field-hint,
+html[data-theme="mine"] .field-hint,
+html[data-theme="dusk"] .avatar-hint,
+html[data-theme="mine"] .avatar-hint,
+html[data-theme="dusk"] .char-count,
+html[data-theme="mine"] .char-count,
+html[data-theme="dusk"] .link-code-meta,
+html[data-theme="mine"] .link-code-meta {
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .info-row,
+html[data-theme="mine"] .info-row,
+html[data-theme="dusk"] .linked-app,
+html[data-theme="mine"] .linked-app {
+  border-color: rgba(79, 195, 247, 0.18) !important;
+}
+html[data-theme="dusk"] .field-input,
+html[data-theme="mine"] .field-input,
+html[data-theme="dusk"] .avatar-btn,
+html[data-theme="mine"] .avatar-btn {
+  background: var(--tm-input-bg) !important;
+  color: var(--tm-input-fg) !important;
+  border-color: var(--tm-input-border) !important;
+}
+html[data-theme="dusk"] .field-input:disabled,
+html[data-theme="mine"] .field-input:disabled {
+  background: rgba(15, 28, 44, 0.85) !important;
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .link-code-box,
+html[data-theme="mine"] .link-code-box {
+  background: rgba(15, 28, 44, 0.72) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+}
+html[data-theme="dusk"] .link-code-value,
+html[data-theme="mine"] .link-code-value {
+  color: #e8f4ff !important;
+}
+html[data-theme="dusk"] .avatar-placeholder,
+html[data-theme="mine"] .avatar-placeholder {
+  background: rgba(15, 28, 44, 0.85) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .pp-card-link,
+html[data-theme="mine"] .pp-card-link {
+  color: #4FC3F7 !important;
+}
+
+/* Pioneer Pass lock overlay — dusk/mine: black icon + text */
+html[data-theme="dusk"] .dash-pp-lock,
+html[data-theme="mine"] .dash-pp-lock {
+  color: #000 !important;
+}
+html[data-theme="dusk"] .dash-pp-lock-icon,
+html[data-theme="mine"] .dash-pp-lock-icon {
+  color: #000 !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+html[data-theme="dusk"] .dash-pp-lock-req,
+html[data-theme="mine"] .dash-pp-lock-req {
+  color: #000 !important;
+  text-shadow: none;
+}
+html[data-theme="dusk"] .dash-pp-lock:hover,
+html[data-theme="mine"] .dash-pp-lock:hover {
+  color: #000 !important;
+}

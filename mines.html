@@ -2,6 +2,21 @@
 <html lang="en">
 <head>
   <base href="/" />
+  <script src="/js/console-guard.js?v=20261004-1"></script>
+  <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script>
+  /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
+  (function () {
+    try {
+      var m = document.cookie.match(/(?:^|;\s*)tmPrefs=([^;]*)/);
+      if (!m) return;
+      var o = JSON.parse(decodeURIComponent(m[1]));
+      var t = o.th || o['terramine.portal.theme'];
+      if (t === 'coal') t = 'mine';
+      if (t === 'dusk' || t === 'mine' || t === 'day') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+  </script>
     <script>
   (function () {
     try {
@@ -152,6 +167,11 @@
     .flip-type-order-btn:disabled { opacity:.55; cursor:not-allowed; }
     .flip-type-order-btn[aria-pressed="true"] { border-color:#4FC3F7; background:#e8f7fe; }
     .flip-type-order-btn .flip-type-order-arrows { font-size:18px; line-height:1; }
+    .group-toggle-btn svg { width:22px; height:22px; display:block; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+    /* icon shows the action (same as the tip): grouped now → single-group icon; one group now → stacked icon */
+    .group-toggle-btn .group-toggle-ico-grouped { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-merged { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-grouped { display:block; }
 
 
     .toolbar-follow-tip {
@@ -161,6 +181,8 @@
       font-size:13px; line-height:1.35; font-weight:500; text-align:left;
       max-width:min(280px, calc(100vw - 16px));
     }
+    /* Red variant: same colors as the Visitor Count sort tip (.visitors-sort-tip) */
+    .toolbar-follow-tip.is-red { background:#8B1E1E; color:#fff; border-color:rgba(255,255,255,.22); box-shadow:0 12px 28px rgba(6,10,16,.55); }
     .tool-search { flex:1; min-width:160px; }
     .mine-count { margin-left:auto; font-size:12px; color:#64748b; font-weight:600; }
     .page-settings { position:absolute; top:10px; right:12px; z-index:3; }
@@ -199,6 +221,15 @@
     .mine-group-head img { width:36px; height:36px; object-fit:contain; }
     .mine-group-head h2 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); }
     .mine-group-count { font-size:12px; color:#64748b; font-weight:700; }
+    /* Ungrouped view: one header bar listing every shown mine type with its count */
+    .mine-group-head.is-all { flex-wrap:wrap; column-gap:18px; row-gap:4px; }
+    .mine-group-head-type { display:inline-flex; align-items:center; gap:8px; }
+    .mine-group-head-label { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); line-height:1.1; }
+    @media (max-width:600px) {
+      .mine-group-head.is-all { column-gap:12px; }
+      .mine-group-head.is-all img { width:28px; height:28px; }
+      .mine-group-head.is-all .mine-group-head-label { font-size:24px; }
+    }
     .mine-totals-bar {
       display:flex; flex-wrap:wrap; align-items:center; gap:8px;
       margin:0;
@@ -1116,6 +1147,7 @@
     .gps-pin { cursor:pointer; }
     .gps-pin:not(.is-missing):hover { color:#4FC3F7; }
   </style>
+  <link rel="stylesheet" href="/portal-theme.css?v=20261005-14" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -1222,8 +1254,12 @@
         </div>
       </div>
       <div class="mine-toolbar" id="mine-toolbar">
-        <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Reverses the order of the mine type groups." aria-pressed="false" data-tip="Reverses the order of the mine type groups." disabled>
+        <button type="button" class="flip-type-order-btn" id="flip-type-order" aria-label="Reverse the order of the Mine Type Groups" aria-pressed="false" data-tip="Reverse the order of the Mine Type Groups" disabled>
           <span class="flip-type-order-arrows" aria-hidden="true">⇅</span>
+        </button>
+        <button type="button" class="flip-type-order-btn group-toggle-btn" id="group-toggle" aria-label="Display all mines in 1 group" aria-pressed="false" data-tip="Display all mines in 1 group" data-tip-variant="red" disabled>
+          <svg class="group-toggle-ico-grouped" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="18" height="4.5" rx="1.2"></rect><rect x="3" y="9.75" width="18" height="4.5" rx="1.2"></rect><rect x="3" y="16" width="18" height="4.5" rx="1.2"></rect></svg>
+          <svg class="group-toggle-ico-merged" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="18" height="17" rx="2"></rect><path d="M7 8.5h10M7 12h10M7 15.5h10"></path></svg>
         </button>
         <div class="type-filter" id="filter-type" role="group" aria-label="Mine type filter">
           <button type="button" class="type-filter-btn" data-type="diamond" aria-label="Filter Diamond" aria-pressed="false" disabled>
@@ -1442,7 +1478,7 @@
     </main>
   </div>
 </div>
-<script src="js/random-mine-names.js"></script>
+<script src="js/random-mine-names.js?v=20261005-1"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -1465,10 +1501,10 @@
   const TYPE_ORDER_DEFAULT = ['diamond', 'gold', 'coal', 'rock'];
   const TYPE_ORDER_FLIP_KEY = 'terramine.mines.typeOrderFlipped';
   function loadTypeOrderFlipped() {
-    try { return sessionStorage.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
   }
   function saveTypeOrderFlipped(on) {
-    try { sessionStorage.setItem(TYPE_ORDER_FLIP_KEY, on ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(TYPE_ORDER_FLIP_KEY, on ? '1' : '0'); } catch (e) {}
   }
   let typeOrderFlipped = loadTypeOrderFlipped();
   let TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
@@ -1504,6 +1540,25 @@
       flipBtn.classList.toggle('is-flipped', !!typeOrderFlipped);
     }
   }
+  // Grouped by mine type (default) vs. all mines in one group; kept per tab like the other filter-bar settings.
+  const UNGROUPED_KEY = 'terramine.mines.ungrouped';
+  const GROUP_TOGGLE_TIPS = { grouped: 'Display all mines in 1 group', ungrouped: 'Re-group all mines by their Mine Type' };
+  let minesUngrouped = (function () { try { return TMPrefs.getItem(UNGROUPED_KEY) === '1'; } catch (e) { return false; } })();
+  function updateGroupToggleButton() {
+    const btn = $('group-toggle');
+    if (!btn) return;
+    const tip = minesUngrouped ? GROUP_TOGGLE_TIPS.ungrouped : GROUP_TOGGLE_TIPS.grouped;
+    btn.setAttribute('aria-pressed', minesUngrouped ? 'true' : 'false');
+    btn.setAttribute('aria-label', tip);
+    btn.setAttribute('data-tip', tip);
+    btn.classList.toggle('active', minesUngrouped);
+  }
+  function toggleMineGrouping() {
+    minesUngrouped = !minesUngrouped;
+    try { TMPrefs.setItem(UNGROUPED_KEY, minesUngrouped ? '1' : '0'); } catch (e) {}
+    updateGroupToggleButton();
+    renderFromFilters();
+  }
   function flipTypeOrder() {
     typeOrderFlipped = !typeOrderFlipped;
     saveTypeOrderFlipped(typeOrderFlipped);
@@ -1536,28 +1591,39 @@
   const SHOWCASE_FILTER_VALUES = ['has', 'none'];
   const FILTER_UNNAMED_KEY = 'terramine.mines.filterUnnamed';
   function loadUnnamedOnly() {
-    try { return sessionStorage.getItem(FILTER_UNNAMED_KEY) === '1'; } catch (e) { return false; }
+    // Default OFF. One-time cookie heal clears sticky mn=1 (tm-prefs healUnnamedFilter).
+    try {
+      if (window.TMPrefs && typeof TMPrefs.healUnnamedFilter === 'function') TMPrefs.healUnnamedFilter();
+      return TMPrefs.getItem(FILTER_UNNAMED_KEY) === '1';
+    } catch (e) { return false; }
   }
   function saveUnnamedOnly() {
-    try { sessionStorage.setItem(FILTER_UNNAMED_KEY, unnamedOnly ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(FILTER_UNNAMED_KEY, unnamedOnly ? '1' : '0'); } catch (e) {}
+  }
+  function allMineTypeSet() {
+    return new Set(TYPE_ORDER_DEFAULT.slice());
   }
   function loadSelectedTypes() {
+    // Default: all four types ON (show every mine). Empty / missing / invalid cookie → all ON.
+    // A non-empty saved list is restored as-is (after tm-prefs one-time heal to all four).
     try {
-      const raw = sessionStorage.getItem(FILTER_TYPES_KEY);
-      if (!raw) return new Set();
+      if (window.TMPrefs && typeof TMPrefs.healMineTypeFilters === 'function') TMPrefs.healMineTypeFilters();
+      const raw = TMPrefs.getItem(FILTER_TYPES_KEY);
+      if (!raw) return allMineTypeSet();
       const arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) return new Set();
-      return new Set(arr.filter(t => TYPE_ORDER.indexOf(t) !== -1));
-    } catch (e) { return new Set(); }
+      if (!Array.isArray(arr) || !arr.length) return allMineTypeSet();
+      const next = new Set(arr.filter(t => TYPE_ORDER_DEFAULT.indexOf(t) !== -1));
+      return next.size ? next : allMineTypeSet();
+    } catch (e) { return allMineTypeSet(); }
   }
   function saveSelectedTypes() {
     try {
-      sessionStorage.setItem(FILTER_TYPES_KEY, JSON.stringify(Array.from(selectedTypes)));
+      TMPrefs.setItem(FILTER_TYPES_KEY, JSON.stringify(Array.from(selectedTypes)));
     } catch (e) {}
   }
   function loadSelectedShowcase() {
     try {
-      const raw = sessionStorage.getItem(FILTER_SHOWCASE_KEY);
+      const raw = TMPrefs.getItem(FILTER_SHOWCASE_KEY);
       if (!raw) return new Set();
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return new Set();
@@ -1572,7 +1638,7 @@
 
   function saveSelectedShowcase() {
     try {
-      sessionStorage.setItem(FILTER_SHOWCASE_KEY, JSON.stringify(Array.from(selectedShowcase)));
+      TMPrefs.setItem(FILTER_SHOWCASE_KEY, JSON.stringify(Array.from(selectedShowcase)));
     } catch (e) {}
   }
   let selectedTypes = loadSelectedTypes();
@@ -1974,7 +2040,12 @@
   const MINE_MAP_LOAD_AREA_STEP_MI = 0.25;
   const MINE_MAP_MILES_TO_M = 1609.344;
   let mineMapLoadAreaOn = false;
-  let mineMapLoadAreaRadiusMi = MINE_MAP_LOAD_AREA_DEFAULT_MI;
+  let mineMapLoadAreaRadiusMi = (function () {   // last Load Area radius (tmPrefs cookie)
+    try {
+      const v = Number(TMPrefs.getItem('terramine.mineMap.radius'));
+      return Number.isFinite(v) && v > 0 ? v : MINE_MAP_LOAD_AREA_DEFAULT_MI;
+    } catch (e) { return MINE_MAP_LOAD_AREA_DEFAULT_MI; }
+  })();
   function mineMapLoadAreaRadiusM() {
     return mineMapLoadAreaRadiusMi * MINE_MAP_MILES_TO_M;
   }
@@ -2105,18 +2176,25 @@
 
   function setMineMapLabels(on) {
     mineMapLabelsOn = !!on;
+    saveMineMapLabels(mineMapLabelsOn);
     updateMineMapLabelsBtn();
     if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
   }
+  function getSavedMineMapLabels() {
+    try { return TMPrefs.getItem('terramine.mineMap.labels') === '1'; } catch (e) { return false; }
+  }
+  function saveMineMapLabels(on) {
+    try { TMPrefs.setItem('terramine.mineMap.labels', on ? '1' : '0'); } catch (e) {}
+  }
   function getSavedMineMapBuildings() {
     try {
-      return sessionStorage.getItem(MINE_MAP_BUILDINGS_KEY) === '1';
+      return TMPrefs.getItem(MINE_MAP_BUILDINGS_KEY) === '1';
     } catch (e) {
       return false;
     }
   }
   function saveMineMapBuildings(on) {
-    try { sessionStorage.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
   }
   function updateMineMapBuildingsBtn() {
     const btn = $('mine-map-buildings');
@@ -2583,7 +2661,7 @@
   }
   function getSavedMineMapZoom() {
     try {
-      const raw = sessionStorage.getItem(MINE_MAP_ZOOM_KEY);
+      const raw = TMPrefs.getItem(MINE_MAP_ZOOM_KEY);
       if (raw == null || raw === '') return MINE_MAP_ZOOM_DEFAULT;
       return clampMineMapZoom(raw);
     } catch (e) {
@@ -2592,7 +2670,7 @@
   }
   function saveMineMapZoom(z) {
     const clamped = clampMineMapZoom(z);
-    try { sessionStorage.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
+    try { TMPrefs.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
     return clamped;
   }
   function syncMineMapZoomSlider(z) {
@@ -2731,16 +2809,10 @@
     if (list) list.innerHTML = '';
     const input = $('mine-map-bulk-rename-input');
     if (input) input.value = '';
+    // Last-used checkboxes stay (tmPrefs cookie); only the name string is cleared.
     const seq = $('mine-map-bulk-rename-seq');
-    if (seq) seq.checked = false;
-    const appendType = $('mine-map-bulk-rename-append-type');
-    if (appendType) appendType.checked = false;
-    const pad = $('mine-map-bulk-rename-pad');
-    if (pad) pad.checked = false;
     const padWrap = $('mine-map-bulk-rename-pad-wrap');
-    if (padWrap) padWrap.hidden = true;
-    const randomEl = $('mine-map-bulk-rename-random');
-    if (randomEl) randomEl.checked = false;
+    if (padWrap) padWrap.hidden = !(seq && seq.checked);
     syncBulkRenameRandomUi();
     syncBulkRenameByDateUi();
     const apply = $('mine-map-bulk-rename-apply');
@@ -2955,9 +3027,11 @@
     bulkRenameSelected = mines.slice();
     const dlg = $('mine-map-bulk-rename');
     if (!dlg) return;
-    const randomEl = $('mine-map-bulk-rename-random');
-    if (randomEl) randomEl.checked = false;
     syncBulkRenameRandomUi();
+    syncBulkRenameByDateUi();
+    const seq = $('mine-map-bulk-rename-seq');
+    const padWrap = $('mine-map-bulk-rename-pad-wrap');
+    if (padWrap) padWrap.hidden = !(seq && seq.checked);
     renderBulkRenameList();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
@@ -3062,7 +3136,7 @@
     return input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
   }
   // "Random Mine Names" (js/random-mine-names.js): one Mad Libs base name per selected mine
-  // ("The Rusty Pickaxe Mine"), rolled once when checked / on Reroll and kept by mine id, so the
+  // ("Rusty Pickaxe Mine"), rolled once when checked / on Reroll and kept by mine id, so the
   // preview and Apply use the SAME names. It overrides the typed title (field dimmed + disabled);
   // mine type / numbering appends still follow the random name.
   function bulkRenameRandomGen() {
@@ -3289,8 +3363,7 @@
     }
     const list = $('mine-map-bulk-greet-list');
     if (list) list.innerHTML = '';
-    const ta = $('mine-map-bulk-greet-input');
-    if (ta) ta.value = '';
+    // Last greeting text stays in the box (and in the tmPrefs cookie).
     bulkGreetSelected = [];
     setBulkGreetBusy(false);
     setBulkGreetProgress('', false);
@@ -3375,8 +3448,8 @@
     setBulkGreetBusy(false);
     setBulkGreetProgress('', false);
     const ta = $('mine-map-bulk-greet-input');
-    if (ta) ta.value = '';
     renderBulkGreetList();
+    updateBulkGreetCount();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
     if (ta) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
@@ -3510,6 +3583,8 @@
     syncMineMapZoomSlider(getSavedMineMapZoom());
     mineMapBuildingsOn = getSavedMineMapBuildings();
     updateMineMapBuildingsBtn();
+    mineMapLabelsOn = getSavedMineMapLabels();
+    updateMineMapLabelsBtn();
     const type = typeKey(mine || {});
     const iconEl = $('mine-map-type-icon');
     if (iconEl) {
@@ -3696,6 +3771,7 @@
       radiusSlider.removeAttribute('alt');
       const onRadiusInput = () => {
         mineMapLoadAreaRadiusMi = clampLoadAreaMiles(radiusSlider.value);
+        try { TMPrefs.setItem('terramine.mineMap.radius', String(mineMapLoadAreaRadiusMi)); } catch (e) {}
         const valEl = $('mine-map-radius-value');
         if (valEl) valEl.textContent = formatLoadAreaMiles(mineMapLoadAreaRadiusMi);
         if (mineMapLoadAreaOn) redrawMineMapLoadArea();
@@ -3907,7 +3983,7 @@
   }
   function loadDisplay() {
     try {
-      const raw = sessionStorage.getItem(DISPLAY_KEY);
+      const raw = TMPrefs.getItem(DISPLAY_KEY);
       if (!raw) return defaultDisplay();
       return normalizeDisplay(JSON.parse(raw));
     } catch (e) {
@@ -4503,7 +4579,7 @@
     if (!focus) return;
     focusMineId = focus.id;
     // Leave types/showcase=all so the focused mine is not hidden by saved chip sets.
-    selectedTypes = new Set();
+    selectedTypes = allMineTypeSet();
     saveSelectedTypes();
     selectedShowcase = new Set();
     saveSelectedShowcase();
@@ -4617,6 +4693,18 @@
   function buildFlat() {
     const mines = visibleMines();
     const items = [];
+    if (minesUngrouped) {
+      // One group: the active sort runs across every shown mine; the header lists each type's count (types with 0 shown are left out, like empty groups).
+      const counts = {};
+      TYPE_ORDER.forEach(t => { counts[t] = 0; });
+      const all = sortGroup(mines.filter(p => Object.prototype.hasOwnProperty.call(counts, typeKey(p))));
+      all.forEach(p => { counts[typeKey(p)]++; });
+      if (all.length) {
+        items.push({ kind: 'header', type: 'all', count: all.length, counts: counts });
+        all.forEach(m => items.push({ kind: 'card', mine: m }));
+      }
+      return { items, matchCount: mines.length };
+    }
     TYPE_ORDER.forEach(t => {
       const group = sortGroup(mines.filter(p => typeKey(p) === t));
       if (!group.length) return;
@@ -6370,14 +6458,16 @@ function updateSortButtons() {
     const c = findCorners(mine);
     return !!(c && c.path && c.path.length >= 3);
   }
+  // Custom follow tip text for card map pins (js/map-pin-tip.js shows it; no native title).
+  function mapPinTipText(id) { return 'Show the Mine on the map (' + id + ')'; }
   function voMapPinHtml(mine, fallbackId) {
     const id = (mine && mine.id != null) ? String(mine.id)
       : (fallbackId != null ? String(fallbackId) : '');
     if (mineHasMapLocation(mine) && id) {
       return '<button type="button" class="vo-pin" data-mine-id="' + escapeHtml(id)
-        + '" title="Show mine map" aria-label="Show mine map">' + pinSvgHtml() + '</button>';
+        + '" data-tip="' + escapeHtml(mapPinTipText(id)) + '" aria-label="' + escapeHtml(mapPinTipText(id)) + '">' + pinSvgHtml() + '</button>';
     }
-    return '<span class="vo-pin is-missing" title="No location" aria-hidden="true">' + pinSvgHtml() + '</span>';
+    return '<span class="vo-pin is-missing" aria-hidden="true">' + pinSvgHtml() + '</span>';
   }
 
   function renderMineLandDetailCard(mine, photoSrc) {
@@ -6955,7 +7045,40 @@ function updateSortButtons() {
     slot.appendChild(img);
     bindLandPhotoInteractions(slot);
   }
+  function appendAllTypesHeader(item) {
+    const sec = document.createElement('section');
+    sec.className = 'mine-group all-types';
+    const head = document.createElement('div');
+    head.className = 'mine-group-head is-all';
+    head.setAttribute('role', 'heading');
+    head.setAttribute('aria-level', '2');
+    TYPE_ORDER.forEach(t => {
+      const n = item.counts[t] || 0;
+      if (!n) return;
+      const part = document.createElement('span');
+      part.className = 'mine-group-head-type';
+      part.dataset.type = t;
+      const img = document.createElement('img');
+      img.src = ICONS[t];
+      img.alt = '';
+      img.width = 36;
+      img.height = 36;
+      const label = document.createElement('span');
+      label.className = 'mine-group-head-label';
+      label.textContent = TYPE_LABEL[t];
+      const c = document.createElement('span');
+      c.className = 'mine-group-count';
+      c.textContent = String(n);
+      part.append(img, label, c);
+      head.appendChild(part);
+    });
+    currentGrid = document.createElement('div');
+    currentGrid.className = 'mine-grid';
+    sec.append(head, currentGrid);
+    $('mine-board').appendChild(sec);
+  }
   function appendHeader(item) {
+    if (item.type === 'all') { appendAllTypesHeader(item); return; }
     const sec = document.createElement('section');
     sec.className = 'mine-group';
     sec.classList.add(String(item.type).toLowerCase().replace(/\s+/g, ''));
@@ -7026,8 +7149,9 @@ function updateSortButtons() {
       pinEl = document.createElement('button');
       pinEl.type = 'button';
       pinEl.className = 'gps-pin';
-      pinEl.title = 'Show mine map';
-      pinEl.setAttribute('aria-label', 'Show mine map');
+      if (mine && mine.id != null) pinEl.dataset.mineId = String(mine.id);
+      pinEl.setAttribute('data-tip', mapPinTipText(mine && mine.id != null ? String(mine.id) : ''));
+      pinEl.setAttribute('aria-label', mapPinTipText(mine && mine.id != null ? String(mine.id) : ''));
       pinEl.appendChild(pinSvg());
       pinEl.addEventListener('click', e => {
         e.preventDefault();
@@ -7039,7 +7163,6 @@ function updateSortButtons() {
     } else {
       pinEl = pinSvg();
       pinEl.classList.add('gps-pin', 'is-missing');
-      pinEl.setAttribute('title', 'No location');
     }
 
     // Missing productionLevel / gameLevel => 1 on cards (same as totals / app).
@@ -7476,6 +7599,7 @@ function updateSortButtons() {
   });
   $('btn-signout').addEventListener('click', () => {
     try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+    try { if (window.TMPrefs && typeof TMPrefs.clear === 'function') TMPrefs.clear(); } catch (e) {}
     document.documentElement.classList.remove('tm-expect-auth');
     auth.signOut();
   });
@@ -7730,6 +7854,20 @@ function updateSortButtons() {
     });
   }
 
+  // Saved sort + search (tmPrefs cookie), restored before a ?mineId= deep link can replace the search.
+  (function restoreMinesSortSearch() {
+    try {
+      const o = TMPrefs.get('terramine.mines.sort', null);
+      if (o && typeof o.k === 'string' && document.querySelector('.sort-btn[data-sort="' + o.k + '"]')) {
+        sortKey = o.k;
+        sortDir = o.d === -1 ? -1 : 1;
+      }
+      const q = TMPrefs.get('terramine.mines.search', '');
+      const s = $('filter-search');
+      if (s && typeof q === 'string' && q) s.value = q;
+    } catch (e) {}
+  })();
+  updateSortButtons();
   applyMineFocusFromUrl();
   updateTypeFilterButtons();
   updateShowcaseFilterButtons();
@@ -7742,12 +7880,23 @@ function updateSortButtons() {
     });
   }
   applyTypeOrderLayout();
+  const groupToggleBtn = $('group-toggle');
+  if (groupToggleBtn) {
+    groupToggleBtn.addEventListener('click', function () {
+      if (groupToggleBtn.disabled) return;
+      toggleMineGrouping();
+      refreshShowcaseFollowTipText(groupToggleBtn);   // tip under the cursor now names the next action
+    });
+  }
+  updateGroupToggleButton();
 
 document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const t = btn.dataset.type;
       if (selectedTypes.has(t)) selectedTypes.delete(t);
       else selectedTypes.add(t);
+      // Never leave every type off — fall back to all four ON (show all mines).
+      if (!selectedTypes.size) selectedTypes = allMineTypeSet();
       saveSelectedTypes();
       updateTypeFilterButtons();
       if (loadedUid) renderFromFilters();
@@ -7778,6 +7927,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     });
   }
   $('filter-search').addEventListener('input', () => {
+    try { TMPrefs.set('terramine.mines.search', $('filter-search').value || ''); } catch (e) {}
     // Editing/clearing search exits exact mineId focus so the user is not stuck.
     if (focusMineId) clearMineFocus();
     if (loadedUid) renderFromFilters();
@@ -7787,6 +7937,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
       const key = btn.dataset.sort;
       if (sortKey === key) sortDir *= -1;
       else { sortKey = key; sortDir = 1; }
+      try { TMPrefs.set('terramine.mines.sort', { k: sortKey, d: sortDir }); } catch (e) {}
       updateSortButtons();
       if (loadedUid) renderFromFilters();
     });
@@ -7802,8 +7953,10 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   let showcaseFollowTipTarget = null;
   let showcaseFollowTipX = 0;
   let showcaseFollowTipY = 0;
+  let showcaseFollowTipHide = null;   // touch: a tap shows the tip briefly, then this hides it
   function dismissShowcaseFollowTip() {
     if (showcaseFollowTipTimer) { clearTimeout(showcaseFollowTipTimer); showcaseFollowTipTimer = null; }
+    if (showcaseFollowTipHide) { clearTimeout(showcaseFollowTipHide); showcaseFollowTipHide = null; }
     showcaseFollowTipTarget = null;
     if (showcaseFollowTip) showcaseFollowTip.style.display = 'none';
   }
@@ -7834,21 +7987,33 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     tip.style.top = top + 'px';
     tip.style.visibility = 'visible';
   }
+  function refreshShowcaseFollowTipText(btn) {
+    if (showcaseFollowTipTarget !== btn || !showcaseFollowTip) return;
+    showcaseFollowTip.textContent = SHOWCASE_TIPS[btn.dataset.showcase] || (btn.getAttribute('data-tip') || '').trim();
+    if (showcaseFollowTip.style.display === 'block') placeShowcaseFollowTip(showcaseFollowTipX, showcaseFollowTipY);
+  }
   function bindShowcaseFollowTip(btn) {
     if (!btn || btn.dataset.showcaseTipBound === '1') return;
     btn.dataset.showcaseTipBound = '1';
+    let touchAt = 0;
+    btn.addEventListener('touchstart', () => { touchAt = Date.now(); }, { passive: true });
     btn.addEventListener('mouseenter', (e) => {
       if (showcaseFollowTipTimer) { clearTimeout(showcaseFollowTipTimer); showcaseFollowTipTimer = null; }
+      if (showcaseFollowTipHide) { clearTimeout(showcaseFollowTipHide); showcaseFollowTipHide = null; }
+      const fromTap = Date.now() - touchAt < 1000;   // emulated mouseenter of a tap
       showcaseFollowTipTarget = btn;
       showcaseFollowTipX = e.clientX;
       showcaseFollowTipY = e.clientY;
       const tip = ensureShowcaseFollowTip();
       tip.textContent = SHOWCASE_TIPS[btn.dataset.showcase] || (btn.getAttribute('data-tip') || '').trim();
+      tip.classList.toggle('is-red', btn.dataset.tipVariant === 'red');
       tip.style.display = 'none';
       showcaseFollowTipTimer = setTimeout(() => {
         showcaseFollowTipTimer = null;
         if (showcaseFollowTipTarget !== btn || !btn.isConnected) return;
         placeShowcaseFollowTip(showcaseFollowTipX, showcaseFollowTipY);
+        // Touch has no mouseleave: hide a tapped tip after a moment (the tap's action already ran).
+        if (fromTap) showcaseFollowTipHide = setTimeout(() => { if (showcaseFollowTipTarget === btn) dismissShowcaseFollowTip(); }, 1500);
       }, 200);
     });
     btn.addEventListener('mousemove', (e) => {
@@ -7865,6 +8030,8 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   }
   document.querySelectorAll('#filter-showcase .type-filter-btn').forEach(bindShowcaseFollowTip);
   bindShowcaseFollowTip($('filter-unnamed-btn'));
+  bindShowcaseFollowTip($('flip-type-order'));   // same follow-the-mouse tip as the other filter-bar icons
+  bindShowcaseFollowTip($('group-toggle'));       // same tip, red variant (Visitor Count sort tip colors)
   bindMineTitleInteractionsOnce();
   bindMineMapTitleInteractionsOnce();
 
@@ -7891,7 +8058,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   syncHoursControl();
   bindMineTotalsFollowTips();
   // Persist migrated legacy 12/18/24 rates as boost+hours.
-  try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+  try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
   $('page-settings-btn').addEventListener('click', () => {
     setPageSettingsOpen($('page-settings-panel').hidden);
   });
@@ -7910,7 +8077,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     });
     $('display-rate').value = displayPref.rate;
     syncHoursControl();
-    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     refreshProdValues();
     refreshGroupTotals();
     refreshOpenProdTip();
@@ -7992,5 +8159,8 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
 
 </script>
   <script src="portal-nav.js" defer></script>
+<script src="/js/map-pin-tip.js?v=20261004-1"></script>
+<script src="/js/mine-headlamp.js?v=20261005-3"></script>
+<script src="/js/portal-theme.js?v=20261005-7"></script>
 </body>
 </html>

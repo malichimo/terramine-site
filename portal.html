@@ -2,6 +2,21 @@
 <html lang="en">
 <head>
   <base href="/" />
+  <script src="/js/console-guard.js?v=20261004-1"></script>
+  <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script>
+  /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
+  (function () {
+    try {
+      var m = document.cookie.match(/(?:^|;\s*)tmPrefs=([^;]*)/);
+      if (!m) return;
+      var o = JSON.parse(decodeURIComponent(m[1]));
+      var t = o.th || o['terramine.portal.theme'];
+      if (t === 'coal') t = 'mine';
+      if (t === 'dusk' || t === 'mine' || t === 'day') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+  </script>
     <script>
   (function () {
     try {
@@ -31,7 +46,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261003-2" />
+  <link rel="stylesheet" href="portal.css?v=20261005-7" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -40,6 +55,7 @@
   <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
        already verified via ads.txt at the site root). -->
   <!-- (adsbygoogle.js removed — see comment above) -->
+  <link rel="stylesheet" href="/portal-theme.css?v=20261005-14" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -163,6 +179,17 @@
                 </label>
               </div>
             </div>
+            <div class="theme-toggle" role="group" aria-label="Color theme">
+              <button type="button" class="theme-toggle-btn" data-theme-set="day" aria-label="High Noon" aria-pressed="true" data-tip="High Noon">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+              </button>
+              <button type="button" class="theme-toggle-btn" data-theme-set="dusk" aria-label="TerraTown at Dusk" aria-pressed="false" data-tip="TerraTown at Dusk">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z"></path></svg>
+              </button>
+              <button type="button" class="theme-toggle-btn" data-theme-set="mine" aria-label="Midnight" aria-pressed="false" data-tip="Midnight">
+                <img src="/images/mine-icons/miner-theme.png?v=20261005-2" alt="" width="20" height="20" decoding="async">
+              </button>
+            </div>
           </div>
           <div class="mine-totals-rows" id="mine-totals-rows" aria-label="Mine production totals"></div>
         </div>
@@ -171,7 +198,8 @@
                 <div class="dash-breakdown-row">
           <div class="dash-breakdown-col dash-breakdown-col-stats">
 <div class="stat-stack">
-          <div class="stat-card stat-card-properties">
+          <div class="stat-card stat-card-properties has-share" id="dash-props-card">
+            <button type="button" class="dash-share-btn" data-share-card="dash-props-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
             <div class="stat-card-head">
               <div class="stat-card-label">TerraMines Owned</div>
               <div class="stat-card-value cyan" id="stat-props">—</div>
@@ -223,16 +251,18 @@
             </div>
           </div>
         </div>
-            <div class="stat-card dash-pie-card">
+            <div class="stat-card dash-pie-card has-share" id="dash-pie-card">
               <div class="stat-card-label">Mines by Type</div>
+              <button type="button" class="dash-share-btn" data-share-card="dash-pie-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               <div class="dash-pie-wrap">
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
             </div>
             <section class="dash-dominance-card" id="dash-dominance-card" aria-labelledby="dash-dominance-title">
-              <div class="dash-dominance-head">
+              <div class="dash-dominance-head has-share">
                 <h2 class="dash-dominance-title" id="dash-dominance-title">Mine Dominance</h2>
                 <div class="dash-dominance-area" id="dash-dominance-area" aria-live="polite" title="Area covered by your Reach outline">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-dominance-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-dominance-body">
                 <div class="dash-dominance-map" id="dash-dominance-map" aria-label="Map of the overall area your mines cover"></div>
@@ -242,8 +272,9 @@
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-visits">
             <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today, then Inventory (class names are grid slots: -visits = column 2, -slot = column 3) -->
-            <div class="stat-card dash-slot-card" id="dash-slot-card" aria-label="TerraBucks earned today">
+            <div class="stat-card dash-slot-card has-share" id="dash-slot-card" aria-label="TerraBucks earned today">
               <div class="stat-card-label">TerraBucks Earned Today</div>
+              <button type="button" class="dash-share-btn" data-share-card="dash-slot-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               <div class="tb-today" id="tb-today">
                 <div class="tb-today-section">
                   <div class="tb-today-section-title">Visitor check-ins to your mines</div>
@@ -302,7 +333,7 @@
                   </table>
                 </div>
                 <div class="tb-today-total">
-                  <span>Known TB today</span>
+                  <span>Earned TerraBucks Today</span>
                   <strong id="tb-today-known-total">—</strong>
                 </div>
                 <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
@@ -324,9 +355,10 @@
             <!-- column 3 = the bar graphs: Visitors, Mines Purchased, Mini Games, Referrals, My Check-ins -->
             <!-- Oct 1, 2026: visitor check-ins to your mines per day, last 60 days -->
             <section class="dash-visits-card" id="dash-visits-card" aria-labelledby="dash-visits-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-visits-title">Visitors &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-visits-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-visits-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-visits-wrap">
@@ -337,9 +369,10 @@
             </section>
             <!-- Oct 1, 2026: your mines purchased per day (stacked by type), last 60 days -->
             <section class="dash-visits-card dash-buys-card" id="dash-buys-card" aria-labelledby="dash-buys-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-buys-title">Mines Purchased &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-buys-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-buys-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-buys-wrap">
@@ -350,9 +383,10 @@
             </section>
             <!-- Oct 1, 2026: mini games per day (games stacked by type + TB), last 30 days -->
             <section class="dash-visits-card dash-games-card" id="dash-games-card" aria-labelledby="dash-games-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-games-title">Mini Games &mdash; Last 30 Days</h2>
                 <div class="dash-visits-total" id="dash-games-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-games-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-games-wrap">
@@ -364,9 +398,10 @@
             </section>
             <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
             <section class="dash-visits-card dash-refs-card" id="dash-refs-card" aria-labelledby="dash-refs-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-refs-title">Referrals &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-refs-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-refs-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-refs-wrap">
@@ -377,9 +412,10 @@
             </section>
             <!-- Oct 1, 2026: your own check-ins at other players' mines per day, last 60 days -->
             <section class="dash-visits-card dash-myci-card" id="dash-myci-card" aria-labelledby="dash-myci-title">
-              <div class="dash-visits-head">
+              <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-myci-title">My Check-ins &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-myci-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-myci-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-myci-wrap">
@@ -942,6 +978,8 @@
   // Sign out
   $('btn-signout').addEventListener('click', () => {
     try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+    try { if (typeof ppTrialForget === 'function' && auth.currentUser) ppTrialForget(auth.currentUser.uid); } catch (e) {}
+    try { if (window.TMPrefs && typeof TMPrefs.clear === 'function') TMPrefs.clear(); } catch (e) {}
     document.documentElement.classList.remove('tm-expect-auth');
     auth.signOut();
   });
@@ -973,7 +1011,7 @@
   const TYPE_ORDER_DEFAULT = ['diamond', 'gold', 'coal', 'rock'];
   const TYPE_ORDER_FLIP_KEY = 'terramine.mines.typeOrderFlipped';
   function loadTypeOrderFlipped() {
-    try { return sessionStorage.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
   }
   let typeOrderFlipped = loadTypeOrderFlipped();
   let TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
@@ -1045,7 +1083,7 @@
   }
   function loadDisplay() {
     try {
-      const raw = sessionStorage.getItem(DISPLAY_KEY);
+      const raw = TMPrefs.getItem(DISPLAY_KEY);
       if (!raw) return defaultDisplay();
       return normalizeDisplay(JSON.parse(raw));
     } catch (e) {
@@ -1097,10 +1135,10 @@
     all: 'All Mines Production'
   };
   function loadCompareOn() {
-    try { return sessionStorage.getItem(COMPARE_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(COMPARE_KEY) === '1'; } catch (e) { return false; }
   }
   function saveCompareOn(on) {
-    try { sessionStorage.setItem(COMPARE_KEY, on ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(COMPARE_KEY, on ? '1' : '0'); } catch (e) {}
   }
   let compareOn = false; // always start OFF; toggled by the Compare pill
 
@@ -1156,16 +1194,13 @@
     const row = document.createElement('div');
     row.className = 'mine-totals-bar';
     row.dataset.period = period;
-    const label = document.createElement('div');
-    label.className = 'mine-totals-period-label';
-    label.textContent = ROW_PERIOD_LABEL[period] || period;
+    // Period corner titles removed (Oct 5, 2026) — per-box titles remain.
     const left = document.createElement('div');
     left.className = 'mine-totals-bar-left';
     TYPE_ORDER.forEach(function (typ) { left.appendChild(buildGroupTotalBox(typ)); });
     const right = document.createElement('div');
     right.className = 'mine-totals-bar-right';
     right.appendChild(buildGroupTotalBox('all'));
-    row.appendChild(label);
     row.appendChild(left);
     row.appendChild(right);
     return row;
@@ -1370,6 +1405,202 @@
       if (totalsFollowTipTarget === box) dismissTotalsFollowTip();
     });
   }
+  // ── Copy a dashboard card image for sharing (camera button; Oct 4–5, 2026) ──
+  // Camera "Copy image for sharing" button (top-right of the title bar) on TerraMines Owned, Mines by
+  // Type, Mine Dominance (map tiles are captured: Google serves them with CORS),
+  // TerraBucks Earned Today and the five column-3 graphs. Click: capture the card to a PNG
+  // (html2canvas, loaded on first use; chart cards fall back to their canvas),
+  // then shareToDiscord(). That copies the image to the clipboard and also downloads
+  // it (the fallback when the clipboard is unavailable); nothing else opens.
+  // DISCORD_SHARE_ENDPOINT stays '' (unused); setting it later would POST to a server.
+  const DISCORD_SHARE_ENDPOINT = '';   // '' = copy + download only (no server)
+  const HTML2CANVAS_SRC = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+  let html2canvasLoad = null;
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (!html2canvasLoad) {
+      html2canvasLoad = new Promise((resolve, reject) => {
+        const sc = document.createElement('script');
+        sc.src = HTML2CANVAS_SRC;
+        sc.async = true;
+        sc.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error('html2canvas missing'));
+        sc.onerror = () => { html2canvasLoad = null; reject(new Error('html2canvas failed to load')); };
+        document.head.appendChild(sc);
+      });
+    }
+    return html2canvasLoad;
+  }
+  function dashCardTitle(card) {
+    const h = card && card.querySelector('.dash-visits-title, .dash-dominance-title, .stat-card-label');
+    return h ? h.textContent.replace(/\s+/g, ' ').trim() : 'TerraMine';
+  }
+  function canvasToPngBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      try { canvas.toBlob(b => (b && b.size) ? resolve(b) : reject(new Error('empty image')), 'image/png'); }
+      catch (e) { reject(e); }
+    });
+  }
+  // Fallback for chart cards when html2canvas can't load: title bar + the chart canvas.
+  function composeChartCardCanvas(card) {
+    const src = card && card.querySelector('canvas');
+    if (!src || !src.width || !src.height) return null;
+    const scale = src.width / Math.max(1, src.getBoundingClientRect().width || src.width);
+    const headH = Math.round(40 * scale), pad = Math.round(10 * scale);
+    const out = document.createElement('canvas');
+    out.width = src.width + pad * 2;
+    out.height = src.height + headH + pad * 2;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, out.width, out.height);
+    const head = card.querySelector('.dash-visits-head');
+    ctx.fillStyle = head ? getComputedStyle(head).backgroundColor : '#8B5A2B';
+    ctx.fillRect(0, 0, out.width, headH);
+    ctx.fillStyle = '#fff8ec';
+    ctx.textBaseline = 'middle';
+    ctx.font = Math.round(18 * scale) + "px 'Bebas Neue', sans-serif";
+    ctx.fillText(dashCardTitle(card).toUpperCase(), pad, headH / 2);
+    const total = card.querySelector('.dash-visits-total');
+    if (total && total.textContent.trim()) {
+      ctx.font = Math.round(13 * scale) + "px 'DM Sans', sans-serif";
+      ctx.textAlign = 'right';
+      ctx.fillText(total.textContent.trim(), out.width - pad, headH / 2);
+      ctx.textAlign = 'left';
+    }
+    ctx.drawImage(src, pad, headH + pad);
+    return out;
+  }
+  async function captureDashCard(card) {
+    try {
+      const h2c = await loadHtml2Canvas();
+      const canvas = await h2c(card, {
+        backgroundColor: '#ffffff',
+        scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1)),
+        useCORS: true,
+        logging: false,
+        // leave out the share button, Pioneer lock overlay and the Google map zoom buttons
+        // (map tiles + "Map data ©Google" attribution stay in)
+        ignoreElements: el => !!(el.classList && (el.classList.contains('dash-share-btn') || el.classList.contains('dash-pp-lock')
+          || el.classList.contains('gmnoprint') && !!el.querySelector('button[aria-label*="Zoom" i]')))
+      });
+      return await canvasToPngBlob(canvas);
+    } catch (e) {
+      const c = composeChartCardCanvas(card);
+      if (c) return canvasToPngBlob(c);
+      throw e;
+    }
+  }
+  function dashShareFileName(title) {
+    const d = new Date();
+    const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const slug = String(title || 'dashboard').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'dashboard';
+    return 'terramine-' + slug + '-' + ymd + '.png';
+  }
+  // The one place a share goes out. Today: clipboard + download (camera button, "Copy image for sharing").
+  // Later: with DISCORD_SHARE_ENDPOINT set, POST multipart {image, title, nickname, cardId}.
+  async function shareToDiscord(cardId, blob, title) {
+    const fileName = dashShareFileName(title);
+    if (DISCORD_SHARE_ENDPOINT) {
+      const fd = new FormData();
+      fd.append('image', blob, fileName);
+      fd.append('title', title || '');
+      fd.append('nickname', (($('nav-nickname') || {}).textContent || '').trim());
+      fd.append('cardId', cardId || '');
+      const res = await fetch(DISCORD_SHARE_ENDPOINT, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Share failed (' + res.status + ')');
+      showToast('Shared on Discord');
+      return 'posted';
+    }
+    let copied = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem === 'function') {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        copied = true;
+      }
+    } catch (e) { copied = false; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    showToast(copied ? 'Image copied' : 'Image saved');
+    return copied ? 'copied' : 'downloaded';
+  }
+  function bindShareFollowTip(btn) {
+    if (!btn || btn.dataset.shareTipBound === '1') return;
+    btn.dataset.shareTipBound = '1';
+    btn.removeAttribute('title');
+    let touchAt = 0, hideTimer = null;
+    btn.addEventListener('touchstart', () => { touchAt = Date.now(); }, { passive: true });
+    btn.addEventListener('mouseenter', (e) => {
+      if (totalsFollowTipTimer) { clearTimeout(totalsFollowTipTimer); totalsFollowTipTimer = null; }
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      const fromTap = Date.now() - touchAt < 1000;   // emulated mouseenter of a tap
+      totalsFollowTipTarget = btn;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      const tip = ensureTotalsFollowTip();
+      tip.textContent = (btn.getAttribute('data-tip') || '').trim();
+      tip.style.display = 'none';
+      totalsFollowTipTimer = setTimeout(() => {
+        totalsFollowTipTimer = null;
+        if (totalsFollowTipTarget !== btn || !btn.isConnected) return;
+        tip.textContent = (btn.getAttribute('data-tip') || '').trim();
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+        // Touch has no mouseleave: hide a tapped tip after a moment (the tap's action already ran).
+        if (fromTap) hideTimer = setTimeout(() => { if (totalsFollowTipTarget === btn) dismissTotalsFollowTip(); }, 1500);
+      }, 200);
+    });
+    btn.addEventListener('mousemove', (e) => {
+      if (totalsFollowTipTarget !== btn) return;
+      totalsFollowTipX = e.clientX;
+      totalsFollowTipY = e.clientY;
+      if (totalsFollowTip && totalsFollowTip.style.display === 'block' && !totalsFollowTipTimer) {
+        placeTotalsFollowTip(totalsFollowTipX, totalsFollowTipY);
+      }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (totalsFollowTipTarget === btn && Date.now() - touchAt >= 1000) dismissTotalsFollowTip();
+    });
+  }
+  async function onDashShareClick(btn) {
+    const card = $(btn.dataset.shareCard);
+    if (!card || btn.disabled || card.classList.contains('is-pp-locked')) return;
+    btn.disabled = true;
+    btn.classList.add('is-busy');
+    btn.setAttribute('aria-busy', 'true');
+    const title = dashCardTitle(card);
+    try {
+      const blob = await captureDashCard(card);
+      await shareToDiscord(card.id, blob, title);
+    } catch (e) {
+      console.error('Discord share failed:', e);
+      showToast('Could not make the image \u2014 please try again', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('is-busy');
+      btn.removeAttribute('aria-busy');
+    }
+  }
+  function initDashShareButtons() {
+    document.querySelectorAll('.dash-share-btn[data-share-card]').forEach(btn => {
+      if (btn.dataset.shareBound === '1') return;
+      btn.dataset.shareBound = '1';
+      bindShareFollowTip(btn);
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();   // the graphs' own click (trial unlock / popup) stays separate
+        if (Date.now() - (btn._tapAt || 0) > 1000) dismissTotalsFollowTip();
+        onDashShareClick(btn);
+      });
+      btn.addEventListener('touchstart', () => { btn._tapAt = Date.now(); }, { passive: true });
+    });
+  }
+  initDashShareButtons();
+
   function bindMineTotalsFollowTips() {
     const host = $('mine-totals-rows');
     if (!host) return;
@@ -1419,7 +1650,7 @@
     displayPref = normalizeDisplay({ period: period, rate: rate, hours: hours });
     $('display-rate').value = displayPref.rate;
     syncHoursControl();
-    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     refreshGroupTotals();
     refreshOpenTotalsFollowTip();
   }
@@ -1432,7 +1663,7 @@
     periodEl.value = displayPref.period;
     rateEl.value = displayPref.rate;
     syncHoursControl();
-    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     btn.addEventListener('click', () => {
       setPageSettingsOpen($('page-settings-panel').hidden);
     });
@@ -1496,7 +1727,7 @@
         loadMiniGamesTodayOnly(user.uid).catch(function (err) { console.warn('[mini-games] today load failed:', err); });
       }
       // Inventory card: same users-doc fields as inventory.html, no extra read.
-      try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, options); }
+      try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, Object.assign({}, options, { uid: user && user.uid })); }
       catch (invErr) { setInventoryError(invErr); }
 
       // Debug: log the logged-in user's Auth basics + Firestore profile doc.
@@ -1600,17 +1831,46 @@
     }
   }
 
+  // Mine Maintenance "Daily activity available" (Oct 4, 2026). The app resets
+  // propertyDetails.dailyActivitiesRemaining lazily (only when the mine is next
+  // used), so a 0 left over from an earlier day still reads 0. A mine counts as
+  // available when remaining (default 1) > 0, OR its lastDailyReset is before
+  // the start of today in the player's own time zone (browser local midnight).
+  // With no lastDailyReset, a 0 counts as available only if lastUpdated is also
+  // before local midnight; with neither, the 0 is trusted (not available).
+  function anyTimeMs(v) {
+    if (v == null || v === '') return NaN;
+    if (typeof v === 'number') return v < 1e11 ? v * 1000 : v;          // seconds or ms
+    if (typeof v === 'string') { const t = Date.parse(v); return isFinite(t) ? t : NaN; }
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (typeof v.toDate === 'function') return v.toDate().getTime();
+    if (v instanceof Date) return v.getTime();
+    if (typeof v.seconds === 'number') return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
+    if (typeof v._seconds === 'number') return v._seconds * 1000;
+    return NaN;
+  }
+  function localMidnightMs(now) {
+    const d = now != null ? new Date(now) : new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  }
+  function mineDailyActivityAvailable(p, midnightMs, usePropFallback) {
+    const d = (p && p._details) || {};
+    const pick = k => (d[k] != null && d[k] !== '') ? d[k] : (usePropFallback ? p[k] : undefined);
+    const remaining = pick('dailyActivitiesRemaining');
+    if ((remaining ?? 1) > 0) return true;
+    const reset = anyTimeMs(pick('lastDailyReset'));
+    if (isFinite(reset)) return reset < midnightMs;
+    const updated = anyTimeMs(pick('lastUpdated'));
+    return isFinite(updated) && updated < midnightMs;
+  }
   function updateReadyStat(props, options = {}) {
     if (!props.length) {
       $('stat-ready').textContent = '0';
       return;
     }
-    if (options.preview) {
-      const readyCount = props.filter(p => ((p._details && p._details.dailyActivitiesRemaining) ?? p.dailyActivitiesRemaining ?? 1) > 0).length;
-      $('stat-ready').textContent = readyCount;
-      return;
-    }
-    const readyCount = props.filter(p => ((p._details || {}).dailyActivitiesRemaining ?? 1) > 0).length;
+    const midnight = localMidnightMs();
+    // Preview data keeps the fields on the property itself, so it also falls back to those.
+    const readyCount = props.filter(p => mineDailyActivityAvailable(p, midnight, !!options.preview)).length;
     $('stat-ready').textContent = readyCount;
   }
 
@@ -1692,27 +1952,19 @@
     }
   }
 
+  // Oct 4, 2026: the date-ranged query (field == uid AND timestamp >= today) was
+  // always refused live (permission-denied) and fell through to this path, so go
+  // straight to it: newest 200 check-ins for the field, filtered to today here.
   async function queryTodayCheckIns(field, uid, startISO) {
-    try {
-      var snap = await db.collection('checkIns')
-        .where(field, '==', uid)
-        .where('timestamp', '>=', startISO)
-        .orderBy('timestamp', 'desc')
-        .get();
-      return snap.docs.map(function (d) { return { id: d.id, data: d.data() || {} }; });
-    } catch (err) {
-      // Missing composite index or timestamp type mismatch — fall back to recent page + client filter.
-      console.warn('tb-today query with date failed (' + field + '):', err && err.message);
-      var snap2 = await db.collection('checkIns')
-        .where(field, '==', uid)
-        .orderBy('timestamp', 'desc')
-        .limit(200)
-        .get();
-      var startMs = new Date(startISO).getTime();
-      return snap2.docs
-        .map(function (d) { return { id: d.id, data: d.data() || {} }; })
-        .filter(function (row) { return checkInTsMillis(row.data.timestamp) >= startMs; });
-    }
+    var snap = await db.collection('checkIns')
+      .where(field, '==', uid)
+      .orderBy('timestamp', 'desc')
+      .limit(200)
+      .get();
+    var startMs = new Date(startISO).getTime();
+    return snap.docs
+      .map(function (d) { return { id: d.id, data: d.data() || {} }; })
+      .filter(function (row) { return checkInTsMillis(row.data.timestamp) >= startMs; });
   }
 
   async function loadTbTodayEarned(user, options) {
@@ -2104,6 +2356,22 @@
    *  those bars with its own vertical gradient (base → its top) instead of
    *  color; second.labelColor tints the right-axis labels and title; opts.titles = { left, right } draws small axis titles;
    *  opts.hoverOutlineColor overrides the amber outline. */
+  /** Axis/grid colors: day = brown; dusk/mine = slate #6b7b8e (+ darker baseline). */
+  function dayBarChrome() {
+    var th = (document.documentElement.getAttribute('data-theme') || 'day').toLowerCase();
+    if (th === 'dusk' || th === 'mine') {
+      return {
+        grid: '#6b7b8e',
+        baseline: '#4a5766',
+        label: '#6b7b8e'
+      };
+    }
+    return {
+      grid: 'rgba(139,115,85,0.18)',
+      baseline: 'rgba(92,51,23,0.55)',
+      label: '#6b5a45'
+    };
+  }
   function drawDayBars(canvas, st, opts) {
     if (!canvas || !canvas.getContext) return;
     const wrap = canvas.parentElement;
@@ -2122,6 +2390,7 @@
     ctx.clearRect(0, 0, cssW, cssH);
     const px = function (v) { return Math.round(v * dpr) / dpr; };         // snap to device pixels
     const hair = function (v) { return (Math.floor(v * dpr) + 0.5) / dpr; }; // crisp 1-device-px line
+    const chrome = dayBarChrome();
 
     const maxCount = days.reduce(function (m, d) { return Math.max(m, opts.total(d)); }, 0);
     const axis = (opts.axis || vis60Axis)(maxCount);
@@ -2155,11 +2424,11 @@
       const y = hair(yOf(v));
       ctx.beginPath();
       ctx.moveTo(x0, y); ctx.lineTo(x0 + plotW, y);
-      ctx.strokeStyle = t === 0 ? 'rgba(92,51,23,0.55)' : 'rgba(139,115,85,0.18)';
+      ctx.strokeStyle = t === 0 ? chrome.baseline : chrome.grid;
       ctx.lineWidth = 1 / dpr;
       ctx.stroke();
       if (t > 0 && (t % labelEvery === 0 || t === nTicks)) {
-        ctx.fillStyle = '#6b5a45';
+        ctx.fillStyle = chrome.label;
         ctx.fillText(fmtNum(v), padL - 5, yOf(v));
         if (two) {                       // right axis: same gridline, its own value
           ctx.textAlign = 'left';
@@ -2173,7 +2442,7 @@
       ctx.font = '600 9px DM Sans, sans-serif';
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#6b5a45';
+      ctx.fillStyle = chrome.label;
       if (opts.titles.left) ctx.fillText(opts.titles.left, 0, 1);
       ctx.textAlign = 'right';
       ctx.fillStyle = (two && two.labelColor) || '#9a5b06';
@@ -2242,7 +2511,7 @@
     // X labels: today, then every 10 days back; skip any that would overlap.
     ctx.font = tickFont;
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#6b5a45';
+    ctx.fillStyle = chrome.label;
     let leftLimit = Infinity;
     for (let i = days.length - 1; i >= 0; i -= 10) {
       const text = i === days.length - 1 ? 'Today' : vis60ShortDate(days[i].date);
@@ -2255,7 +2524,7 @@
       ctx.fillText(text, lx, yBase + 6);
       ctx.beginPath();
       ctx.moveTo(hair(cx), yBase); ctx.lineTo(hair(cx), yBase + 4);
-      ctx.strokeStyle = 'rgba(92,51,23,0.55)'; ctx.lineWidth = 1 / dpr; ctx.stroke();
+      ctx.strokeStyle = chrome.baseline; ctx.lineWidth = 1 / dpr; ctx.stroke();
       leftLimit = lx;
     }
     const sum = days.reduce(function (a, d) { return a + opts.total(d); }, 0);
@@ -2548,6 +2817,13 @@
   const VIS60_CHART = { canvasId: 'dash-visits-chart', st: _vis60, render: renderVisitors60, fill: fillVis60Tip };
   bindDayBarTip(VIS60_CHART);
   renderVisitors60(); // empty 60-slot frame under the "Loading…" message
+  document.addEventListener('tm-theme-change', function () {
+    try { renderVisitors60(); } catch (e) {}
+    try { renderBuys60(); } catch (e) {}
+    try { renderReferrals60(); } catch (e) {}
+    try { renderMiniGames30(); } catch (e) {}
+    try { renderMyCheckIns60(); } catch (e) {}
+  });
 
   // ── Mines Purchased — Last 60 Days (column 2, under Visitors) ────────────
   // Oct 1, 2026. Your own mines bought per browser-local day, stacked by type
@@ -3967,7 +4243,8 @@
       const byMine = RESOURCE_IMAGE_IDS[mineKey];
       const rk = normalizeRarity(item && item.rarity);
       if (byMine && rk && Object.prototype.hasOwnProperty.call(byMine, rk)) return byMine[rk];
-      const names = [item && item.name, item && item._raw && typeof item._raw === 'object' ? (item._raw.id || item._raw.key) : ''];
+      const rawObj = item && item._raw && typeof item._raw === 'object' ? item._raw : {};
+      const names = [item && item.name, rawObj.id || rawObj.key, rawObj.itemId, rawObj.itemKey, rawObj.itemType, rawObj.type];
       for (const n of names) {
         const sl = itemSlug(n);
         if (!sl) continue;
@@ -3975,6 +4252,8 @@
         if (sl.indexOf('goggle') >= 0) return 'goggles';
         // any name containing "pumpkin" (pumpkins, Pumpkin, pumpkins_2026, halloweenPumpkin…)
         if (sl.indexOf('pumpkin') >= 0) return 'pumpkin';
+        // Jack-O-Lantern in any spelling (jackOLantern, jack_o_lantern, Jack-O-Lantern, jack o lantern, jackolanterns...)
+        if (sl.replace(/-/g, '').indexOf('jackolantern') >= 0) return 'pumpkin';
         if (ITEM_IMAGE_IDS.has(sl)) return sl;
         if (ITEM_IMAGE_ALIASES[sl]) return ITEM_IMAGE_ALIASES[sl];
         const sing = sl.replace(/s$/, '');
@@ -4045,6 +4324,9 @@
       if (Array.isArray(raw.list)) return raw.list;
       if (Array.isArray(raw.resources)) return raw.resources;
       if (Array.isArray(raw.entries)) return raw.entries;
+      // { items: { key: n, ... } } as the only field: use that map (Oct 4, 2026)
+      const only = Object.keys(raw);
+      if (only.length === 1 && /^(items|list|resources|entries)$/.test(only[0]) && raw[only[0]] && typeof raw[only[0]] === 'object') return toRawList(raw[only[0]]);
       return Object.keys(raw).map(k => {
         const v = raw[k];
         if (v != null && typeof v === 'object' && !Array.isArray(v)) {
@@ -4061,7 +4343,7 @@
       }
       if (typeof raw !== 'object') return null;
       const name = asString(pickFirst(raw, [
-        'name', 'title', 'displayName', 'itemName', 'label', 'resourceName', 'resource', 'type', 'id'
+        'name', 'title', 'displayName', 'itemName', 'label', 'itemId', 'itemKey', 'itemType', 'resourceName', 'resource', 'type', 'kind', 'id', 'key', 'slug'
       ])) || ('Item ' + (idx + 1));
       let rarity = normalizeRarity(pickFirst(raw, [
         'rarity', 'tier', 'quality', 'grade', 'rarityTier', 'rarityLevel'
@@ -4085,7 +4367,7 @@
         'value', 'tbValue', 'tb', 'price', 'worth', 'sellValue', 'terraBucks'
       ]));
       const count = asNum(pickFirst(raw, [
-        'count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total'
+        'count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total', 'held', 'num', 'units'
       ]));
       return { name, rarity, image, value, count, _raw: raw };
     }
@@ -4093,7 +4375,18 @@
     function parseGroupField(raw) {
       const list = toRawList(raw);
       const out = [];
+      const byStr = new Map();   // ['jackOLantern', 'jackOLantern'] -> one item x2 (Oct 4, 2026)
       list.forEach((entry, i) => {
+        if (typeof entry === 'string' && entry.trim()) {
+          const k = entry.trim();
+          const prev = byStr.get(k);
+          if (prev) { prev.count++; return; }
+          const it = parseItem(k, i);
+          it.count = 1;
+          byStr.set(k, it);
+          out.push(it);
+          return;
+        }
         const item = parseItem(entry, i);
         if (item && item.name) out.push(item);
       });
@@ -4117,7 +4410,116 @@
         // inventory: keep insertion / forEach order from parseGroupField
         result[g.key] = items;
       });
+      // + items the app stores elsewhere in the users doc (see extraInventoryItems)
+      result.inventory = (result.inventory || []).concat(extraInventoryItems(ud, result.inventory));
       return result;
+    }
+    // ── Items stored outside users.inventory (Oct 4, 2026) ──
+    // A Jack-O-Lantern found in the app did not show: the app keeps some
+    // collectibles outside users.inventory. Besides the known fields, the
+    // Inventory group also takes, from the same users doc (no extra read):
+    //  • container fields named like items (items, collectibles, seasonalItems,
+    //    eventItems, inventoryV2 …), any shape (array / map / nested map);
+    //  • top-level fields named after an item (jackOLanterns: 1, pumpkins: 3 …).
+    // Fields ABOUT an item (…Today, …Daily, last…, …At, …Limit, …Found, …Earned)
+    // are not items. Unknown items keep their raw key as the name ("No image").
+    const KNOWN_ITEM_FIELDS = new Set(GROUPS.map(g => g.field));
+    const EXTRA_CONTAINER_RE = /(inventor|^items?|items?$|collectible|seasonal|loot|treasure|trophies|consumable|powerups?$|boosts?$|backpack|stash|halloween)/;
+    const EXTRA_ITEM_WORD_RE = /(lantern|pumpkin|goggle|cand(y|ies)|collectible|halloween|ghost|skull)/;
+    const NOT_ITEM_RE = /(today|daily|perday|date|time|stamp|^last|reset|limit|^max|max$|cap$|cooldown|history|logs?$|streak|updated|created|expir|until|active|equipped|earned|traded|sold|spent|redeemed|found|enabled|unlocked|claimed|seen|shown|version|meta|settings|config|prefs?$|ids$|urls?$)/;
+    const STAMP_KEY_RE = /(At|_at|Ms|_ms|Ts|_ts)$/;
+    const SENSITIVE_KEY_RE = /(email|phone|token|fcm|password|secret|address|paypal|venmo|cashapp|iban|bank|card|ssn|ipaddr|device|auth|apikey|private|birth|location|geo)/i;
+    function normKey(k) { return String(k).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+    function isStampLike(v) {
+      return !!v && typeof v === 'object' && (typeof v.toDate === 'function' || ('seconds' in v && 'nanoseconds' in v));
+    }
+    function isPlainMap(v) {
+      return !!v && typeof v === 'object' && !Array.isArray(v) && !isStampLike(v)
+        && !(v.latitude != null && v.longitude != null) && !(typeof v.path === 'string' && v.firestore);
+    }
+    function notItemKey(k) { return NOT_ITEM_RE.test(normKey(k)) || STAMP_KEY_RE.test(String(k)); }
+    const COUNT_KEYS = ['count', 'qty', 'quantity', 'amount', 'owned', 'stack', 'stacks', 'total', 'held', 'num', 'units'];
+    /** Items from one container field (array / map / nested map), any entry shape. */
+    function containerItems(field, raw) {
+      const out = [];
+      parseGroupField(raw).forEach(it => {
+        const key = it._raw && typeof it._raw === 'object' ? asString(it._raw.id) : '';
+        if (key && notItemKey(key)) return;                         // e.g. { updatedAt: … } inside the map
+        if (it._raw && typeof it._raw === 'object' && it._raw.id != null && it._raw.name === it._raw.id) {
+          const v = raw && !Array.isArray(raw) ? raw[it._raw.id] : undefined;
+          if (isStampLike(v) || typeof v === 'boolean' || (typeof v === 'string' && asNum(v) == null)) return;   // map of flags / dates, not counts
+        }
+        it._src = 'users.' + field;
+        out.push(it);
+      });
+      return out;
+    }
+    /** Items found in the users doc outside the known fields (Inventory group). */
+    function extraInventoryItems(ud, existing) {
+      const out = [];
+      const seen = new Set((existing || []).map(it => itemSlug(it.name).replace(/-/g, '')));
+      const add = it => {
+        const s = itemSlug(it.name).replace(/-/g, '');
+        if (!s || seen.has(s)) return;
+        seen.add(s);
+        out.push(it);
+      };
+      Object.keys(ud || {}).forEach(k => {
+        if (KNOWN_ITEM_FIELDS.has(k) || /Resources$/.test(k) || SENSITIVE_KEY_RE.test(k) || notItemKey(k)) return;
+        const v = ud[k];
+        const nk = normKey(k);
+        const itemish = EXTRA_ITEM_WORD_RE.test(nk);
+        if (EXTRA_CONTAINER_RE.test(nk) && (Array.isArray(v) || isPlainMap(v))) {
+          if (itemish && isPlainMap(v) && pickFirst(v, COUNT_KEYS) != null) {   // { count: 1, … } = one item
+            const it = parseItem(Object.assign({ id: k, name: k }, v), 0);
+            if (it) { it._src = 'users.' + k; add(it); }
+            return;
+          }
+          containerItems(k, v).forEach(add);
+          return;
+        }
+        if (!itemish) return;
+        if (typeof v === 'number' || (typeof v === 'string' && asNum(v) != null)) {
+          add({ name: k, rarity: '', image: '', value: null, count: asNum(v), _raw: { id: k }, _src: 'users.' + k });
+        } else if (isPlainMap(v)) {
+          if (pickFirst(v, COUNT_KEYS) != null || pickFirst(v, ['name', 'title', 'displayName', 'itemName'])) {
+            const it = parseItem(Object.assign({ id: k, name: k }, v), 0);
+            if (it) { it._src = 'users.' + k; add(it); }
+          } else containerItems(k, v).forEach(add);
+        } else if (Array.isArray(v)) containerItems(k, v).forEach(add);
+      });
+      return out;
+    }
+    /** Users-doc field names + types (no values; sensitive fields: type only) for the console. */
+    function usersDocShape(ud) {
+      const desc = function (x) {
+        if (x == null) return 'null';
+        if (Array.isArray(x)) return 'array';
+        if (isStampLike(x)) return 'timestamp';
+        if (typeof x === 'object') return 'map{' + Object.keys(x).slice(0, 8).join(',') + '}';
+        return typeof x;
+      };
+      const out = {};
+      Object.keys(ud || {}).sort().forEach(k => {
+        const v = ud[k];
+        const sens = SENSITIVE_KEY_RE.test(k);
+        if (v == null) out[k] = 'null';
+        else if (Array.isArray(v)) out[k] = 'array[' + v.length + ']' + (!sens && v.length ? ' of ' + Array.from(new Set(v.slice(0, 20).map(desc))).join(' | ') : '');
+        else if (isStampLike(v)) out[k] = 'timestamp';
+        else if (typeof v === 'object') out[k] = sens ? 'map(' + Object.keys(v).length + ' keys)' : 'map{' + Object.keys(v).slice(0, 30).join(',') + '}';
+        else out[k] = typeof v;
+      });
+      return out;
+    }
+    /** console.debug dump to confirm where the app stores items (DevTools → Verbose). */
+    function logInventorySources(tag, uid, ud, groups) {
+      try {
+        console.debug(tag + ' users/' + uid + ' fields (types only, no values): ' + JSON.stringify(usersDocShape(ud)));
+        const extra = (groups.inventory || []).filter(it => it._src);
+        console.debug(tag + ' items found outside users.inventory: ' + (extra.length
+          ? extra.map(it => it._src + ' → "' + it.name + '"' + (it.count != null ? ' ×' + it.count : '')).join('; ')
+          : 'none'));
+      } catch (_) {}
     }
     function metaLine(item) {
       const parts = [];
@@ -4256,8 +4658,137 @@
       body.append(photo, meta);
     }
     // ---- end: verbatim from inventory.html ----
+
+    // ── Official seasonal inventory (Oct 5, 2026) ─────────────────────────────
+    // Pumpkins (and future seasonal items) are NOT in users/{uid}.inventory.
+    //   1) config/seasonalEvent → { enabled, eventId, displayName, dailyClaimCapPerUser, … }
+    //   2) If enabled && eventId: seasonalInventory/{uid}{eventId} (exact doc id = uid + eventId)
+    //      Fields: count, totalCollected, totalRedeemed, tbFromRedemptions, claimsToday.
+    //      Missing doc → still show the card with count 0.
+    //   3) Shown in the Inventory group (with goggles etc.), label = displayName.
+    // Only the signed-in user's own doc is read (no queries / no other uids).
+        async function fetchSeasonalInventoryItem(uid) {
+      if (!uid || typeof db === 'undefined' || !db || typeof db.collection !== 'function') return null;
+      try {
+        // (1) config/seasonalEvent — log full doc for DevTools on mars/nfoguides
+        const cfgSnap = await db.collection('config').doc('seasonalEvent').get();
+        const cfgExists = !!(cfgSnap && cfgSnap.exists);
+        const cfg = cfgExists ? (cfgSnap.data() || {}) : null;
+        try {
+          console.log('[inventory] (1) config/seasonalEvent', {
+            path: 'config/seasonalEvent',
+            exists: cfgExists,
+            data: cfg,
+            keys: cfg ? Object.keys(cfg) : []
+          });
+        } catch (_) {}
+        if (!cfgExists) return null;
+        if (!cfg.enabled || cfg.eventId == null || cfg.eventId === '') {
+          try { console.log('[inventory] seasonalEvent: disabled or no eventId — skip seasonalInventory lookup', { enabled: cfg.enabled, eventId: cfg.eventId }); } catch (_) {}
+          return null;
+        }
+        const eventId = String(cfg.eventId);
+        const displayName = asString(cfg.displayName) || eventId;
+        const docId = String(uid) + eventId;
+        let count = 0;
+        let totalCollected = null, totalRedeemed = null, tbFromRedemptions = null, claimsToday = null;
+        let exists = false;
+        let invData = null;
+        let invErr = null;
+        try {
+          // (2) seasonalInventory/{uid}{eventId} — exact concat; log full doc
+          const invSnap = await db.collection('seasonalInventory').doc(docId).get();
+          exists = !!(invSnap && invSnap.exists);
+          invData = exists ? (invSnap.data() || {}) : null;
+          try {
+            console.log('[inventory] (2) seasonalInventory/' + docId, {
+              path: 'seasonalInventory/' + docId,
+              uid: String(uid),
+              eventId: eventId,
+              docId: docId,
+              concat: String(uid) + ' + ' + eventId,
+              exists: exists,
+              data: invData,
+              keys: invData ? Object.keys(invData) : []
+            });
+          } catch (_) {}
+          if (exists) {
+            const d = invData || {};
+            const c = asNum(d.count);
+            count = c != null ? c : 0;
+            totalCollected = asNum(d.totalCollected);
+            totalRedeemed = asNum(d.totalRedeemed);
+            tbFromRedemptions = asNum(d.tbFromRedemptions);
+            claimsToday = asNum(d.claimsToday);
+          }
+        } catch (err) {
+          invErr = err && (err.code || err.message) || err;
+          const denied = /permission-denied|PERMISSION_DENIED/i.test(String(invErr));
+          try {
+            console.warn('[inventory] (2) seasonalInventory/' + docId + ' read failed:', invErr);
+            console.log('[inventory] (2) seasonalInventory/' + docId, {
+              path: 'seasonalInventory/' + docId, uid: String(uid), eventId: eventId, docId: docId,
+              concat: 'uid+eventId (correct)',
+              exists: false, error: invErr, data: null,
+              note: denied
+                ? 'Firestore rules deny client read of seasonalInventory/{uid}{eventId}. Doc path is correct; owner read must be allowed (no alternate client path in this repo). Showing count 0 until rules allow.'
+                : 'Read failed; showing count 0.'
+            });
+            if (denied) {
+              console.warn('[inventory] seasonalInventory permission-denied — ask backend to allow owner get on seasonalInventory/{uid}{eventId}; client path is correct.');
+            }
+          } catch (_) {}
+        }
+        try {
+          console.log('[inventory] seasonal parsed', {
+            displayName: displayName, docId: docId, exists: exists,
+            countFromField_count: count,
+            totalCollected: totalCollected, totalRedeemed: totalRedeemed,
+            tbFromRedemptions: tbFromRedemptions, claimsToday: claimsToday,
+            rawFieldSample: invData ? {
+              count: invData.count, quantity: invData.quantity, amount: invData.amount,
+              owned: invData.owned, balance: invData.balance, available: invData.available,
+              totalCollected: invData.totalCollected, totalRedeemed: invData.totalRedeemed
+            } : null
+          });
+        } catch (_) {}
+        return {
+          name: displayName,
+          rarity: '',
+          image: '',
+          value: null,
+          count: count,
+          _raw: { id: docId, eventId: eventId, displayName: displayName },
+          _src: 'seasonalInventory/' + docId,
+          _seasonal: true
+        };
+      } catch (err) {
+        try { console.warn('[inventory] seasonalEvent load failed:', err && (err.code || err.message) || err); } catch (_) {}
+        return null;
+      }
+    }
+    
+    /** Put the official seasonal item in the Inventory group; drop speculative duplicates. */
+    function mergeSeasonalIntoGroups(groups, seasonal) {
+      if (!groups || !seasonal) return groups;
+      const inv = Array.isArray(groups.inventory) ? groups.inventory.slice() : [];
+      const slug = itemSlug(seasonal.name).replace(/-/g, '');
+      const sArt = itemImageId(seasonal, 'inventory');
+      groups.inventory = inv.filter(function (it) {
+        if (it && it._seasonal) return false;
+        const s = itemSlug(it && it.name).replace(/-/g, '');
+        if (slug && s === slug) return false;
+        // Speculative users.* pumpkin / jack-o-lantern entries → replaced by official doc
+        if (sArt && it && it._src && String(it._src).indexOf('users.') === 0 && itemImageId(it, 'inventory') === sArt) return false;
+        return true;
+      });
+      groups.inventory.push(seasonal);
+      return groups;
+    }
+
     return { GROUPS: GROUPS, buildGroupsFromUser: buildGroupsFromUser, renderCard: renderCard,
-      itemImageId: itemImageId, resourceDisplayName: resourceDisplayName };
+      itemImageId: itemImageId, resourceDisplayName: resourceDisplayName, logInventorySources: logInventorySources,
+      fetchSeasonalInventoryItem: fetchSeasonalInventoryItem, mergeSeasonalIntoGroups: mergeSeasonalIntoGroups };
   })();
   const _inv = { status: 'loading', tiles: [], preview: false };
   // Local preview only (no Firestore)
@@ -4288,19 +4819,7 @@
   }
   /** Tiles in inventory.html's order: GROUPS (Inventory, Rock … Diamond), items as that page sorts them. */
   function invBuildTiles(ud) {
-    const groups = INV_PAGE.buildGroupsFromUser(ud || {});
-    const tiles = [];
-    INV_PAGE.GROUPS.forEach(function (g) {
-      (groups[g.key] || []).forEach(function (item) {
-        const fallback = item.name || 'Untitled';
-        tiles.push({
-          item: item, group: g, mineKey: g.key,
-          name: g.key !== 'inventory' ? INV_PAGE.resourceDisplayName(g.key, item.rarity, fallback) : fallback,
-          artId: INV_PAGE.itemImageId(item, g.key)
-        });
-      });
-    });
-    return tiles;
+    return invBuildTilesFromGroups(INV_PAGE.buildGroupsFromUser(ud || {}));
   }
   function invTileEl(t, i) {
     const el = document.createElement('div');
@@ -4347,10 +4866,21 @@
     }
     return el;
   }
-  function renderInventoryCard(ud, options) {
-    options = options || {};
-    _inv.preview = !!options.preview;
-    const tiles = invBuildTiles(ud);
+  function invBuildTilesFromGroups(groups) {
+    const tiles = [];
+    INV_PAGE.GROUPS.forEach(function (g) {
+      (groups[g.key] || []).forEach(function (item) {
+        const fallback = item.name || 'Untitled';
+        tiles.push({
+          item: item, group: g, mineKey: g.key,
+          name: g.key !== 'inventory' ? INV_PAGE.resourceDisplayName(g.key, item.rarity, fallback) : fallback,
+          artId: INV_PAGE.itemImageId(item, g.key)
+        });
+      });
+    });
+    return tiles;
+  }
+  function paintInventoryTiles(tiles, ud, options) {
     _inv.tiles = tiles;
     if (invTipKey != null) hideVis60Tip();
     const grid = $('dash-inv-grid');
@@ -4360,9 +4890,31 @@
     _inv.status = tiles.length ? 'ready' : 'empty';
     setInvMsg(tiles.length ? '' : 'No inventory or mine resources found.', '');
     if (!options.preview) {
+      INV_PAGE.logInventorySources('[inventory-card]', (auth.currentUser && auth.currentUser.uid) || '?', ud || {}, INV_PAGE.buildGroupsFromUser(ud || {}));
       const noPicN = tiles.filter(function (t) { return !t.artId && !t.item.image; }).length;
-      console.info('[inventory-card] ' + tiles.length + ' tile(s) from the users doc (same fields/order as inventory.html); '
-        + noPicN + ' without a picture.');
+      const seasonalN = tiles.filter(function (t) { return t.item && t.item._seasonal; }).length;
+      console.info('[inventory-card] ' + tiles.length + ' tile(s) (same order as inventory.html'
+        + (seasonalN ? '; ' + seasonalN + ' seasonal' : '') + '); ' + noPicN + ' without a picture.');
+    }
+  }
+  function renderInventoryCard(ud, options) {
+    options = options || {};
+    _inv.preview = !!options.preview;
+    const groups = INV_PAGE.buildGroupsFromUser(ud || {});
+    paintInventoryTiles(invBuildTilesFromGroups(groups), ud, options);
+    // Official seasonal item — same path as inventory.html (own doc only).
+    const uid = options.uid || (auth.currentUser && auth.currentUser.uid) || '';
+    if (!options.preview && uid) {
+      INV_PAGE.fetchSeasonalInventoryItem(uid).then(function (seasonal) {
+        if (!seasonal || _inv.preview) return;
+        // Ignore if dashboard moved on to another user/load.
+        if (options.uid) { if (options.uid !== uid) return; }
+        else if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+        INV_PAGE.mergeSeasonalIntoGroups(groups, seasonal);
+        paintInventoryTiles(invBuildTilesFromGroups(groups), ud, options);
+      }).catch(function (err) {
+        try { console.warn('[inventory-card] seasonal load failed:', err && (err.code || err.message) || err); } catch (_) {}
+      });
     }
   }
   function fillInvTip(key) {
@@ -4407,26 +4959,53 @@
   const PIONEER_TRIAL_END = '2026-10-10T00:00:00-04:00';   // end of Oct 9, America/New_York
   const PIONEER_TRIAL_END_MS = PIONEER_TRIAL_END ? Date.parse(PIONEER_TRIAL_END) : NaN;
   // Overlay text, from the end date: the last trial day in New York ("October 9").
-  const PIONEER_TRIAL_LABEL = isFinite(PIONEER_TRIAL_END_MS)
-    ? 'Free trial until ' + new Date(PIONEER_TRIAL_END_MS - 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' })
-    : '';
+  function ppTrialDayOrdinal(n) {
+    var j = n % 10, k = n % 100;
+    if (j === 1 && k !== 11) return n + 'st';
+    if (j === 2 && k !== 12) return n + 'nd';
+    if (j === 3 && k !== 13) return n + 'rd';
+    return n + 'th';
+  }
+  const PIONEER_TRIAL_LABEL = (function () {
+    if (!isFinite(PIONEER_TRIAL_END_MS)) return '';
+    // Last calendar day of the trial in America/New_York
+    var d = new Date(PIONEER_TRIAL_END_MS - 1);
+    var parts = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }).formatToParts(d);
+    var month = '', day = 0;
+    parts.forEach(function (p) {
+      if (p.type === 'month') month = p.value;
+      if (p.type === 'day') day = parseInt(p.value, 10) || 0;
+    });
+    return "Free trial of this website's Pioneer Pass features until " + month + ' ' + ppTrialDayOrdinal(day);
+  })();
   let pioneerLocked = null;   // null until the users doc decides
   let ppCtx = null;           // { uid, options } of the locked load (trial unlock reuses it)
   let ppTrialTimer = 0;
   function ppTrialActive() { return isFinite(PIONEER_TRIAL_END_MS) && Date.now() < PIONEER_TRIAL_END_MS; }
-  // Remembered per user (this browser) for the rest of the trial, so a reload
-  // keeps the graphs open; ignored once the trial ends or the end date changes.
+  // Remembered per user for THIS browser tab/session only (sessionStorage).
+  // Must not survive logout or a new browser session (no localStorage / cookie).
   function ppTrialKey(uid) { return 'tmPioneerTrialOpen:' + uid; }
   function ppTrialRemembered(uid) {
     try {
-      const v = localStorage.getItem(ppTrialKey(uid));
+      // Drop any legacy localStorage flag from earlier builds
+      try { localStorage.removeItem(ppTrialKey(uid)); } catch (e2) {}
+      const v = sessionStorage.getItem(ppTrialKey(uid));
       if (v == null) return false;
       if (ppTrialActive() && v === String(PIONEER_TRIAL_END_MS)) return true;
-      localStorage.removeItem(ppTrialKey(uid));   // stale (trial over / date changed)
+      sessionStorage.removeItem(ppTrialKey(uid));   // stale (trial over / date changed)
     } catch (e) {}
     return false;
   }
-  function ppTrialRemember(uid) { try { localStorage.setItem(ppTrialKey(uid), String(PIONEER_TRIAL_END_MS)); } catch (e) {} }
+  function ppTrialRemember(uid) {
+    try {
+      try { localStorage.removeItem(ppTrialKey(uid)); } catch (e2) {}
+      sessionStorage.setItem(ppTrialKey(uid), String(PIONEER_TRIAL_END_MS));
+    } catch (e) {}
+  }
+  function ppTrialForget(uid) {
+    try { sessionStorage.removeItem(ppTrialKey(uid)); } catch (e) {}
+    try { localStorage.removeItem(ppTrialKey(uid)); } catch (e) {}
+  }
   function isPioneerMember(ud) { return !!ud && ud.isPioneerMember === true; }
   function ppGraphs() {
     return [
@@ -4494,7 +5073,7 @@
     if (locked) {
       console.info('[pioneer] not a Pioneer Pass member (users doc isPioneerMember !== true): column-3 graphs locked; skipped the My Check-ins 60-day fetch, '
         + 'Referrals / Mini Games read today only, Visitors keeps its 90-day fetch for the stat boxes.'
-        + (ppTrialActive() ? ' Free trial until ' + PIONEER_TRIAL_END + ': clicking a graph opens them all.' : ''));
+        + (ppTrialActive() ? ' ' + PIONEER_TRIAL_LABEL + ': clicking a graph opens them all.' : ''));
       // Trial ends while the page is open and nothing was clicked: back to the plain lock.
       if (ppTrialActive()) {
         ppTrialTimer = setTimeout(function check() {
@@ -4799,5 +5378,7 @@
 
 </script>
   <script src="portal-nav.js" defer></script>
+<script src="/js/mine-headlamp.js?v=20261005-3"></script>
+<script src="/js/portal-theme.js?v=20261005-7"></script>
 </body>
 </html>
