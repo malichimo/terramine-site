@@ -49,7 +49,8 @@
     'terramine.mineMap.radius': 'pr',           //   Load Area radius (miles)
     'terramine.mineMap.reach': 'px',            //   full map: Reach on/off
     'terramine.bulkRename.checks': 'br',        // Bulk Rename checkboxes
-    'terramine.bulkGreet.text': 'bg'            // Bulk Greeting text
+    'terramine.bulkGreet.text': 'bg',           // Bulk Greeting text
+    'terramine.portal.theme': 'th'              // portal Day/Dusk/Coal Mine theme
   };
   function code(key) { return ALIAS[key] || String(key); }
   function store(kind) { try { return w[kind]; } catch (e) { return null; } }

@@ -1,0 +1,357 @@
+/* Portal 3-way theme: Day / Dusk / Coal Mine (Oct 5, 2026). html[data-theme]. */
+
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+html[data-theme="day"],
+html:not([data-theme]) {
+  --tm-overlay: rgba(238, 241, 244, 0.7);
+  --tm-body-bg: #0D1B2A;
+  --tm-card: rgba(255, 255, 255, 0.92);
+  --tm-card-solid: #ffffff;
+  --tm-card-border: rgba(139, 115, 85, 0.45);
+  --tm-text: #1a2330;
+  --tm-text-muted: #556070;
+  --tm-head-bg: #5C3317;
+  --tm-head-fg: #fff8ec;
+  --tm-toolbar-bg: rgba(255, 255, 255, 0.88);
+  --tm-toolbar-border: rgba(92, 51, 23, 0.25);
+  --tm-chip-bg: rgba(255, 255, 255, 0.9);
+  --tm-chip-fg: #333;
+  --tm-chip-on-bg: var(--brown-dark, #5C3317);
+  --tm-chip-on-fg: #fff;
+  --tm-input-bg: #fff;
+  --tm-input-fg: #1a2330;
+  --tm-input-border: rgba(92, 51, 23, 0.3);
+  --tm-tip-bg: #0f172a;
+  --tm-tip-fg: #f8fafc;
+  --tm-map-panel: rgba(15, 23, 42, 0.96);
+  --tm-map-chrome: #0f172a;
+  --tm-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --tm-rock-fg: #1565c0;
+  --tm-coal-fg: #455a64;
+  --tm-status: #334155;
+  --tm-empty: #64748b;
+}
+
+html[data-theme="dusk"] {
+  --tm-overlay: rgba(10, 18, 30, 0.78);
+  --tm-body-bg: #070d16;
+  --tm-card: rgba(22, 38, 58, 0.94);
+  --tm-card-solid: #16263a;
+  --tm-card-border: rgba(79, 195, 247, 0.22);
+  --tm-text: #e8eef6;
+  --tm-text-muted: #9aadc2;
+  --tm-head-bg: #1a3350;
+  --tm-head-fg: #e8f4ff;
+  --tm-toolbar-bg: rgba(17, 31, 48, 0.94);
+  --tm-toolbar-border: rgba(79, 195, 247, 0.2);
+  --tm-chip-bg: rgba(30, 48, 70, 0.95);
+  --tm-chip-fg: #d7e6f5;
+  --tm-chip-on-bg: #4FC3F7;
+  --tm-chip-on-fg: #0a1522;
+  --tm-input-bg: #0f1c2c;
+  --tm-input-fg: #e8eef6;
+  --tm-input-border: rgba(79, 195, 247, 0.28);
+  --tm-tip-bg: #0b1624;
+  --tm-tip-fg: #f0f6fc;
+  --tm-map-panel: rgba(10, 18, 30, 0.97);
+  --tm-map-chrome: #0b1624;
+  --tm-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --tm-rock-fg: #90CAF9;
+  --tm-coal-fg: #CFD8DC;
+  --tm-status: #b6c7d9;
+  --tm-empty: #8a9bb0;
+  --text-dark: #e8eef6;
+  --text-mid: #9aadc2;
+  --white: #e8eef6;
+}
+
+html[data-theme="coal"] {
+  /* Charcoal coal-mine black; amber/brown accents; Rock stays readable grey (not lost on black). */
+  --tm-overlay: rgba(8, 6, 4, 0.82);
+  --tm-body-bg: #050403;
+  --tm-card: rgba(28, 22, 16, 0.96);
+  --tm-card-solid: #1c1610;
+  --tm-card-border: rgba(224, 123, 32, 0.35);
+  --tm-text: #f3e6d4;
+  --tm-text-muted: #b8a48a;
+  --tm-head-bg: #2a1a0c;
+  --tm-head-fg: #ffe7c2;
+  --tm-toolbar-bg: rgba(20, 14, 10, 0.96);
+  --tm-toolbar-border: rgba(224, 123, 32, 0.28);
+  --tm-chip-bg: rgba(36, 26, 16, 0.95);
+  --tm-chip-fg: #f0dfc6;
+  --tm-chip-on-bg: #E07B20;
+  --tm-chip-on-fg: #1a0e04;
+  --tm-input-bg: #120e0a;
+  --tm-input-fg: #f3e6d4;
+  --tm-input-border: rgba(224, 123, 32, 0.4);
+  --tm-tip-bg: #140e08;
+  --tm-tip-fg: #ffe9cc;
+  --tm-map-panel: rgba(10, 8, 6, 0.98);
+  --tm-map-chrome: #100c08;
+  --tm-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+  --tm-rock-fg: #c5d3e0;   /* light rock grey on coal — not the same as coal black */
+  --tm-coal-fg: #e0e0e0;   /* coal accents stay light so icons don't vanish */
+  --tm-status: #d2b48c;
+  --tm-empty: #a89070;
+  --brown-dark: #3d2412;
+  --brown: #c47a2c;
+  --brown-mid: #a67c52;
+  --brown-light: #8B6914;
+  --text-dark: #f3e6d4;
+  --text-mid: #b8a48a;
+  --white: #f3e6d4;
+  --rock-color: #c5d3e0;
+  --coal-color: #eceff1;
+}
+
+/* ── Surfaces ─────────────────────────────────────────────────────────────── */
+html[data-theme="dusk"] body,
+html[data-theme="coal"] body { background-color: var(--tm-body-bg); color: var(--tm-text); }
+
+html[data-theme="dusk"] .backgroundoverlaycolor,
+html[data-theme="coal"] .backgroundoverlaycolor { background: var(--tm-overlay); }
+
+html[data-theme="dusk"] .portalbackground,
+html[data-theme="coal"] .portalbackground { filter: saturate(0.85) brightness(0.55); }
+html[data-theme="coal"] .portalbackground { filter: saturate(0.7) brightness(0.35) contrast(1.05); }
+
+/* Cards / panels (dashboard, mines, inventory, visitors, activity, account) */
+html[data-theme="dusk"] .stat-card,
+html[data-theme="dusk"] .dash-slot-card,
+html[data-theme="dusk"] .dash-pie-card,
+html[data-theme="dusk"] .dash-visits-card,
+html[data-theme="dusk"] .dash-inv-card,
+html[data-theme="dusk"] .mine-card,
+html[data-theme="dusk"] .inv-card,
+html[data-theme="dusk"] .vo-card,
+html[data-theme="dusk"] .account-card,
+html[data-theme="dusk"] .mine-group-total,
+html[data-theme="coal"] .stat-card,
+html[data-theme="coal"] .dash-slot-card,
+html[data-theme="coal"] .dash-pie-card,
+html[data-theme="coal"] .dash-visits-card,
+html[data-theme="coal"] .dash-inv-card,
+html[data-theme="coal"] .mine-card,
+html[data-theme="coal"] .inv-card,
+html[data-theme="coal"] .vo-card,
+html[data-theme="coal"] .account-card,
+html[data-theme="coal"] .mine-group-total {
+  background: var(--tm-card) !important;
+  border-color: var(--tm-card-border) !important;
+  color: var(--tm-text) !important;
+  box-shadow: var(--tm-shadow);
+}
+
+html[data-theme="dusk"] .stat-card-label,
+html[data-theme="dusk"] .stat-card-value,
+html[data-theme="dusk"] .mine-card-title,
+html[data-theme="dusk"] .inv-card-name,
+html[data-theme="dusk"] .inv-card-meta,
+html[data-theme="dusk"] .vo-name,
+html[data-theme="coal"] .stat-card-label,
+html[data-theme="coal"] .stat-card-value,
+html[data-theme="coal"] .mine-card-title,
+html[data-theme="coal"] .inv-card-name,
+html[data-theme="coal"] .inv-card-meta,
+html[data-theme="coal"] .vo-name { color: var(--tm-text) !important; }
+
+html[data-theme="dusk"] .mine-group-head,
+html[data-theme="dusk"] .dash-visits-head,
+html[data-theme="dusk"] .dash-dominance-head,
+html[data-theme="dusk"] .inv-group-head,
+html[data-theme="coal"] .mine-group-head,
+html[data-theme="coal"] .dash-visits-head,
+html[data-theme="coal"] .dash-dominance-head,
+html[data-theme="coal"] .inv-group-head {
+  background: var(--tm-head-bg) !important;
+  color: var(--tm-head-fg) !important;
+  border-color: var(--tm-card-border) !important;
+}
+
+/* Filter / toolbars */
+html[data-theme="dusk"] .mine-toolbar,
+html[data-theme="dusk"] #inv-toolbar,
+html[data-theme="dusk"] #visitors-toolbar,
+html[data-theme="dusk"] .page-settings-panel,
+html[data-theme="coal"] .mine-toolbar,
+html[data-theme="coal"] #inv-toolbar,
+html[data-theme="coal"] #visitors-toolbar,
+html[data-theme="coal"] .page-settings-panel {
+  background: var(--tm-toolbar-bg) !important;
+  border-color: var(--tm-toolbar-border) !important;
+  color: var(--tm-text) !important;
+}
+
+html[data-theme="dusk"] .sort-btn,
+html[data-theme="dusk"] .type-filter-btn,
+html[data-theme="dusk"] .flip-type-order-btn,
+html[data-theme="dusk"] .page-settings-btn,
+html[data-theme="coal"] .sort-btn,
+html[data-theme="coal"] .type-filter-btn,
+html[data-theme="coal"] .flip-type-order-btn,
+html[data-theme="coal"] .page-settings-btn {
+  background: var(--tm-chip-bg) !important;
+  color: var(--tm-chip-fg) !important;
+  border-color: var(--tm-toolbar-border) !important;
+}
+html[data-theme="dusk"] .sort-btn.active,
+html[data-theme="dusk"] .type-filter-btn.active,
+html[data-theme="dusk"] .type-filter-btn[aria-pressed="true"],
+html[data-theme="dusk"] .flip-type-order-btn[aria-pressed="true"],
+html[data-theme="dusk"] .group-toggle-btn[aria-pressed="true"],
+html[data-theme="coal"] .sort-btn.active,
+html[data-theme="coal"] .type-filter-btn.active,
+html[data-theme="coal"] .type-filter-btn[aria-pressed="true"],
+html[data-theme="coal"] .flip-type-order-btn[aria-pressed="true"],
+html[data-theme="coal"] .group-toggle-btn[aria-pressed="true"] {
+  background: var(--tm-chip-on-bg) !important;
+  color: var(--tm-chip-on-fg) !important;
+}
+
+html[data-theme="dusk"] .tool-search,
+html[data-theme="dusk"] .input-field,
+html[data-theme="dusk"] select,
+html[data-theme="dusk"] textarea,
+html[data-theme="coal"] .tool-search,
+html[data-theme="coal"] .input-field,
+html[data-theme="coal"] select,
+html[data-theme="coal"] textarea {
+  background: var(--tm-input-bg) !important;
+  color: var(--tm-input-fg) !important;
+  border-color: var(--tm-input-border) !important;
+}
+
+html[data-theme="dusk"] .mine-status,
+html[data-theme="dusk"] .inv-status,
+html[data-theme="dusk"] .mine-count,
+html[data-theme="dusk"] .inv-empty,
+html[data-theme="coal"] .mine-status,
+html[data-theme="coal"] .inv-status,
+html[data-theme="coal"] .mine-count,
+html[data-theme="coal"] .inv-empty { color: var(--tm-status) !important; }
+
+/* Follow tips / popups */
+html[data-theme="dusk"] .toolbar-follow-tip,
+html[data-theme="dusk"] .mine-greet-tip,
+html[data-theme="coal"] .toolbar-follow-tip,
+html[data-theme="coal"] .mine-greet-tip {
+  background: var(--tm-tip-bg) !important;
+  color: var(--tm-tip-fg) !important;
+  border-color: var(--tm-card-border) !important;
+}
+
+/* Map chrome */
+html[data-theme="dusk"] .mine-map-overlay,
+html[data-theme="dusk"] .visitors-overlay,
+html[data-theme="coal"] .mine-map-overlay,
+html[data-theme="coal"] .visitors-overlay {
+  background: rgba(0, 0, 0, 0.72) !important;
+}
+html[data-theme="dusk"] .mine-map-panel,
+html[data-theme="dusk"] .mine-map-chrome,
+html[data-theme="dusk"] .mine-map-bulk-rename,
+html[data-theme="dusk"] .mine-map-bulk-greet,
+html[data-theme="dusk"] .mine-map-edit,
+html[data-theme="coal"] .mine-map-panel,
+html[data-theme="coal"] .mine-map-chrome,
+html[data-theme="coal"] .mine-map-bulk-rename,
+html[data-theme="coal"] .mine-map-bulk-greet,
+html[data-theme="coal"] .mine-map-edit {
+  background: var(--tm-map-panel) !important;
+  color: var(--tm-text) !important;
+  border-color: var(--tm-card-border) !important;
+}
+html[data-theme="dusk"] #mine-map-body,
+html[data-theme="dusk"] #full-map-canvas,
+html[data-theme="coal"] #mine-map-body,
+html[data-theme="coal"] #full-map-canvas {
+  background: var(--tm-map-chrome) !important;
+}
+
+/* Rock vs Coal contrast on coal theme — keep rock chips/labels light grey, not charcoal */
+html[data-theme="coal"] .mine-group-total[data-group-type="rock"],
+html[data-theme="coal"] .mine-group-head-type[data-type="rock"],
+html[data-theme="coal"] .type-filter-btn[data-type="rock"] {
+  color: var(--tm-rock-fg) !important;
+  border-color: rgba(197, 211, 224, 0.55) !important;
+}
+html[data-theme="coal"] .mine-group-total[data-group-type="coal"],
+html[data-theme="coal"] .mine-group-head-type[data-type="coal"],
+html[data-theme="coal"] .type-filter-btn[data-type="coal"] {
+  color: var(--tm-coal-fg) !important;
+  border-color: rgba(224, 123, 32, 0.45) !important;
+}
+
+/* Login card on themed pages */
+html[data-theme="dusk"] .login-card,
+html[data-theme="coal"] .login-card {
+  background: var(--tm-card-solid) !important;
+  color: var(--tm-text) !important;
+  border-color: var(--tm-card-border) !important;
+}
+
+/* Dashboard share / compare bits */
+html[data-theme="dusk"] .compare-pill,
+html[data-theme="coal"] .compare-pill {
+  background: var(--tm-chip-bg) !important;
+  color: var(--tm-chip-fg) !important;
+  border-color: var(--tm-toolbar-border) !important;
+}
+html[data-theme="dusk"] .dash-share-btn,
+html[data-theme="coal"] .dash-share-btn { color: #fff; }
+
+/* ── Theme toggle pill ────────────────────────────────────────────────────── */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+}
+.theme-toggle-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #c5d0dc;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-toggle-btn svg,
+.theme-toggle-btn img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  pointer-events: none;
+}
+.theme-toggle-btn img { filter: brightness(1.25); }
+.theme-toggle-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.theme-toggle-btn[aria-pressed="true"] {
+  background: rgba(79, 195, 247, 0.22);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(79, 195, 247, 0.45);
+}
+html[data-theme="coal"] .theme-toggle-btn[aria-pressed="true"] {
+  background: rgba(224, 123, 32, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(224, 123, 32, 0.55);
+}
+.theme-toggle-btn:focus-visible { outline: 2px solid #4FC3F7; outline-offset: 1px; }
+
+@media (max-width: 700px) {
+  .theme-toggle-btn { width: 30px; height: 30px; }
+  .theme-toggle-btn svg, .theme-toggle-btn img { width: 16px; height: 16px; }
+}
+@media (max-width: 400px) {
+  .theme-toggle { gap: 0; padding: 2px; }
+  .theme-toggle-btn { width: 28px; height: 28px; }
+}
