@@ -45,6 +45,9 @@
       try { if (w.TMPrefs) TMPrefs.set(KEY, theme); } catch (e) {}
     }
     syncHeadlamp(theme);
+    try {
+      d.dispatchEvent(new CustomEvent('tm-theme-change', { detail: { theme: theme } }));
+    } catch (e) {}
   }
 
   /* ── Mouse-follow tips (same pattern as map-pin / share tips) ───────────── */

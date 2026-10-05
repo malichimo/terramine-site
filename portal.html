@@ -2354,6 +2354,22 @@
    *  those bars with its own vertical gradient (base → its top) instead of
    *  color; second.labelColor tints the right-axis labels and title; opts.titles = { left, right } draws small axis titles;
    *  opts.hoverOutlineColor overrides the amber outline. */
+  /** Axis/grid colors: day = brown; dusk/mine = slate #6b7b8e (+ darker baseline). */
+  function dayBarChrome() {
+    var th = (document.documentElement.getAttribute('data-theme') || 'day').toLowerCase();
+    if (th === 'dusk' || th === 'mine') {
+      return {
+        grid: '#6b7b8e',
+        baseline: '#4a5766',
+        label: '#6b7b8e'
+      };
+    }
+    return {
+      grid: 'rgba(139,115,85,0.18)',
+      baseline: 'rgba(92,51,23,0.55)',
+      label: '#6b5a45'
+    };
+  }
   function drawDayBars(canvas, st, opts) {
     if (!canvas || !canvas.getContext) return;
     const wrap = canvas.parentElement;
@@ -2372,6 +2388,7 @@
     ctx.clearRect(0, 0, cssW, cssH);
     const px = function (v) { return Math.round(v * dpr) / dpr; };         // snap to device pixels
     const hair = function (v) { return (Math.floor(v * dpr) + 0.5) / dpr; }; // crisp 1-device-px line
+    const chrome = dayBarChrome();
 
     const maxCount = days.reduce(function (m, d) { return Math.max(m, opts.total(d)); }, 0);
     const axis = (opts.axis || vis60Axis)(maxCount);
@@ -2405,11 +2422,11 @@
       const y = hair(yOf(v));
       ctx.beginPath();
       ctx.moveTo(x0, y); ctx.lineTo(x0 + plotW, y);
-      ctx.strokeStyle = t === 0 ? 'rgba(92,51,23,0.55)' : 'rgba(139,115,85,0.18)';
+      ctx.strokeStyle = t === 0 ? chrome.baseline : chrome.grid;
       ctx.lineWidth = 1 / dpr;
       ctx.stroke();
       if (t > 0 && (t % labelEvery === 0 || t === nTicks)) {
-        ctx.fillStyle = '#6b5a45';
+        ctx.fillStyle = chrome.label;
         ctx.fillText(fmtNum(v), padL - 5, yOf(v));
         if (two) {                       // right axis: same gridline, its own value
           ctx.textAlign = 'left';
@@ -2423,7 +2440,7 @@
       ctx.font = '600 9px DM Sans, sans-serif';
       ctx.textBaseline = 'top';
       ctx.textAlign = 'left';
-      ctx.fillStyle = '#6b5a45';
+      ctx.fillStyle = chrome.label;
       if (opts.titles.left) ctx.fillText(opts.titles.left, 0, 1);
       ctx.textAlign = 'right';
       ctx.fillStyle = (two && two.labelColor) || '#9a5b06';
@@ -2492,7 +2509,7 @@
     // X labels: today, then every 10 days back; skip any that would overlap.
     ctx.font = tickFont;
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#6b5a45';
+    ctx.fillStyle = chrome.label;
     let leftLimit = Infinity;
     for (let i = days.length - 1; i >= 0; i -= 10) {
       const text = i === days.length - 1 ? 'Today' : vis60ShortDate(days[i].date);
@@ -2505,7 +2522,7 @@
       ctx.fillText(text, lx, yBase + 6);
       ctx.beginPath();
       ctx.moveTo(hair(cx), yBase); ctx.lineTo(hair(cx), yBase + 4);
-      ctx.strokeStyle = 'rgba(92,51,23,0.55)'; ctx.lineWidth = 1 / dpr; ctx.stroke();
+      ctx.strokeStyle = chrome.baseline; ctx.lineWidth = 1 / dpr; ctx.stroke();
       leftLimit = lx;
     }
     const sum = days.reduce(function (a, d) { return a + opts.total(d); }, 0);
@@ -2798,6 +2815,13 @@
   const VIS60_CHART = { canvasId: 'dash-visits-chart', st: _vis60, render: renderVisitors60, fill: fillVis60Tip };
   bindDayBarTip(VIS60_CHART);
   renderVisitors60(); // empty 60-slot frame under the "Loading…" message
+  document.addEventListener('tm-theme-change', function () {
+    try { renderVisitors60(); } catch (e) {}
+    try { renderBuys60(); } catch (e) {}
+    try { renderReferrals60(); } catch (e) {}
+    try { renderMiniGames30(); } catch (e) {}
+    try { renderMyCheckIns60(); } catch (e) {}
+  });
 
   // ── Mines Purchased — Last 60 Days (column 2, under Visitors) ────────────
   // Oct 1, 2026. Your own mines bought per browser-local day, stacked by type
@@ -5326,6 +5350,6 @@
 </script>
   <script src="portal-nav.js" defer></script>
 <script src="/js/mine-headlamp.js?v=20261005-3"></script>
-<script src="/js/portal-theme.js?v=20261005-6"></script>
+<script src="/js/portal-theme.js?v=20261005-7"></script>
 </body>
 </html>
