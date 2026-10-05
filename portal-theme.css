@@ -503,3 +503,18 @@ html[data-theme="dusk"] .vo-message {
   display: block;
   overflow: visible;
 }
+
+
+/* Mine theme miner PNG (cropped character) */
+.theme-toggle-btn[data-theme-set="mine"] img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+  display: block;
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .theme-toggle-btn[data-theme-set="mine"] img { width: 18px; height: 18px; }
+}
