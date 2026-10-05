@@ -165,6 +165,11 @@ html[data-theme="mine"] .page-settings-panel {
   color: var(--tm-text) !important;
 }
 
+html[data-theme="dusk"] .page-settings-hours-value,
+html[data-theme="mine"] .page-settings-hours-value {
+  color: #fff !important;
+}
+
 html[data-theme="dusk"] .sort-btn,
 html[data-theme="mine"] .sort-btn,
 html[data-theme="dusk"] .type-filter-btn,
