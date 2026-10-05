@@ -1703,7 +1703,7 @@
         loadMiniGamesTodayOnly(user.uid).catch(function (err) { console.warn('[mini-games] today load failed:', err); });
       }
       // Inventory card: same users-doc fields as inventory.html, no extra read.
-      try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, options); }
+      try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, Object.assign({}, options, { uid: user && user.uid })); }
       catch (invErr) { setInventoryError(invErr); }
 
       // Debug: log the logged-in user's Auth basics + Firestore profile doc.
@@ -4610,8 +4610,93 @@
       body.append(photo, meta);
     }
     // ---- end: verbatim from inventory.html ----
+
+    // ── Official seasonal inventory (Oct 5, 2026) ─────────────────────────────
+    // Pumpkins (and future seasonal items) are NOT in users/{uid}.inventory.
+    //   1) config/seasonalEvent → { enabled, eventId, displayName, dailyClaimCapPerUser, … }
+    //   2) If enabled && eventId: seasonalInventory/{uid}{eventId} (exact doc id = uid + eventId)
+    //      Fields: count, totalCollected, totalRedeemed, tbFromRedemptions, claimsToday.
+    //      Missing doc → still show the card with count 0.
+    //   3) Shown in the Inventory group (with goggles etc.), label = displayName.
+    // Only the signed-in user's own doc is read (no queries / no other uids).
+    async function fetchSeasonalInventoryItem(uid) {
+      if (!uid || typeof db === 'undefined' || !db || typeof db.collection !== 'function') return null;
+      try {
+        const cfgSnap = await db.collection('config').doc('seasonalEvent').get();
+        if (!cfgSnap || !cfgSnap.exists) {
+          try { console.log('[inventory] seasonalEvent: no config doc'); } catch (_) {}
+          return null;
+        }
+        const cfg = cfgSnap.data() || {};
+        if (!cfg.enabled || cfg.eventId == null || cfg.eventId === '') {
+          try { console.log('[inventory] seasonalEvent: disabled or no eventId', { enabled: !!cfg.enabled, eventId: cfg.eventId || null }); } catch (_) {}
+          return null;
+        }
+        const eventId = String(cfg.eventId);
+        const displayName = asString(cfg.displayName) || eventId;
+        const docId = String(uid) + eventId;
+        let count = 0;
+        let totalCollected = null, totalRedeemed = null, tbFromRedemptions = null, claimsToday = null;
+        let exists = false;
+        try {
+          const invSnap = await db.collection('seasonalInventory').doc(docId).get();
+          exists = !!(invSnap && invSnap.exists);
+          if (exists) {
+            const d = invSnap.data() || {};
+            const c = asNum(d.count);
+            count = c != null ? c : 0;
+            totalCollected = asNum(d.totalCollected);
+            totalRedeemed = asNum(d.totalRedeemed);
+            tbFromRedemptions = asNum(d.tbFromRedemptions);
+            claimsToday = asNum(d.claimsToday);
+          }
+        } catch (err) {
+          try { console.warn('[inventory] seasonalInventory/' + docId + ' read failed:', err && (err.code || err.message) || err); } catch (_) {}
+        }
+        try {
+          console.log('[inventory] seasonalEvent', {
+            enabled: true, eventId: eventId, displayName: displayName, docId: docId,
+            exists: exists, count: count, totalCollected: totalCollected, totalRedeemed: totalRedeemed,
+            tbFromRedemptions: tbFromRedemptions, claimsToday: claimsToday,
+            dailyClaimCapPerUser: cfg.dailyClaimCapPerUser != null ? cfg.dailyClaimCapPerUser : null
+          });
+        } catch (_) {}
+        return {
+          name: displayName,
+          rarity: '',
+          image: '',
+          value: null,
+          count: count,
+          _raw: { id: docId, eventId: eventId, displayName: displayName },
+          _src: 'seasonalInventory/' + docId,
+          _seasonal: true
+        };
+      } catch (err) {
+        try { console.warn('[inventory] seasonalEvent load failed:', err && (err.code || err.message) || err); } catch (_) {}
+        return null;
+      }
+    }
+    /** Put the official seasonal item in the Inventory group; drop speculative duplicates. */
+    function mergeSeasonalIntoGroups(groups, seasonal) {
+      if (!groups || !seasonal) return groups;
+      const inv = Array.isArray(groups.inventory) ? groups.inventory.slice() : [];
+      const slug = itemSlug(seasonal.name).replace(/-/g, '');
+      const sArt = itemImageId(seasonal, 'inventory');
+      groups.inventory = inv.filter(function (it) {
+        if (it && it._seasonal) return false;
+        const s = itemSlug(it && it.name).replace(/-/g, '');
+        if (slug && s === slug) return false;
+        // Speculative users.* pumpkin / jack-o-lantern entries → replaced by official doc
+        if (sArt && it && it._src && String(it._src).indexOf('users.') === 0 && itemImageId(it, 'inventory') === sArt) return false;
+        return true;
+      });
+      groups.inventory.push(seasonal);
+      return groups;
+    }
+
     return { GROUPS: GROUPS, buildGroupsFromUser: buildGroupsFromUser, renderCard: renderCard,
-      itemImageId: itemImageId, resourceDisplayName: resourceDisplayName, logInventorySources: logInventorySources };
+      itemImageId: itemImageId, resourceDisplayName: resourceDisplayName, logInventorySources: logInventorySources,
+      fetchSeasonalInventoryItem: fetchSeasonalInventoryItem, mergeSeasonalIntoGroups: mergeSeasonalIntoGroups };
   })();
   const _inv = { status: 'loading', tiles: [], preview: false };
   // Local preview only (no Firestore)
@@ -4642,19 +4727,7 @@
   }
   /** Tiles in inventory.html's order: GROUPS (Inventory, Rock … Diamond), items as that page sorts them. */
   function invBuildTiles(ud) {
-    const groups = INV_PAGE.buildGroupsFromUser(ud || {});
-    const tiles = [];
-    INV_PAGE.GROUPS.forEach(function (g) {
-      (groups[g.key] || []).forEach(function (item) {
-        const fallback = item.name || 'Untitled';
-        tiles.push({
-          item: item, group: g, mineKey: g.key,
-          name: g.key !== 'inventory' ? INV_PAGE.resourceDisplayName(g.key, item.rarity, fallback) : fallback,
-          artId: INV_PAGE.itemImageId(item, g.key)
-        });
-      });
-    });
-    return tiles;
+    return invBuildTilesFromGroups(INV_PAGE.buildGroupsFromUser(ud || {}));
   }
   function invTileEl(t, i) {
     const el = document.createElement('div');
@@ -4701,10 +4774,21 @@
     }
     return el;
   }
-  function renderInventoryCard(ud, options) {
-    options = options || {};
-    _inv.preview = !!options.preview;
-    const tiles = invBuildTiles(ud);
+  function invBuildTilesFromGroups(groups) {
+    const tiles = [];
+    INV_PAGE.GROUPS.forEach(function (g) {
+      (groups[g.key] || []).forEach(function (item) {
+        const fallback = item.name || 'Untitled';
+        tiles.push({
+          item: item, group: g, mineKey: g.key,
+          name: g.key !== 'inventory' ? INV_PAGE.resourceDisplayName(g.key, item.rarity, fallback) : fallback,
+          artId: INV_PAGE.itemImageId(item, g.key)
+        });
+      });
+    });
+    return tiles;
+  }
+  function paintInventoryTiles(tiles, ud, options) {
     _inv.tiles = tiles;
     if (invTipKey != null) hideVis60Tip();
     const grid = $('dash-inv-grid');
@@ -4716,8 +4800,29 @@
     if (!options.preview) {
       INV_PAGE.logInventorySources('[inventory-card]', (auth.currentUser && auth.currentUser.uid) || '?', ud || {}, INV_PAGE.buildGroupsFromUser(ud || {}));
       const noPicN = tiles.filter(function (t) { return !t.artId && !t.item.image; }).length;
-      console.info('[inventory-card] ' + tiles.length + ' tile(s) from the users doc (same fields/order as inventory.html); '
-        + noPicN + ' without a picture.');
+      const seasonalN = tiles.filter(function (t) { return t.item && t.item._seasonal; }).length;
+      console.info('[inventory-card] ' + tiles.length + ' tile(s) (same order as inventory.html'
+        + (seasonalN ? '; ' + seasonalN + ' seasonal' : '') + '); ' + noPicN + ' without a picture.');
+    }
+  }
+  function renderInventoryCard(ud, options) {
+    options = options || {};
+    _inv.preview = !!options.preview;
+    const groups = INV_PAGE.buildGroupsFromUser(ud || {});
+    paintInventoryTiles(invBuildTilesFromGroups(groups), ud, options);
+    // Official seasonal item — same path as inventory.html (own doc only).
+    const uid = options.uid || (auth.currentUser && auth.currentUser.uid) || '';
+    if (!options.preview && uid) {
+      INV_PAGE.fetchSeasonalInventoryItem(uid).then(function (seasonal) {
+        if (!seasonal || _inv.preview) return;
+        // Ignore if dashboard moved on to another user/load.
+        if (options.uid) { if (options.uid !== uid) return; }
+        else if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+        INV_PAGE.mergeSeasonalIntoGroups(groups, seasonal);
+        paintInventoryTiles(invBuildTilesFromGroups(groups), ud, options);
+      }).catch(function (err) {
+        try { console.warn('[inventory-card] seasonal load failed:', err && (err.code || err.message) || err); } catch (_) {}
+      });
     }
   }
   function fillInvTip(key) {

@@ -648,6 +648,90 @@
     } catch (_) {}
   }
 
+
+  // ── Official seasonal inventory (Oct 5, 2026) ─────────────────────────────
+  // Pumpkins (and future seasonal items) are NOT in users/{uid}.inventory.
+  //   1) config/seasonalEvent → { enabled, eventId, displayName, dailyClaimCapPerUser, … }
+  //   2) If enabled && eventId: seasonalInventory/{uid}{eventId} (exact doc id = uid + eventId)
+  //      Fields: count, totalCollected, totalRedeemed, tbFromRedemptions, claimsToday.
+  //      Missing doc → still show the card with count 0.
+  //   3) Shown in the Inventory group (with goggles etc.), label = displayName.
+  // Only the signed-in user's own doc is read (no queries / no other uids).
+  async function fetchSeasonalInventoryItem(uid) {
+    if (!uid || typeof db === 'undefined' || !db || typeof db.collection !== 'function') return null;
+    try {
+      const cfgSnap = await db.collection('config').doc('seasonalEvent').get();
+      if (!cfgSnap || !cfgSnap.exists) {
+        try { console.log('[inventory] seasonalEvent: no config doc'); } catch (_) {}
+        return null;
+      }
+      const cfg = cfgSnap.data() || {};
+      if (!cfg.enabled || cfg.eventId == null || cfg.eventId === '') {
+        try { console.log('[inventory] seasonalEvent: disabled or no eventId', { enabled: !!cfg.enabled, eventId: cfg.eventId || null }); } catch (_) {}
+        return null;
+      }
+      const eventId = String(cfg.eventId);
+      const displayName = asString(cfg.displayName) || eventId;
+      const docId = String(uid) + eventId;
+      let count = 0;
+      let totalCollected = null, totalRedeemed = null, tbFromRedemptions = null, claimsToday = null;
+      let exists = false;
+      try {
+        const invSnap = await db.collection('seasonalInventory').doc(docId).get();
+        exists = !!(invSnap && invSnap.exists);
+        if (exists) {
+          const d = invSnap.data() || {};
+          const c = asNum(d.count);
+          count = c != null ? c : 0;
+          totalCollected = asNum(d.totalCollected);
+          totalRedeemed = asNum(d.totalRedeemed);
+          tbFromRedemptions = asNum(d.tbFromRedemptions);
+          claimsToday = asNum(d.claimsToday);
+        }
+      } catch (err) {
+        try { console.warn('[inventory] seasonalInventory/' + docId + ' read failed:', err && (err.code || err.message) || err); } catch (_) {}
+      }
+      try {
+        console.log('[inventory] seasonalEvent', {
+          enabled: true, eventId: eventId, displayName: displayName, docId: docId,
+          exists: exists, count: count, totalCollected: totalCollected, totalRedeemed: totalRedeemed,
+          tbFromRedemptions: tbFromRedemptions, claimsToday: claimsToday,
+          dailyClaimCapPerUser: cfg.dailyClaimCapPerUser != null ? cfg.dailyClaimCapPerUser : null
+        });
+      } catch (_) {}
+      return {
+        name: displayName,
+        rarity: '',
+        image: '',
+        value: null,
+        count: count,
+        _raw: { id: docId, eventId: eventId, displayName: displayName },
+        _src: 'seasonalInventory/' + docId,
+        _seasonal: true
+      };
+    } catch (err) {
+      try { console.warn('[inventory] seasonalEvent load failed:', err && (err.code || err.message) || err); } catch (_) {}
+      return null;
+    }
+  }
+  /** Put the official seasonal item in the Inventory group; drop speculative duplicates. */
+  function mergeSeasonalIntoGroups(groups, seasonal) {
+    if (!groups || !seasonal) return groups;
+    const inv = Array.isArray(groups.inventory) ? groups.inventory.slice() : [];
+    const slug = itemSlug(seasonal.name).replace(/-/g, '');
+    const sArt = itemImageId(seasonal, 'inventory');
+    groups.inventory = inv.filter(function (it) {
+      if (it && it._seasonal) return false;
+      const s = itemSlug(it && it.name).replace(/-/g, '');
+      if (slug && s === slug) return false;
+      // Speculative users.* pumpkin / jack-o-lantern entries → replaced by official doc
+      if (sArt && it && it._src && String(it._src).indexOf('users.') === 0 && itemImageId(it, 'inventory') === sArt) return false;
+      return true;
+    });
+    groups.inventory.push(seasonal);
+    return groups;
+  }
+
   function matchesSearch(item, q) {
     if (!q) return true;
     return String(item.name || '').toLowerCase().indexOf(q) >= 0;
@@ -866,6 +950,13 @@
       }
 
       groupData = buildGroupsFromUser(ud);
+      // Official seasonal item (config/seasonalEvent + seasonalInventory/{uid}{eventId})
+      try {
+        const seasonal = await fetchSeasonalInventoryItem(user.uid);
+        if (seasonal) mergeSeasonalIntoGroups(groupData, seasonal);
+      } catch (seasonErr) {
+        try { console.warn('[inventory] seasonal merge failed:', seasonErr); } catch (_) {}
+      }
       loadedUid = user.uid;
       logInventorySources('[inventory]', user.uid, ud, groupData);
       // ?debugInventory=1: also list your own users/{uid}/inventory, /items and
