@@ -483,3 +483,14 @@ html[data-theme="dusk"] #dash-props-card .prop-type-count {
 html[data-theme="dusk"] #dash-props-card .prop-breakdown {
   border-top-color: #6b7b8e !important;
 }
+
+
+/* G) Visitors + Activity cards (dusk) — graph blue bodies; message text slate */
+html[data-theme="dusk"] .vo-card,
+html[data-theme="dusk"] .vo-card-body {
+  background: var(--tm-graph-blue) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+}
+html[data-theme="dusk"] .vo-message {
+  color: #9caec2 !important;
+}
