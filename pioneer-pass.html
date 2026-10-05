@@ -222,7 +222,8 @@
         <div id="pp-success" class="pp-success" hidden>
           <div class="pp-success-icon">⭐</div>
           <h3>Welcome, Pioneer!</h3>
-          <p>Your subscription is confirmed for <strong id="pp-success-code"></strong>. We'll activate your pass on that account, and your perks will show up the next time you open TerraMine.</p>
+          <p>Your subscription is confirmed for <strong id="pp-success-code"></strong>.</p>
+          <p id="pp-success-status">Activating your pass…</p>
           <p class="pp-success-id">PayPal subscription ID: <span id="pp-success-id"></span></p>
         </div>
       </div>
@@ -321,7 +322,7 @@
       </details>
       <details>
         <summary>When can I sign up?</summary>
-        <p>Right now. Choose monthly or yearly, enter your referral code and subscribe with PayPal. We add the pass to your account, usually within a day. Your free vanity referral code can be claimed right away on the <a href="/account.html">Account page</a> of the web portal. On iPhone, the in-app perks (7×7 range and Pioneer Boosts) appear with the next App Store update.</p>
+        <p>Right now. Choose monthly or yearly, enter your referral code and subscribe with PayPal. Your pass is added to your account automatically as soon as PayPal confirms the subscription. Your free vanity referral code can be claimed right away on the <a href="/account.html">Account page</a> of the web portal. On iPhone, the in-app perks (7×7 range and Pioneer Boosts) appear with the next App Store update.</p>
       </details>
       <details>
         <summary>Can I cancel?</summary>
@@ -420,6 +421,19 @@
     }
     input.addEventListener('input', function () { showError(''); });
 
+    // Cloud Functions callables, called over plain HTTPS (no Firebase SDK on this page).
+    var FN_BASE = 'https://us-central1-terramine-5cda5.cloudfunctions.net/';
+    function callFn(name, data) {
+      return fetch(FN_BASE + name, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: data })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j.error) throw new Error(j.error.message || 'Request failed');
+        return j.result;
+      });
+    }
+
     function renderButtons() {
       Object.keys(PLANS).forEach(function (key) {
         var planId = PLANS[key].id;
@@ -434,7 +448,25 @@
             }
             input.value = code;
             showError('');
-            return actions.resolve();
+            // Make sure the code belongs to a real account before taking payment.
+            return callFn('checkPioneerCode', { code: code }).then(function (r) {
+              if (r && r.ok) {
+                if (r.alreadyMember) {
+                  showError('This account already has the Pioneer Pass. No need to subscribe again.');
+                  return actions.reject();
+                }
+                return actions.resolve();
+              }
+              showError(r && r.reason === 'unavailable'
+                ? 'This account can\'t get the Pioneer Pass. Please contact scott@terramine.app.'
+                : 'We couldn\'t find that referral code. Check it in the app under Refer Friends.');
+              input.focus();
+              return actions.reject();
+            }, function () {
+              // Check unavailable: let them continue; the code is still
+              // verified server-side after payment.
+              return actions.resolve();
+            });
           },
           createSubscription: function (data, actions) {
             return actions.subscription.create({
@@ -450,6 +482,13 @@
             document.getElementById('pp-success-code').textContent = normalizedCode();
             document.getElementById('pp-success-id').textContent = data.subscriptionID || '';
             document.getElementById('pp-success').hidden = false;
+            var statusEl = document.getElementById('pp-success-status');
+            var fallback = 'Your pass will be added to your account shortly. If it isn\'t active within a few hours, email scott@terramine.app with your PayPal subscription ID below.';
+            callFn('claimPioneerSubscription', { subscriptionId: data.subscriptionID }).then(function (r) {
+              statusEl.textContent = (r && r.ok)
+                ? 'Your Pioneer Pass is active! Restart TerraMine to see your perks.'
+                : fallback;
+            }, function () { statusEl.textContent = fallback; });
           },
           onError: function () {
             showError('Something went wrong with PayPal. You have not been charged. Please try again.', true);
