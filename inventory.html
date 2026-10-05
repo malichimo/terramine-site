@@ -682,17 +682,24 @@
   //      Missing doc → still show the card with count 0.
   //   3) Shown in the Inventory group (with goggles etc.), label = displayName.
   // Only the signed-in user's own doc is read (no queries / no other uids).
-  async function fetchSeasonalInventoryItem(uid) {
+    async function fetchSeasonalInventoryItem(uid) {
     if (!uid || typeof db === 'undefined' || !db || typeof db.collection !== 'function') return null;
     try {
+      // (1) config/seasonalEvent — log full doc for DevTools on mars/nfoguides
       const cfgSnap = await db.collection('config').doc('seasonalEvent').get();
-      if (!cfgSnap || !cfgSnap.exists) {
-        try { console.log('[inventory] seasonalEvent: no config doc'); } catch (_) {}
-        return null;
-      }
-      const cfg = cfgSnap.data() || {};
+      const cfgExists = !!(cfgSnap && cfgSnap.exists);
+      const cfg = cfgExists ? (cfgSnap.data() || {}) : null;
+      try {
+        console.log('[inventory] (1) config/seasonalEvent', {
+          path: 'config/seasonalEvent',
+          exists: cfgExists,
+          data: cfg,
+          keys: cfg ? Object.keys(cfg) : []
+        });
+      } catch (_) {}
+      if (!cfgExists) return null;
       if (!cfg.enabled || cfg.eventId == null || cfg.eventId === '') {
-        try { console.log('[inventory] seasonalEvent: disabled or no eventId', { enabled: !!cfg.enabled, eventId: cfg.eventId || null }); } catch (_) {}
+        try { console.log('[inventory] seasonalEvent: disabled or no eventId — skip seasonalInventory lookup', { enabled: cfg.enabled, eventId: cfg.eventId }); } catch (_) {}
         return null;
       }
       const eventId = String(cfg.eventId);
@@ -701,11 +708,27 @@
       let count = 0;
       let totalCollected = null, totalRedeemed = null, tbFromRedemptions = null, claimsToday = null;
       let exists = false;
+      let invData = null;
+      let invErr = null;
       try {
+        // (2) seasonalInventory/{uid}{eventId} — exact concat; log full doc
         const invSnap = await db.collection('seasonalInventory').doc(docId).get();
         exists = !!(invSnap && invSnap.exists);
+        invData = exists ? (invSnap.data() || {}) : null;
+        try {
+          console.log('[inventory] (2) seasonalInventory/' + docId, {
+            path: 'seasonalInventory/' + docId,
+            uid: String(uid),
+            eventId: eventId,
+            docId: docId,
+            concat: String(uid) + ' + ' + eventId,
+            exists: exists,
+            data: invData,
+            keys: invData ? Object.keys(invData) : []
+          });
+        } catch (_) {}
         if (exists) {
-          const d = invSnap.data() || {};
+          const d = invData || {};
           const c = asNum(d.count);
           count = c != null ? c : 0;
           totalCollected = asNum(d.totalCollected);
@@ -714,14 +737,26 @@
           claimsToday = asNum(d.claimsToday);
         }
       } catch (err) {
-        try { console.warn('[inventory] seasonalInventory/' + docId + ' read failed:', err && (err.code || err.message) || err); } catch (_) {}
+        invErr = err && (err.code || err.message) || err;
+        try {
+          console.warn('[inventory] (2) seasonalInventory/' + docId + ' read failed:', invErr);
+          console.log('[inventory] (2) seasonalInventory/' + docId, {
+            path: 'seasonalInventory/' + docId, uid: String(uid), eventId: eventId, docId: docId,
+            exists: false, error: invErr, data: null
+          });
+        } catch (_) {}
       }
       try {
-        console.log('[inventory] seasonalEvent', {
-          enabled: true, eventId: eventId, displayName: displayName, docId: docId,
-          exists: exists, count: count, totalCollected: totalCollected, totalRedeemed: totalRedeemed,
+        console.log('[inventory] seasonal parsed', {
+          displayName: displayName, docId: docId, exists: exists,
+          countFromField_count: count,
+          totalCollected: totalCollected, totalRedeemed: totalRedeemed,
           tbFromRedemptions: tbFromRedemptions, claimsToday: claimsToday,
-          dailyClaimCapPerUser: cfg.dailyClaimCapPerUser != null ? cfg.dailyClaimCapPerUser : null
+          rawFieldSample: invData ? {
+            count: invData.count, quantity: invData.quantity, amount: invData.amount,
+            owned: invData.owned, balance: invData.balance, available: invData.available,
+            totalCollected: invData.totalCollected, totalRedeemed: invData.totalRedeemed
+          } : null
         });
       } catch (_) {}
       return {
@@ -739,6 +774,7 @@
       return null;
     }
   }
+  
   /** Put the official seasonal item in the Inventory group; drop speculative duplicates. */
   function mergeSeasonalIntoGroups(groups, seasonal) {
     if (!groups || !seasonal) return groups;
