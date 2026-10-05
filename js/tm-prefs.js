@@ -43,6 +43,7 @@
     'terramine.activity.sort': 'ao',
     'terramine.activity.search': 'aq',
     'terramine.inventory.search': 'iq',
+    'terramine.inventory.ungrouped': 'iu',       // inventory: all items in 1 group
     'terramine.mineMap.zoom': 'pz',             // pop-up / full map: zoom
     'terramine.mineMap.buildings': 'pb',        //   Buildings on/off
     'terramine.mineMap.labels': 'pl',           //   Labels on/off

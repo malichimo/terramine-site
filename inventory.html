@@ -3,7 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
-  <script src="/js/tm-prefs.js?v=20261005-5"></script>
+  <script src="/js/tm-prefs.js?v=20261005-6"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -147,6 +147,31 @@
     .mine-group-head img { width:36px; height:36px; object-fit:contain; }
     .mine-group-head h2 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); text-transform:uppercase; }
     .mine-group-count { font-size:12px; color:#64748b; font-weight:700; }
+
+    .flip-type-order-btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:40px; height:40px; padding:0; flex-shrink:0;
+      border:1px solid #cbd5e1; border-radius:10px; background:#fff;
+      color:#334155; cursor:pointer;
+    }
+    .flip-type-order-btn:hover { border-color:#4FC3F7; background:#e8f7fe; color:#0c4a6e; }
+    .flip-type-order-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .flip-type-order-btn[aria-pressed="true"] { border-color:#4FC3F7; background:#e8f7fe; }
+    .group-toggle-btn svg { width:22px; height:22px; display:block; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+    /* icon shows the action (same as the tip): grouped now → single-group icon; one group now → stacked icon */
+    .group-toggle-btn .group-toggle-ico-grouped { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-merged { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-grouped { display:block; }
+    .toolbar-follow-tip.is-red { background:#8B1E1E; color:#fff; border-color:rgba(255,255,255,.22); box-shadow:0 12px 28px rgba(6,10,16,.55); }
+    /* Ungrouped view: one header bar listing every shown category with its count */
+    .mine-group-head.is-all { flex-wrap:wrap; column-gap:18px; row-gap:4px; }
+    .mine-group-head-type { display:inline-flex; align-items:center; gap:8px; }
+    .mine-group-head-label { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; font-weight:400; color:var(--navy); line-height:1.1; text-transform:uppercase; }
+    @media (max-width:600px) {
+      .mine-group-head.is-all { column-gap:12px; }
+      .mine-group-head.is-all img { width:28px; height:28px; }
+      .mine-group-head.is-all .mine-group-head-label { font-size:24px; }
+    }
 
     .inv-grid { display:flex; flex-wrap:wrap; justify-content:flex-start; gap:14px; width:100%; }
     .inv-card {
@@ -298,6 +323,10 @@
     </div>
   </nav>
 <div class="mine-toolbar" id="inv-toolbar">
+        <button type="button" class="flip-type-order-btn group-toggle-btn" id="inv-group-toggle" aria-label="Display all items in 1 group" aria-pressed="false" data-tip="Display all items in 1 group" data-tip-variant="red" disabled>
+          <svg class="group-toggle-ico-grouped" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="18" height="4.5" rx="1.2"></rect><rect x="3" y="9.75" width="18" height="4.5" rx="1.2"></rect><rect x="3" y="16" width="18" height="4.5" rx="1.2"></rect></svg>
+          <svg class="group-toggle-ico-merged" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="18" height="17" rx="2"></rect><path d="M7 8.5h10M7 12h10M7 15.5h10"></path></svg>
+        </button>
         <input class="tool-search" id="filter-search" type="search" placeholder="Search item name" autocomplete="off" disabled />
         <span class="mine-count" id="match-count"></span>
       </div>
@@ -424,6 +453,8 @@
   function setToolbar(on) {
     const el = $('filter-search');
     if (el) el.disabled = !on;
+    const gt = $('inv-group-toggle');
+    if (gt) gt.disabled = !on;
   }
 
   function pickFirst(obj, keys) {
@@ -738,12 +769,20 @@
         }
       } catch (err) {
         invErr = err && (err.code || err.message) || err;
+        const denied = /permission-denied|PERMISSION_DENIED/i.test(String(invErr));
         try {
           console.warn('[inventory] (2) seasonalInventory/' + docId + ' read failed:', invErr);
           console.log('[inventory] (2) seasonalInventory/' + docId, {
             path: 'seasonalInventory/' + docId, uid: String(uid), eventId: eventId, docId: docId,
-            exists: false, error: invErr, data: null
+            concat: 'uid+eventId (correct)',
+            exists: false, error: invErr, data: null,
+            note: denied
+              ? 'Firestore rules deny client read of seasonalInventory/{uid}{eventId}. Doc path is correct; owner read must be allowed (no alternate client path in this repo). Showing count 0 until rules allow.'
+              : 'Read failed; showing count 0.'
           });
+          if (denied) {
+            console.warn('[inventory] seasonalInventory permission-denied — ask backend to allow: allow get if request.auth != null && request.auth.uid == resource OR docId starts with request.auth.uid; client path config/seasonalEvent → seasonalInventory/{uid}{eventId} is correct.');
+          }
         } catch (_) {}
       }
       try {
@@ -791,6 +830,30 @@
     });
     groups.inventory.push(seasonal);
     return groups;
+  }
+
+
+  // Grouped by category (default) vs. all items in one group — mirrors Mines.
+  const INV_UNGROUPED_KEY = 'terramine.inventory.ungrouped';
+  const INV_GROUP_TOGGLE_TIPS = {
+    grouped: 'Display all items in 1 group',
+    ungrouped: 'Re-group all items by their category'
+  };
+  let inventoryUngrouped = (function () { try { return TMPrefs.getItem(INV_UNGROUPED_KEY) === '1'; } catch (e) { return false; } })();
+  function updateInvGroupToggleButton() {
+    const btn = $('inv-group-toggle');
+    if (!btn) return;
+    const tip = inventoryUngrouped ? INV_GROUP_TOGGLE_TIPS.ungrouped : INV_GROUP_TOGGLE_TIPS.grouped;
+    btn.setAttribute('aria-pressed', inventoryUngrouped ? 'true' : 'false');
+    btn.setAttribute('aria-label', tip);
+    btn.setAttribute('data-tip', tip);
+    btn.classList.toggle('active', inventoryUngrouped);
+  }
+  function toggleInventoryGrouping() {
+    inventoryUngrouped = !inventoryUngrouped;
+    try { TMPrefs.setItem(INV_UNGROUPED_KEY, inventoryUngrouped ? '1' : '0'); } catch (e) {}
+    updateInvGroupToggleButton();
+    if (loadedUid) renderFromFilters();
   }
 
   function matchesSearch(item, q) {
@@ -942,35 +1005,91 @@
     let matchTotal = 0;
     let shownGroups = 0;
 
+    // Precompute filtered lists per group (same search as before).
+    const filteredByKey = {};
     GROUPS.forEach(g => {
-      const all = groupData[g.key] || [];
-      const filtered = all.filter(it => matchesSearch(it, q));
-      if (!filtered.length) return;
-      shownGroups++;
-      matchTotal += filtered.length;
-
-      const sec = document.createElement('section');
-      sec.className = 'mine-group';
-      sec.dataset.group = g.key;
-      const head = document.createElement('div');
-      head.className = 'mine-group-head';
-      const img = document.createElement('img');
-      img.src = g.icon;
-      img.alt = '';
-      img.width = 36;
-      img.height = 36;
-      const h = document.createElement('h2');
-      h.textContent = g.title;
-      const c = document.createElement('span');
-      c.className = 'mine-group-count';
-      c.textContent = String(filtered.length);
-      head.append(img, h, c);
-      const grid = document.createElement('div');
-      grid.className = 'inv-grid';
-      filtered.forEach(it => grid.appendChild(renderCard(it, { orderByRarity: !!g.sortByRarity, mineKey: g.key })));
-      sec.append(head, grid);
-      board.appendChild(sec);
+      filteredByKey[g.key] = (groupData[g.key] || []).filter(it => matchesSearch(it, q));
     });
+
+    if (inventoryUngrouped) {
+      // One group: single header listing each category that has matches + all cards.
+      const counts = {};
+      const flat = [];
+      GROUPS.forEach(g => {
+        const filtered = filteredByKey[g.key] || [];
+        if (!filtered.length) return;
+        counts[g.key] = filtered.length;
+        matchTotal += filtered.length;
+        filtered.forEach(it => flat.push({ item: it, group: g }));
+      });
+      if (flat.length) {
+        shownGroups = 1;
+        const sec = document.createElement('section');
+        sec.className = 'mine-group all-types';
+        sec.dataset.group = 'all';
+        const head = document.createElement('div');
+        head.className = 'mine-group-head is-all';
+        head.setAttribute('role', 'heading');
+        head.setAttribute('aria-level', '2');
+        GROUPS.forEach(g => {
+          const n = counts[g.key] || 0;
+          if (!n) return;
+          const part = document.createElement('span');
+          part.className = 'mine-group-head-type';
+          part.dataset.type = g.key;
+          const img = document.createElement('img');
+          img.src = g.icon;
+          img.alt = '';
+          img.width = 36;
+          img.height = 36;
+          const label = document.createElement('span');
+          label.className = 'mine-group-head-label';
+          // Short labels for the combined bar (Inventory / Rock / Coal / Gold / Diamond)
+          label.textContent = ({ inventory: 'Inventory', rock: 'Rock', coal: 'Coal', gold: 'Gold', diamond: 'Diamond' })[g.key] || g.title;
+          const c = document.createElement('span');
+          c.className = 'mine-group-count';
+          c.textContent = String(n);
+          part.append(img, label, c);
+          head.appendChild(part);
+        });
+        const grid = document.createElement('div');
+        grid.className = 'inv-grid';
+        flat.forEach(function (row) {
+          grid.appendChild(renderCard(row.item, { orderByRarity: !!row.group.sortByRarity, mineKey: row.group.key }));
+        });
+        sec.append(head, grid);
+        board.appendChild(sec);
+      }
+    } else {
+      GROUPS.forEach(g => {
+        const filtered = filteredByKey[g.key] || [];
+        if (!filtered.length) return;
+        shownGroups++;
+        matchTotal += filtered.length;
+
+        const sec = document.createElement('section');
+        sec.className = 'mine-group';
+        sec.dataset.group = g.key;
+        const head = document.createElement('div');
+        head.className = 'mine-group-head';
+        const img = document.createElement('img');
+        img.src = g.icon;
+        img.alt = '';
+        img.width = 36;
+        img.height = 36;
+        const h = document.createElement('h2');
+        h.textContent = g.title;
+        const c = document.createElement('span');
+        c.className = 'mine-group-count';
+        c.textContent = String(filtered.length);
+        head.append(img, h, c);
+        const grid = document.createElement('div');
+        grid.className = 'inv-grid';
+        filtered.forEach(it => grid.appendChild(renderCard(it, { orderByRarity: !!g.sortByRarity, mineKey: g.key })));
+        sec.append(head, grid);
+        board.appendChild(sec);
+      });
+    }
 
     if (!shownGroups) {
       board.innerHTML = '<div class="inv-empty">' +
@@ -988,7 +1107,7 @@
     }
   }
 
-  let loggedRawUsersDoc = false;
+    let loggedRawUsersDoc = false;
   async function loadPortal(user) {
     setToolbar(false);
     setStatus('Loading inventory…');
@@ -1160,6 +1279,82 @@
     try { TMPrefs.set('terramine.inventory.search', $('filter-search').value || ''); } catch (e) {}
     if (loadedUid) renderFromFilters();
   });
+
+  updateInvGroupToggleButton();
+  (function bindInvGroupToggle() {
+    const btn = $('inv-group-toggle');
+    if (!btn || btn.dataset.invGroupBound === '1') return;
+    btn.dataset.invGroupBound = '1';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      toggleInventoryGrouping();
+    });
+  })();
+
+  (function bindInvGroupFollowTip() {
+    var DELAY = 200;
+    var tipEl = null, tipTimer = null, tipHide = null, tipTarget = null, tipX = 0, tipY = 0, touchAt = 0;
+    function ensureTip() {
+      if (!tipEl) {
+        tipEl = document.createElement('div');
+        tipEl.className = 'toolbar-follow-tip';
+        tipEl.setAttribute('role', 'tooltip');
+        document.body.appendChild(tipEl);
+      }
+      return tipEl;
+    }
+    function placeTip(x, y) {
+      var tip = ensureTip();
+      var gap = 14, edge = 8;
+      tip.style.visibility = 'hidden';
+      tip.style.display = 'block';
+      var w = tip.offsetWidth, h = tip.offsetHeight;
+      var left = x + gap, top = y + gap;
+      if (left + w > window.innerWidth - edge) left = x - gap - w;
+      if (top + h > window.innerHeight - edge) top = y - gap - h;
+      if (left < edge) left = edge;
+      if (top < edge) top = edge;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+      tip.style.visibility = 'visible';
+    }
+    function dismiss() {
+      if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+      if (tipHide) { clearTimeout(tipHide); tipHide = null; }
+      tipTarget = null;
+      if (tipEl) tipEl.style.display = 'none';
+    }
+    var btn = $('inv-group-toggle');
+    if (!btn || btn.dataset.invGroupTipBound === '1') return;
+    btn.dataset.invGroupTipBound = '1';
+    btn.addEventListener('touchstart', function () { touchAt = Date.now(); }, { passive: true });
+    btn.addEventListener('mouseenter', function (e) {
+      if (tipTimer) { clearTimeout(tipTimer); tipTimer = null; }
+      if (tipHide) { clearTimeout(tipHide); tipHide = null; }
+      var fromTap = Date.now() - touchAt < 1000;
+      tipTarget = btn;
+      tipX = e.clientX; tipY = e.clientY;
+      var tip = ensureTip();
+      tip.textContent = (btn.getAttribute('data-tip') || '').trim();
+      tip.classList.toggle('is-red', btn.dataset.tipVariant === 'red');
+      tip.style.display = 'none';
+      tipTimer = setTimeout(function () {
+        tipTimer = null;
+        if (tipTarget !== btn || !btn.isConnected) return;
+        placeTip(tipX, tipY);
+        if (fromTap) tipHide = setTimeout(function () { if (tipTarget === btn) dismiss(); }, 1500);
+      }, DELAY);
+    });
+    btn.addEventListener('mousemove', function (e) {
+      if (tipTarget !== btn) return;
+      tipX = e.clientX; tipY = e.clientY;
+      if (tipEl && tipEl.style.display === 'block' && !tipTimer) placeTip(tipX, tipY);
+    });
+    btn.addEventListener('mouseleave', function () {
+      if (tipTarget === btn) dismiss();
+    });
+  })();
+
 
   (function bindNavPillFollowTips() {
     var DELAY = 320;

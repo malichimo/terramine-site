@@ -3,7 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
-  <script src="/js/tm-prefs.js?v=20261005-5"></script>
+  <script src="/js/tm-prefs.js?v=20261005-6"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -4697,12 +4697,20 @@
           }
         } catch (err) {
           invErr = err && (err.code || err.message) || err;
+          const denied = /permission-denied|PERMISSION_DENIED/i.test(String(invErr));
           try {
             console.warn('[inventory] (2) seasonalInventory/' + docId + ' read failed:', invErr);
             console.log('[inventory] (2) seasonalInventory/' + docId, {
               path: 'seasonalInventory/' + docId, uid: String(uid), eventId: eventId, docId: docId,
-              exists: false, error: invErr, data: null
+              concat: 'uid+eventId (correct)',
+              exists: false, error: invErr, data: null,
+              note: denied
+                ? 'Firestore rules deny client read of seasonalInventory/{uid}{eventId}. Doc path is correct; owner read must be allowed (no alternate client path in this repo). Showing count 0 until rules allow.'
+                : 'Read failed; showing count 0.'
             });
+            if (denied) {
+              console.warn('[inventory] seasonalInventory permission-denied — ask backend to allow owner get on seasonalInventory/{uid}{eventId}; client path is correct.');
+            }
           } catch (_) {}
         }
         try {
