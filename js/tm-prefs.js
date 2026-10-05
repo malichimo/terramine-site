@@ -30,6 +30,7 @@
     'terramine.mines.ungrouped': 'mu',          // mines: all mines in 1 group
     'terramine.mines.filterTypes': 'mt',        // mines: type filter buttons
     'terramine.mines.typesVer': 'tv',           // one-time heal for type-filter defaults
+    'terramine.mines.unnamedVer': 'uv',         // one-time heal: Unnamed filter defaults OFF
     'terramine.mines.filterShowcase': 'ms',     // mines: visitor pinned image filter
     'terramine.mines.filterUnnamed': 'mn',      // mines: Unnamed filter
     'terramine.mines.sort': 'mo',               // mines: sort key + direction
@@ -217,8 +218,11 @@
 
   // Mine type filter chips: all four ON when unset. tv=1 marks the one-time heal after
   // the first cookie launch (partial mt lists without "diamond" were sticky for 1 year).
+  // Unnamed filter defaults OFF; uv=1 clears a sticky mn=1 from the same cookie migration
+  // (shows "No unnamed mines match that filter." / 0 match) without requiring a full cookie clear.
   var MINE_TYPES = ['diamond', 'gold', 'coal', 'rock'];
   var TYPES_VER = 1;
+  var UNNAMED_VER = 1;
   function healMineTypeFilters() {
     var ver = get('terramine.mines.typesVer', null);
     if (ver === TYPES_VER) return;
@@ -226,12 +230,21 @@
     set('terramine.mines.filterTypes', MINE_TYPES.slice());
     set('terramine.mines.typesVer', TYPES_VER);
   }
+  function healUnnamedFilter() {
+    var ver = get('terramine.mines.unnamedVer', null);
+    if (ver === UNNAMED_VER) return;
+    set('terramine.mines.filterUnnamed', 0);  // OFF
+    set('terramine.mines.unnamedVer', UNNAMED_VER);
+  }
   try { healMineTypeFilters(); } catch (e) {}
+  try { healUnnamedFilter(); } catch (e) {}
 
   w.TMPrefs = {
     NAME: NAME, ALIAS: ALIAS, MINE_TYPES: MINE_TYPES,
     get: get, set: set, remove: remove, getItem: getItem, setItem: setItem,
     all: readAll, size: function () { return (rawCookie() || '').length; },
-    bindBulkTools: bindBulkTools, healMineTypeFilters: healMineTypeFilters
+    bindBulkTools: bindBulkTools,
+    healMineTypeFilters: healMineTypeFilters,
+    healUnnamedFilter: healUnnamedFilter
   };
 })(window, document);
