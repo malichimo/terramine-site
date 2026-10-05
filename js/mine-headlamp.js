@@ -3,7 +3,7 @@
   'use strict';
 
   var ROOT_ID = 'mine-headlamp-root';
-  var DELAY_MS = 2000;
+  var DELAY_MS = 500;
   var HALF_ANGLE = 0.62; // ~35.5° half → ~71° full cone
   var MINER_H = 140;
   // Headlamp local offset from miner center (sprite faces +X / right)
