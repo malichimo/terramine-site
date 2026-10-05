@@ -23,6 +23,13 @@
     } catch (e) {}
     return 'day';
   }
+  function syncHeadlamp(theme) {
+    try {
+      if (w.MineHeadlamp && typeof w.MineHeadlamp.sync === 'function') {
+        w.MineHeadlamp.sync(theme);
+      }
+    } catch (e) {}
+  }
   function apply(theme, persist) {
     theme = normalize(theme);
     d.documentElement.setAttribute('data-theme', theme);
@@ -34,6 +41,7 @@
     if (persist !== false) {
       try { if (w.TMPrefs) TMPrefs.set(KEY, theme); } catch (e) {}
     }
+    syncHeadlamp(theme);
   }
   function bind() {
     d.querySelectorAll('.theme-toggle').forEach(function (wrap) {

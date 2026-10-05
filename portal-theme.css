@@ -496,3 +496,93 @@ html[data-theme="mine"] .vo-message {
 @media (max-width: 700px) {
   .theme-toggle-btn[data-theme-set="mine"] img { width: 18px; height: 18px; }
 }
+
+/* ── Mine headlamp overlay (viewport-locked; Easy Mine cone) ──────────────── */
+#mine-headlamp-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+#mine-headlamp-root.is-visible { opacity: 1; }
+
+/* Darkness blocks clicks only where visible; clip-path hole = click-through cone */
+.mine-headlamp-dark {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.94);
+  pointer-events: auto;
+  z-index: 2;
+}
+
+/* Warm wash inside the cone (visual only) */
+.mine-headlamp-cone-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(circle at center,
+    rgba(255, 230, 150, 0.2) 0%,
+    rgba(246, 200, 80, 0.08) 35%,
+    rgba(246, 200, 80, 0) 70%);
+}
+
+.mine-headlamp-apex-glow {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(circle,
+    rgba(255, 236, 170, 0.7) 0%,
+    rgba(240, 193, 74, 0.25) 40%,
+    rgba(240, 193, 74, 0) 70%);
+}
+
+.mine-headlamp-miner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: auto;
+  height: 140px;
+  max-width: 42vw;
+  max-height: 28vh;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 0 10px rgba(255, 220, 120, 0.45));
+  z-index: 4;
+}
+@media (max-width: 700px) {
+  .mine-headlamp-miner { height: 110px; }
+}
+@media (max-width: 400px) {
+  .mine-headlamp-miner { height: 92px; }
+}
+
+/* Theme pill punch-through above headlamp so Mine can be exited */
+html.mine-headlamp-on .theme-toggle,
+html[data-theme="mine"] .theme-toggle {
+  position: relative;
+  z-index: 10060;
+  pointer-events: auto;
+}
+html.mine-headlamp-on .mine-totals-controls,
+html[data-theme="mine"] .mine-totals-controls {
+  position: relative;
+  z-index: 10060;
+}
+html.mine-headlamp-on .nav-right,
+html[data-theme="mine"] .nav-right {
+  position: relative;
+  z-index: 10060;
+}
+@media (prefers-reduced-motion: reduce) {
+  #mine-headlamp-root { transition: opacity 0.2s linear; }
+}
