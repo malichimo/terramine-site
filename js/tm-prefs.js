@@ -241,9 +241,22 @@
   try { healMineTypeFilters(); } catch (e) {}
   try { healUnnamedFilter(); } catch (e) {}
 
+  /** Delete the tmPrefs cookie, spill blob, and any localStorage fallback keys. */
+  function clear() {
+    try { writeCookie('', 0); } catch (e) {}
+    var ls = store('localStorage');
+    if (ls) {
+      try { ls.removeItem(SPILL_KEY); } catch (e) {}
+      try {
+        Object.keys(ALIAS).forEach(function (k) { try { ls.removeItem(k); } catch (e2) {} });
+        Object.keys(ALIAS).forEach(function (k) { try { ls.removeItem(ALIAS[k]); } catch (e2) {} });
+      } catch (e) {}
+    }
+  }
+
   w.TMPrefs = {
     NAME: NAME, ALIAS: ALIAS, MINE_TYPES: MINE_TYPES,
-    get: get, set: set, remove: remove, getItem: getItem, setItem: setItem,
+    get: get, set: set, remove: remove, clear: clear, getItem: getItem, setItem: setItem,
     all: readAll, size: function () { return (rawCookie() || '').length; },
     bindBulkTools: bindBulkTools,
     healMineTypeFilters: healMineTypeFilters,

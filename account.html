@@ -3,7 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
-  <script src="/js/tm-prefs.js?v=20261005-6"></script>
+  <script src="/js/tm-prefs.js?v=20261005-7"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -539,6 +539,7 @@
   });
   $('btn-signout').addEventListener('click', () => {
     try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+    try { if (window.TMPrefs && typeof TMPrefs.clear === 'function') TMPrefs.clear(); } catch (e) {}
     document.documentElement.classList.remove('tm-expect-auth');
     auth.signOut();
   });

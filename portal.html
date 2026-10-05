@@ -3,7 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
-  <script src="/js/tm-prefs.js?v=20261005-6"></script>
+  <script src="/js/tm-prefs.js?v=20261005-7"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -978,6 +978,8 @@
   // Sign out
   $('btn-signout').addEventListener('click', () => {
     try { sessionStorage.removeItem('tmPortalAuthed'); } catch (e) {}
+    try { if (typeof ppTrialForget === 'function' && auth.currentUser) ppTrialForget(auth.currentUser.uid); } catch (e) {}
+    try { if (window.TMPrefs && typeof TMPrefs.clear === 'function') TMPrefs.clear(); } catch (e) {}
     document.documentElement.classList.remove('tm-expect-auth');
     auth.signOut();
   });
@@ -4964,19 +4966,30 @@
   let ppCtx = null;           // { uid, options } of the locked load (trial unlock reuses it)
   let ppTrialTimer = 0;
   function ppTrialActive() { return isFinite(PIONEER_TRIAL_END_MS) && Date.now() < PIONEER_TRIAL_END_MS; }
-  // Remembered per user (this browser) for the rest of the trial, so a reload
-  // keeps the graphs open; ignored once the trial ends or the end date changes.
+  // Remembered per user for THIS browser tab/session only (sessionStorage).
+  // Must not survive logout or a new browser session (no localStorage / cookie).
   function ppTrialKey(uid) { return 'tmPioneerTrialOpen:' + uid; }
   function ppTrialRemembered(uid) {
     try {
-      const v = localStorage.getItem(ppTrialKey(uid));
+      // Drop any legacy localStorage flag from earlier builds
+      try { localStorage.removeItem(ppTrialKey(uid)); } catch (e2) {}
+      const v = sessionStorage.getItem(ppTrialKey(uid));
       if (v == null) return false;
       if (ppTrialActive() && v === String(PIONEER_TRIAL_END_MS)) return true;
-      localStorage.removeItem(ppTrialKey(uid));   // stale (trial over / date changed)
+      sessionStorage.removeItem(ppTrialKey(uid));   // stale (trial over / date changed)
     } catch (e) {}
     return false;
   }
-  function ppTrialRemember(uid) { try { localStorage.setItem(ppTrialKey(uid), String(PIONEER_TRIAL_END_MS)); } catch (e) {} }
+  function ppTrialRemember(uid) {
+    try {
+      try { localStorage.removeItem(ppTrialKey(uid)); } catch (e2) {}
+      sessionStorage.setItem(ppTrialKey(uid), String(PIONEER_TRIAL_END_MS));
+    } catch (e) {}
+  }
+  function ppTrialForget(uid) {
+    try { sessionStorage.removeItem(ppTrialKey(uid)); } catch (e) {}
+    try { localStorage.removeItem(ppTrialKey(uid)); } catch (e) {}
+  }
   function isPioneerMember(ud) { return !!ud && ud.isPioneerMember === true; }
   function ppGraphs() {
     return [
