@@ -158,7 +158,6 @@ html[data-theme="mine"] .vo-name { color: var(--tm-text) !important; }
 
 html[data-theme="dusk"] .dash-visits-head,
 html[data-theme="dusk"] .dash-dominance-head,
-html[data-theme="dusk"] .inv-group-head,
 html[data-theme="mine"] .mine-group-head,
 html[data-theme="mine"] .dash-visits-head,
 html[data-theme="mine"] .dash-dominance-head,
@@ -168,14 +167,20 @@ html[data-theme="mine"] .inv-group-head {
   border-color: var(--tm-card-border) !important;
 }
 
-/* Mines page group heads (dusk): transparent bar; labels slate-blue */
-html[data-theme="dusk"] .mine-group-head {
+/* Mines + Inventory group heads (dusk): transparent bar; labels slate-blue.
+   Inventory reuses .mine-group-head / h2; .inv-group-head mirrored if present. */
+html[data-theme="dusk"] .mine-group-head,
+html[data-theme="dusk"] .inv-group-head,
+html[data-theme="dusk"] #inv-board .mine-group-head {
   background: transparent !important;
   border-color: transparent !important;
   color: #345d7b !important;
 }
 html[data-theme="dusk"] .mine-group-head-label,
-html[data-theme="dusk"] .mine-group-head h2 {
+html[data-theme="dusk"] .mine-group-head h2,
+html[data-theme="dusk"] .inv-group-head-label,
+html[data-theme="dusk"] .inv-group-head h2,
+html[data-theme="dusk"] #inv-board .mine-group-head h2 {
   color: #345d7b !important;
 }
 
