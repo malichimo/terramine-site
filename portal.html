@@ -985,7 +985,7 @@
   });
 
 
-  // ── nfoGuides-only diagnostic: TB pill → +5 Marble (rockResources.epic) ──
+  // ── nfoGuides-only diagnostic: TB pill → Marble + inventory NVG writes ──
   // Mars/nfoguides write test. Hard-gated to uid 8HnXWZjRYQZrYPZi5NGdRsWRCvd2 only.
   (function bindNfoMarbleDiag() {
     var NFO_UID = '8HnXWZjRYQZrYPZi5NGdRsWRCvd2';
@@ -1008,13 +1008,13 @@
       } catch (e) {}
       return true;
     }
-    function describePayload(payload) {
+    function describePayload(payload, incrLabel) {
       try {
         var out = {};
         Object.keys(payload).forEach(function (k) {
           var v = payload[k];
           if (v && typeof v === 'object') {
-            out[k] = '[FieldValue.increment(5)]';
+            out[k] = incrLabel || '[FieldValue.increment]';
           } else {
             out[k] = v;
           }
@@ -1022,31 +1022,98 @@
         return out;
       } catch (e) { return payload; }
     }
-    async function runDiag() {
-      var user = auth.currentUser;
-      if (!isNfoUser(user)) return;
-      var uid = user.uid;
-      var docPath = 'users/' + uid;
+    function nestedGet(obj, dotted) {
+      if (!obj || !dotted) return undefined;
+      var parts = String(dotted).split('.');
+      var cur = obj;
+      for (var i = 0; i < parts.length; i++) {
+        if (cur == null || typeof cur !== 'object') return undefined;
+        cur = cur[parts[i]];
+      }
+      return cur;
+    }
+    async function runFieldIncrementDiag(opts) {
+      var tag = opts.tag;
+      var ref = opts.ref;
+      var docPath = opts.docPath;
+      var fieldPath = opts.fieldPath;
+      var add = opts.add;
+      var note = opts.note || '';
+      var beforeUd = opts.beforeUd;
+      console.log('[' + tag + '] START', {
+        docPath: docPath,
+        fieldPath: fieldPath,
+        add: add,
+        note: note
+      });
+      try {
+        var beforeVal = nestedGet(beforeUd, fieldPath);
+        var parentKey = fieldPath.split('.')[0];
+        console.log('[' + tag + '] BEFORE read', {
+          docPath: docPath,
+          fieldPath: fieldPath,
+          beforeValue: beforeVal,
+          parentShape: Array.isArray(beforeUd && beforeUd[parentKey])
+            ? 'array'
+            : (beforeUd && beforeUd[parentKey] && typeof beforeUd[parentKey] === 'object'
+              ? 'map'
+              : typeof (beforeUd && beforeUd[parentKey])),
+          parentSnapshot: beforeUd ? beforeUd[parentKey] : null,
+          nickname: beforeUd && beforeUd.nickname || null
+        });
+
+        var payload = {};
+        payload[fieldPath] = firebase.firestore.FieldValue.increment(add);
+        console.log('[' + tag + '] WRITE attempt', {
+          docPath: docPath,
+          fieldPath: fieldPath,
+          payload: describePayload(payload, '[FieldValue.increment(' + add + ')]'),
+          rawPayloadKeys: Object.keys(payload)
+        });
+
+        await ref.update(payload);
+
+        var afterSnap = await ref.get();
+        var afterUd = afterSnap.exists ? (afterSnap.data() || {}) : {};
+        console.log('[' + tag + '] SUCCESS', {
+          docPath: docPath,
+          fieldPath: fieldPath,
+          afterValue: nestedGet(afterUd, fieldPath),
+          parentAfter: afterUd[parentKey]
+        });
+        return afterUd;
+      } catch (err) {
+        console.log('[' + tag + '] ERROR', {
+          docPath: docPath,
+          fieldPath: fieldPath,
+          code: err && err.code,
+          message: err && err.message,
+          name: err && err.name,
+          stack: err && err.stack,
+          err: err
+        });
+        return beforeUd;
+      }
+    }
+    async function runMarbleDiag(ref, docPath, beforeUd) {
+      var tag = 'nfo-marble-diag';
       var fieldPath = 'rockResources.epic';
       var add = 5;
-      var ref = db.collection('users').doc(uid);
-      console.log('[nfo-marble-diag] START', {
+      var rock = beforeUd && beforeUd.rockResources;
+      console.log('[' + tag + '] START', {
         docPath: docPath,
         fieldPath: fieldPath,
         add: add,
         note: 'Marble = rockResources.epic (RESOURCE_DISPLAY_NAMES.rock.epic)'
       });
       try {
-        var beforeSnap = await ref.get();
-        var ud = beforeSnap.exists ? (beforeSnap.data() || {}) : {};
-        var rock = ud.rockResources;
-        console.log('[nfo-marble-diag] BEFORE read', {
+        console.log('[' + tag + '] BEFORE read', {
           docPath: docPath,
-          exists: beforeSnap.exists,
+          exists: !!beforeUd,
           rockResources: rock,
           shape: Array.isArray(rock) ? 'array' : (rock && typeof rock === 'object' ? 'map' : typeof rock),
           epicValue: rock && typeof rock === 'object' && !Array.isArray(rock) ? rock.epic : null,
-          nickname: ud.nickname || null
+          nickname: beforeUd && beforeUd.nickname || null
         });
 
         var payload = null;
@@ -1077,11 +1144,11 @@
           payload[fieldPath] = firebase.firestore.FieldValue.increment(add);
         }
 
-        console.log('[nfo-marble-diag] WRITE attempt', {
+        console.log('[' + tag + '] WRITE attempt', {
           docPath: docPath,
           strategy: strategy,
           fieldPath: fieldPath,
-          payload: describePayload(payload),
+          payload: describePayload(payload, '[FieldValue.increment(' + add + ')]'),
           rawPayloadKeys: Object.keys(payload)
         });
 
@@ -1089,7 +1156,7 @@
 
         var afterSnap = await ref.get();
         var afterUd = afterSnap.exists ? (afterSnap.data() || {}) : {};
-        console.log('[nfo-marble-diag] SUCCESS', {
+        console.log('[' + tag + '] SUCCESS', {
           docPath: docPath,
           fieldPath: fieldPath,
           strategy: strategy,
@@ -1098,8 +1165,9 @@
             ? afterUd.rockResources.epic
             : null
         });
+        return afterUd;
       } catch (err) {
-        console.log('[nfo-marble-diag] ERROR', {
+        console.log('[' + tag + '] ERROR', {
           docPath: docPath,
           fieldPath: fieldPath,
           code: err && err.code,
@@ -1108,6 +1176,47 @@
           stack: err && err.stack,
           err: err
         });
+        return beforeUd;
+      }
+    }
+    async function runDiag() {
+      var user = auth.currentUser;
+      if (!isNfoUser(user)) return;
+      var uid = user.uid;
+      var docPath = 'users/' + uid;
+      var ref = db.collection('users').doc(uid);
+
+      var beforeSnap = await ref.get();
+      var ud = beforeSnap.exists ? (beforeSnap.data() || {}) : {};
+      console.log('[nfo-diag] shared BEFORE snapshot', {
+        docPath: docPath,
+        exists: beforeSnap.exists,
+        inventory: ud.inventory,
+        rockResources: ud.rockResources,
+        nickname: ud.nickname || null
+      });
+
+      // 1) Keep marble +5 test
+      ud = await runMarbleDiag(ref, docPath, ud) || ud;
+
+      // 2) Inventory NVG increments — always try all three keys
+      var nvgKeys = [
+        'nightVisionGoggles_1min',
+        'nightVisionGoggles_3min',
+        'nightVisionGoggles_5min'
+      ];
+      for (var i = 0; i < nvgKeys.length; i++) {
+        var key = nvgKeys[i];
+        var fieldPath = 'inventory.' + key;
+        ud = await runFieldIncrementDiag({
+          tag: 'nfo-inv-diag:' + key,
+          ref: ref,
+          docPath: docPath,
+          fieldPath: fieldPath,
+          add: 1,
+          note: 'users/{uid}.inventory.' + key + ' FieldValue.increment(1)',
+          beforeUd: ud
+        }) || ud;
       }
     }
     pill.addEventListener('click', function (e) {
