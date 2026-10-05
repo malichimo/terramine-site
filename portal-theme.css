@@ -314,7 +314,7 @@ html[data-theme="mine"] .compare-pill {
   border-color: var(--tm-toolbar-border) !important;
 }
 html[data-theme="dusk"] .dash-share-btn,
-html[data-theme="mine"] .dash-share-btn { color: #fff; }
+html[data-theme="mine"] .dash-share-btn { color: #354355; }
 
 /* ── Theme toggle pill ────────────────────────────────────────────────────── */
 .theme-toggle {
@@ -408,18 +408,32 @@ html[data-theme="dusk"] .mine-group-total[data-group-type="all"] .mine-group-tot
   color: #fff !important;
 }
 
-/* B) Camera share icons — white border/icon, transparent bg (incl. white cards) */
+/* B) Camera share icons — slate #354355; hover icon white (border stays) */
 html[data-theme="dusk"] .dash-share-btn,
 html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn {
   background: transparent !important;
-  border-color: rgba(255, 255, 255, 0.85) !important;
-  color: #fff !important;
+  border-color: #354355 !important;
+  color: #354355 !important;
 }
 html[data-theme="dusk"] .dash-share-btn:hover,
 html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: #fff !important;
+  background: transparent !important;
+  border-color: #354355 !important;
+  color: #fff !important;
 }
+html[data-theme="mine"] .dash-share-btn,
+html[data-theme="mine"] .stat-card.has-share > .dash-share-btn {
+  background: transparent !important;
+  border-color: #354355 !important;
+  color: #354355 !important;
+}
+html[data-theme="mine"] .dash-share-btn:hover,
+html[data-theme="mine"] .stat-card.has-share > .dash-share-btn:hover {
+  background: transparent !important;
+  border-color: #354355 !important;
+  color: #fff !important;
+}
+
 
 /* C) Earned TerraBucks Today — value uses USD green */
 html[data-theme="dusk"] .tb-today-total {
