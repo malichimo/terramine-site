@@ -3,6 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
+  <script src="/js/tm-prefs.js?v=20261005-1"></script>
     <script>
   (function () {
     try {
@@ -32,7 +33,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261004-1" />
+  <link rel="stylesheet" href="portal.css?v=20261005-1" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -173,7 +174,7 @@
           <div class="dash-breakdown-col dash-breakdown-col-stats">
 <div class="stat-stack">
           <div class="stat-card stat-card-properties has-share" id="dash-props-card">
-            <button type="button" class="dash-share-btn" data-share-card="dash-props-card" data-tip="Share this on Discord" aria-label="Share this on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+            <button type="button" class="dash-share-btn" data-share-card="dash-props-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
             <div class="stat-card-head">
               <div class="stat-card-label">TerraMines Owned</div>
               <div class="stat-card-value cyan" id="stat-props">—</div>
@@ -227,7 +228,7 @@
         </div>
             <div class="stat-card dash-pie-card has-share" id="dash-pie-card">
               <div class="stat-card-label">Mines by Type</div>
-              <button type="button" class="dash-share-btn" data-share-card="dash-pie-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+              <button type="button" class="dash-share-btn" data-share-card="dash-pie-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               <div class="dash-pie-wrap">
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
@@ -236,7 +237,7 @@
               <div class="dash-dominance-head has-share">
                 <h2 class="dash-dominance-title" id="dash-dominance-title">Mine Dominance</h2>
                 <div class="dash-dominance-area" id="dash-dominance-area" aria-live="polite" title="Area covered by your Reach outline">&mdash;</div>
-                <button type="button" class="dash-share-btn" data-share-card="dash-dominance-card" data-tip="Share this map on Discord" aria-label="Share this map on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+                <button type="button" class="dash-share-btn" data-share-card="dash-dominance-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-dominance-body">
                 <div class="dash-dominance-map" id="dash-dominance-map" aria-label="Map of the overall area your mines cover"></div>
@@ -248,7 +249,7 @@
             <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today, then Inventory (class names are grid slots: -visits = column 2, -slot = column 3) -->
             <div class="stat-card dash-slot-card has-share" id="dash-slot-card" aria-label="TerraBucks earned today">
               <div class="stat-card-label">TerraBucks Earned Today</div>
-              <button type="button" class="dash-share-btn" data-share-card="dash-slot-card" data-tip="Share this box on Discord" aria-label="Share this box on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+              <button type="button" class="dash-share-btn" data-share-card="dash-slot-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               <div class="tb-today" id="tb-today">
                 <div class="tb-today-section">
                   <div class="tb-today-section-title">Visitor check-ins to your mines</div>
@@ -332,7 +333,7 @@
               <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-visits-title">Visitors &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-visits-total" aria-live="polite">&mdash;</div>
-                <button type="button" class="dash-share-btn" data-share-card="dash-visits-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+                <button type="button" class="dash-share-btn" data-share-card="dash-visits-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-visits-wrap">
@@ -346,7 +347,7 @@
               <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-buys-title">Mines Purchased &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-buys-total" aria-live="polite">&mdash;</div>
-                <button type="button" class="dash-share-btn" data-share-card="dash-buys-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+                <button type="button" class="dash-share-btn" data-share-card="dash-buys-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-buys-wrap">
@@ -360,7 +361,7 @@
               <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-games-title">Mini Games &mdash; Last 30 Days</h2>
                 <div class="dash-visits-total" id="dash-games-total" aria-live="polite">&mdash;</div>
-                <button type="button" class="dash-share-btn" data-share-card="dash-games-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+                <button type="button" class="dash-share-btn" data-share-card="dash-games-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-games-wrap">
@@ -375,7 +376,7 @@
               <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-refs-title">Referrals &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-refs-total" aria-live="polite">&mdash;</div>
-                <button type="button" class="dash-share-btn" data-share-card="dash-refs-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+                <button type="button" class="dash-share-btn" data-share-card="dash-refs-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-refs-wrap">
@@ -389,7 +390,7 @@
               <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-myci-title">My Check-ins &mdash; Last 60 Days</h2>
                 <div class="dash-visits-total" id="dash-myci-total" aria-live="polite">&mdash;</div>
-                <button type="button" class="dash-share-btn" data-share-card="dash-myci-card" data-tip="Share this graph on Discord" aria-label="Share this graph on Discord"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3"></path><path d="M7.5 7.5L12 3l4.5 4.5"></path><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"></path></svg></button>
+                <button type="button" class="dash-share-btn" data-share-card="dash-myci-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="dash-visits-body">
                 <div class="dash-visits-wrap" id="dash-myci-wrap">
@@ -983,7 +984,7 @@
   const TYPE_ORDER_DEFAULT = ['diamond', 'gold', 'coal', 'rock'];
   const TYPE_ORDER_FLIP_KEY = 'terramine.mines.typeOrderFlipped';
   function loadTypeOrderFlipped() {
-    try { return sessionStorage.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
   }
   let typeOrderFlipped = loadTypeOrderFlipped();
   let TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
@@ -1055,7 +1056,7 @@
   }
   function loadDisplay() {
     try {
-      const raw = sessionStorage.getItem(DISPLAY_KEY);
+      const raw = TMPrefs.getItem(DISPLAY_KEY);
       if (!raw) return defaultDisplay();
       return normalizeDisplay(JSON.parse(raw));
     } catch (e) {
@@ -1107,10 +1108,10 @@
     all: 'All Mines Production'
   };
   function loadCompareOn() {
-    try { return sessionStorage.getItem(COMPARE_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(COMPARE_KEY) === '1'; } catch (e) { return false; }
   }
   function saveCompareOn(on) {
-    try { sessionStorage.setItem(COMPARE_KEY, on ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(COMPARE_KEY, on ? '1' : '0'); } catch (e) {}
   }
   let compareOn = false; // always start OFF; toggled by the Compare pill
 
@@ -1380,16 +1381,15 @@
       if (totalsFollowTipTarget === box) dismissTotalsFollowTip();
     });
   }
-  // ── Share a dashboard card on Discord (Oct 4, 2026) ──────────────────────
-  // Share button (top-right of the title bar) on TerraMines Owned, Mines by
+  // ── Copy a dashboard card image for sharing (camera button; Oct 4–5, 2026) ──
+  // Camera "Copy image for sharing" button (top-right of the title bar) on TerraMines Owned, Mines by
   // Type, Mine Dominance (map tiles are captured: Google serves them with CORS),
   // TerraBucks Earned Today and the five column-3 graphs. Click: capture the card to a PNG
   // (html2canvas, loaded on first use; chart cards fall back to their canvas),
-  // then shareToDiscord(). For now that copies the image to the clipboard, also
-  // downloads it, and opens the TerraMine Discord so it can be pasted in
-  // #general. Set DISCORD_SHARE_ENDPOINT later to POST it to a server instead.
-  const DISCORD_SHARE_ENDPOINT = '';   // '' = copy + download + open Discord (no server)
-  const DISCORD_INVITE_URL = 'https://discord.gg/vJq4QF9d7v';
+  // then shareToDiscord(). That copies the image to the clipboard and also downloads
+  // it (the fallback when the clipboard is unavailable); nothing else opens.
+  // DISCORD_SHARE_ENDPOINT stays '' (unused); setting it later would POST to a server.
+  const DISCORD_SHARE_ENDPOINT = '';   // '' = copy + download only (no server)
   const HTML2CANVAS_SRC = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
   let html2canvasLoad = null;
   function loadHtml2Canvas() {
@@ -1470,7 +1470,7 @@
     const slug = String(title || 'dashboard').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'dashboard';
     return 'terramine-' + slug + '-' + ymd + '.png';
   }
-  // The one place a share goes out. Today: clipboard + download + open Discord.
+  // The one place a share goes out. Today: clipboard + download (camera button, "Copy image for sharing").
   // Later: with DISCORD_SHARE_ENDPOINT set, POST multipart {image, title, nickname, cardId}.
   async function shareToDiscord(cardId, blob, title) {
     const fileName = dashShareFileName(title);
@@ -1502,8 +1502,7 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-    showToast(copied ? 'Image copied \u2014 paste it in Discord #general' : 'Image saved \u2014 upload it in Discord #general');
-    window.open(DISCORD_INVITE_URL, '_blank', 'noopener');
+    showToast(copied ? 'Image copied' : 'Image saved');
     return copied ? 'copied' : 'downloaded';
   }
   function bindShareFollowTip(btn) {
@@ -1627,7 +1626,7 @@
     displayPref = normalizeDisplay({ period: period, rate: rate, hours: hours });
     $('display-rate').value = displayPref.rate;
     syncHoursControl();
-    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     refreshGroupTotals();
     refreshOpenTotalsFollowTip();
   }
@@ -1640,7 +1639,7 @@
     periodEl.value = displayPref.period;
     rateEl.value = displayPref.rate;
     syncHoursControl();
-    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     btn.addEventListener('click', () => {
       setPageSettingsOpen($('page-settings-panel').hidden);
     });

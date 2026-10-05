@@ -3,6 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
+  <script src="/js/tm-prefs.js?v=20261005-1"></script>
   <script>
   (function () {
     try {
@@ -678,7 +679,7 @@
   </div>
 </div>
 
-<script src="js/random-mine-names.js"></script>
+<script src="js/random-mine-names.js?v=20261005-1"></script>
 <script src="js/vendor/delaunator-5.1.0.min.js?v=5.1.0"></script>
 <script src="js/reach-hull.js?v=20260929-2"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -761,7 +762,7 @@
   let mineMapInstance = null;
   let mineMapLabelsOn = false;
   let mineMapBuildingsOn = false;
-  let mineMapReachOn = false;
+  let mineMapReachOn = (function () { try { return TMPrefs.getItem('terramine.mineMap.reach') === '1'; } catch (e) { return false; } })();
   let mineMapReachReady = false;
   let mineMapReachOverlays = [];
   let mineMapReachLast = null; // last TerraMineReachHull.compute() result (method, ratio, vertices…)
@@ -1135,14 +1136,21 @@
   }
   function setMineMapLabels(on) {
     mineMapLabelsOn = !!on;
+    saveMineMapLabels(mineMapLabelsOn);
     updateMineMapLabelsBtn();
     if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
   }
+  function getSavedMineMapLabels() {
+    try { return TMPrefs.getItem('terramine.mineMap.labels') === '1'; } catch (e) { return false; }
+  }
+  function saveMineMapLabels(on) {
+    try { TMPrefs.setItem('terramine.mineMap.labels', on ? '1' : '0'); } catch (e) {}
+  }
   function getSavedMineMapBuildings() {
-    try { return sessionStorage.getItem(MINE_MAP_BUILDINGS_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(MINE_MAP_BUILDINGS_KEY) === '1'; } catch (e) { return false; }
   }
   function saveMineMapBuildings(on) {
-    try { sessionStorage.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
   }
   function updateMineMapBuildingsBtn() {
     const btn = $('mine-map-buildings');
@@ -1293,6 +1301,7 @@
   }
   function setMineMapReach(on) {
     mineMapReachOn = !!on;
+    try { TMPrefs.setItem('terramine.mineMap.reach', mineMapReachOn ? '1' : '0'); } catch (e) {}
     updateMineMapReachBtn();
     if (mineMapReachOn) {
       if (mineMapReachReady) drawMineMapReach();
@@ -1642,14 +1651,14 @@
   }
   function getSavedMineMapZoom() {
     try {
-      const raw = sessionStorage.getItem(MINE_MAP_ZOOM_KEY);
+      const raw = TMPrefs.getItem(MINE_MAP_ZOOM_KEY);
       if (raw == null || raw === '') return MINE_MAP_ZOOM_DEFAULT;
       return clampMineMapZoom(raw);
     } catch (e) { return MINE_MAP_ZOOM_DEFAULT; }
   }
   function saveMineMapZoom(z) {
     const clamped = clampMineMapZoom(z);
-    try { sessionStorage.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
+    try { TMPrefs.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
     return clamped;
   }
   function syncMineMapZoomSlider(z) {
@@ -1788,16 +1797,10 @@
     if (list) list.innerHTML = '';
     const input = $('mine-map-bulk-rename-input');
     if (input) input.value = '';
+    // Last-used checkboxes stay (tmPrefs cookie); only the name string is cleared.
     const seq = $('mine-map-bulk-rename-seq');
-    if (seq) seq.checked = false;
-    const appendType = $('mine-map-bulk-rename-append-type');
-    if (appendType) appendType.checked = false;
-    const pad = $('mine-map-bulk-rename-pad');
-    if (pad) pad.checked = false;
     const padWrap = $('mine-map-bulk-rename-pad-wrap');
-    if (padWrap) padWrap.hidden = true;
-    const randomEl = $('mine-map-bulk-rename-random');
-    if (randomEl) randomEl.checked = false;
+    if (padWrap) padWrap.hidden = !(seq && seq.checked);
     syncBulkRenameRandomUi();
     syncBulkRenameByDateUi();
     const apply = $('mine-map-bulk-rename-apply');
@@ -2014,9 +2017,11 @@
     bulkRenameSelected = mines.slice();
     const dlg = $('mine-map-bulk-rename');
     if (!dlg) return;
-    const randomEl = $('mine-map-bulk-rename-random');
-    if (randomEl) randomEl.checked = false;
     syncBulkRenameRandomUi();
+    syncBulkRenameByDateUi();
+    const seq = $('mine-map-bulk-rename-seq');
+    const padWrap = $('mine-map-bulk-rename-pad-wrap');
+    if (padWrap) padWrap.hidden = !(seq && seq.checked);
     renderBulkRenameList();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
@@ -2222,7 +2227,7 @@
     return input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
   }
   // "Random Mine Names" (js/random-mine-names.js): one Mad Libs base name per selected mine
-  // ("The Rusty Pickaxe Mine"), rolled once when checked / on Reroll and kept by mine id, so the
+  // ("Rusty Pickaxe Mine"), rolled once when checked / on Reroll and kept by mine id, so the
   // preview and Apply use the SAME names. It overrides the typed title (field dimmed + disabled);
   // mine type / numbering appends still follow the random name.
   function bulkRenameRandomGen() {
@@ -2449,8 +2454,7 @@
     }
     const list = $('mine-map-bulk-greet-list');
     if (list) list.innerHTML = '';
-    const ta = $('mine-map-bulk-greet-input');
-    if (ta) ta.value = '';
+    // Last greeting text stays in the box (and in the tmPrefs cookie).
     bulkGreetSelected = [];
     setBulkGreetBusy(false);
     setBulkGreetProgress('', false);
@@ -2535,8 +2539,8 @@
     setBulkGreetBusy(false);
     setBulkGreetProgress('', false);
     const ta = $('mine-map-bulk-greet-input');
-    if (ta) ta.value = '';
     renderBulkGreetList();
+    updateBulkGreetCount();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
     if (ta) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
@@ -2851,6 +2855,8 @@
     syncMineMapZoomSlider(getSavedMineMapZoom());
     mineMapBuildingsOn = getSavedMineMapBuildings();
     updateMineMapBuildingsBtn();
+    mineMapLabelsOn = getSavedMineMapLabels();
+    updateMineMapLabelsBtn();
     updateMineMapLabelsBtn();
     updateMineMapReachBtn();
     mineMapReachReady = false;

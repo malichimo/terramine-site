@@ -1,5 +1,5 @@
 /* TerraMine: "Random Mine Names" generator for Bulk Rename (mines, activity, visitors, full-map).
- * Mad Libs style: "The <Adjective> <Noun> Mine", e.g. "The Rusty Pickaxe Mine".
+ * Mad Libs style: "<Adjective> <Noun> Mine", e.g. "Rusty Pickaxe Mine" (no leading "The").
  * Theme: mining, old boom towns, Wild West prospecting, and playful mishaps
  * (broken gear, cave-ins, lost canaries, dynamite goofs). Family-friendly words only.
  * Exposes window.TerraMineRandomNames = { ADJECTIVES, NOUNS, format, one, batch }.
@@ -51,7 +51,7 @@
   ];
 
   function format(adj, noun) {
-    return 'The ' + adj + ' ' + noun + ' Mine';
+    return adj + ' ' + noun + ' Mine';
   }
   function pick(list, rnd) {
     return list[Math.floor(rnd() * list.length) % list.length];

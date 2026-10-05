@@ -3,6 +3,7 @@
 <head>
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
+  <script src="/js/tm-prefs.js?v=20261005-1"></script>
     <script>
   (function () {
     try {
@@ -154,9 +155,10 @@
     .flip-type-order-btn[aria-pressed="true"] { border-color:#4FC3F7; background:#e8f7fe; }
     .flip-type-order-btn .flip-type-order-arrows { font-size:18px; line-height:1; }
     .group-toggle-btn svg { width:22px; height:22px; display:block; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
-    .group-toggle-btn .group-toggle-ico-merged { display:none; }
-    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-grouped { display:none; }
-    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-merged { display:block; }
+    /* icon shows the action (same as the tip): grouped now → single-group icon; one group now → stacked icon */
+    .group-toggle-btn .group-toggle-ico-grouped { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-merged { display:none; }
+    .group-toggle-btn[aria-pressed="true"] .group-toggle-ico-grouped { display:block; }
 
 
     .toolbar-follow-tip {
@@ -1462,7 +1464,7 @@
     </main>
   </div>
 </div>
-<script src="js/random-mine-names.js"></script>
+<script src="js/random-mine-names.js?v=20261005-1"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -1485,10 +1487,10 @@
   const TYPE_ORDER_DEFAULT = ['diamond', 'gold', 'coal', 'rock'];
   const TYPE_ORDER_FLIP_KEY = 'terramine.mines.typeOrderFlipped';
   function loadTypeOrderFlipped() {
-    try { return sessionStorage.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(TYPE_ORDER_FLIP_KEY) === '1'; } catch (e) { return false; }
   }
   function saveTypeOrderFlipped(on) {
-    try { sessionStorage.setItem(TYPE_ORDER_FLIP_KEY, on ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(TYPE_ORDER_FLIP_KEY, on ? '1' : '0'); } catch (e) {}
   }
   let typeOrderFlipped = loadTypeOrderFlipped();
   let TYPE_ORDER = typeOrderFlipped ? TYPE_ORDER_DEFAULT.slice().reverse() : TYPE_ORDER_DEFAULT.slice();
@@ -1527,7 +1529,7 @@
   // Grouped by mine type (default) vs. all mines in one group; kept per tab like the other filter-bar settings.
   const UNGROUPED_KEY = 'terramine.mines.ungrouped';
   const GROUP_TOGGLE_TIPS = { grouped: 'Display all mines in 1 group', ungrouped: 'Re-group all mines by their Mine Type' };
-  let minesUngrouped = (function () { try { return sessionStorage.getItem(UNGROUPED_KEY) === '1'; } catch (e) { return false; } })();
+  let minesUngrouped = (function () { try { return TMPrefs.getItem(UNGROUPED_KEY) === '1'; } catch (e) { return false; } })();
   function updateGroupToggleButton() {
     const btn = $('group-toggle');
     if (!btn) return;
@@ -1539,7 +1541,7 @@
   }
   function toggleMineGrouping() {
     minesUngrouped = !minesUngrouped;
-    try { sessionStorage.setItem(UNGROUPED_KEY, minesUngrouped ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(UNGROUPED_KEY, minesUngrouped ? '1' : '0'); } catch (e) {}
     updateGroupToggleButton();
     renderFromFilters();
   }
@@ -1575,14 +1577,14 @@
   const SHOWCASE_FILTER_VALUES = ['has', 'none'];
   const FILTER_UNNAMED_KEY = 'terramine.mines.filterUnnamed';
   function loadUnnamedOnly() {
-    try { return sessionStorage.getItem(FILTER_UNNAMED_KEY) === '1'; } catch (e) { return false; }
+    try { return TMPrefs.getItem(FILTER_UNNAMED_KEY) === '1'; } catch (e) { return false; }
   }
   function saveUnnamedOnly() {
-    try { sessionStorage.setItem(FILTER_UNNAMED_KEY, unnamedOnly ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(FILTER_UNNAMED_KEY, unnamedOnly ? '1' : '0'); } catch (e) {}
   }
   function loadSelectedTypes() {
     try {
-      const raw = sessionStorage.getItem(FILTER_TYPES_KEY);
+      const raw = TMPrefs.getItem(FILTER_TYPES_KEY);
       if (!raw) return new Set();
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return new Set();
@@ -1591,12 +1593,12 @@
   }
   function saveSelectedTypes() {
     try {
-      sessionStorage.setItem(FILTER_TYPES_KEY, JSON.stringify(Array.from(selectedTypes)));
+      TMPrefs.setItem(FILTER_TYPES_KEY, JSON.stringify(Array.from(selectedTypes)));
     } catch (e) {}
   }
   function loadSelectedShowcase() {
     try {
-      const raw = sessionStorage.getItem(FILTER_SHOWCASE_KEY);
+      const raw = TMPrefs.getItem(FILTER_SHOWCASE_KEY);
       if (!raw) return new Set();
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return new Set();
@@ -1611,7 +1613,7 @@
 
   function saveSelectedShowcase() {
     try {
-      sessionStorage.setItem(FILTER_SHOWCASE_KEY, JSON.stringify(Array.from(selectedShowcase)));
+      TMPrefs.setItem(FILTER_SHOWCASE_KEY, JSON.stringify(Array.from(selectedShowcase)));
     } catch (e) {}
   }
   let selectedTypes = loadSelectedTypes();
@@ -2013,7 +2015,12 @@
   const MINE_MAP_LOAD_AREA_STEP_MI = 0.25;
   const MINE_MAP_MILES_TO_M = 1609.344;
   let mineMapLoadAreaOn = false;
-  let mineMapLoadAreaRadiusMi = MINE_MAP_LOAD_AREA_DEFAULT_MI;
+  let mineMapLoadAreaRadiusMi = (function () {   // last Load Area radius (tmPrefs cookie)
+    try {
+      const v = Number(TMPrefs.getItem('terramine.mineMap.radius'));
+      return Number.isFinite(v) && v > 0 ? v : MINE_MAP_LOAD_AREA_DEFAULT_MI;
+    } catch (e) { return MINE_MAP_LOAD_AREA_DEFAULT_MI; }
+  })();
   function mineMapLoadAreaRadiusM() {
     return mineMapLoadAreaRadiusMi * MINE_MAP_MILES_TO_M;
   }
@@ -2144,18 +2151,25 @@
 
   function setMineMapLabels(on) {
     mineMapLabelsOn = !!on;
+    saveMineMapLabels(mineMapLabelsOn);
     updateMineMapLabelsBtn();
     if (mineMapInstance) mineMapInstance.setOptions({ styles: mineMapStyles() });
   }
+  function getSavedMineMapLabels() {
+    try { return TMPrefs.getItem('terramine.mineMap.labels') === '1'; } catch (e) { return false; }
+  }
+  function saveMineMapLabels(on) {
+    try { TMPrefs.setItem('terramine.mineMap.labels', on ? '1' : '0'); } catch (e) {}
+  }
   function getSavedMineMapBuildings() {
     try {
-      return sessionStorage.getItem(MINE_MAP_BUILDINGS_KEY) === '1';
+      return TMPrefs.getItem(MINE_MAP_BUILDINGS_KEY) === '1';
     } catch (e) {
       return false;
     }
   }
   function saveMineMapBuildings(on) {
-    try { sessionStorage.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
+    try { TMPrefs.setItem(MINE_MAP_BUILDINGS_KEY, on ? '1' : '0'); } catch (e) {}
   }
   function updateMineMapBuildingsBtn() {
     const btn = $('mine-map-buildings');
@@ -2622,7 +2636,7 @@
   }
   function getSavedMineMapZoom() {
     try {
-      const raw = sessionStorage.getItem(MINE_MAP_ZOOM_KEY);
+      const raw = TMPrefs.getItem(MINE_MAP_ZOOM_KEY);
       if (raw == null || raw === '') return MINE_MAP_ZOOM_DEFAULT;
       return clampMineMapZoom(raw);
     } catch (e) {
@@ -2631,7 +2645,7 @@
   }
   function saveMineMapZoom(z) {
     const clamped = clampMineMapZoom(z);
-    try { sessionStorage.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
+    try { TMPrefs.setItem(MINE_MAP_ZOOM_KEY, String(clamped)); } catch (e) {}
     return clamped;
   }
   function syncMineMapZoomSlider(z) {
@@ -2770,16 +2784,10 @@
     if (list) list.innerHTML = '';
     const input = $('mine-map-bulk-rename-input');
     if (input) input.value = '';
+    // Last-used checkboxes stay (tmPrefs cookie); only the name string is cleared.
     const seq = $('mine-map-bulk-rename-seq');
-    if (seq) seq.checked = false;
-    const appendType = $('mine-map-bulk-rename-append-type');
-    if (appendType) appendType.checked = false;
-    const pad = $('mine-map-bulk-rename-pad');
-    if (pad) pad.checked = false;
     const padWrap = $('mine-map-bulk-rename-pad-wrap');
-    if (padWrap) padWrap.hidden = true;
-    const randomEl = $('mine-map-bulk-rename-random');
-    if (randomEl) randomEl.checked = false;
+    if (padWrap) padWrap.hidden = !(seq && seq.checked);
     syncBulkRenameRandomUi();
     syncBulkRenameByDateUi();
     const apply = $('mine-map-bulk-rename-apply');
@@ -2994,9 +3002,11 @@
     bulkRenameSelected = mines.slice();
     const dlg = $('mine-map-bulk-rename');
     if (!dlg) return;
-    const randomEl = $('mine-map-bulk-rename-random');
-    if (randomEl) randomEl.checked = false;
     syncBulkRenameRandomUi();
+    syncBulkRenameByDateUi();
+    const seq = $('mine-map-bulk-rename-seq');
+    const padWrap = $('mine-map-bulk-rename-pad-wrap');
+    if (padWrap) padWrap.hidden = !(seq && seq.checked);
     renderBulkRenameList();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
@@ -3101,7 +3111,7 @@
     return input ? String(input.value || '').replace(/\s+/g, ' ').trim() : '';
   }
   // "Random Mine Names" (js/random-mine-names.js): one Mad Libs base name per selected mine
-  // ("The Rusty Pickaxe Mine"), rolled once when checked / on Reroll and kept by mine id, so the
+  // ("Rusty Pickaxe Mine"), rolled once when checked / on Reroll and kept by mine id, so the
   // preview and Apply use the SAME names. It overrides the typed title (field dimmed + disabled);
   // mine type / numbering appends still follow the random name.
   function bulkRenameRandomGen() {
@@ -3328,8 +3338,7 @@
     }
     const list = $('mine-map-bulk-greet-list');
     if (list) list.innerHTML = '';
-    const ta = $('mine-map-bulk-greet-input');
-    if (ta) ta.value = '';
+    // Last greeting text stays in the box (and in the tmPrefs cookie).
     bulkGreetSelected = [];
     setBulkGreetBusy(false);
     setBulkGreetProgress('', false);
@@ -3414,8 +3423,8 @@
     setBulkGreetBusy(false);
     setBulkGreetProgress('', false);
     const ta = $('mine-map-bulk-greet-input');
-    if (ta) ta.value = '';
     renderBulkGreetList();
+    updateBulkGreetCount();
     dlg.hidden = false;
     dlg.setAttribute('aria-hidden', 'false');
     if (ta) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 0);
@@ -3549,6 +3558,8 @@
     syncMineMapZoomSlider(getSavedMineMapZoom());
     mineMapBuildingsOn = getSavedMineMapBuildings();
     updateMineMapBuildingsBtn();
+    mineMapLabelsOn = getSavedMineMapLabels();
+    updateMineMapLabelsBtn();
     const type = typeKey(mine || {});
     const iconEl = $('mine-map-type-icon');
     if (iconEl) {
@@ -3735,6 +3746,7 @@
       radiusSlider.removeAttribute('alt');
       const onRadiusInput = () => {
         mineMapLoadAreaRadiusMi = clampLoadAreaMiles(radiusSlider.value);
+        try { TMPrefs.setItem('terramine.mineMap.radius', String(mineMapLoadAreaRadiusMi)); } catch (e) {}
         const valEl = $('mine-map-radius-value');
         if (valEl) valEl.textContent = formatLoadAreaMiles(mineMapLoadAreaRadiusMi);
         if (mineMapLoadAreaOn) redrawMineMapLoadArea();
@@ -3946,7 +3958,7 @@
   }
   function loadDisplay() {
     try {
-      const raw = sessionStorage.getItem(DISPLAY_KEY);
+      const raw = TMPrefs.getItem(DISPLAY_KEY);
       if (!raw) return defaultDisplay();
       return normalizeDisplay(JSON.parse(raw));
     } catch (e) {
@@ -7816,6 +7828,20 @@ function updateSortButtons() {
     });
   }
 
+  // Saved sort + search (tmPrefs cookie), restored before a ?mineId= deep link can replace the search.
+  (function restoreMinesSortSearch() {
+    try {
+      const o = TMPrefs.get('terramine.mines.sort', null);
+      if (o && typeof o.k === 'string' && document.querySelector('.sort-btn[data-sort="' + o.k + '"]')) {
+        sortKey = o.k;
+        sortDir = o.d === -1 ? -1 : 1;
+      }
+      const q = TMPrefs.get('terramine.mines.search', '');
+      const s = $('filter-search');
+      if (s && typeof q === 'string' && q) s.value = q;
+    } catch (e) {}
+  })();
+  updateSortButtons();
   applyMineFocusFromUrl();
   updateTypeFilterButtons();
   updateShowcaseFilterButtons();
@@ -7873,6 +7899,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     });
   }
   $('filter-search').addEventListener('input', () => {
+    try { TMPrefs.set('terramine.mines.search', $('filter-search').value || ''); } catch (e) {}
     // Editing/clearing search exits exact mineId focus so the user is not stuck.
     if (focusMineId) clearMineFocus();
     if (loadedUid) renderFromFilters();
@@ -7882,6 +7909,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
       const key = btn.dataset.sort;
       if (sortKey === key) sortDir *= -1;
       else { sortKey = key; sortDir = 1; }
+      try { TMPrefs.set('terramine.mines.sort', { k: sortKey, d: sortDir }); } catch (e) {}
       updateSortButtons();
       if (loadedUid) renderFromFilters();
     });
@@ -8002,7 +8030,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
   syncHoursControl();
   bindMineTotalsFollowTips();
   // Persist migrated legacy 12/18/24 rates as boost+hours.
-  try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+  try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
   $('page-settings-btn').addEventListener('click', () => {
     setPageSettingsOpen($('page-settings-panel').hidden);
   });
@@ -8021,7 +8049,7 @@ document.querySelectorAll('#filter-type .type-filter-btn').forEach(btn => {
     });
     $('display-rate').value = displayPref.rate;
     syncHoursControl();
-    try { sessionStorage.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
+    try { TMPrefs.setItem(DISPLAY_KEY, JSON.stringify(displayPref)); } catch (e) {}
     refreshProdValues();
     refreshGroupTotals();
     refreshOpenProdTip();
