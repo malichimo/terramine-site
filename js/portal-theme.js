@@ -1,16 +1,18 @@
-/* Portal Day / Dusk / Coal Mine theme toggle. Persists via TMPrefs (tmPrefs cookie). */
+/* Portal Day / Dusk / Mine theme toggle. Persists via TMPrefs (tmPrefs cookie). */
 (function (w, d) {
   'use strict';
   var KEY = 'terramine.portal.theme';
-  var THEMES = ['day', 'dusk', 'coal'];
-  var LABELS = { day: 'Day', dusk: 'Dusk', coal: 'Coal Mine' };
+  var THEMES = ['day', 'dusk', 'mine'];
+  var LABELS = { day: 'Day', dusk: 'Dusk', mine: 'Mine' };
 
   function normalize(t) {
     t = String(t || '').toLowerCase();
+    if (t === 'coal') t = 'mine'; // migrate legacy cookie value
     return THEMES.indexOf(t) >= 0 ? t : 'day';
   }
   function current() {
     var fromDom = d.documentElement.getAttribute('data-theme');
+    if (fromDom === 'coal') fromDom = 'mine';
     if (THEMES.indexOf(fromDom) >= 0) return fromDom;
     try {
       if (w.TMPrefs) {
