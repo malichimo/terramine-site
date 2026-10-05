@@ -37,7 +37,7 @@
         '<div class="mine-headlamp-cone-glow"></div>' +
         '<div class="mine-headlamp-apex-glow"></div>' +
         '<div class="mine-headlamp-dark"></div>' +
-        '<img class="mine-headlamp-miner" src="/images/mine-icons/miner-theme.png?v=20261005-2" alt="" width="120" height="140" draggable="false" decoding="async">';
+        '<img class="mine-headlamp-miner" src="/images/mine-icons/miner-theme.png?v=20261005-2" alt="" width="120" height="140" draggable="false" decoding="async" data-tip="A youthful Ssouz breaking curfew in TerraTown at midnight!">';
       d.body.appendChild(root);
     }
     darkEl = root.querySelector('.mine-headlamp-dark');

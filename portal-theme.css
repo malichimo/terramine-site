@@ -553,7 +553,8 @@ html[data-theme="mine"] .vo-message {
   max-height: 28vh;
   transform: translate(-50%, -50%);
   transform-origin: 50% 50%;
-  pointer-events: none;
+  pointer-events: auto; /* hover tip; does not cover whole viewport */
+  cursor: default;
   user-select: none;
   -webkit-user-drag: none;
   filter: drop-shadow(0 0 10px rgba(255, 220, 120, 0.45));
@@ -585,4 +586,10 @@ html[data-theme="mine"] .nav-right {
 }
 @media (prefers-reduced-motion: reduce) {
   #mine-headlamp-root { transition: opacity 0.2s linear; }
+}
+
+/* Theme / miner mouse-follow tips above headlamp overlay */
+.toolbar-follow-tip.theme-follow-tip {
+  z-index: 10070;
+  max-width: min(320px, calc(100vw - 16px));
 }
