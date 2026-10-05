@@ -675,3 +675,23 @@ html[data-theme="dusk"] .pp-card-link,
 html[data-theme="mine"] .pp-card-link {
   color: #4FC3F7 !important;
 }
+
+/* Pioneer Pass lock overlay — dusk/mine: black icon + text */
+html[data-theme="dusk"] .dash-pp-lock,
+html[data-theme="mine"] .dash-pp-lock {
+  color: #000 !important;
+}
+html[data-theme="dusk"] .dash-pp-lock-icon,
+html[data-theme="mine"] .dash-pp-lock-icon {
+  color: #000 !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+html[data-theme="dusk"] .dash-pp-lock-req,
+html[data-theme="mine"] .dash-pp-lock-req {
+  color: #000 !important;
+  text-shadow: none;
+}
+html[data-theme="dusk"] .dash-pp-lock:hover,
+html[data-theme="mine"] .dash-pp-lock:hover {
+  color: #000 !important;
+}

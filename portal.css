@@ -1507,7 +1507,7 @@ body.auth-pending #portal {
 }
 
 /* ── Pioneer Pass free trial (non-members, until PIONEER_TRIAL_END) ── Oct 3, 2026
-   Same overlay as a <button>: open padlock · "Free trial until October 9" · logo.
+   Same overlay as a <button>: open padlock · free-trial Pioneer Pass features copy · logo.
    One click opens all five graphs (member view) for this page / browser. */
 button.dash-pp-lock {
   -webkit-appearance: none; appearance: none;

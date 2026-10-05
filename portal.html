@@ -46,7 +46,7 @@
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="portal.css?v=20261005-6" />
+  <link rel="stylesheet" href="portal.css?v=20261005-7" />
   <link rel="stylesheet" href="portal-top-nav.css?v=20260929-1" />
   <!-- ✅ Sept 7, 2026: adsbygoogle.js removed — this is a login-gated app
        shell with no content for a logged-out visitor; serving/requesting
@@ -55,7 +55,7 @@
   <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
        already verified via ads.txt at the site root). -->
   <!-- (adsbygoogle.js removed — see comment above) -->
-  <link rel="stylesheet" href="/portal-theme.css?v=20261005-13" />
+  <link rel="stylesheet" href="/portal-theme.css?v=20261005-14" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -4959,9 +4959,25 @@
   const PIONEER_TRIAL_END = '2026-10-10T00:00:00-04:00';   // end of Oct 9, America/New_York
   const PIONEER_TRIAL_END_MS = PIONEER_TRIAL_END ? Date.parse(PIONEER_TRIAL_END) : NaN;
   // Overlay text, from the end date: the last trial day in New York ("October 9").
-  const PIONEER_TRIAL_LABEL = isFinite(PIONEER_TRIAL_END_MS)
-    ? 'Free trial until ' + new Date(PIONEER_TRIAL_END_MS - 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' })
-    : '';
+  function ppTrialDayOrdinal(n) {
+    var j = n % 10, k = n % 100;
+    if (j === 1 && k !== 11) return n + 'st';
+    if (j === 2 && k !== 12) return n + 'nd';
+    if (j === 3 && k !== 13) return n + 'rd';
+    return n + 'th';
+  }
+  const PIONEER_TRIAL_LABEL = (function () {
+    if (!isFinite(PIONEER_TRIAL_END_MS)) return '';
+    // Last calendar day of the trial in America/New_York
+    var d = new Date(PIONEER_TRIAL_END_MS - 1);
+    var parts = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }).formatToParts(d);
+    var month = '', day = 0;
+    parts.forEach(function (p) {
+      if (p.type === 'month') month = p.value;
+      if (p.type === 'day') day = parseInt(p.value, 10) || 0;
+    });
+    return "Free trial of this website's Pioneer Pass features until " + month + ' ' + ppTrialDayOrdinal(day);
+  })();
   let pioneerLocked = null;   // null until the users doc decides
   let ppCtx = null;           // { uid, options } of the locked load (trial unlock reuses it)
   let ppTrialTimer = 0;
@@ -5057,7 +5073,7 @@
     if (locked) {
       console.info('[pioneer] not a Pioneer Pass member (users doc isPioneerMember !== true): column-3 graphs locked; skipped the My Check-ins 60-day fetch, '
         + 'Referrals / Mini Games read today only, Visitors keeps its 90-day fetch for the stat boxes.'
-        + (ppTrialActive() ? ' Free trial until ' + PIONEER_TRIAL_END + ': clicking a graph opens them all.' : ''));
+        + (ppTrialActive() ? ' ' + PIONEER_TRIAL_LABEL + ': clicking a graph opens them all.' : ''));
       // Trial ends while the page is open and nothing was clicked: back to the plain lock.
       if (ppTrialActive()) {
         ppTrialTimer = setTimeout(function check() {
