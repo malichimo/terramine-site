@@ -494,3 +494,12 @@ html[data-theme="dusk"] .vo-card-body {
 html[data-theme="dusk"] .vo-message {
   color: #9caec2 !important;
 }
+
+
+/* Mine theme miner icon (colored SVG — keep fills, not currentColor wash) */
+.theme-toggle-btn[data-theme-set="mine"] svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  overflow: visible;
+}
