@@ -985,7 +985,7 @@
   });
 
 
-  // ── nfoGuides-only diagnostic: TB pill → Marble + inventory NVG writes ──
+  // ── nfoGuides-only diagnostic: TB pill → Marble / Flawless Diamond / tbBalance ──
   // Mars/nfoguides write test. Hard-gated to uid 8HnXWZjRYQZrYPZi5NGdRsWRCvd2 only.
   (function bindNfoMarbleDiag() {
     var NFO_UID = '8HnXWZjRYQZrYPZi5NGdRsWRCvd2';
@@ -1191,33 +1191,36 @@
       console.log('[nfo-diag] shared BEFORE snapshot', {
         docPath: docPath,
         exists: beforeSnap.exists,
-        inventory: ud.inventory,
         rockResources: ud.rockResources,
+        diamondResources: ud.diamondResources,
+        tbBalance: ud.tbBalance,
         nickname: ud.nickname || null
       });
 
-      // 1) Keep marble +5 test
+      // 1) Marble +5 (rockResources.epic)
       ud = await runMarbleDiag(ref, docPath, ud) || ud;
 
-      // 2) Inventory NVG increments — always try all three keys
-      var nvgKeys = [
-        'nightVisionGoggles_1min',
-        'nightVisionGoggles_3min',
-        'nightVisionGoggles_5min'
-      ];
-      for (var i = 0; i < nvgKeys.length; i++) {
-        var key = nvgKeys[i];
-        var fieldPath = 'inventory.' + key;
-        ud = await runFieldIncrementDiag({
-          tag: 'nfo-inv-diag:' + key,
-          ref: ref,
-          docPath: docPath,
-          fieldPath: fieldPath,
-          add: 1,
-          note: 'users/{uid}.inventory.' + key + ' FieldValue.increment(1)',
-          beforeUd: ud
-        }) || ud;
-      }
+      // 2) Flawless Diamond +1 (diamondResources.epic)
+      ud = await runFieldIncrementDiag({
+        tag: 'nfo-diamond-diag',
+        ref: ref,
+        docPath: docPath,
+        fieldPath: 'diamondResources.epic',
+        add: 1,
+        note: 'Flawless Diamond = diamondResources.epic (RESOURCE_DISPLAY_NAMES.diamond.epic)',
+        beforeUd: ud
+      }) || ud;
+
+      // 3) TerraBucks balance +1
+      ud = await runFieldIncrementDiag({
+        tag: 'nfo-tb-diag',
+        ref: ref,
+        docPath: docPath,
+        fieldPath: 'tbBalance',
+        add: 1,
+        note: 'users/{uid}.tbBalance FieldValue.increment(1)',
+        beforeUd: ud
+      }) || ud;
     }
     pill.addEventListener('click', function (e) {
       if (!auth.currentUser || auth.currentUser.uid !== NFO_UID) return;
