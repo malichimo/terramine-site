@@ -264,7 +264,9 @@
   .fraud-check label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); cursor:pointer; user-select:none; }
   .fraud-check input[type="checkbox"] { accent-color:var(--gold); width:13px; height:13px; cursor:pointer; }
   .fraud-check.checked label { color:var(--green); }
+  .fraud-check.stale label { color:var(--amber); }
   .fraud-check-note { font-size:9px; color:var(--text-muted); margin-top:2px; margin-left:19px; }
+  .fraud-check-note.stale-note { color:var(--amber); }
 
   .empty-row td { padding:32px; text-align:center; color:var(--text-muted); font-size:12px; }
 
@@ -458,6 +460,32 @@
                                          // are just a scanning aid, not a fraud verdict — see
                                          // checkReferralFraud.ts for the real triage logic.
 
+  // Account-level fraud-check memory — added Sept 12, 2026 (Scott: "so we
+  // don't keep checking the same accounts flagged as safe"). Previously
+  // fraudChecked/fraudCheckedAt/fraudCheckedBy lived ONLY on the
+  // withdrawalRequests doc, so every new redemption from a repeat
+  // requester started unchecked again even if that account was already
+  // vetted clean last time. Now toggleFraudCheck() also stamps
+  // users/{userId} with the same fields plus a referralCount snapshot at
+  // check time, and a new request from an already-vetted account inherits
+  // that state automatically — UNLESS referralCount has grown a lot since
+  // (see FRAUD_RECHECK_REFERRAL_GROWTH below), since an account that looked
+  // clean at 5 referrals isn't the same account at 40. Fetched alongside
+  // nickname/referralCode/referralCount below — same doc read, zero extra
+  // Firestore cost.
+  const accountFraudCheckedAtCache = new Map();
+  const accountFraudCheckedByCache = new Map();
+  const accountFraudCheckedRefCountCache = new Map();
+  // If referralCount has grown by at least this much since the account was
+  // last cleared, treat the old clearance as stale rather than silently
+  // trusting it — surfaced as an amber "recommend re-checking" note instead
+  // of a blind green checkmark.
+  const FRAUD_RECHECK_REFERRAL_GROWTH = 5;
+  // ✅ Oct 5, 2026 (Scott: "make the referral fraud check sustain for 30
+  // days"): an account-level clearance carries over to that account's new
+  // redemptions for this many days, then asks for a fresh check.
+  const FRAUD_CHECK_VALID_DAYS = 30;
+
   // ── Auth ───────────────────────────────────────────────────────────────
   onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -506,10 +534,16 @@
         nicknameCache.set(uid, (udata && udata.nickname) || uid.substring(0, 8));
         referralCodeCache.set(uid, (udata && udata.referralCode) || null);
         referralCountCache.set(uid, (udata && udata.referralCount) || 0);
+        accountFraudCheckedAtCache.set(uid, (udata && udata.referralFraudCheckedAt) || null);
+        accountFraudCheckedByCache.set(uid, (udata && udata.referralFraudCheckedBy) || null);
+        accountFraudCheckedRefCountCache.set(uid, (udata && udata.referralFraudCheckedAtReferralCount) ?? null);
       } catch (e) {
         nicknameCache.set(uid, uid.substring(0, 8));
         referralCodeCache.set(uid, null);
         referralCountCache.set(uid, 0);
+        accountFraudCheckedAtCache.set(uid, null);
+        accountFraudCheckedByCache.set(uid, null);
+        accountFraudCheckedRefCountCache.set(uid, null);
       }
     }));
 
@@ -518,6 +552,9 @@
       nickname: nicknameCache.get(r.userId) || '—',
       referralCode: referralCodeCache.get(r.userId) || null,
       referralCount: referralCountCache.get(r.userId) ?? 0,
+      accountFraudCheckedAt: accountFraudCheckedAtCache.get(r.userId) || null,
+      accountFraudCheckedBy: accountFraudCheckedByCache.get(r.userId) || null,
+      accountFraudCheckedAtReferralCount: accountFraudCheckedRefCountCache.get(r.userId) ?? null,
       // Older requests predate the Sept 4, 2026 Tango rollout and have no
       // payoutMethod field at all — same default the Cloud Function itself
       // uses when the field is omitted, so a pre-Tango request is treated
@@ -700,6 +737,64 @@
       </div>`;
   }
 
+  // Computes the effective fraud-check display state for a request, folding
+  // in account-level memory — see the "✅ Sept 12, 2026" comment above
+  // renderStatusCell's fraudCheck block for the three cases this covers.
+  function fraudCheckState(r) {
+    if (r.fraudChecked) {
+      return {
+        checked: true,
+        cssClass: ' checked',
+        label: '✅ Referral fraud checked',
+        note: r.fraudCheckedAt ? `${escHtml(r.fraudCheckedBy || '—')} — ${new Date(r.fraudCheckedAt).toLocaleString()}` : '',
+        noteClass: '',
+      };
+    }
+
+    if (r.accountFraudCheckedAt) {
+      const checkedAtCount = r.accountFraudCheckedAtReferralCount ?? 0;
+      const currentCount = r.referralCount || 0;
+      const grown = currentCount - checkedAtCount;
+      const stale = grown >= FRAUD_RECHECK_REFERRAL_GROWTH;
+      const ageDays = (Date.now() - new Date(r.accountFraudCheckedAt).getTime()) / 86400000;
+      const expired = !(ageDays <= FRAUD_CHECK_VALID_DAYS); // also true if the date is unreadable
+
+      if (expired) {
+        return {
+          checked: false,
+          cssClass: ' stale',
+          label: 'Referral fraud checked?',
+          note: `⏰ Last checked ${Math.floor(ageDays)} days ago by ${escHtml(r.accountFraudCheckedBy || '—')} ` +
+                `(${new Date(r.accountFraudCheckedAt).toLocaleDateString()}), over ${FRAUD_CHECK_VALID_DAYS} days — re-check`,
+          noteClass: ' stale-note',
+        };
+      }
+
+      if (!stale) {
+        return {
+          checked: true,
+          cssClass: ' checked',
+          label: '✅ Referral fraud checked',
+          note: `Carried over — ${escHtml(r.accountFraudCheckedBy || '—')} verified this account ` +
+                `${new Date(r.accountFraudCheckedAt).toLocaleString()} at ${checkedAtCount} referrals ` +
+                `(good for ${Math.max(0, Math.ceil(FRAUD_CHECK_VALID_DAYS - ageDays))} more days)`,
+          noteClass: '',
+        };
+      }
+
+      return {
+        checked: false,
+        cssClass: ' stale',
+        label: 'Referral fraud checked?',
+        note: `⚠️ Checked previously at ${checkedAtCount} referrals (by ${escHtml(r.accountFraudCheckedBy || '—')}) — ` +
+              `now at ${currentCount}, recommend re-checking`,
+        noteClass: ' stale-note',
+      };
+    }
+
+    return { checked: false, cssClass: '', label: 'Referral fraud checked?', note: '', noteClass: '' };
+  }
+
   function renderStatusCell(r) {
     const badge = statusBadge(r.status);
     const flagBadge = r.flaggedForReview ? `<span class="badge badge-purple" title="${escAttr(r.flagReason || '')}">🚩 FLAGGED</span>` : '';
@@ -714,13 +809,25 @@
     // Firestore (isAdmin() already grants update on this collection) rather
     // than through the Cloud Function, since nothing here needs server-side
     // validation.
+    //
+    // ✅ Sept 12, 2026: now also checks account-level memory (see
+    // accountFraudCheckedAtCache above) so a repeat requester whose account
+    // was already vetted clean doesn't show up unchecked again. Three
+    // states: (1) this exact request was explicitly checked — green, as
+    // before; (2) not explicitly checked, but the account has a clean prior
+    // check and referralCount hasn't grown much since — green, "carried
+    // over" note; (3) the account has a prior check but referralCount grew
+    // by FRAUD_RECHECK_REFERRAL_GROWTH+ since — amber "stale" warning
+    // instead of a blind checkmark, since this isn't really the same
+    // account risk profile anymore.
+    const fc = fraudCheckState(r);
     const fraudCheck = `
-      <div class="fraud-check${r.fraudChecked ? ' checked' : ''}">
+      <div class="fraud-check${fc.cssClass}">
         <label>
-          <input type="checkbox" ${r.fraudChecked ? 'checked' : ''} onchange="toggleFraudCheck('${r.id}', this.checked)">
-          ${r.fraudChecked ? '✅ Referral fraud checked' : 'Referral fraud checked?'}
+          <input type="checkbox" ${fc.checked ? 'checked' : ''} onchange="toggleFraudCheck('${r.id}', this.checked)">
+          ${fc.label}
         </label>
-        ${r.fraudChecked && r.fraudCheckedAt ? `<div class="fraud-check-note">${escHtml(r.fraudCheckedBy || '—')} — ${new Date(r.fraudCheckedAt).toLocaleString()}</div>` : ''}
+        ${fc.note ? `<div class="fraud-check-note${fc.noteClass}">${fc.note}</div>` : ''}
       </div>`;
 
     // Flag toggle — for the "looks fake but not enough evidence to ban"
@@ -920,23 +1027,56 @@
   };
 
   // Fraud-check toggle: writes straight to Firestore (isAdmin() already
-  // grants update on withdrawalRequests — see firestore.rules), records who
-  // checked it and when. Updates local state + re-renders instead of a full
-  // loadAll() so the table doesn't flicker/reset scroll on every click.
+  // grants update on withdrawalRequests AND users — see firestore.rules),
+  // records who checked it and when. Updates local state + re-renders
+  // instead of a full loadAll() so the table doesn't flicker/reset scroll
+  // on every click.
+  //
+  // ✅ Sept 12, 2026: also stamps users/{userId} with the same fields plus
+  // a referralCount snapshot, so the NEXT redemption from this account
+  // inherits the clean check instead of starting unchecked again (see
+  // fraudCheckState() above). Unchecking clears the account-level memory
+  // too — an admin unchecking means they no longer trust this account as
+  // clean, so a future request shouldn't silently inherit a clearance the
+  // admin themselves just revoked.
   window.toggleFraudCheck = async (requestId, checked) => {
     const nowIso = new Date().toISOString();
     const byEmail = auth.currentUser?.email || null;
+    const req = allRequests.find(r => r.id === requestId);
+    const userId = req?.userId || null;
+    const referralCountSnapshot = req?.referralCount ?? 0;
     try {
-      await updateDoc(doc(db, 'withdrawalRequests', requestId), {
-        fraudChecked: checked,
-        fraudCheckedAt: checked ? nowIso : null,
-        fraudCheckedBy: checked ? byEmail : null,
-      });
-      const req = allRequests.find(r => r.id === requestId);
+      const writes = [
+        updateDoc(doc(db, 'withdrawalRequests', requestId), {
+          fraudChecked: checked,
+          fraudCheckedAt: checked ? nowIso : null,
+          fraudCheckedBy: checked ? byEmail : null,
+        }),
+      ];
+      if (userId) {
+        writes.push(updateDoc(doc(db, 'users', userId), {
+          referralFraudCheckedAt: checked ? nowIso : null,
+          referralFraudCheckedBy: checked ? byEmail : null,
+          referralFraudCheckedAtReferralCount: checked ? referralCountSnapshot : null,
+        }));
+      }
+      await Promise.all(writes);
+
       if (req) {
         req.fraudChecked = checked;
         req.fraudCheckedAt = checked ? nowIso : null;
         req.fraudCheckedBy = checked ? byEmail : null;
+      }
+      // Update every other cached request for this same account too, so
+      // the carried-over state is visible immediately without a reload if
+      // this admin has more than one request from the same user open.
+      if (userId) {
+        allRequests.forEach(r => {
+          if (r.userId !== userId) return;
+          r.accountFraudCheckedAt = checked ? nowIso : null;
+          r.accountFraudCheckedBy = checked ? byEmail : null;
+          r.accountFraudCheckedAtReferralCount = checked ? referralCountSnapshot : null;
+        });
       }
       render();
     } catch (e) {
