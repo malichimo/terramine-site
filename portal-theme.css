@@ -593,3 +593,85 @@ html[data-theme="mine"] .nav-right {
   z-index: 10070;
   max-width: min(320px, calc(100vw - 16px));
 }
+
+/* Account page cards (app-card) — match dashboard graph-blue boxes */
+html[data-theme="dusk"] .app-card,
+html[data-theme="mine"] .app-card {
+  background: var(--tm-graph-blue) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+  color: var(--tm-text) !important;
+  box-shadow: var(--tm-shadow);
+}
+html[data-theme="dusk"] .app-card-header,
+html[data-theme="mine"] .app-card-header {
+  border-bottom-color: var(--tm-graph-blue-border) !important;
+  background: rgba(15, 28, 44, 0.45) !important;
+}
+html[data-theme="dusk"] .app-card-title,
+html[data-theme="mine"] .app-card-title,
+html[data-theme="dusk"] .pp-card-status,
+html[data-theme="mine"] .pp-card-status,
+html[data-theme="dusk"] .linked-app-name,
+html[data-theme="mine"] .linked-app-name,
+html[data-theme="dusk"] .info-value,
+html[data-theme="mine"] .info-value {
+  color: var(--tm-text) !important;
+}
+html[data-theme="dusk"] .pp-card-status-value,
+html[data-theme="mine"] .pp-card-status-value,
+html[data-theme="dusk"] .pp-card-sub,
+html[data-theme="mine"] .pp-card-sub,
+html[data-theme="dusk"] .info-label,
+html[data-theme="mine"] .info-label,
+html[data-theme="dusk"] .linked-app-meta,
+html[data-theme="mine"] .linked-app-meta,
+html[data-theme="dusk"] .field-label,
+html[data-theme="mine"] .field-label,
+html[data-theme="dusk"] .field-hint,
+html[data-theme="mine"] .field-hint,
+html[data-theme="dusk"] .avatar-hint,
+html[data-theme="mine"] .avatar-hint,
+html[data-theme="dusk"] .char-count,
+html[data-theme="mine"] .char-count,
+html[data-theme="dusk"] .link-code-meta,
+html[data-theme="mine"] .link-code-meta {
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .info-row,
+html[data-theme="mine"] .info-row,
+html[data-theme="dusk"] .linked-app,
+html[data-theme="mine"] .linked-app {
+  border-color: rgba(79, 195, 247, 0.18) !important;
+}
+html[data-theme="dusk"] .field-input,
+html[data-theme="mine"] .field-input,
+html[data-theme="dusk"] .avatar-btn,
+html[data-theme="mine"] .avatar-btn {
+  background: var(--tm-input-bg) !important;
+  color: var(--tm-input-fg) !important;
+  border-color: var(--tm-input-border) !important;
+}
+html[data-theme="dusk"] .field-input:disabled,
+html[data-theme="mine"] .field-input:disabled {
+  background: rgba(15, 28, 44, 0.85) !important;
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .link-code-box,
+html[data-theme="mine"] .link-code-box {
+  background: rgba(15, 28, 44, 0.72) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+}
+html[data-theme="dusk"] .link-code-value,
+html[data-theme="mine"] .link-code-value {
+  color: #e8f4ff !important;
+}
+html[data-theme="dusk"] .avatar-placeholder,
+html[data-theme="mine"] .avatar-placeholder {
+  background: rgba(15, 28, 44, 0.85) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .pp-card-link,
+html[data-theme="mine"] .pp-card-link {
+  color: #4FC3F7 !important;
+}
