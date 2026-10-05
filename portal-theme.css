@@ -369,18 +369,18 @@ html[data-theme="dusk"] .mine-totals-bar {
   background: var(--tm-graph-blue) !important;
   border-color: var(--tm-graph-blue-border) !important;
 }
-html[data-theme="dusk"] .mine-totals-period-label {
-  color: #fff !important;
-}
+/* Period corner titles removed — hide if present */
+.mine-totals-period-label { display: none !important; }
 html[data-theme="dusk"] .mine-group-total {
   background: var(--tm-graph-blue) !important;
   color: #fff !important;
 }
-html[data-theme="dusk"] .mine-group-total-title {
-  color: #fff !important;
+/* Type boxes (Diamond/Gold/Coal/Rock) — not All Mines */
+html[data-theme="dusk"] .mine-group-total:not([data-group-type="all"]) .mine-group-total-title {
+  color: #9caec2 !important;
 }
-html[data-theme="dusk"] .mine-group-total-value {
-  color: #fff !important;
+html[data-theme="dusk"] .mine-group-total:not([data-group-type="all"]) .mine-group-total-value {
+  color: #d3b021 !important;
 }
 html[data-theme="dusk"] .mine-group-total[data-group-type="all"] {
   background: var(--tm-graph-blue) !important;
@@ -406,13 +406,14 @@ html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn:hover {
   border-color: #fff !important;
 }
 
-/* C) Known TB Today box — USD green treatment */
+/* C) Earned TerraBucks Today — value uses USD green */
 html[data-theme="dusk"] .tb-today-total {
   background: rgba(34, 197, 94, 0.16) !important;
   border-color: rgba(34, 197, 94, 0.55) !important;
-  color: var(--tm-usd-green) !important;
+  color: var(--tm-text) !important;
 }
-html[data-theme="dusk"] .tb-today-total strong {
+html[data-theme="dusk"] .tb-today-total strong,
+html[data-theme="dusk"] .tb-today-total .tb-today-tb-val {
   color: var(--tm-usd-green) !important;
 }
 
@@ -457,4 +458,13 @@ html[data-theme="dusk"] .mine-totals-controls .theme-toggle {
 html[data-theme="mine"] .mine-totals-controls .theme-toggle {
   background: rgba(20, 14, 10, 0.8);
   border-color: rgba(224, 123, 32, 0.4);
+}
+
+
+/* F) TerraMines Owned (dusk) — type counts gold, separator slate */
+html[data-theme="dusk"] #dash-props-card .prop-type-count {
+  color: #d3b021 !important;
+}
+html[data-theme="dusk"] #dash-props-card .prop-breakdown {
+  border-top-color: #6b7b8e !important;
 }

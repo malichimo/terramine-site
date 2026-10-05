@@ -219,7 +219,7 @@ body.auth-pending #portal {
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 20px 12px 10px;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.85);
   border: 2px solid var(--brown-mid);
   border-radius: 12px;
@@ -434,6 +434,7 @@ body.auth-pending #portal {
   gap: 8px;
 }
 .mine-totals-period-label {
+  display: none !important; /* corner titles removed Oct 5, 2026 */
   position: absolute;
   top: 8px;
   left: 12px;
