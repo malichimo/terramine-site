@@ -700,3 +700,27 @@ html[data-theme="dusk"] .dash-pp-lock:hover,
 html[data-theme="mine"] .dash-pp-lock:hover {
   color: #000 !important;
 }
+
+/* Account referral dual QR slots */
+html[data-theme="dusk"] .vc-qr-slot,
+html[data-theme="mine"] .vc-qr-slot {
+  background: rgba(22, 38, 58, 0.55) !important;
+  border-color: rgba(79, 195, 247, 0.22) !important;
+  color: var(--tm-text) !important;
+}
+html[data-theme="dusk"] .vc-qr-slot .vc-row,
+html[data-theme="mine"] .vc-qr-slot .vc-row {
+  border-bottom-color: rgba(79, 195, 247, 0.18) !important;
+}
+html[data-theme="dusk"] .vc-qr-empty,
+html[data-theme="mine"] .vc-qr-empty {
+  background: rgba(10, 18, 30, 0.35) !important;
+  border-color: rgba(79, 195, 247, 0.25) !important;
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .vc-qr-frame,
+html[data-theme="mine"] .vc-qr-frame {
+  border-color: rgba(79, 195, 247, 0.22) !important;
+  box-shadow: none;
+}
+
