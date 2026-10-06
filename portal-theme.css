@@ -65,6 +65,16 @@ html[data-theme="mine"] {
   --text-dark: #e8eef6;
   --text-mid: #9aadc2;
   --white: #e8eef6;
+  /* Remap Day "brown app palette" used by account.html inline CSS.
+     Pioneer Pass logos are <img> assets — unaffected. */
+  --brown-dark: #e8f4ff;
+  --brown: #4FC3F7;
+  --brown-mid: rgba(79, 195, 247, 0.45);
+  --brown-light: rgba(79, 195, 247, 0.28);
+  --gold: #0a1522;
+  --bg: #0f1c2c;
+  --bg2: #16263a;
+  --off-white: #0f1c2c;
 }
 
 /* ── Surfaces ─────────────────────────────────────────────────────────────── */
@@ -861,5 +871,39 @@ html[data-theme="mine"] #toast {
   background: #0b1624 !important;
   border-color: rgba(79, 195, 247, 0.28) !important;
   color: var(--tm-text) !important;
+}
+
+/* Account dusk: belt-and-suspenders for primary actions / referral chrome (not PP logos) */
+html[data-theme="dusk"] #profile-save-btn,
+html[data-theme="mine"] #profile-save-btn,
+html[data-theme="dusk"] #vc-btn,
+html[data-theme="mine"] #vc-btn,
+html[data-theme="dusk"] #link-code-btn,
+html[data-theme="mine"] #link-code-btn,
+html[data-theme="dusk"] #password-save-btn,
+html[data-theme="mine"] #password-save-btn,
+html[data-theme="dusk"] button.btn-save,
+html[data-theme="mine"] button.btn-save {
+  background: #4FC3F7 !important;
+  color: #0a1522 !important;
+  border: none !important;
+}
+html[data-theme="dusk"] #vc-primary,
+html[data-theme="mine"] #vc-primary,
+html[data-theme="dusk"] #vc-current,
+html[data-theme="mine"] #vc-current,
+html[data-theme="dusk"] .vc-code,
+html[data-theme="mine"] .vc-code {
+  color: #e8f4ff !important;
+}
+html[data-theme="dusk"] button.vc-copy,
+html[data-theme="mine"] button.vc-copy,
+html[data-theme="dusk"] #vc-primary-copy,
+html[data-theme="mine"] #vc-primary-copy,
+html[data-theme="dusk"] #vc-current-copy,
+html[data-theme="mine"] #vc-current-copy {
+  background: rgba(30, 48, 70, 0.95) !important;
+  color: #d7e6f5 !important;
+  border: 2px solid rgba(79, 195, 247, 0.35) !important;
 }
 
