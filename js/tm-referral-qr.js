@@ -4,6 +4,7 @@
  */
 (function (w) {
   var SIZE = 220;
+  var FRAME_PAD = 12; // inner gutter so border-radius does not clip QR corners
   var LOGO_SRC = '/images/mine-icons/miner-theme.png';
   var JOIN_BASE = 'https://terramine.app/join?ref=';
 
@@ -42,8 +43,11 @@
 
     var wrap = document.createElement('div');
     wrap.className = 'vc-qr-frame';
-    wrap.style.width = SIZE + 'px';
-    wrap.style.height = SIZE + 'px';
+    var outer = SIZE + FRAME_PAD * 2;
+    wrap.style.width = outer + 'px';
+    wrap.style.height = outer + 'px';
+    wrap.style.padding = FRAME_PAD + 'px';
+    wrap.style.boxSizing = 'border-box';
 
     var qrHost = document.createElement('div');
     qrHost.className = 'vc-qr-canvas';
@@ -94,6 +98,7 @@
 
   w.TMReferralQR = {
     SIZE: SIZE,
+    FRAME_PAD: FRAME_PAD,
     joinUrl: joinUrl,
     activeCode: activeCode,
     render: render
