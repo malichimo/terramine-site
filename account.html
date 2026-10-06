@@ -151,9 +151,62 @@
       min-height: 0;
     }
 
-    .main { flex:1; overflow-y:auto; background:transparent; }
+    /* Match portal dashboard: full-width content area, 28px side padding (no max-width strip).
+       Col2 (PP + referral QRs) is wider: 0.85fr / 1.45fr / 0.85fr */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      background: transparent;
+      min-height: calc(100vh - 80px);
+      padding: 28px 28px 48px;
+      box-sizing: border-box;
+    }
 
-    .content { max-width: 600px; margin: 0 auto; padding: 24px 16px 48px; }
+    .content {
+      max-width: none;
+      width: 100%;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Account 3-column layout (match portal dash-breakdown breakpoints; Oct 6, 2026)
+       ≥1101: Profile+Account | Pioneer Pass+Referral | Linked Apps+Password
+       721–1100: Profile+Account left (span 2 rows); PP+Referral then rest on right
+       ≤720: single column in DOM order */
+    .account-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.45fr) minmax(0, 0.85fr);
+      gap: 12px;
+      align-items: start;
+      width: 100%;
+    }
+    .account-col {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .account-col > .app-card:last-child { margin-bottom: 0; }
+    @media (max-width: 1100px) {
+      .account-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+      }
+      .account-col-profile { grid-column: 1; grid-row: 1 / span 2; }
+      .account-col-pp { grid-column: 2; grid-row: 1; }
+      .account-col-rest { grid-column: 2; grid-row: 2; }
+    }
+    @media (max-width: 720px) {
+      .account-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+      .account-col-profile,
+      .account-col-pp,
+      .account-col-rest { grid-column: auto; grid-row: auto; }
+      .main { padding: 20px 16px 48px; }
+    }
+    @media (max-width: 768px) {
+      .main { padding: 16px 16px 48px; }
+    }
 
     /* ── App card ── */
     .app-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; margin-bottom:18px; overflow:hidden; }
@@ -237,6 +290,128 @@
     .vc-input-wrap:focus-within { border-color:var(--brown); }
     .vc-prefix { display:flex; align-items:center; padding:0 10px; background:var(--off-white); color:var(--text-mid); font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight:700; font-size:14px; border-right:1px solid var(--brown-light); }
     .vc-input { flex:1 1 auto; min-width:0; border:none; outline:none; padding:10px 12px; font-size:14px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-transform:uppercase; letter-spacing:1px; color:var(--text-dark); }
+
+    /* One referral card in col 2: two side-by-side QR slots (regular | vanity) */
+    .vc-qr-duo {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 10px;
+      align-items: start;
+    }
+    .vc-qr-slot {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--brown-light, #D2B48C);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.55);
+      box-sizing: border-box;
+      position: relative;
+    }
+    /* Camera copy button, lower-right of each QR slot (dashboard share icon) */
+    .vc-qr-copy-btn {
+      position: absolute; right: 8px; bottom: 8px; z-index: 2;
+      width: 30px; height: 30px; padding: 0; margin: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid #354355; border-radius: 8px;
+      background: transparent; color: #354355; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .vc-qr-copy-btn[hidden] { display: none !important; }
+    .vc-qr-copy-btn svg {
+      width: 20px; height: 20px; display: block; pointer-events: none;
+      fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .vc-qr-copy-btn:hover { background: rgba(53, 67, 85, 0.08); }
+    .vc-qr-copy-btn:focus-visible { outline: 2px solid #354355; outline-offset: 1px; }
+    .vc-qr-copy-btn.is-busy { opacity: 0.6; cursor: progress; }
+    .vc-qr-slot .vc-row {
+      padding: 0 0 8px;
+      border-bottom: 1px solid rgba(139, 115, 85, 0.25);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .vc-qr-panel {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+    .vc-qr-panel[hidden],
+    .vc-qr-empty[hidden] { display: none !important; }
+    .vc-qr-empty {
+      font-size: 12px;
+      color: var(--text-mid);
+      text-align: center;
+      padding: 18px 8px;
+      border: 1px dashed rgba(139, 115, 85, 0.35);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.35);
+    }
+    @media (max-width: 720px) {
+      .vc-qr-duo { grid-template-columns: minmax(0, 1fr); }
+    }
+    .vc-qr-frame {
+      position: relative;
+      width: 234px;   /* 210 QR + 12px gutter each side (JS may override) */
+      height: 234px;
+      padding: 12px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid #e0d0c0;
+      box-shadow: 0 1px 4px rgba(92, 51, 23, 0.12);
+    }
+    .vc-qr-canvas { width: 210px; height: 210px; }
+    .vc-qr-canvas canvas,
+    .vc-qr-canvas table { display: block; width: 210px !important; height: 210px !important; max-width: 100%; }
+    .vc-qr-logo-pad {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 52px;
+      height: 52px;
+      box-sizing: border-box;
+      padding: 5px;
+      background: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 3px #fff;
+      pointer-events: none;
+    }
+    .vc-qr-logo-pad img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .vc-qr-caption {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--text-mid);
+      text-align: center;
+    }
+    .vc-qr-caption code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      color: var(--text-dark);
+    }
+    @media (max-width: 420px) {
+      .vc-share-row { justify-content: center; }
+      .vc-qr-panel { margin: 0 auto; }
+    }
+
     .vc-price { font-size:13px; color:var(--text-mid); margin-top:14px; }
     .vc-price strong { color:var(--text-dark); }
     .vc-free { color:#2E7D32; font-weight:700; }
@@ -282,7 +457,7 @@
       max-width:min(280px, calc(100vw - 16px));
     }
 </style>
-  <link rel="stylesheet" href="/portal-theme.css?v=20261005-14" />
+  <link rel="stylesheet" href="/portal-theme.css?v=20261006-19" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -354,6 +529,8 @@
 <main class="main">
       <div class="content">
 
+        <div class="account-grid">
+          <div class="account-col account-col-profile">
         <!-- Profile card -->
         <div class="app-card">
           <div class="app-card-header">
@@ -409,6 +586,9 @@
           </div>
         </div>
 
+          </div>
+
+          <div class="account-col account-col-pp">
         <!-- Pioneer Pass status (users/{uid}.isPioneerMember / pioneerMemberSince) -->
         <div class="app-card pp-card" id="pp-card">
           <div class="app-card-body pp-card-body">
@@ -420,24 +600,40 @@
           </div>
         </div>
 
-        <!-- Vanity referral code (setVanityReferralCode Cloud Function; free for Pioneer Pass, 5,000 TB otherwise) -->
+        <!-- Referral / vanity (one card in col 2; dual QR slots in the middle) -->
         <div class="app-card" id="vanity-card">
           <div class="app-card-header">
             <span class="app-card-title">🏷️ Vanity Referral Code</span>
           </div>
           <div class="app-card-body">
             <div class="field-hint" style="font-size:13px; margin-top:0;">
-              Pick a custom referral code that's easy to share, like <strong>TM-GOLDRUSH</strong>. Your regular code keeps working too.
+              Share your regular code anytime. Optionally claim a custom vanity code like <strong>TM-GOLDRUSH</strong> — both keep working.
             </div>
-            <div class="vc-row">
-              <span class="info-label">Your regular code</span>
-              <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-primary">—</span><button class="vc-copy" id="vc-primary-copy" type="button">Copy</button></span>
+            <div class="vc-qr-duo">
+              <div class="vc-qr-slot" id="vc-slot-regular">
+                <div class="vc-row">
+                  <span class="info-label">Your regular code</span>
+                  <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-primary">—</span><button class="vc-copy" id="vc-primary-copy" type="button">Copy</button></span>
+                </div>
+                <div class="vc-qr-panel" id="vc-qr-panel" hidden>
+                  <div id="vc-qr" class="vc-qr" role="img" aria-label="QR code for your regular referral link"></div>
+                  <div class="vc-qr-caption" id="vc-qr-caption">Scan to join</div>
+                </div>
+                <button type="button" class="vc-qr-copy-btn" id="vc-qr-copy" data-tip="Copy QR Code Image" aria-label="Copy QR Code Image" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
+              <div class="vc-qr-slot" id="vc-slot-vanity">
+                <div class="vc-row">
+                  <span class="info-label">Your vanity code</span>
+                  <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-current">None yet</span><button class="vc-copy" id="vc-current-copy" type="button" style="display:none;">Copy</button></span>
+                </div>
+                <div class="vc-qr-panel" id="vc-qr-vanity-panel" hidden>
+                  <div id="vc-qr-vanity" class="vc-qr" role="img" aria-label="QR code for your vanity referral link"></div>
+                  <div class="vc-qr-caption" id="vc-qr-vanity-caption">Scan to join</div>
+                </div>
+                <button type="button" class="vc-qr-copy-btn" id="vc-qr-vanity-copy" data-tip="Copy QR VANITY code image" aria-label="Copy QR VANITY code image" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
             </div>
-            <div class="vc-row" style="border-bottom:none;">
-              <span class="info-label">Your vanity code</span>
-              <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-current">None yet</span><button class="vc-copy" id="vc-current-copy" type="button" style="display:none;">Copy</button></span>
-            </div>
-            <div class="field-group" style="margin-top:14px; margin-bottom:0;">
+            <div class="field-group" style="margin-top:16px; margin-bottom:0;">
               <label class="field-label" for="vc-input" id="vc-input-label">Choose your code</label>
               <div class="vc-input-wrap">
                 <span class="vc-prefix">TM-</span>
@@ -453,6 +649,9 @@
           </div>
         </div>
 
+          </div>
+
+          <div class="account-col account-col-rest">
         <!-- Linked apps (Calculator partner API, Sept 27, 2026) -->
         <div class="app-card" id="linked-apps-card">
           <div class="app-card-header">
@@ -500,6 +699,10 @@
           </div>
           <div class="pw-note">For your security, you'll need to re-enter your current password to make this change.</div>
         </div>
+          </div>
+
+
+        </div>
 
       </div>
     </main>
@@ -513,6 +716,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<script src="/js/vendor/qrcode.min.js?v=20261006-1"></script>
+<script src="/js/tm-referral-qr.js?v=20261006-7"></script>
 
 <script>
   firebase.initializeApp({
@@ -885,7 +1090,43 @@
     ready(function () {
       bindPill(document.querySelector('.nav-pill-usd'));
       bindPill(document.querySelector('.nav-pill-tb'));
+      bindQrCopy('vc-qr-copy', 'vc-qr');
+      bindQrCopy('vc-qr-vanity-copy', 'vc-qr-vanity');
     });
+    // Camera buttons on the referral QR slots: copy PNG (QR + logo + caption)
+    function flashTip(el, text) {
+      var orig = el.dataset.tipOrig || el.getAttribute('data-tip') || '';
+      el.dataset.tipOrig = orig;
+      el.setAttribute('data-tip', text);
+      if (tipTarget === el && tipEl) {
+        tipEl.textContent = text;
+        if (tipEl.style.display === 'block') placeTip(tipX, tipY);
+      }
+      clearTimeout(el._tipReset);
+      el._tipReset = setTimeout(function () {
+        el.setAttribute('data-tip', orig);
+        if (tipTarget === el && tipEl) tipEl.textContent = orig;
+      }, 1600);
+    }
+    function bindQrCopy(btnId, hostId) {
+      var btn = document.getElementById(btnId);
+      if (!btn || btn.dataset.qrCopyBound === '1') return;
+      btn.dataset.qrCopyBound = '1';
+      bindPill(btn);
+      btn.addEventListener('click', function () {
+        var host = document.getElementById(hostId);
+        if (!host || !window.TMReferralQR || btn.classList.contains('is-busy')) return;
+        btn.classList.add('is-busy');
+        TMReferralQR.copyImage(host).then(function (how) {
+          flashTip(btn, how === 'copied' ? 'Copied!' : 'Downloaded PNG');
+          // Show feedback even if the tooltip wasn't open yet
+          if (tipTarget !== btn) { tipTarget = btn; var r = btn.getBoundingClientRect(); tipX = r.left; tipY = r.top; ensureTip().textContent = btn.getAttribute('data-tip'); placeTip(tipX, tipY); setTimeout(function () { if (tipTarget === btn) hideTip(); }, 1400); }
+        }).catch(function (err) {
+          try { console.warn('[vc-qr-copy]', err); } catch (_) {}
+          flashTip(btn, 'Copy failed');
+        }).then(function () { btn.classList.remove('is-busy'); });
+      });
+    }
   })();
 
   // ── Linked apps (Calculator partner API) ─────────────────────────
@@ -927,6 +1168,46 @@
     $('vc-current-copy').onclick = () => copyText(vanity, 'Code');
     $('vc-input-label').textContent = vanity ? 'Change your code' : 'Choose your code';
     $('vc-btn').textContent = vanity ? 'Change code' : 'Claim code';
+
+    // Dual QR slots: regular (miner logo) always; vanity (TerraWife) only when claimed — no empty QR frame
+    try {
+      if (window.TMReferralQR) {
+        const panel = $('vc-qr-panel');
+        const host = $('vc-qr');
+        const cap = $('vc-qr-caption');
+        if (host) {
+          const drawn = TMReferralQR.render(host, primary, { logo: TMReferralQR.LOGO_MINER });
+          if (panel) panel.hidden = !drawn;
+          if ($('vc-qr-copy')) $('vc-qr-copy').hidden = !drawn;
+          if (cap) cap.innerHTML = drawn
+            ? ('Scan to join · <code>' + drawn.code.replace(/</g, '') + '</code>')
+            : 'Scan to join';
+        }
+        const vPanel = $('vc-qr-vanity-panel');
+        const vHost = $('vc-qr-vanity');
+        const vCap = $('vc-qr-vanity-caption');
+        if (vanity && vHost) {
+          const drawnV = TMReferralQR.render(vHost, vanity, { logo: TMReferralQR.LOGO_TERRAWIFE });
+          if (vPanel) vPanel.hidden = !drawnV;
+          if ($('vc-qr-vanity-copy')) $('vc-qr-vanity-copy').hidden = !drawnV;
+          if (vCap && drawnV) {
+            vCap.innerHTML = 'Scan to join · <code>' + drawnV.code.replace(/</g, '') + '</code>';
+          }
+        } else {
+          if (vHost) {
+            try {
+              while (vHost.firstChild) vHost.removeChild(vHost.firstChild);
+              vHost.hidden = true;
+              vHost.removeAttribute('data-ref-code');
+              vHost.removeAttribute('data-join-url');
+            } catch (_) {}
+          }
+          if (vPanel) vPanel.hidden = true;
+          if ($('vc-qr-vanity-copy')) $('vc-qr-vanity-copy').hidden = true;
+          if (vCap) vCap.textContent = 'Scan to join';
+        }
+      }
+    } catch (e) { try { console.warn('[vc-qr]', e); } catch (_) {} }
 
     const tb = Number(vcUser.tbBalance) || 0;
     if (isPioneer) {

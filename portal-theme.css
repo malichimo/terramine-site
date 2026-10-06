@@ -65,6 +65,16 @@ html[data-theme="mine"] {
   --text-dark: #e8eef6;
   --text-mid: #9aadc2;
   --white: #e8eef6;
+  /* Remap Day "brown app palette" used by account.html inline CSS.
+     Pioneer Pass logos are <img> assets — unaffected. */
+  --brown-dark: #e8f4ff;
+  --brown: #4FC3F7;
+  --brown-mid: rgba(79, 195, 247, 0.45);
+  --brown-light: rgba(79, 195, 247, 0.28);
+  --gold: #0a1522;
+  --bg: #0f1c2c;
+  --bg2: #16263a;
+  --off-white: #0f1c2c;
 }
 
 /* ── Surfaces ─────────────────────────────────────────────────────────────── */
@@ -163,6 +173,11 @@ html[data-theme="mine"] .page-settings-panel {
   background: var(--tm-toolbar-bg) !important;
   border-color: var(--tm-toolbar-border) !important;
   color: var(--tm-text) !important;
+}
+
+html[data-theme="dusk"] .page-settings-hours-value,
+html[data-theme="mine"] .page-settings-hours-value {
+  color: #fff !important;
 }
 
 html[data-theme="dusk"] .sort-btn,
@@ -694,4 +709,216 @@ html[data-theme="mine"] .dash-pp-lock-req {
 html[data-theme="dusk"] .dash-pp-lock:hover,
 html[data-theme="mine"] .dash-pp-lock:hover {
   color: #000 !important;
+}
+
+/* Account referral dual QR slots */
+html[data-theme="dusk"] .vc-qr-slot,
+html[data-theme="mine"] .vc-qr-slot {
+  background: rgba(22, 38, 58, 0.55) !important;
+  border-color: rgba(79, 195, 247, 0.22) !important;
+  color: var(--tm-text) !important;
+}
+html[data-theme="dusk"] .vc-qr-slot .vc-row,
+html[data-theme="mine"] .vc-qr-slot .vc-row {
+  border-bottom-color: rgba(79, 195, 247, 0.18) !important;
+}
+html[data-theme="dusk"] .vc-qr-empty,
+html[data-theme="mine"] .vc-qr-empty {
+  background: rgba(10, 18, 30, 0.35) !important;
+  border-color: rgba(79, 195, 247, 0.25) !important;
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .vc-qr-frame,
+html[data-theme="mine"] .vc-qr-frame {
+  border-color: rgba(79, 195, 247, 0.22) !important;
+  box-shadow: none;
+}
+
+/* Account page — dusk/mine: replace remaining Day browns (buttons, codes, inputs) */
+html[data-theme="dusk"] .btn-save,
+html[data-theme="mine"] .btn-save {
+  background: var(--tm-chip-on-bg) !important;
+  color: var(--tm-chip-on-fg) !important;
+  border: none !important;
+}
+html[data-theme="dusk"] .btn-save:hover,
+html[data-theme="mine"] .btn-save:hover {
+  background: #29B6F6 !important;
+  color: var(--tm-chip-on-fg) !important;
+}
+html[data-theme="dusk"] .btn-save:disabled,
+html[data-theme="mine"] .btn-save:disabled {
+  background: rgba(79, 195, 247, 0.28) !important;
+  color: rgba(10, 21, 34, 0.65) !important;
+  cursor: not-allowed;
+}
+
+html[data-theme="dusk"] .vc-copy,
+html[data-theme="mine"] .vc-copy {
+  background: var(--tm-chip-bg) !important;
+  color: var(--tm-chip-fg) !important;
+  border-color: var(--tm-graph-blue-border) !important;
+}
+html[data-theme="dusk"] .vc-copy:hover,
+html[data-theme="mine"] .vc-copy:hover {
+  border-color: #4FC3F7 !important;
+  color: #e8f4ff !important;
+}
+
+html[data-theme="dusk"] .vc-code,
+html[data-theme="mine"] .vc-code {
+  color: #e8f4ff !important;
+}
+html[data-theme="dusk"] .vc-qr-caption,
+html[data-theme="mine"] .vc-qr-caption {
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .vc-qr-caption code,
+html[data-theme="mine"] .vc-qr-caption code {
+  color: #e8f4ff !important;
+}
+
+html[data-theme="dusk"] .vc-input-wrap,
+html[data-theme="mine"] .vc-input-wrap {
+  background: var(--tm-input-bg) !important;
+  border-color: var(--tm-input-border) !important;
+}
+html[data-theme="dusk"] .vc-input-wrap:focus-within,
+html[data-theme="mine"] .vc-input-wrap:focus-within {
+  border-color: #4FC3F7 !important;
+}
+html[data-theme="dusk"] .vc-prefix,
+html[data-theme="mine"] .vc-prefix {
+  background: rgba(15, 28, 44, 0.95) !important;
+  color: var(--tm-text-muted) !important;
+  border-right-color: var(--tm-input-border) !important;
+}
+html[data-theme="dusk"] .vc-input,
+html[data-theme="mine"] .vc-input {
+  background: transparent !important;
+  color: var(--tm-input-fg) !important;
+}
+html[data-theme="dusk"] .vc-input:disabled,
+html[data-theme="mine"] .vc-input:disabled {
+  color: var(--tm-text-muted) !important;
+}
+
+html[data-theme="dusk"] .vc-price,
+html[data-theme="mine"] .vc-price {
+  color: var(--tm-text-muted) !important;
+}
+html[data-theme="dusk"] .vc-price strong,
+html[data-theme="mine"] .vc-price strong {
+  color: var(--tm-text) !important;
+}
+html[data-theme="dusk"] .vc-free,
+html[data-theme="mine"] .vc-free {
+  color: #22C55E !important;
+}
+
+html[data-theme="dusk"] .vc-row,
+html[data-theme="mine"] .vc-row {
+  border-bottom-color: rgba(79, 195, 247, 0.18) !important;
+}
+
+html[data-theme="dusk"] .pw-card-header,
+html[data-theme="mine"] .pw-card-header {
+  background: var(--tm-head-bg) !important;
+  border-bottom-color: var(--tm-graph-blue-border) !important;
+}
+html[data-theme="dusk"] .pw-card-header .app-card-title,
+html[data-theme="mine"] .pw-card-header .app-card-title {
+  color: var(--tm-head-fg) !important;
+}
+html[data-theme="dusk"] .pw-note,
+html[data-theme="mine"] .pw-note {
+  background: rgba(15, 28, 44, 0.72) !important;
+  border-top-color: var(--tm-graph-blue-border) !important;
+  color: var(--tm-text-muted) !important;
+}
+
+html[data-theme="dusk"] .btn-unlink,
+html[data-theme="mine"] .btn-unlink {
+  background: rgba(15, 28, 44, 0.85) !important;
+  border-color: #ef5350 !important;
+  color: #ef9a9a !important;
+}
+html[data-theme="dusk"] .avatar-btn:hover,
+html[data-theme="mine"] .avatar-btn:hover {
+  border-color: #4FC3F7 !important;
+}
+html[data-theme="dusk"] .avatar-img,
+html[data-theme="mine"] .avatar-img {
+  border-color: var(--tm-graph-blue-border) !important;
+  background: rgba(15, 28, 44, 0.85) !important;
+}
+html[data-theme="dusk"] .badge-email,
+html[data-theme="mine"] .badge-email {
+  background: rgba(79, 195, 247, 0.15) !important;
+  color: #9aadc2 !important;
+}
+html[data-theme="dusk"] .badge-google,
+html[data-theme="mine"] .badge-google {
+  background: rgba(79, 195, 247, 0.18) !important;
+  color: #4FC3F7 !important;
+}
+html[data-theme="dusk"] .pp-card.is-member .pp-card-status-value,
+html[data-theme="mine"] .pp-card.is-member .pp-card-status-value {
+  color: #22C55E !important;
+}
+html[data-theme="dusk"] #toast,
+html[data-theme="mine"] #toast {
+  background: #0b1624 !important;
+  border-color: rgba(79, 195, 247, 0.28) !important;
+  color: var(--tm-text) !important;
+}
+
+/* Account dusk: belt-and-suspenders for primary actions / referral chrome (not PP logos) */
+html[data-theme="dusk"] #profile-save-btn,
+html[data-theme="mine"] #profile-save-btn,
+html[data-theme="dusk"] #vc-btn,
+html[data-theme="mine"] #vc-btn,
+html[data-theme="dusk"] #link-code-btn,
+html[data-theme="mine"] #link-code-btn,
+html[data-theme="dusk"] #password-save-btn,
+html[data-theme="mine"] #password-save-btn,
+html[data-theme="dusk"] button.btn-save,
+html[data-theme="mine"] button.btn-save {
+  background: #4FC3F7 !important;
+  color: #0a1522 !important;
+  border: none !important;
+}
+html[data-theme="dusk"] #vc-primary,
+html[data-theme="mine"] #vc-primary,
+html[data-theme="dusk"] #vc-current,
+html[data-theme="mine"] #vc-current,
+html[data-theme="dusk"] .vc-code,
+html[data-theme="mine"] .vc-code {
+  color: #e8f4ff !important;
+}
+html[data-theme="dusk"] button.vc-copy,
+html[data-theme="mine"] button.vc-copy,
+html[data-theme="dusk"] #vc-primary-copy,
+html[data-theme="mine"] #vc-primary-copy,
+html[data-theme="dusk"] #vc-current-copy,
+html[data-theme="mine"] #vc-current-copy {
+  background: rgba(30, 48, 70, 0.95) !important;
+  color: #d7e6f5 !important;
+  border: 2px solid rgba(79, 195, 247, 0.35) !important;
+}
+
+/* Account QR camera copy buttons — dusk/mine: white box + white icon */
+html[data-theme="dusk"] .vc-qr-copy-btn,
+html[data-theme="mine"] .vc-qr-copy-btn {
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  background: transparent !important;
+}
+html[data-theme="dusk"] .vc-qr-copy-btn:hover,
+html[data-theme="mine"] .vc-qr-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+html[data-theme="dusk"] .vc-qr-copy-btn:focus-visible,
+html[data-theme="mine"] .vc-qr-copy-btn:focus-visible {
+  outline-color: #ffffff !important;
 }

@@ -4,6 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script src="/js/tm-time.js?v=20261006-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -1147,7 +1148,7 @@
     .gps-pin { cursor:pointer; }
     .gps-pin:not(.is-missing):hover { color:#4FC3F7; }
   </style>
-  <link rel="stylesheet" href="/portal-theme.css?v=20261005-14" />
+  <link rel="stylesheet" href="/portal-theme.css?v=20261006-19" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -3949,12 +3950,13 @@
     return cols;
   }
   function periodAmount(perSec, period) {
-    // Scale from per-second: min=*60, day=*86400, month=*86400*30, year=*86400*365
+    // Scale from per-second via shared js/tm-time.js (month = 365/12 days, year = 365 days)
+    const T = window.TMTime;
     if (period === 'sec') return perSec;
-    if (period === 'min') return perSec * 60;
-    if (period === 'day') return perSec * 60 * 60 * 24;
-    if (period === 'year') return perSec * 60 * 60 * 24 * 365;
-    return perSec * 60 * 60 * 24 * 30;
+    if (period === 'min') return perSec * T.SECONDS_PER_MINUTE;
+    if (period === 'day') return perSec * T.SECONDS_PER_DAY;
+    if (period === 'year') return perSec * T.SECONDS_PER_YEAR;
+    return perSec * T.SECONDS_PER_MONTH;
   }
   const DISPLAY_KEY = 'terramine.mines.display';
   const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
