@@ -114,6 +114,115 @@
     return { code: code, url: url };
   }
 
+
+  // ── Copy QR image (Oct 6, 2026) ─────────────────────────────────────────
+  function loadImg(src) {
+    return new Promise(function (resolve, reject) {
+      var im = new Image();
+      im.decoding = 'async';
+      im.onload = function () { resolve(im); };
+      im.onerror = function () { reject(new Error('logo load failed: ' + src)); };
+      im.src = src; // same-origin → canvas stays untainted
+    });
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  /**
+   * Build a PNG blob of the rendered QR in hostEl: white rounded frame + 12px
+   * gutter, QR modules, centered logo on its white pad, and the
+   * "Scan to join · CODE" caption underneath.
+   */
+  function toPngBlob(hostEl, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve, reject) {
+      if (!hostEl) return reject(new Error('no QR host'));
+      var qrCanvas = hostEl.querySelector('.vc-qr-canvas canvas');
+      var logoEl = hostEl.querySelector('.vc-qr-logo-pad img');
+      if (!qrCanvas) return reject(new Error('QR not rendered'));
+      var code = hostEl.getAttribute('data-ref-code') || '';
+      var logoSrc = (logoEl && logoEl.getAttribute('src')) || opts.logo || LOGO_MINER;
+      var caption = opts.caption || (code ? ('Scan to join \u00b7 ' + code) : 'Scan to join');
+
+      loadImg(logoSrc).then(function (logo) {
+        var S = 3;                       // export scale (crisp modules)
+        var qr = SIZE, pad = FRAME_PAD;
+        var frame = qr + pad * 2;        // 234
+        var margin = 10, capH = 28;
+        var W = frame + margin * 2, H = frame + margin * 2 + capH;
+        var c = document.createElement('canvas');
+        c.width = W * S; c.height = H * S;
+        var ctx = c.getContext('2d');
+        ctx.scale(S, S);
+
+        // card background (white, rounded)
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, 0, 0, W, H, 14); ctx.fill();
+        // frame border
+        ctx.strokeStyle = '#d7dee8'; ctx.lineWidth = 1;
+        roundRect(ctx, margin + 0.5, margin + 0.5, frame - 1, frame - 1, 12); ctx.stroke();
+
+        // QR modules (no smoothing)
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(qrCanvas, margin + pad, margin + pad, qr, qr);
+        ctx.imageSmoothingEnabled = true;
+
+        // logo pad (52px white rounded box, 5px padding, +3px white halo)
+        var lp = 52, lpad = 5;
+        var cx = margin + frame / 2, cy = margin + frame / 2;
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, cx - lp / 2 - 3, cy - lp / 2 - 3, lp + 6, lp + 6, 12); ctx.fill();
+        var box = lp - lpad * 2;
+        var ratio = Math.min(box / logo.naturalWidth, box / logo.naturalHeight);
+        var lw = logo.naturalWidth * ratio, lh = logo.naturalHeight * ratio;
+        ctx.drawImage(logo, cx - lw / 2, cy - lh / 2, lw, lh);
+
+        // caption
+        ctx.fillStyle = '#334155';
+        ctx.font = '700 12px "DM Sans", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(caption, W / 2, margin + frame + capH / 2 + 2);
+
+        c.toBlob(function (blob) {
+          if (blob) resolve(blob); else reject(new Error('toBlob failed'));
+        }, 'image/png');
+      }).catch(reject);
+    });
+  }
+  function downloadBlob(blob, name) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name || 'terramine-qr.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+  /** Copy QR PNG to clipboard; falls back to download. Resolves 'copied' | 'downloaded'. */
+  function copyImage(hostEl, opts) {
+    opts = opts || {};
+    var code = (hostEl && hostEl.getAttribute('data-ref-code')) || 'qr';
+    var fileName = 'terramine-' + String(code).toLowerCase().replace(/[^a-z0-9-]/g, '') + '-qr.png';
+    var blobP = toPngBlob(hostEl, opts);
+    var canClip = !!(navigator.clipboard && navigator.clipboard.write && w.ClipboardItem);
+    if (canClip) {
+      var item;
+      try { item = new w.ClipboardItem({ 'image/png': blobP }); } catch (e) { item = null; }
+      if (item) {
+        return navigator.clipboard.write([item]).then(function () { return 'copied'; })
+          .catch(function () {
+            return blobP.then(function (b) { downloadBlob(b, fileName); return 'downloaded'; });
+          });
+      }
+    }
+    return blobP.then(function (b) { downloadBlob(b, fileName); return 'downloaded'; });
+  }
+
   w.TMReferralQR = {
     SIZE: SIZE,
     FRAME_PAD: FRAME_PAD,
@@ -124,6 +233,8 @@
     vanityCode: vanityCode,
     activeCode: regularCode,
     resolveCode: resolveCode,
-    render: render
+    render: render,
+    toPngBlob: toPngBlob,
+    copyImage: copyImage
   };
 })(window);

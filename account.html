@@ -310,7 +310,25 @@
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.55);
       box-sizing: border-box;
+      position: relative;
     }
+    /* Camera copy button, lower-right of each QR slot (dashboard share icon) */
+    .vc-qr-copy-btn {
+      position: absolute; right: 8px; bottom: 8px; z-index: 2;
+      width: 30px; height: 30px; padding: 0; margin: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid #354355; border-radius: 8px;
+      background: transparent; color: #354355; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .vc-qr-copy-btn[hidden] { display: none !important; }
+    .vc-qr-copy-btn svg {
+      width: 20px; height: 20px; display: block; pointer-events: none;
+      fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .vc-qr-copy-btn:hover { background: rgba(53, 67, 85, 0.08); }
+    .vc-qr-copy-btn:focus-visible { outline: 2px solid #354355; outline-offset: 1px; }
+    .vc-qr-copy-btn.is-busy { opacity: 0.6; cursor: progress; }
     .vc-qr-slot .vc-row {
       padding: 0 0 8px;
       border-bottom: 1px solid rgba(139, 115, 85, 0.25);
@@ -439,7 +457,7 @@
       max-width:min(280px, calc(100vw - 16px));
     }
 </style>
-  <link rel="stylesheet" href="/portal-theme.css?v=20261006-18" />
+  <link rel="stylesheet" href="/portal-theme.css?v=20261006-19" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -601,6 +619,7 @@
                   <div id="vc-qr" class="vc-qr" role="img" aria-label="QR code for your regular referral link"></div>
                   <div class="vc-qr-caption" id="vc-qr-caption">Scan to join</div>
                 </div>
+                <button type="button" class="vc-qr-copy-btn" id="vc-qr-copy" data-tip="Copy QR Code Image" aria-label="Copy QR Code Image" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
               <div class="vc-qr-slot" id="vc-slot-vanity">
                 <div class="vc-row">
@@ -611,6 +630,7 @@
                   <div id="vc-qr-vanity" class="vc-qr" role="img" aria-label="QR code for your vanity referral link"></div>
                   <div class="vc-qr-caption" id="vc-qr-vanity-caption">Scan to join</div>
                 </div>
+                <button type="button" class="vc-qr-copy-btn" id="vc-qr-vanity-copy" data-tip="Copy QR VANITY code image" aria-label="Copy QR VANITY code image" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
               </div>
             </div>
             <div class="field-group" style="margin-top:16px; margin-bottom:0;">
@@ -697,7 +717,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 <script src="/js/vendor/qrcode.min.js?v=20261006-1"></script>
-<script src="/js/tm-referral-qr.js?v=20261006-6"></script>
+<script src="/js/tm-referral-qr.js?v=20261006-7"></script>
 
 <script>
   firebase.initializeApp({
@@ -1070,7 +1090,43 @@
     ready(function () {
       bindPill(document.querySelector('.nav-pill-usd'));
       bindPill(document.querySelector('.nav-pill-tb'));
+      bindQrCopy('vc-qr-copy', 'vc-qr');
+      bindQrCopy('vc-qr-vanity-copy', 'vc-qr-vanity');
     });
+    // Camera buttons on the referral QR slots: copy PNG (QR + logo + caption)
+    function flashTip(el, text) {
+      var orig = el.dataset.tipOrig || el.getAttribute('data-tip') || '';
+      el.dataset.tipOrig = orig;
+      el.setAttribute('data-tip', text);
+      if (tipTarget === el && tipEl) {
+        tipEl.textContent = text;
+        if (tipEl.style.display === 'block') placeTip(tipX, tipY);
+      }
+      clearTimeout(el._tipReset);
+      el._tipReset = setTimeout(function () {
+        el.setAttribute('data-tip', orig);
+        if (tipTarget === el && tipEl) tipEl.textContent = orig;
+      }, 1600);
+    }
+    function bindQrCopy(btnId, hostId) {
+      var btn = document.getElementById(btnId);
+      if (!btn || btn.dataset.qrCopyBound === '1') return;
+      btn.dataset.qrCopyBound = '1';
+      bindPill(btn);
+      btn.addEventListener('click', function () {
+        var host = document.getElementById(hostId);
+        if (!host || !window.TMReferralQR || btn.classList.contains('is-busy')) return;
+        btn.classList.add('is-busy');
+        TMReferralQR.copyImage(host).then(function (how) {
+          flashTip(btn, how === 'copied' ? 'Copied!' : 'Downloaded PNG');
+          // Show feedback even if the tooltip wasn't open yet
+          if (tipTarget !== btn) { tipTarget = btn; var r = btn.getBoundingClientRect(); tipX = r.left; tipY = r.top; ensureTip().textContent = btn.getAttribute('data-tip'); placeTip(tipX, tipY); setTimeout(function () { if (tipTarget === btn) hideTip(); }, 1400); }
+        }).catch(function (err) {
+          try { console.warn('[vc-qr-copy]', err); } catch (_) {}
+          flashTip(btn, 'Copy failed');
+        }).then(function () { btn.classList.remove('is-busy'); });
+      });
+    }
   })();
 
   // ── Linked apps (Calculator partner API) ─────────────────────────
@@ -1122,6 +1178,7 @@
         if (host) {
           const drawn = TMReferralQR.render(host, primary, { logo: TMReferralQR.LOGO_MINER });
           if (panel) panel.hidden = !drawn;
+          if ($('vc-qr-copy')) $('vc-qr-copy').hidden = !drawn;
           if (cap) cap.innerHTML = drawn
             ? ('Scan to join · <code>' + drawn.code.replace(/</g, '') + '</code>')
             : 'Scan to join';
@@ -1132,6 +1189,7 @@
         if (vanity && vHost) {
           const drawnV = TMReferralQR.render(vHost, vanity, { logo: TMReferralQR.LOGO_TERRAWIFE });
           if (vPanel) vPanel.hidden = !drawnV;
+          if ($('vc-qr-vanity-copy')) $('vc-qr-vanity-copy').hidden = !drawnV;
           if (vCap && drawnV) {
             vCap.innerHTML = 'Scan to join · <code>' + drawnV.code.replace(/</g, '') + '</code>';
           }
@@ -1145,6 +1203,7 @@
             } catch (_) {}
           }
           if (vPanel) vPanel.hidden = true;
+          if ($('vc-qr-vanity-copy')) $('vc-qr-vanity-copy').hidden = true;
           if (vCap) vCap.textContent = 'Scan to join';
         }
       }

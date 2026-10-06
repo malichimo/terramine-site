@@ -907,3 +907,18 @@ html[data-theme="mine"] #vc-current-copy {
   border: 2px solid rgba(79, 195, 247, 0.35) !important;
 }
 
+/* Account QR camera copy buttons — dusk/mine: white box + white icon */
+html[data-theme="dusk"] .vc-qr-copy-btn,
+html[data-theme="mine"] .vc-qr-copy-btn {
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  background: transparent !important;
+}
+html[data-theme="dusk"] .vc-qr-copy-btn:hover,
+html[data-theme="mine"] .vc-qr-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+html[data-theme="dusk"] .vc-qr-copy-btn:focus-visible,
+html[data-theme="mine"] .vc-qr-copy-btn:focus-visible {
+  outline-color: #ffffff !important;
+}
