@@ -151,7 +151,8 @@
       min-height: 0;
     }
 
-    /* Match portal dashboard: full-width content area, 28px side padding (no max-width strip) */
+    /* Match portal dashboard: full-width content area, 28px side padding (no max-width strip).
+       Col2 (PP + referral QRs) is wider: 0.85fr / 1.45fr / 0.85fr */
     .main {
       flex: 1;
       overflow-y: auto;
@@ -176,7 +177,7 @@
        ≤720: single column in DOM order */
     .account-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.45fr) minmax(0, 0.85fr);
       gap: 12px;
       align-items: start;
       width: 100%;
@@ -340,8 +341,8 @@
     }
     .vc-qr-frame {
       position: relative;
-      width: 204px;   /* 180 QR + 12px gutter each side (JS may override) */
-      height: 204px;
+      width: 234px;   /* 210 QR + 12px gutter each side (JS may override) */
+      height: 234px;
       padding: 12px;
       box-sizing: border-box;
       border-radius: 12px;
@@ -350,9 +351,9 @@
       border: 1px solid #e0d0c0;
       box-shadow: 0 1px 4px rgba(92, 51, 23, 0.12);
     }
-    .vc-qr-canvas { width: 180px; height: 180px; }
+    .vc-qr-canvas { width: 210px; height: 210px; }
     .vc-qr-canvas canvas,
-    .vc-qr-canvas table { display: block; width: 180px !important; height: 180px !important; max-width: 100%; }
+    .vc-qr-canvas table { display: block; width: 210px !important; height: 210px !important; max-width: 100%; }
     .vc-qr-logo-pad {
       position: absolute;
       left: 50%;
@@ -697,7 +698,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 <script src="/js/vendor/qrcode.min.js?v=20261006-1"></script>
-<script src="/js/tm-referral-qr.js?v=20261006-4"></script>
+<script src="/js/tm-referral-qr.js?v=20261006-5"></script>
 
 <script>
   firebase.initializeApp({

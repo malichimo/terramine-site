@@ -3,7 +3,7 @@
  * Logo overlays the center with a white pad (~20% of QR) for scanability.
  */
 (function (w) {
-  var SIZE = 180; // fits two side-by-side slots in account column 2
+  var SIZE = 210; // col2 is wider (0.85/1.45/0.85); keep 12px frame gutter
   var FRAME_PAD = 12; // inner gutter so border-radius does not clip QR corners
   var LOGO_SRC = '/images/mine-icons/miner-theme.png';
   var JOIN_BASE = 'https://terramine.app/join?ref=';
@@ -71,8 +71,8 @@
     var logo = document.createElement('img');
     logo.src = LOGO_SRC;
     logo.alt = '';
-    logo.width = 40;
-    logo.height = 40;
+    logo.width = 48;
+    logo.height = 48;
     logo.decoding = 'async';
     logoPad.appendChild(logo);
     wrap.appendChild(logoPad);
