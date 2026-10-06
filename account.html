@@ -611,7 +611,6 @@
                   <div id="vc-qr-vanity" class="vc-qr" role="img" aria-label="QR code for your vanity referral link"></div>
                   <div class="vc-qr-caption" id="vc-qr-vanity-caption">Scan to join</div>
                 </div>
-                <div class="vc-qr-empty" id="vc-qr-vanity-empty">No vanity QR yet — claim a code below.</div>
               </div>
             </div>
             <div class="field-group" style="margin-top:16px; margin-bottom:0;">
@@ -698,7 +697,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 <script src="/js/vendor/qrcode.min.js?v=20261006-1"></script>
-<script src="/js/tm-referral-qr.js?v=20261006-5"></script>
+<script src="/js/tm-referral-qr.js?v=20261006-6"></script>
 
 <script>
   firebase.initializeApp({
@@ -1114,14 +1113,14 @@
     $('vc-input-label').textContent = vanity ? 'Change your code' : 'Choose your code';
     $('vc-btn').textContent = vanity ? 'Change code' : 'Claim code';
 
-    // Dual QR slots: regular always; vanity QR only when claimed
+    // Dual QR slots: regular (miner logo) always; vanity (TerraWife) only when claimed — no empty QR frame
     try {
       if (window.TMReferralQR) {
         const panel = $('vc-qr-panel');
         const host = $('vc-qr');
         const cap = $('vc-qr-caption');
         if (host) {
-          const drawn = TMReferralQR.render(host, primary);
+          const drawn = TMReferralQR.render(host, primary, { logo: TMReferralQR.LOGO_MINER });
           if (panel) panel.hidden = !drawn;
           if (cap) cap.innerHTML = drawn
             ? ('Scan to join · <code>' + drawn.code.replace(/</g, '') + '</code>')
@@ -1130,18 +1129,23 @@
         const vPanel = $('vc-qr-vanity-panel');
         const vHost = $('vc-qr-vanity');
         const vCap = $('vc-qr-vanity-caption');
-        const vEmpty = $('vc-qr-vanity-empty');
         if (vanity && vHost) {
-          const drawnV = TMReferralQR.render(vHost, vanity);
+          const drawnV = TMReferralQR.render(vHost, vanity, { logo: TMReferralQR.LOGO_TERRAWIFE });
           if (vPanel) vPanel.hidden = !drawnV;
-          if (vEmpty) vEmpty.hidden = !!drawnV;
           if (vCap && drawnV) {
             vCap.innerHTML = 'Scan to join · <code>' + drawnV.code.replace(/</g, '') + '</code>';
           }
         } else {
-          if (vHost) { try { vHost.textContent = ''; } catch (_) {} }
+          if (vHost) {
+            try {
+              while (vHost.firstChild) vHost.removeChild(vHost.firstChild);
+              vHost.hidden = true;
+              vHost.removeAttribute('data-ref-code');
+              vHost.removeAttribute('data-join-url');
+            } catch (_) {}
+          }
           if (vPanel) vPanel.hidden = true;
-          if (vEmpty) vEmpty.hidden = false;
+          if (vCap) vCap.textContent = 'Scan to join';
         }
       }
     } catch (e) { try { console.warn('[vc-qr]', e); } catch (_) {} }

@@ -1,11 +1,12 @@
-/* TerraMine referral QR with centered miner logo (Oct 6, 2026).
+/* TerraMine referral QR with centered character logo (Oct 6, 2026).
  * Depends on js/vendor/qrcode.min.js (davidshimjs, CorrectLevel.H).
- * Logo overlays the center with a white pad (~20% of QR) for scanability.
+ * Regular QR: miner-theme.png. Vanity QR: terrawife.png (only when claimed).
  */
 (function (w) {
-  var SIZE = 210; // col2 is wider (0.85/1.45/0.85); keep 12px frame gutter
-  var FRAME_PAD = 12; // inner gutter so border-radius does not clip QR corners
-  var LOGO_SRC = '/images/mine-icons/miner-theme.png';
+  var SIZE = 210;
+  var FRAME_PAD = 12;
+  var LOGO_MINER = '/images/mine-icons/miner-theme.png';
+  var LOGO_TERRAWIFE = '/images/mine-icons/terrawife.png';
   var JOIN_BASE = 'https://terramine.app/join?ref=';
 
   function joinUrl(code) {
@@ -20,7 +21,6 @@
     return String((ud && ud.vanityCode) || '').trim();
   }
 
-  /** Prefer explicit code string; else regular referral code from user doc. */
   function resolveCode(udOrCode) {
     if (typeof udOrCode === 'string') return String(udOrCode || '').trim();
     return regularCode(udOrCode);
@@ -31,10 +31,10 @@
   }
 
   /**
-   * Render QR into hostEl (emptied first). Adds miner logo overlay.
-   * udOrCode: user doc OR referral code string.
-   * opts.size: pixel size of QR modules (default SIZE).
-   * Returns { code, url } or null if no code / QRCode missing.
+   * Render QR into hostEl (emptied first).
+   * opts.logo: image URL for center (default miner).
+   * opts.size: QR module size (default SIZE).
+   * Returns { code, url } or null.
    */
   function render(hostEl, udOrCode, opts) {
     if (!hostEl) return null;
@@ -42,9 +42,12 @@
     opts = opts || {};
     var size = Number(opts.size) > 0 ? Math.round(opts.size) : SIZE;
     var pad = FRAME_PAD;
+    var logoSrc = opts.logo || LOGO_MINER;
     var code = resolveCode(udOrCode);
     if (!code) {
       hostEl.hidden = true;
+      hostEl.removeAttribute('data-ref-code');
+      hostEl.removeAttribute('data-join-url');
       return null;
     }
     hostEl.hidden = false;
@@ -69,7 +72,7 @@
     logoPad.className = 'vc-qr-logo-pad';
     logoPad.setAttribute('aria-hidden', 'true');
     var logo = document.createElement('img');
-    logo.src = LOGO_SRC;
+    logo.src = logoSrc;
     logo.alt = '';
     logo.width = 48;
     logo.height = 48;
@@ -98,7 +101,12 @@
         canvases[0].style.width = size + 'px';
         canvases[0].style.height = size + 'px';
       }
-      if (imgs[0]) imgs[0].style.display = 'none';
+      // Hide QRCode lib's duplicate img; keep our logo img inside .vc-qr-logo-pad
+      for (var i = 0; i < imgs.length; i++) {
+        if (!imgs[i].closest || !imgs[i].closest('.vc-qr-logo-pad')) {
+          imgs[i].style.display = 'none';
+        }
+      }
     } catch (e) {}
 
     hostEl.setAttribute('data-ref-code', code);
@@ -109,6 +117,8 @@
   w.TMReferralQR = {
     SIZE: SIZE,
     FRAME_PAD: FRAME_PAD,
+    LOGO_MINER: LOGO_MINER,
+    LOGO_TERRAWIFE: LOGO_TERRAWIFE,
     joinUrl: joinUrl,
     regularCode: regularCode,
     vanityCode: vanityCode,
