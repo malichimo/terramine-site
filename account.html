@@ -153,7 +153,40 @@
 
     .main { flex:1; overflow-y:auto; background:transparent; }
 
-    .content { max-width: 600px; margin: 0 auto; padding: 24px 16px 48px; }
+    .content { max-width: 1280px; width: 100%; margin: 0 auto; padding: 24px 28px 48px; box-sizing: border-box; }
+
+    /* Account 3-column layout (match portal dash-breakdown breakpoints; Oct 6, 2026)
+       ≥1101: Profile+Account | Pioneer Pass+Referral | Linked Apps+Password
+       721–1100: Profile+Account left (span 2 rows); PP+Referral then rest on right
+       ≤720: single column in DOM order */
+    .account-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .account-col {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .account-col > .app-card:last-child { margin-bottom: 0; }
+    @media (max-width: 1100px) {
+      .account-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+      }
+      .account-col-profile { grid-column: 1; grid-row: 1 / span 2; }
+      .account-col-pp { grid-column: 2; grid-row: 1; }
+      .account-col-rest { grid-column: 2; grid-row: 2; }
+    }
+    @media (max-width: 720px) {
+      .account-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+      .account-col-profile,
+      .account-col-pp,
+      .account-col-rest { grid-column: auto; grid-row: auto; }
+      .content { padding: 20px 16px 48px; }
+    }
 
     /* ── App card ── */
     .app-card { background:white; border:2px solid var(--brown-mid); border-radius:12px; margin-bottom:18px; overflow:hidden; }
@@ -354,6 +387,8 @@
 <main class="main">
       <div class="content">
 
+        <div class="account-grid">
+          <div class="account-col account-col-profile">
         <!-- Profile card -->
         <div class="app-card">
           <div class="app-card-header">
@@ -409,6 +444,9 @@
           </div>
         </div>
 
+          </div>
+
+          <div class="account-col account-col-pp">
         <!-- Pioneer Pass status (users/{uid}.isPioneerMember / pioneerMemberSince) -->
         <div class="app-card pp-card" id="pp-card">
           <div class="app-card-body pp-card-body">
@@ -453,6 +491,9 @@
           </div>
         </div>
 
+          </div>
+
+          <div class="account-col account-col-rest">
         <!-- Linked apps (Calculator partner API, Sept 27, 2026) -->
         <div class="app-card" id="linked-apps-card">
           <div class="app-card-header">
@@ -499,6 +540,8 @@
             </div>
           </div>
           <div class="pw-note">For your security, you'll need to re-enter your current password to make this change.</div>
+        </div>
+          </div>
         </div>
 
       </div>
