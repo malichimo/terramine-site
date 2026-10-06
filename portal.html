@@ -4,6 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script src="/js/tm-time.js?v=20261006-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -1052,11 +1053,13 @@
     return productionBase(type) * (1 + productionBonus(level) / 100);
   }
   function periodAmount(perSec, period) {
+    // Scale from per-second via shared js/tm-time.js (month = 365/12 days, year = 365 days)
+    const T = window.TMTime;
     if (period === 'sec') return perSec;
-    if (period === 'min') return perSec * 60;
-    if (period === 'day') return perSec * 60 * 60 * 24;
-    if (period === 'year') return perSec * 60 * 60 * 24 * 365;
-    return perSec * 60 * 60 * 24 * 30;
+    if (period === 'min') return perSec * T.SECONDS_PER_MINUTE;
+    if (period === 'day') return perSec * T.SECONDS_PER_DAY;
+    if (period === 'year') return perSec * T.SECONDS_PER_YEAR;
+    return perSec * T.SECONDS_PER_MONTH;
   }
   const DISPLAY_KEY = 'terramine.mines.display';
   const DISPLAY_PERIODS = ['sec', 'min', 'day', 'month', 'year'];
