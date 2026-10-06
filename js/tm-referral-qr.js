@@ -12,10 +12,9 @@
     return JOIN_BASE + encodeURIComponent(String(code || '').trim());
   }
 
+  /** Card A share QR always uses the regular referral code (vanity has its own card). */
   function activeCode(ud) {
     ud = ud || {};
-    var vanity = String(ud.vanityCode || '').trim();
-    if (vanity) return vanity;
     return String(ud.referralCode || '').trim();
   }
 

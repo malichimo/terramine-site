@@ -290,7 +290,22 @@
     .vc-prefix { display:flex; align-items:center; padding:0 10px; background:var(--off-white); color:var(--text-mid); font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight:700; font-size:14px; border-right:1px solid var(--brown-light); }
     .vc-input { flex:1 1 auto; min-width:0; border:none; outline:none; padding:10px 12px; font-size:14px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-transform:uppercase; letter-spacing:1px; color:var(--text-dark); }
 
-    /* Referral QR (miner logo overlay; ~220px) */
+    /* Regular + Vanity referral cards: full-width row under the 3 account columns */
+    .referral-pair {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+      margin-top: 4px;
+      margin-bottom: 0;
+      align-items: start;
+    }
+    .referral-pair > .app-card { margin-bottom: 0; height: 100%; }
+    @media (max-width: 900px) {
+      .referral-pair { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    /* Referral QR (miner logo overlay; ~220px) — Card A share layout */
     .vc-share-row {
       display: flex;
       align-items: flex-start;
@@ -299,7 +314,7 @@
       flex-wrap: wrap;
       margin-top: 4px;
     }
-    .vc-share-codes { flex: 1 1 200px; min-width: 0; }
+    .vc-share-codes { flex: 1 1 160px; min-width: 0; }
     .vc-share-codes .vc-row:last-child { border-bottom: none; }
     .vc-qr-panel {
       flex: 0 0 auto;
@@ -552,46 +567,6 @@
           </div>
         </div>
 
-        <!-- Vanity referral code (setVanityReferralCode Cloud Function; free for Pioneer Pass, 5,000 TB otherwise) -->
-        <div class="app-card" id="vanity-card">
-          <div class="app-card-header">
-            <span class="app-card-title">🏷️ Vanity Referral Code</span>
-          </div>
-          <div class="app-card-body">
-            <div class="field-hint" style="font-size:13px; margin-top:0;">
-              Pick a custom referral code that's easy to share, like <strong>TM-GOLDRUSH</strong>. Your regular code keeps working too.
-            </div>
-            <div class="vc-share-row">
-              <div class="vc-share-codes">
-                <div class="vc-row">
-                  <span class="info-label">Your regular code</span>
-                  <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-primary">—</span><button class="vc-copy" id="vc-primary-copy" type="button">Copy</button></span>
-                </div>
-                <div class="vc-row">
-                  <span class="info-label">Your vanity code</span>
-                  <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-current">None yet</span><button class="vc-copy" id="vc-current-copy" type="button" style="display:none;">Copy</button></span>
-                </div>
-              </div>
-              <div class="vc-qr-panel" id="vc-qr-panel" hidden>
-                <div id="vc-qr" class="vc-qr" role="img" aria-label="QR code for your TerraMine join link"></div>
-                <div class="vc-qr-caption" id="vc-qr-caption">Scan to join</div>
-              </div>
-            </div>
-            <div class="field-group" style="margin-top:14px; margin-bottom:0;">
-              <label class="field-label" for="vc-input" id="vc-input-label">Choose your code</label>
-              <div class="vc-input-wrap">
-                <span class="vc-prefix">TM-</span>
-                <input class="vc-input" type="text" id="vc-input" maxlength="10" placeholder="GOLDRUSH" autocomplete="off" autocapitalize="characters" spellcheck="false" />
-              </div>
-              <div class="field-hint">4–10 letters or numbers. You can change it once per calendar month. Changing it releases your old vanity code.</div>
-            </div>
-            <div class="vc-price" id="vc-price"></div>
-            <div class="save-row">
-              <button class="btn-save" id="vc-btn" onclick="claimVanityCode()">Claim code</button>
-              <span class="save-status" id="vc-status"></span>
-            </div>
-          </div>
-        </div>
 
           </div>
 
@@ -644,6 +619,60 @@
           <div class="pw-note">For your security, you'll need to re-enter your current password to make this change.</div>
         </div>
           </div>
+
+        <!-- Referral share (regular code + QR) and Vanity claim — side by side -->
+        <div class="referral-pair">
+          <div class="app-card" id="referral-share-card">
+            <div class="app-card-header">
+              <span class="app-card-title">📤 Your Referral Code</span>
+            </div>
+            <div class="app-card-body">
+              <div class="field-hint" style="font-size:13px; margin-top:0;">
+                Share this code so friends can join TerraMine with your link. Scan the QR or copy the code.
+              </div>
+              <div class="vc-share-row">
+                <div class="vc-share-codes">
+                  <div class="vc-row">
+                    <span class="info-label">Your regular code</span>
+                    <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-primary">—</span><button class="vc-copy" id="vc-primary-copy" type="button">Copy</button></span>
+                  </div>
+                </div>
+                <div class="vc-qr-panel" id="vc-qr-panel" hidden>
+                  <div id="vc-qr" class="vc-qr" role="img" aria-label="QR code for your TerraMine join link"></div>
+                  <div class="vc-qr-caption" id="vc-qr-caption">Scan to join</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="app-card" id="vanity-card">
+            <div class="app-card-header">
+              <span class="app-card-title">🏷️ Your Vanity Code</span>
+            </div>
+            <div class="app-card-body">
+              <div class="field-hint" style="font-size:13px; margin-top:0;">
+                Pick a custom code that's easy to share, like <strong>TM-GOLDRUSH</strong>. Your regular code keeps working too.
+              </div>
+              <div class="vc-row" style="border-bottom:none;">
+                <span class="info-label">Your vanity code</span>
+                <span style="display:flex; align-items:center; gap:8px;"><span class="vc-code" id="vc-current">None yet</span><button class="vc-copy" id="vc-current-copy" type="button" style="display:none;">Copy</button></span>
+              </div>
+              <div class="field-group" style="margin-top:14px; margin-bottom:0;">
+                <label class="field-label" for="vc-input" id="vc-input-label">Choose your code</label>
+                <div class="vc-input-wrap">
+                  <span class="vc-prefix">TM-</span>
+                  <input class="vc-input" type="text" id="vc-input" maxlength="10" placeholder="GOLDRUSH" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+                </div>
+                <div class="field-hint">4–10 letters or numbers. You can change it once per calendar month. Changing it releases your old vanity code.</div>
+              </div>
+              <div class="vc-price" id="vc-price"></div>
+              <div class="save-row">
+                <button class="btn-save" id="vc-btn" onclick="claimVanityCode()">Claim code</button>
+                <span class="save-status" id="vc-status"></span>
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
 
       </div>
@@ -659,7 +688,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
 <script src="/js/vendor/qrcode.min.js?v=20261006-1"></script>
-<script src="/js/tm-referral-qr.js?v=20261006-2"></script>
+<script src="/js/tm-referral-qr.js?v=20261006-3"></script>
 
 <script>
   firebase.initializeApp({
@@ -1075,7 +1104,7 @@
     $('vc-input-label').textContent = vanity ? 'Change your code' : 'Choose your code';
     $('vc-btn').textContent = vanity ? 'Change code' : 'Claim code';
 
-    // Referral join QR: vanity if claimed, else regular code
+    // Card A QR always encodes the regular referral code (vanity is Card B)
     try {
       const panel = $('vc-qr-panel');
       const host = $('vc-qr');
@@ -1085,8 +1114,7 @@
         if (panel) panel.hidden = !drawn;
         if (cap) {
           if (drawn) {
-            const which = vanity ? 'vanity' : 'regular';
-            cap.innerHTML = 'Scan to join · <code>' + drawn.code.replace(/</g, '') + '</code> <span style="font-weight:500;color:var(--text-mid);">(' + which + ')</span>';
+            cap.innerHTML = 'Scan to join · <code>' + drawn.code.replace(/</g, '') + '</code>';
           } else {
             cap.textContent = 'Scan to join';
           }
