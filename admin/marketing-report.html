@@ -393,7 +393,7 @@
           <span class="section-tag">§ Ad Revenue</span>
           <h2>Estimated ad revenue by platform</h2>
         </div>
-        <p class="section-desc">Estimated network earnings from AdMob's network report. Unity Ads bids within this mediation — see Unity Ads Detail below for its own slice. Reported ~1 day behind "today".</p>
+        <p class="section-desc">Estimated earnings from the AdMob Network only (AdMob's network report). Unity Ads and Meta Audience Network bid inside the same mediation but are reported and paid separately — they appear in the sections below and are added together in "All ad sources". Reported ~1 day behind "today".</p>
       </div>
       <div class="panel panel-row">
         <div>
@@ -411,27 +411,29 @@
         <div>
           <div class="side-stat"><div class="k">Android revenue (period)</div><div class="v" id="adRevAndroid">—</div><div class="delta" id="adRevAndroidDelta"></div></div>
           <div class="side-stat"><div class="k">iOS revenue (period)</div><div class="v" id="adRevIos">—</div><div class="delta" id="adRevIosDelta"></div></div>
-          <div class="side-stat"><div class="k">Total revenue (period)</div><div class="v" id="adRevTotal">—</div><div class="delta" id="adRevTotalDelta"></div></div>
+          <div class="side-stat"><div class="k">AdMob Network total (period)</div><div class="v" id="adRevTotal">—</div><div class="delta" id="adRevTotalDelta"></div></div>
+          <div class="side-stat"><div class="k">All ad sources (AdMob + Unity + Meta)</div><div class="v" id="adRevAll">—</div><div class="delta" id="adRevAllDelta"></div></div>
         </div>
       </div>
     </section>
 
-    <!-- Sept 20, 2026 (Scott) -- Unity Ads is a bidding participant inside
-         the AdMob mediation above, not a separate ad network -- its revenue
-         is already counted in the AdMob total in the section above this
-         one. This section exists purely for visibility into Unity's own
-         slice and bidding health (fill rate, completion rate), which
-         AdMob's own network report doesn't break out. Sourced from
-         unity_ad_revenue_snapshots, written daily by refreshUnityAdStats
-         (functions/src/index.ts), which calls Unity's own Monetization
-         Stats API directly. -->
+    <!-- Sept 20, 2026 (Scott); corrected Oct 8, 2026 -- Unity Ads bids inside
+         the AdMob mediation but is paid by Unity directly. AdMob's network
+         report (what the section above uses) covers the AdMob Network only,
+         so Unity's revenue is IN ADDITION to the AdMob Network total
+         (confirmed against AdMob's Mediation report, which lists AdMob
+         Network, Unity Ads and Meta as separate ad sources that sum to its
+         total). This section also shows bidding health (fill rate,
+         completion rate). Sourced from unity_ad_revenue_snapshots, written
+         daily by refreshUnityAdStats (functions/src/index.ts), which calls
+         Unity's own Monetization Stats API directly. -->
     <section class="section">
       <div class="section-head">
         <div>
           <span class="section-tag">§ Ad Revenue</span>
           <h2>Unity Ads detail</h2>
         </div>
-        <p class="section-desc">Unity's own slice of the ad revenue above, plus bidding-health metrics AdMob's report doesn't show. <strong>Not additive</strong> — already included in "Estimated ad revenue by platform." Reported ~1 day behind "today".</p>
+        <p class="section-desc">Unity's own revenue from bidding in our ad mediation, plus bidding-health metrics. Paid by Unity directly, so it's <strong>in addition to</strong> the AdMob Network total above (AdMob's Mediation report lists it as a separate ad source). Reported ~1 day behind "today".</p>
       </div>
       <div class="panel panel-row">
         <div>
@@ -1298,6 +1300,16 @@
     noteEl.textContent = `Estimated ad revenue from AdMob's network report (typically about 1 day behind "today" — most recent figure is for ${latest.date}). Estimates only — AdMob's own dashboard is authoritative for reconciliation/payment purposes.`;
   }
 
+  // Flags a snapshot feed whose newest day is more than 3 days old, so a
+  // silently failing daily job (Unity/Meta pull) shows up on the page
+  // instead of just looking like a quiet week.
+  function staleNote(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    if (isNaN(d.getTime())) return '';
+    const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+    return days > 3 ? ` \u26A0 Latest data is ${days} days old \u2014 the daily refresh may be behind.` : '';
+  }
+
   function unityAdRangeSlice(days) {
     return dateRangeSlice(unityAdSnapshots, 'date', days);
   }
@@ -1344,7 +1356,7 @@
       return;
     }
     const latest = slice[slice.length - 1];
-    noteEl.textContent = `From Unity's own Monetization Stats API directly (typically about 1 day behind "today" — most recent figure is for ${latest.date}). This revenue is already part of the AdMob total above, not in addition to it.`;
+    noteEl.textContent = `From Unity's own Monetization Stats API directly (typically about 1 day behind "today" — most recent figure is for ${latest.date}). This revenue is in addition to the AdMob Network total above.${staleNote(latest.date)}`;
   }
 
   function renderMetaAdStats() {
@@ -1382,7 +1394,24 @@
       return;
     }
     const latest = slice[slice.length - 1];
-    noteEl.textContent = `From Meta's Audience Network Reporting API (most recent figure is for ${latest.date}). Estimates only — Meta's Monetization Manager is authoritative for payouts.`;
+    noteEl.textContent = `From Meta's Audience Network Reporting API (most recent figure is for ${latest.date}). Estimates only — Meta's Monetization Manager is authoritative for payouts.${staleNote(latest.date)}`;
+  }
+
+  // Combined revenue across all three sources. AdMob's network report covers
+  // the AdMob Network only; Unity and Meta bid in the same mediation but are
+  // reported/paid separately, so the true total is the sum of the three.
+  function renderAllSourcesTotal() {
+    const fmtUsd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const sum = arr => arr.reduce((t, x) => t + (x.androidRevenue || 0) + (x.iosRevenue || 0), 0);
+    const feeds = [adRevenueSnapshots, unityAdSnapshots, metaAdSnapshots];
+    const cur = feeds.reduce((t, f) => t + sum(dateRangeSlice(f, 'date', currentRange)), 0);
+    const hasData = feeds.some(f => dateRangeSlice(f, 'date', currentRange).length > 0);
+    document.getElementById('adRevAll').textContent = hasData ? fmtUsd(cur) : '—';
+    const prevSlices = feeds.map(f => priorWindowSlice(f, 'date', currentRange));
+    // Only compare when AdMob has a prior window; Unity/Meta history is shorter.
+    const hasPrev = prevSlices[0].length > 0;
+    const prev = prevSlices.reduce((t, sl) => t + sum(sl), 0);
+    applyDelta(document.getElementById('adRevAllDelta'), hasPrev ? computeDeltaPct(cur, prev) : null);
   }
 
   function renderAll() {
@@ -1397,6 +1426,7 @@
     renderAdRevenue();
     renderUnityAdStats();
     renderMetaAdStats();
+    renderAllSourcesTotal();
     renderGeography();
     renderGeographyPlayers();
   }
