@@ -487,6 +487,27 @@ html[data-theme="dusk"] .vo-message,
 html[data-theme="mine"] .vo-message {
   color: #9caec2 !important;
 }
+/* Owner reply block on visitor/activity cards (Day: light #e3f2fd bubble) */
+html[data-theme="dusk"] .vo-owner-reply,
+html[data-theme="mine"] .vo-owner-reply {
+  background: rgba(79, 195, 247, 0.08) !important;
+  border: 1px solid rgba(79, 195, 247, 0.25) !important;
+  border-left: 3px solid #4FC3F7 !important;
+}
+html[data-theme="dusk"] .vo-owner-reply-label,
+html[data-theme="mine"] .vo-owner-reply-label,
+html[data-theme="dusk"] .vo-owner-reply-label span,
+html[data-theme="mine"] .vo-owner-reply-label span {
+  color: #7fd3fa !important;
+}
+html[data-theme="dusk"] .vo-owner-reply-icon,
+html[data-theme="mine"] .vo-owner-reply-icon {
+  color: #7fd3fa !important;
+}
+html[data-theme="dusk"] .vo-owner-reply-text,
+html[data-theme="mine"] .vo-owner-reply-text {
+  color: #d6e2f0 !important;
+}
 
 
 /* Mine theme miner icon (colored SVG — keep fills, not currentColor wash) */
