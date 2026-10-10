@@ -347,6 +347,7 @@
       <span>Redemption Requests</span>
       <div class="table-header-right">
         <button class="nav-btn" id="paypalCsvBtn" title="Download a PayPal mass-pay CSV of every PENDING PayPal request whose referral fraud check is ticked (ignores the tab/search filters)" onclick="downloadPaypalMassPayCsv()">📥 PayPal CSV</button>
+        <button class="nav-btn" id="paypalPaidBtn" style="display:none;" title="Marks every request from your last downloaded PayPal CSV as Paid. Only use after PayPal accepted the file." onclick="markCsvBatchPaid()">✅ Mark last CSV as Paid</button>
         <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, referral code, or method…" oninput="onSearchInput()">
         <span class="table-count" id="tableCount">— requests</span>
       </div>
@@ -565,6 +566,7 @@
 
     updateTabCounts();
     render();
+    refreshPaypalPaidBtn();
   }
 
   function updateTabCounts() {
@@ -1149,7 +1151,7 @@
   }
   window.downloadPaypalMassPayCsv = () => {
     const pendingPaypal = allRequests.filter(r => r.status === 'pending' && r.payoutMethod === 'paypal');
-    const rows = [], skipped = [];
+    const rows = [], skipped = [], batchItems = [];
     let uncheckedCount = 0;
     for (const r of pendingPaypal) {
       if (!fraudCheckState(r).checked) { uncheckedCount++; continue; }
@@ -1161,6 +1163,7 @@
         continue;
       }
       rows.push({ email, code, net });
+      batchItems.push({ id: r.id, code, net });
     }
     if (!rows.length) { showToast('No pending PayPal requests with the fraud check ticked.', 'error'); return; }
 
@@ -1181,6 +1184,14 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 
+    try {
+      localStorage.setItem(PAYPAL_BATCH_KEY, JSON.stringify({
+        createdAt: new Date().toISOString(),
+        items: batchItems,
+      }));
+    } catch (e) { /* storage blocked: the Mark-as-Paid button just won't appear */ }
+    refreshPaypalPaidBtn();
+
     let msg = `Downloaded ${rows.length} payments, $${total.toFixed(2)} total. ${uncheckedCount} pending PayPal left out (fraud check not ticked).`;
     if (skipped.length) msg += ` ${skipped.length} skipped (bad email/code/amount): ${skipped.slice(0, 5).join(', ')}.`;
     if (dupes.length) msg += ` Same Reference ID used twice: ${dupes.join(', ')}.`;
@@ -1189,6 +1200,77 @@
     showToast(msg, skipped.length || dupes.length ? 'error' : '');
     const t = document.getElementById('toast'); clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { t.className = 'toast'; }, 15000);
+  };
+
+  // ── Mark last PayPal CSV as Paid ───────────────────────────────────────
+  // Added Oct 10, 2026. The CSV button remembers which requests went into the
+  // file (this browser only). After PayPal accepts the upload, this does for
+  // each one exactly what the row's "Paid" button does: pending ->
+  // approved_unpaid (server re-checks amount/email/account/cap/cooldown) ->
+  // paid. Anything that fails stays in the batch so it can be retried; rows
+  // that are no longer pending (already paid, rejected, etc.) are dropped.
+  const PAYPAL_BATCH_KEY = 'paypalCsvBatch';
+  function loadPaypalBatch() {
+    try { const b = JSON.parse(localStorage.getItem(PAYPAL_BATCH_KEY) || 'null'); return b && Array.isArray(b.items) && b.items.length ? b : null; }
+    catch (e) { return null; }
+  }
+  function refreshPaypalPaidBtn() {
+    const btn = document.getElementById('paypalPaidBtn');
+    if (!btn) return;
+    const b = loadPaypalBatch();
+    btn.style.display = b ? '' : 'none';
+    if (b) btn.textContent = `✅ Mark last CSV as Paid (${b.items.length})`;
+  }
+  let batchPaying = false;
+  window.markCsvBatchPaid = async () => {
+    if (batchPaying) return;
+    const b = loadPaypalBatch();
+    if (!b) { showToast('No CSV batch remembered in this browser.', 'error'); return; }
+    const total = b.items.reduce((a, x) => a + Math.round(x.net * 100), 0) / 100;
+    if (!confirm(`Mark ${b.items.length} requests ($${total.toFixed(2)} net) from the CSV downloaded ${new Date(b.createdAt).toLocaleString()} as PAID?\n\nOnly do this AFTER PayPal has accepted the upload. Each request is re-checked by the server first; any that fail stay in the batch so you can retry.`)) return;
+
+    batchPaying = true;
+    const btn = document.getElementById('paypalPaidBtn');
+    btn.disabled = true;
+    const byId = new Map(allRequests.map(r => [r.id, r]));
+    const remaining = [], failures = [];
+    let done = 0, skippedNotPending = 0;
+    const queue = [...b.items];
+    const worker = async () => {
+      while (queue.length) {
+        const it = queue.shift();
+        const cur = byId.get(it.id);
+        const status = cur ? cur.status : null;
+        try {
+          if (status === 'paid' || status === 'rejected') { skippedNotPending++; continue; }
+          if (status === 'pending') await adminUpdateWithdrawalStatus({ requestId: it.id, newStatus: 'approved_unpaid' });
+          else if (status !== 'approved_unpaid') throw new Error('status is ' + status);
+          await adminUpdateWithdrawalStatus({ requestId: it.id, newStatus: 'paid' });
+          done++;
+        } catch (e) {
+          console.error(it.code, e);
+          remaining.push(it);
+          failures.push(`${it.code}: ${e?.message || 'failed'}`);
+        }
+        btn.textContent = `Marking paid… ${done + failures.length + skippedNotPending}/${b.items.length}`;
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+
+    try {
+      if (remaining.length) localStorage.setItem(PAYPAL_BATCH_KEY, JSON.stringify({ createdAt: b.createdAt, items: remaining }));
+      else localStorage.removeItem(PAYPAL_BATCH_KEY);
+    } catch (e) {}
+    btn.disabled = false;
+    batchPaying = false;
+    refreshPaypalPaidBtn();
+    let msg = `Marked ${done} as paid.`;
+    if (skippedNotPending) msg += ` ${skippedNotPending} already paid/rejected (skipped).`;
+    if (failures.length) { msg += ` ${failures.length} FAILED and stay in the batch: ${failures.slice(0, 4).join(' | ')}`; console.log(failures.join('\n')); }
+    showToast(msg, failures.length ? 'error' : 'success');
+    const t = document.getElementById('toast'); clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 20000);
+    await loadAll();
   };
 
   window.copyToClipboard = async (text, btnEl) => {
