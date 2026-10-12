@@ -56,6 +56,12 @@
   <!-- ✅ Aug 24, 2026: AdSense — same publisher as the app/AdMob (ca-pub-4502698429383902,
        already verified via ads.txt at the site root). -->
   <!-- (adsbygoogle.js removed — see comment above) -->
+  <style>
+    /* Oct 12, 2026: Mine maintenance table */
+    .dash-maint-today-card .tb-today-games-table { position: relative; margin-top: 6px; }
+    .mt-table .mt-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+    .mt-table td { text-align: right; font-variant-numeric: tabular-nums; }
+  </style>
   <link rel="stylesheet" href="/portal-theme.css?v=20261012-3" />
 </head>
 <body class="auth-pending">
@@ -340,6 +346,13 @@
                 <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
               </div>
             </div>
+            <!-- Oct 12, 2026: Mine Maintenance today (dailyActivities where userId == uid) -->
+            <div class="stat-card dash-slot-card dash-maint-today-card has-share" id="dash-maint-today-card" aria-label="Mine maintenance today">
+              <div class="stat-card-label">Mine Maintenance Today</div>
+              <button type="button" class="dash-share-btn" data-share-card="dash-maint-today-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              <div class="tb-today-games-table" id="maint-today-table"></div>
+              <div class="tb-today-ref-msg" id="maint-today-msg" role="status" hidden></div>
+            </div>
             <!-- Oct 1, 2026: Inventory (same items, order and art as inventory.html; from the users doc already loaded) -->
             <section class="dash-visits-card dash-inv-card" id="dash-inv-card" aria-labelledby="dash-inv-title">
               <div class="dash-visits-head">
@@ -395,6 +408,21 @@
                   <div class="dash-visits-msg is-loading" id="dash-games-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
                 </div>
                 <div class="dash-games-note" id="dash-games-note" role="note" hidden></div>
+              </div>
+            </section>
+            <!-- Oct 12, 2026: mine maintenances per day (perfect / regular) + resources earned, last 30 days -->
+            <section class="dash-visits-card dash-maint-card" id="dash-maint-card" aria-labelledby="dash-maint-title">
+              <div class="dash-visits-head has-share">
+                <h2 class="dash-visits-title" id="dash-maint-title">Mine Maintenance &mdash; Last 30 Days</h2>
+                <div class="dash-visits-total" id="dash-maint-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-maint-card" data-tip="Copy image for sharing" aria-label="Copy image for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-maint-wrap">
+                  <canvas id="dash-maint-chart" role="img" aria-label="Bar graph of mine maintenances per day for the last 30 days, with resources earned"></canvas>
+                  <div class="dash-visits-msg is-loading" id="dash-maint-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+                </div>
+                <div class="dash-games-note" id="dash-maint-note" role="note" hidden></div>
               </div>
             </section>
             <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
@@ -1718,6 +1746,8 @@
         loadMiniGames30(user.uid, options).catch(function (err) {
           console.warn('[mini-games] load failed:', err);
         });
+        // Mine maintenance: one dailyActivities fetch feeds the today box + 30-day graph.
+        loadMaint30(user.uid, options).catch(function (err) { console.warn('[maintenance] load failed:', err); });
         // My Check-ins: one shared fetch of your own check-ins (60 days) feeds the
         // My Check-ins graph and the TerraBucks "Your activity" box (today).
         loadMyCheckIns60(user.uid, options).catch(function (err) {
@@ -1729,6 +1759,7 @@
         myciToday = null;
         loadReferralsTodayOnly(user.uid).catch(function (err) { console.warn('[referrals] today load failed:', err); });
         loadMiniGamesTodayOnly(user.uid).catch(function (err) { console.warn('[mini-games] today load failed:', err); });
+        loadMaint30(user.uid, options, { todayOnly: true }).catch(function (err) { console.warn('[maintenance] today load failed:', err); });
       }
       // Inventory card: same users-doc fields as inventory.html, no extra read.
       try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, Object.assign({}, options, { uid: user && user.uid })); }
@@ -3916,6 +3947,240 @@
   renderMgToday(null, true);
   renderMiniGames30(); // empty 30-slot frame under the "Loading…" message
 
+  // ── Mine Maintenance: "Mine Maintenance Today" box + "Last 30 Days" graph ──
+  // Oct 12, 2026. Read-only. dailyActivities docs (diag Oct 12): userId, propertyId,
+  // timestamp, resetDay, attemptNumber, perfectTiming, wasDoubled, wasAdPurchased,
+  // rewardsEarned { common, uncommon, rare, epic }. Rules require the userId filter.
+  // Same windowed fetch as mini games (fetchWindowWithFallback), local-day buckets.
+  const MT30_DAYS = 30;
+  const MT30_PAGE = 500;
+  const MT30_MAX_PAGES = 20;
+  const MT30_FALLBACK_MAX_PAGES = 20;
+  const MT_RES = ['common', 'uncommon', 'rare', 'epic'];
+  const MT_RES_LABELS = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic' };
+  const MT_RES_COLORS = { common: '#9e9e9e', uncommon: '#43a047', rare: '#1e88e5', epic: '#8e24aa' };
+  const MT30_REG_COLOR = '#78909C';     // regular maintenance
+  const MT30_PERF_COLOR = '#FFB300';    // perfect timing
+  const MT30_RES_COLOR = '#4FC3F7';     // resources (right axis)
+  const MT30_RES_LABEL = '#0277BD';
+  const _mt30 = {
+    seq: 0, status: 'loading', days: null, axis: null, axis2: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', completeFromMs: -Infinity
+  };
+  function mtEmptyDay(d) {
+    d.count = 0; d.perfect = 0; d.doubled = 0; d.ad = 0; d.res = 0; d.incomplete = false;
+    d.r = {}; MT_RES.forEach(function (k) { d.r[k] = 0; });
+    return d;
+  }
+  function mt30BuildDays(nDays) {
+    const win = vis60BuildDays(null, nDays || MT30_DAYS);
+    win.days.forEach(mtEmptyDay);
+    return win;
+  }
+  function mtEntry(d) {
+    const ms = purchaseTsMs(d.timestamp);
+    if (ms == null) return null;
+    const re = (d.rewardsEarned && typeof d.rewardsEarned === 'object') ? d.rewardsEarned : {};
+    const r = {}; let res = 0;
+    MT_RES.forEach(function (k) { const v = Number(re[k]); r[k] = Number.isFinite(v) ? v : 0; res += r[k]; });
+    return { ms: ms, r: r, res: res, perfect: d.perfectTiming === true, doubled: d.wasDoubled === true, ad: d.wasAdPurchased === true };
+  }
+  function mt30Add(win, e) {
+    if (!win.byKey) { win.byKey = Object.create(null); win.days.forEach(function (d) { win.byKey[d.key] = d; }); }
+    if (e.ms < win.startMs || e.ms >= win.endMs) return;
+    const day = win.byKey[vis60DayKey(new Date(e.ms))];
+    if (!day) return;
+    day.count++; if (e.perfect) day.perfect++; if (e.doubled) day.doubled++; if (e.ad) day.ad++;
+    day.res += e.res; MT_RES.forEach(function (k) { day.r[k] += e.r[k]; });
+  }
+  /** One day's maintenance table (today box + graph popup share it). null = "—". */
+  function renderMaintTable(day) {
+    const wrap = document.createElement('div');
+    wrap.className = 'mg-table-wrap mt-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'tb-today-table tb-today-table-games mg-table mt-table';
+    table.setAttribute('aria-label', 'Mine maintenance');
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th scope="col">Resources</th><th scope="col">Earned</th></tr>';
+    const tbody = document.createElement('tbody');
+    const plus = !!(day && day.incomplete);
+    const addRow = function (label, v, swatch, cls) {
+      const tr = document.createElement('tr');
+      if (cls) tr.className = cls;
+      const th = document.createElement('th'); th.scope = 'row';
+      if (swatch) { const s = document.createElement('span'); s.className = 'mt-swatch'; s.style.background = swatch; th.appendChild(s); }
+      th.appendChild(document.createTextNode(label));
+      const td = document.createElement('td');
+      if (v == null) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); }
+      else td.textContent = fmtNum(v) + (plus ? '+' : '');
+      tr.append(th, td);
+      tbody.appendChild(tr);
+    };
+    MT_RES.forEach(function (k) { addRow(MT_RES_LABELS[k], day ? day.r[k] : null, MT_RES_COLORS[k]); });
+    addRow('Maintenances', day ? day.count : null, '', 'mg-total-row');
+    addRow('Perfect timing', day ? day.perfect : null, '');
+    addRow('Doubled', day ? day.doubled : null, '');
+    addRow('Ad purchased', day ? day.ad : null, '');
+    table.append(thead, tbody);
+    wrap.appendChild(table);
+    return wrap;
+  }
+  function setMtTodayMsg(text) {
+    const m = $('maint-today-msg'); if (!m) return;
+    m.textContent = text || ''; m.hidden = !text;
+  }
+  function renderMtToday(day, loading) {
+    const host = $('maint-today-table'); if (!host) return;
+    host.replaceChildren(renderMaintTable(day));
+    if (loading) {
+      const ov = document.createElement('div'); ov.className = 'mg-loading'; ov.innerHTML = dashLoadingHtml(); host.appendChild(ov);
+    }
+  }
+  function setMt30Note(text) { const n = $('dash-maint-note'); if (!n) return; n.textContent = text || ''; n.hidden = !text; }
+  function setMt30Msg(text, cls) { setDashMsg($('dash-maint-msg'), text, cls); }
+  function renderMaint30() {
+    drawDayBars($('dash-maint-chart'), _mt30, {
+      render: renderMaint30,
+      emptyDays: function () { return mt30BuildDays().days; },
+      total: function (d) { return d.count; },
+      segments: function (d) {
+        return [{ key: 'regular', v: d.count - d.perfect, color: MT30_REG_COLOR }, { key: 'perfect', v: d.perfect, color: MT30_PERF_COLOR }];
+      },
+      second: { total: function (d) { return d.res; }, color: MT30_RES_COLOR, labelColor: MT30_RES_LABEL, axis: mg30AxisTb },
+      titles: { left: 'Maint.', right: 'Res.' },
+      hoverOutline: true,
+      hoverOutlineColor: '#5C3317',
+      aria: function (sum, max) {
+        const res = (_mt30.days || []).reduce(function (a, d) { return a + d.res; }, 0);
+        return 'Bar graph of mine maintenances per day for the last 30 days (maintenances on the left axis, perfect timing highlighted; resources earned on the right axis): '
+          + (_mt30.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' maintenance, ' : ' maintenances, ') + fmtNum(res) + ' resources, most in one day ' + fmtNum(max));
+      }
+    });
+  }
+  function fillMt30Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _mt30.days && _mt30.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _mt30.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    tip.appendChild(renderMaintTable(day));
+  }
+  function mt30PreviewEntries(win) {
+    const out = [];
+    win.days.forEach(function (d, i) {
+      const n = (i * 5 + 3) % 7 === 0 ? 0 : (i * 3 + 2) % 6;
+      for (let k = 0; k < n; k++) {
+        const r = { common: 3 + (k % 3), uncommon: k % 2 ? 2 : 1, rare: k % 3 === 0 ? 1 : 0, epic: (i + k) % 9 === 0 ? 1 : 0 };
+        out.push({ ms: d.date.getTime() + (8 + k) * 3600000, r: r, res: r.common + r.uncommon + r.rare + r.epic,
+          perfect: k % 3 === 0, doubled: k % 4 === 1, ad: k % 5 === 2 });
+      }
+    });
+    return out;
+  }
+  function mt30SetLoading(win) {
+    _mt30.status = 'loading';
+    _mt30.days = (win || mt30BuildDays()).days;
+    if (vis60TipChart === MT30_CHART) hideVis60Tip();
+    setMt30Msg('', 'is-loading');
+    const total = $('dash-maint-total'); if (total) total.textContent = '\u2014';
+    setMt30Note('');
+    renderMtToday(null, true);
+    setMtTodayMsg('');
+    renderMaint30();
+  }
+  function mt30Show(win, completeFromMs, final) {
+    win.days.forEach(function (d) { d.incomplete = d.date.getTime() < completeFromMs; });
+    const count = win.days.reduce(function (a, d) { return a + d.count; }, 0);
+    const res = win.days.reduce(function (a, d) { return a + d.res; }, 0);
+    const partial = completeFromMs > win.startMs;
+    _mt30.days = win.days;
+    _mt30.completeFromMs = completeFromMs;
+    _mt30.status = final ? (count ? 'ready' : 'empty') : (count ? 'partial' : 'loading');
+    const plus = partial && final ? '+' : '';
+    const total = $('dash-maint-total');
+    if (total && (final || count)) {
+      total.textContent = fmtNum(count) + plus + (count === 1 && !plus ? ' maintenance' : ' maintenances') + ' \u00b7 ' + fmtNum(res) + plus + ' resources' + (final ? '' : '\u2026');
+    }
+    if (final) setMt30Msg(count ? '' : 'No mine maintenance in the last 30 days', '');
+    else if (count) setMt30Msg('', '');
+    if (final && partial) setMt30Note('Older days may be incomplete: read limit of ' + fmtNum(MT30_PAGE * MT30_MAX_PAGES) + ' maintenances reached.');
+    else setMt30Note('');
+    const today = win.days[win.days.length - 1];
+    if (final || !today.incomplete) renderMtToday(today);
+    renderMaint30();
+    if (vis60TipChart === MT30_CHART && _mt30.hover >= 0) fillMt30Tip(_mt30.hover);
+  }
+  /** opts.todayOnly: locked (no Pioneer Pass) — fill only the today box. */
+  async function loadMaint30(uid, options, opts) {
+    options = options || {}; opts = opts || {};
+    const todayOnly = !!opts.todayOnly;
+    const seq = ++_mt30.seq;
+    let win = mt30BuildDays();
+    const todayMs = win.days[win.days.length - 1].date.getTime();
+    const fetchWin = todayOnly ? { days: win.days, startMs: todayMs, endMs: win.endMs } : win;
+    if (todayOnly) { renderMtToday(null, true); setMtTodayMsg(''); }
+    else mt30SetLoading(win);
+    let src = null, used = 0, seen = new Set();
+    const consume = function (docs) {
+      if (docs !== src) { src = docs; used = 0; seen = new Set(); win = mt30BuildDays(); }
+      for (; used < docs.length; used++) {
+        const doc = docs[used];
+        if (seen.has(doc.id)) continue;
+        seen.add(doc.id);
+        const e = mtEntry(doc.data() || {});
+        if (e) mt30Add(win, e);
+      }
+    };
+    let res = null;
+    try {
+      if (options.preview) {
+        mt30PreviewEntries(win).forEach(function (e) { mt30Add(win, e); });
+      } else {
+        res = await fetchWindowWithFallback({ tag: '[maintenance]', coll: 'dailyActivities', field: 'userId', uid: uid, tsField: 'timestamp',
+          page: MT30_PAGE, maxPages: MT30_MAX_PAGES, fallbackMaxPages: MT30_FALLBACK_MAX_PAGES, days: todayOnly ? 1 : MT30_DAYS,
+          onPage: todayOnly ? null : function (docs, info) {
+            if (seq !== _mt30.seq) return;
+            consume(docs);
+            mt30Show(win, info.completeFromMs, false);
+          } }, fetchWin);
+        consume(res.docs);
+      }
+    } catch (err) {
+      if (seq !== _mt30.seq) return;
+      console.warn('[maintenance] dailyActivities query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      renderMtToday(null);
+      setMtTodayMsg('Could not load mine maintenance.');
+      if (!todayOnly) {
+        _mt30.status = 'error';
+        _mt30.days = mt30BuildDays().days;
+        const total = $('dash-maint-total'); if (total) total.textContent = '\u2014';
+        setMt30Msg('Could not load mine maintenance.', 'is-error');
+        renderMaint30();
+      }
+      return;
+    }
+    if (seq !== _mt30.seq) return;
+    if (todayOnly) {
+      const today = win.days[win.days.length - 1];
+      today.incomplete = !!(res && res.capped);
+      renderMtToday(today);
+      return;
+    }
+    _mt30.path = res ? res.path : 'preview';
+    _mt30.capped = !!(res && res.capped);
+    const completeFromMs = res ? Math.max(win.startMs, res.completeFromMs) : win.startMs;
+    mt30Show(win, completeFromMs, true);
+    console.info('[maintenance] ' + (res ? res.docs.length : 0) + ' dailyActivities doc(s) read (' + _mt30.path + ' path).');
+  }
+  const MT30_CHART = { canvasId: 'dash-maint-chart', st: _mt30, render: renderMaint30, fill: fillMt30Tip };
+  bindDayBarTip(MT30_CHART);
+  renderMtToday(null, true);
+  renderMaint30(); // empty 30-slot frame under the "Loading…" message
+
   // ── My Check-ins — Last 60 Days (column 3, last) ──────────────────────────
   // Oct 1, 2026. Read-only. Your own check-ins at other players' mines, per
   // browser-local day. Same query as activity.html loadVisitsPage() (so the
@@ -5016,6 +5281,7 @@
       { key: 'visitors', card: 'dash-visits-card', wrap: 'dash-visits-wrap', msg: 'dash-visits-msg', total: 'dash-visits-total', st: _vis60, chart: VIS60_CHART, empty: function () { return vis60BuildDays().days; }, render: renderVisitors60 },
       { key: 'buys', card: 'dash-buys-card', wrap: 'dash-buys-wrap', msg: 'dash-buys-msg', total: 'dash-buys-total', st: _buys60, chart: BUYS60_CHART, empty: function () { return buys60BuildDays().days; }, render: renderBuys60 },
       { key: 'games', card: 'dash-games-card', wrap: 'dash-games-wrap', msg: 'dash-games-msg', total: 'dash-games-total', note: 'dash-games-note', st: _mg30, chart: MG30_CHART, empty: function () { return mg30BuildDays().days; }, render: renderMiniGames30 },
+      { key: 'maint', card: 'dash-maint-card', wrap: 'dash-maint-wrap', msg: 'dash-maint-msg', total: 'dash-maint-total', note: 'dash-maint-note', st: _mt30, chart: MT30_CHART, empty: function () { return mt30BuildDays().days; }, render: renderMaint30 },
       { key: 'refs', card: 'dash-refs-card', wrap: 'dash-refs-wrap', msg: 'dash-refs-msg', total: 'dash-refs-total', st: _ref60, chart: REF60_CHART, empty: function () { return ref60BuildDays().days; }, render: renderReferrals60 },
       { key: 'myci', card: 'dash-myci-card', wrap: 'dash-myci-wrap', msg: 'dash-myci-msg', total: 'dash-myci-total', st: _myci, chart: MYCI_CHART, empty: function () { return myciBuildDays().days; }, render: renderMyCheckIns60 }
     ];
@@ -5117,6 +5383,7 @@
     else setBuys60Loading();
     loadReferrals60(ctx.uid, ctx.options).catch(function (err) { console.warn('[referrals] load failed:', err); });
     loadMiniGames30(ctx.uid, ctx.options).catch(function (err) { console.warn('[mini-games] load failed:', err); });
+    loadMaint30(ctx.uid, ctx.options).catch(function (err) { console.warn('[maintenance] load failed:', err); });
     loadMyCheckIns60(ctx.uid, ctx.options).catch(function (err) { console.warn('[my-checkins-60d] load failed:', err); });
     // Keep keyboard focus in place: the clicked overlay is gone, its card stays.
     if (card && document.activeElement === document.body) { card.setAttribute('tabindex', '-1'); card.focus({ preventScroll: true }); }
@@ -5134,6 +5401,8 @@
     });
     renderMgToday(null);
     setMgTodayMsg('Could not load mini games; not included in Known TB today.');
+    renderMtToday(null);
+    setMtTodayMsg('Could not load mine maintenance.');
     setRefTodayMsg('Could not load referrals; not included in Known TB today.');
   }
   // Locked users: today's referrals only (TerraBucks "Referral rewards paid today" + Known TB).
