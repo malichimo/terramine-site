@@ -58,7 +58,12 @@
   <!-- (adsbygoogle.js removed — see comment above) -->
   <style>
     /* Oct 12, 2026: Mine maintenance table */
-    .dash-maint-today-card .tb-today-games-table { position: relative; margin-top: 6px; }
+    .dash-maint-today-card .tb-today-games-table { position: relative; margin-top: 0; }
+    .dash-visits-wrap.mt-today-wrap { height: auto; }
+    .dash-visits-card.is-pp-locked .dash-visits-wrap.mt-today-wrap,
+    .dash-visits-card.is-pp-locked .dash-visits-wrap.cd-wrap { height: 200px; min-height: 200px; overflow: hidden; }
+    .dash-visits-card.is-pp-locked #maint-today-table,
+    .dash-visits-card.is-pp-locked .cd-chips { filter: blur(3px); user-select: none; -webkit-user-select: none; }
     .mt-table { table-layout: auto; }
     .mt-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
     .mt-table thead th:nth-child(n+2) { text-align: center; }
@@ -432,12 +437,19 @@
                 <div class="dash-games-note" id="dash-tb30-note" role="note" hidden></div>
               </div>
             </section>
-            <div class="stat-card dash-slot-card dash-maint-today-card has-share" id="dash-maint-today-card" aria-label="Mine maintenance today">
-              <div class="stat-card-label">Mine Maintenance Today</div>
-              <button type="button" class="dash-share-btn" data-share-card="dash-maint-today-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
-              <div class="tb-today-games-table" id="maint-today-table"></div>
-              <div class="tb-today-ref-msg" id="maint-today-msg" role="status" hidden></div>
-            </div>
+            <section class="dash-visits-card dash-maint-today-card" id="dash-maint-today-card" aria-labelledby="dash-maint-today-title">
+              <div class="dash-visits-head has-share">
+                <h2 class="dash-visits-title" id="dash-maint-today-title">Mine Maintenance Today</h2>
+                <div class="dash-visits-total" id="maint-today-total" aria-live="polite"></div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-maint-today-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap mt-today-wrap" id="maint-today-wrap">
+                  <div class="tb-today-games-table" id="maint-today-table"></div>
+                  <div class="tb-today-ref-msg" id="maint-today-msg" role="status" hidden></div>
+                </div>
+              </div>
+            </section>
             <!-- Oct 1, 2026: Inventory (same items, order and art as inventory.html; from the users doc already loaded) -->
             <!-- Oct 12, 2026: mine maintenances per day (perfect / regular) + resources earned, last 30 days -->
             <section class="dash-visits-card dash-maint-card" id="dash-maint-card" aria-labelledby="dash-maint-title">
@@ -1864,7 +1876,7 @@
         myciToday = null;
         loadReferralsTodayOnly(user.uid).catch(function (err) { console.warn('[referrals] today load failed:', err); });
         loadMiniGamesTodayOnly(user.uid).catch(function (err) { console.warn('[mini-games] today load failed:', err); });
-        loadMaint30(user.uid, options, { todayOnly: true }).catch(function (err) { console.warn('[maintenance] today load failed:', err); });
+        renderMtToday(null);   // Oct 12: Mine Maintenance Today is Pioneer-gated too (no today-only fetch)
       }
       // Inventory card: same users-doc fields as inventory.html, no extra read.
       try { renderInventoryCard(options.preview ? INV_PREVIEW_USER : userData, Object.assign({}, options, { uid: user && user.uid })); }
@@ -4917,6 +4929,7 @@
   // activity and edit); no lastUpdated -> purchasedAt (doc, _raw, details).
   // daysLeft = 180 - whole days since, clamped 0..180. No extra queries.
   const CD_WINDOW = 180, CD_DAY_MS = 86400000;
+  const _mtToday = { seq: 0, locked: false };   // gate state for the Mine Maintenance Today box
   const _cd = { mines: null, preview: false, pending: true, cols: null, geom: null, ro: null, timer: 0, hoverDay: -1 };
   function cdActivityMs(p) {
     const d = (p && p._details) || {};
@@ -4983,6 +4996,17 @@
     }).join('');
   }
   function renderMineCountdown() {
+    if (_cd.locked) {
+      const keep = _cd.mines; _cd.mines = null;
+      try { cdRenderInner(); } finally { _cd.mines = keep; }
+      const t = $('cd-total'); if (t) t.textContent = '\u2014';
+      const m = $('cd-msg'); if (m) { m.textContent = ''; m.hidden = true; }
+      const n = $('cd-note'); if (n) { n.textContent = ''; n.hidden = true; }
+      return;
+    }
+    cdRenderInner();
+  }
+  function cdRenderInner() {
     cdSetChips();
     const canvas = $('cd-chart'); const wrap = $('cd-wrap');
     if (!canvas || !wrap) return;
@@ -5002,10 +5026,17 @@
     _cd.cols = cols;
     const maxStack = cols.reduce(function (a, c) { return Math.max(a, c.length); }, 0);
     const colW = innerW / (CD_WINDOW + 1);
-    const dia = Math.max(2.5, Math.min(7, colW * 1.6));
-    const maxPlotH = 150;
-    const step = maxStack ? Math.min(dia + 1, Math.max(0.8, (maxPlotH - dia) / Math.max(1, maxStack - 1))) : dia + 1;
-    const plotH = Math.max(60, Math.min(maxPlotH, maxStack ? (maxStack - 1) * step + dia + 6 : 60));
+    // Oct 12: 50% taller (225px max, 90 min); a stack never clips: shrink spacing,
+    // then dot size, so the tallest stack fits.
+    let dia = Math.max(2.5, Math.min(7, colW * 1.6));
+    const maxPlotH = 225, minPlotH = 90;
+    const plotH = Math.max(minPlotH, Math.min(maxPlotH, maxStack ? (maxStack - 1) * (dia + 1) + dia + 8 : minPlotH));
+    const avail = plotH - 6;                 // 2px base gap + 4px headroom
+    let step = dia + 1;
+    if (maxStack > 1 && (maxStack - 1) * step + dia > avail) {
+      step = (avail - dia) / (maxStack - 1);
+      if (step < dia * 0.6) { dia = Math.max(1, Math.min(dia, avail / (maxStack * 0.6 + 0.4))); step = (avail - dia) / (maxStack - 1); }
+    }
     const H = padT + plotH + axisH;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
@@ -5955,6 +5986,8 @@
       { key: 'visitors', card: 'dash-visits-card', wrap: 'dash-visits-wrap', msg: 'dash-visits-msg', total: 'dash-visits-total', st: _vis60, chart: VIS60_CHART, empty: function () { return vis60BuildDays().days; }, render: renderVisitors60 },
       { key: 'buys', card: 'dash-buys-card', wrap: 'dash-buys-wrap', msg: 'dash-buys-msg', total: 'dash-buys-total', st: _buys60, chart: BUYS60_CHART, empty: function () { return buys60BuildDays().days; }, render: renderBuys60 },
       { key: 'games', card: 'dash-games-card', wrap: 'dash-games-wrap', msg: 'dash-games-msg', total: 'dash-games-total', note: 'dash-games-note', st: _mg30, chart: MG30_CHART, empty: function () { return mg30BuildDays().days; }, render: renderMiniGames30 },
+      { key: 'mtToday', card: 'dash-maint-today-card', wrap: 'maint-today-wrap', msg: 'maint-today-msg', total: 'maint-today-total', st: _mtToday, chart: _mtToday, empty: function () { return null; }, render: function () { renderMtToday(null); } },
+      { key: 'countdown', card: 'dash-cd-card', wrap: 'cd-wrap', msg: 'cd-msg', total: 'cd-total', note: 'cd-note', st: _cd, chart: _cd, noFail: true, empty: function () { return null; }, render: renderMineCountdown },
       { key: 'tb30', card: 'dash-tb30-card', wrap: 'dash-tb30-wrap', msg: 'dash-tb30-msg', total: 'dash-tb30-total', note: 'dash-tb30-note', st: _tb30, chart: TB30_CHART, empty: function () { return tb30BuildDays().days; }, render: renderTb30 },
       { key: 'maint', card: 'dash-maint-card', wrap: 'dash-maint-wrap', msg: 'dash-maint-msg', total: 'dash-maint-total', note: 'dash-maint-note', st: _mt30, chart: MT30_CHART, empty: function () { return mt30BuildDays().days; }, render: renderMaint30 },
       { key: 'refs', card: 'dash-refs-card', wrap: 'dash-refs-wrap', msg: 'dash-refs-msg', total: 'dash-refs-total', st: _ref60, chart: REF60_CHART, empty: function () { return ref60BuildDays().days; }, render: renderReferrals60 },
@@ -6014,6 +6047,7 @@
     // A lock created before a reload must not keep the old overlay kind (trial / plain).
     if (locked) ppGraphs().forEach(function (g) { const o = $(g.wrap) && $(g.wrap).querySelector('.dash-pp-lock'); if (o) o.remove(); });
     ppGraphs().forEach(function (g) { (locked ? ppLockGraph : ppUnlockGraph)(g); });
+    if (!locked) { try { renderMineCountdown(); } catch (e) {} }
     clearTimeout(ppTrialTimer);
     if (locked) {
       console.info('[pioneer] not a Pioneer Pass member (users doc isPioneerMember !== true): column-3 graphs locked; skipped the My Check-ins 60-day fetch, '
@@ -6050,6 +6084,7 @@
     clearTimeout(ppTrialTimer);
     ppGraphs().forEach(ppUnlockGraph);
     tb30Reset();
+    try { renderMineCountdown(); } catch (e) {}
     console.info('[pioneer] free trial: graphs opened; loading the Pioneer Pass graph data.');
     // Visitors: the 90-day rows already fetched for the stat boxes (or still on their way).
     if (_vis60.lockedRes) { const r = _vis60.lockedRes; _vis60.lockedRes = null; vis60Draw(r.res, r.uid, r.win); }
@@ -6067,7 +6102,7 @@
   /** The users doc failed, so membership (and every graph) is unknown: stop the spinners. */
   function pioneerGateFailed(err) {
     ppGraphs().forEach(function (g) {
-      if (g.st.locked) return;
+      if (g.st.locked || g.noFail) return;
       g.st.seq++;
       g.st.status = 'error';
       g.st.days = g.empty();
