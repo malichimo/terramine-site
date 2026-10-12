@@ -9,6 +9,9 @@
  * Runs once per browser tab session. Remove after the test.
  */
 (function () {
+  // DISABLED Oct 12, 2026 after test (fields: ownerReply string, ownerReplyAt Timestamp; owner update ALLOWED).
+  var NFO_REPLY_DIAG_ENABLED = false;
+  if (!NFO_REPLY_DIAG_ENABLED) return;
   var NFO_UID = '8HnXWZjRYQZrYPZi5NGdRsWRCvd2';
   var TAG = '[nfo-reply-diag]';
   var REPLYISH = /reply|response|answer|replied/i;
