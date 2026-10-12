@@ -8,6 +8,9 @@
  * Load after the page's firebase.initializeApp().
  */
 (function () {
+  // DISABLED Oct 12, 2026: test click removed from all pages; inert even if loaded.
+  var NFO_TB_DIAG_ENABLED = false;
+  if (!NFO_TB_DIAG_ENABLED) return;
   var NFO_UID = '8HnXWZjRYQZrYPZi5NGdRsWRCvd2';
   var AMOUNT = 100;
   var TAG = '[nfo-tb-diag]';
