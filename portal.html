@@ -59,8 +59,25 @@
   <style>
     /* Oct 12, 2026: Mine maintenance table */
     .dash-maint-today-card .tb-today-games-table { position: relative; margin-top: 6px; }
-    .mt-table .mt-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
-    .mt-table td { text-align: right; font-variant-numeric: tabular-nums; }
+    .mt-table { table-layout: auto; }
+    .mt-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .mt-table thead th:nth-child(n+2) { text-align: center; }
+    .mt-table.tb-today-table-games td:nth-child(2), .mt-table.tb-today-table-games td:nth-child(3) { width: auto; }
+    .mt-table td.mt-mines { text-align: center; font-weight: 700; width: 13%; }
+    .mt-table td.mt-res { width: 14%; }
+    .mt-table td.mt-res { text-align: left; padding-left: 4px; padding-right: 4px; cursor: default; }
+    .mt-table td.mt-res .mt-res-ic { width: 18px; height: 18px; object-fit: contain; vertical-align: -4px; margin-right: 3px; }
+    .mt-table td.mt-res.is-zero { opacity: .45; }
+    .mt-table td.mt-res:focus-visible { outline: 2px solid #9575CD; outline-offset: -2px; border-radius: 4px; }
+    .mt-table td.mt-total-note { text-align: right; color: #64748b; font-size: 12px; }
+    .mt-in-tip .mt-table td.mt-res .mt-res-ic { width: 16px; height: 16px; }
+    .dash-visits-tip:has(.mt-in-tip) { width: 360px; }
+    .mt-res-tip { width: auto; min-width: 170px; }
+    .mt-res-tip-row { display: flex; align-items: center; gap: 10px; }
+    .mt-res-tip-ic { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
+    .mt-res-tip-name { font-weight: 700; color: #fde68a; font-size: 14px; }
+    .mt-res-tip-line { font-size: 12px; color: #e2e8f0; font-variant-numeric: tabular-nums; }
+    html[data-theme="dusk"] .mt-table td.mt-total-note, html[data-theme="mine"] .mt-table td.mt-total-note { color: #8fb3d9; }
   </style>
   <link rel="stylesheet" href="/portal-theme.css?v=20261012-3" />
 </head>
@@ -1819,6 +1836,7 @@
             .where('ownerId', '==', user.uid)
             .get()).docs.map(d => ({ id: d.id, ...d.data(), _details: {} }));
       renderPropertyBreakdown(props);
+      try { mtSetProps(props); } catch (e) { console.warn('[maintenance] props map failed:', e); }
 
       // Column 2: "Mines Purchased — Last 60 Days", drawn right away from each
       // property's own purchasedAt + mineType (no extra Firestore query). Only
@@ -3948,32 +3966,61 @@
   renderMiniGames30(); // empty 30-slot frame under the "Loading…" message
 
   // ── Mine Maintenance: "Mine Maintenance Today" box + "Last 30 Days" graph ──
-  // Oct 12, 2026. Read-only. dailyActivities docs (diag Oct 12): userId, propertyId,
-  // timestamp, resetDay, attemptNumber, perfectTiming, wasDoubled, wasAdPurchased,
-  // rewardsEarned { common, uncommon, rare, epic }. Rules require the userId filter.
-  // Same windowed fetch as mini games (fetchWindowWithFallback), local-day buckets.
+  // Oct 12, 2026. Read-only. dailyActivities docs: userId, propertyId, timestamp,
+  // rewardsEarned { common, uncommon, rare, epic } (amounts already include
+  // perfect timing / doubling / ads). Rewards are that mine type's resources
+  // (same names/art as inventory.html). Mine type = properties[propertyId].mineType
+  // (dashboard props), else a properties/{id} read, else skipped (console note).
   const MT30_DAYS = 30;
   const MT30_PAGE = 500;
   const MT30_MAX_PAGES = 20;
   const MT30_FALLBACK_MAX_PAGES = 20;
   const MT_RES = ['common', 'uncommon', 'rare', 'epic'];
-  const MT_RES_LABELS = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic' };
-  const MT_RES_COLORS = { common: '#9e9e9e', uncommon: '#43a047', rare: '#1e88e5', epic: '#8e24aa' };
-  const MT30_REG_COLOR = '#78909C';     // regular maintenance
-  const MT30_PERF_COLOR = '#FFB300';    // perfect timing
-  const MT30_RES_COLOR = '#4FC3F7';     // resources (right axis)
+  const MT_RES_NAMES = {
+    rock: { common: 'Gravel', uncommon: 'Slate', rare: 'Granite', epic: 'Marble' },
+    coal: { common: 'Coal Dust', uncommon: 'Lignite', rare: 'Anthracite', epic: 'Diamond Coal' },
+    gold: { common: 'Gold Flakes', uncommon: 'Gold Nugget', rare: 'Gold Bar', epic: 'Gold Ingot' },
+    diamond: { common: 'Diamond Chip', uncommon: 'Raw Diamond', rare: 'Cut Diamond', epic: 'Flawless Diamond' }
+  };
+  const MT_RES_IMG = {
+    rock: { common: 'gravel', uncommon: 'slate', rare: 'granite', epic: 'marble' },
+    coal: { common: 'coal-dust', uncommon: 'lignite', rare: 'anthracite', epic: 'diamond-coal' },
+    gold: { common: 'gold-flakes', uncommon: 'gold-nugget', rare: 'gold-bar', epic: 'gold-ingot' },
+    diamond: { common: 'diamond-chip', uncommon: 'raw-diamond', rare: 'cut-diamond', epic: 'flawless-diamond' }
+  };
+  const MT30_RES_COLOR = '#9575CD';     // resources (right axis)
   const MT30_RES_LABEL = '#0277BD';
   const _mt30 = {
     seq: 0, status: 'loading', days: null, axis: null, axis2: null, geom: null, hover: -1,
-    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', completeFromMs: -Infinity
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false, capped: false, path: '', completeFromMs: -Infinity,
+    entries: [], win: null, final: false, todayOnly: false
   };
+  const mtPropType = Object.create(null);   // propertyId -> mine type
+  let mtPropsReady = false;
+  const mtTypeFetching = new Set();
+  /** Dashboard props landed: map propertyId -> mineType and re-bucket. */
+  function mtSetProps(props) {
+    (props || []).forEach(function (p) {
+      if (!p || p.id == null) return;
+      const t = String(p.mineType || (p._details && p._details.mineType) || '').trim().toLowerCase();
+      if (MG_TYPES.indexOf(t) !== -1) mtPropType[String(p.id)] = t;
+    });
+    mtPropsReady = true;
+    if (_mt30.preview && !_mt30.entries.length && _mt30.win) _mt30.entries = mt30PreviewEntries(_mt30.win);
+    mtRebuild();
+  }
   function mtEmptyDay(d) {
-    d.count = 0; d.perfect = 0; d.doubled = 0; d.ad = 0; d.res = 0; d.incomplete = false;
-    d.r = {}; MT_RES.forEach(function (k) { d.r[k] = 0; });
+    d.count = 0; d.res = 0; d.incomplete = false; d.unknown = 0;
+    d.types = {};
+    MG_TYPES.forEach(function (t) {
+      const r = {}, contrib = {};
+      MT_RES.forEach(function (k) { r[k] = 0; contrib[k] = new Set(); });
+      d.types[t] = { count: 0, mines: new Set(), r: r, contrib: contrib };
+    });
     return d;
   }
-  function mt30BuildDays(nDays) {
-    const win = vis60BuildDays(null, nDays || MT30_DAYS);
+  function mt30BuildDays() {
+    const win = vis60BuildDays(null, MT30_DAYS);
     win.days.forEach(mtEmptyDay);
     return win;
   }
@@ -3983,16 +4030,47 @@
     const re = (d.rewardsEarned && typeof d.rewardsEarned === 'object') ? d.rewardsEarned : {};
     const r = {}; let res = 0;
     MT_RES.forEach(function (k) { const v = Number(re[k]); r[k] = Number.isFinite(v) ? v : 0; res += r[k]; });
-    return { ms: ms, r: r, res: res, perfect: d.perfectTiming === true, doubled: d.wasDoubled === true, ad: d.wasAdPurchased === true };
+    return { ms: ms, pid: d.propertyId != null ? String(d.propertyId) : '', r: r, res: res };
   }
-  function mt30Add(win, e) {
+  function mtAdd(win, e) {
     if (!win.byKey) { win.byKey = Object.create(null); win.days.forEach(function (d) { win.byKey[d.key] = d; }); }
     if (e.ms < win.startMs || e.ms >= win.endMs) return;
     const day = win.byKey[vis60DayKey(new Date(e.ms))];
     if (!day) return;
-    day.count++; if (e.perfect) day.perfect++; if (e.doubled) day.doubled++; if (e.ad) day.ad++;
-    day.res += e.res; MT_RES.forEach(function (k) { day.r[k] += e.r[k]; });
+    day.count++; day.res += e.res;
+    const type = mtPropType[e.pid];
+    if (!type) { day.unknown++; return; }
+    const t = day.types[type];
+    t.count++;
+    if (e.pid) t.mines.add(e.pid);
+    MT_RES.forEach(function (k) { t.r[k] += e.r[k]; if (e.r[k] > 0 && e.pid) t.contrib[k].add(e.pid); });
   }
+  /** Unknown propertyIds (not in your current mines): try properties/{id}, once each. */
+  function mtResolveUnknown() {
+    if (_mt30.preview || !mtPropsReady) return;
+    const need = [];
+    _mt30.entries.forEach(function (e) { if (e.pid && !mtPropType[e.pid] && !mtTypeFetching.has(e.pid)) { mtTypeFetching.add(e.pid); need.push(e.pid); } });
+    if (!need.length) return;
+    Promise.all(need.slice(0, 60).map(function (id) {
+      return db.collection('properties').doc(id).get().then(function (s) {
+        const t = String((s.exists && s.data() && s.data().mineType) || '').trim().toLowerCase();
+        if (MG_TYPES.indexOf(t) !== -1) { mtPropType[id] = t; return true; }
+        return false;
+      }).catch(function () { return false; });
+    })).then(function (oks) {
+      const got = oks.filter(Boolean).length;
+      const left = need.length - got;
+      if (left) console.info('[maintenance] ' + left + ' maintained mine(s) with unknown mine type (not in your mines / no mineType); counted in totals only.');
+      if (got) mtRebuild();
+    });
+  }
+  function mtRebuild() {
+    if (!_mt30.win || (_mt30.status === 'locked' && !_mt30.todayOnly)) return;
+    const win = mt30BuildDays();
+    _mt30.entries.forEach(function (e) { mtAdd(win, e); });
+    mt30Show(win, _mt30.completeFromMs, _mt30.final);
+  }
+  function mtImgSrc(type, rk) { return 'images/items/' + MT_RES_IMG[type][rk] + '-240.png'; }
   /** One day's maintenance table (today box + graph popup share it). null = "—". */
   function renderMaintTable(day) {
     const wrap = document.createElement('div');
@@ -4001,36 +4079,121 @@
     table.className = 'tb-today-table tb-today-table-games mg-table mt-table';
     table.setAttribute('aria-label', 'Mine maintenance');
     const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th scope="col">Resources</th><th scope="col">Earned</th></tr>';
+    thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Mines</th><th scope="col" colspan="4">Resources earned</th></tr>';
     const tbody = document.createElement('tbody');
-    const plus = !!(day && day.incomplete);
-    const addRow = function (label, v, swatch, cls) {
+    const plus = (day && day.incomplete) ? '+' : '';
+    const na = function (td) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); };
+    let totalMines = 0;
+    MG_TYPES.forEach(function (type) {
+      const v = day ? day.types[type] : null;
       const tr = document.createElement('tr');
-      if (cls) tr.className = cls;
+      tr.dataset.type = type;
       const th = document.createElement('th'); th.scope = 'row';
-      if (swatch) { const s = document.createElement('span'); s.className = 'mt-swatch'; s.style.background = swatch; th.appendChild(s); }
-      th.appendChild(document.createTextNode(label));
-      const td = document.createElement('td');
-      if (v == null) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); }
-      else td.textContent = fmtNum(v) + (plus ? '+' : '');
-      tr.append(th, td);
+      const im = document.createElement('img'); im.src = '/images/mine-icons/' + type + '.svg'; im.alt = '';
+      th.append(im, document.createTextNode(' ' + MINE_TYPE_PIE_LABELS[type]));
+      const tdM = document.createElement('td'); tdM.className = 'mt-mines';
+      if (v) { tdM.textContent = fmtNum(v.mines.size) + plus; totalMines += v.mines.size; } else na(tdM);
+      tr.append(th, tdM);
+      MT_RES.forEach(function (rk) {
+        const td = document.createElement('td');
+        td.className = 'mt-res';
+        const ic = document.createElement('img'); ic.className = 'mt-res-ic'; ic.src = mtImgSrc(type, rk); ic.alt = MT_RES_NAMES[type][rk]; ic.loading = 'lazy';
+        const n = document.createElement('span'); n.className = 'mt-res-n';
+        if (v) {
+          n.textContent = fmtNum(v.r[rk]) + plus;
+          if (!v.r[rk]) td.classList.add('is-zero');
+          td.dataset.type = type; td.dataset.rk = rk;
+          td.dataset.total = String(v.r[rk]); td.dataset.mines = String(v.contrib[rk].size);
+          td.dataset.plus = plus;
+          td.tabIndex = 0;
+        } else { n.textContent = '\u2014'; td.classList.add('tb-today-na'); }
+        td.append(ic, n);
+        tr.appendChild(td);
+      });
       tbody.appendChild(tr);
-    };
-    MT_RES.forEach(function (k) { addRow(MT_RES_LABELS[k], day ? day.r[k] : null, MT_RES_COLORS[k]); });
-    addRow('Maintenances', day ? day.count : null, '', 'mg-total-row');
-    addRow('Perfect timing', day ? day.perfect : null, '');
-    addRow('Doubled', day ? day.doubled : null, '');
-    addRow('Ad purchased', day ? day.ad : null, '');
+    });
+    const tr = document.createElement('tr'); tr.className = 'mg-total-row';
+    const th = document.createElement('th'); th.scope = 'row'; th.textContent = 'Total';
+    const tdM = document.createElement('td'); tdM.className = 'mt-mines';
+    if (day) tdM.textContent = fmtNum(totalMines) + plus; else na(tdM);
+    const tdC = document.createElement('td'); tdC.colSpan = 4; tdC.className = 'mt-total-note';
+    tdC.textContent = day ? (fmtNum(day.count) + plus + (day.count === 1 ? ' maintenance' : ' maintenances')) : '\u2014';
+    tr.append(th, tdM, tdC);
+    tbody.appendChild(tr);
     table.append(thead, tbody);
     wrap.appendChild(table);
     return wrap;
   }
+  // Resource cell popup (today box): bigger icon, name, total, contributing mines.
+  let mtResTip = null, mtResTarget = null;
+  function mtEnsureResTip() {
+    if (mtResTip) return mtResTip;
+    mtResTip = document.createElement('div');
+    mtResTip.className = 'dash-visits-tip mt-res-tip';
+    mtResTip.setAttribute('role', 'tooltip');
+    document.body.appendChild(mtResTip);
+    return mtResTip;
+  }
+  function mtShowResTip(td, x, y) {
+    const tip = mtEnsureResTip();
+    const type = td.dataset.type, rk = td.dataset.rk;
+    if (!type || !rk) return;
+    mtResTarget = td;
+    const mines = Number(td.dataset.mines) || 0;
+    tip.innerHTML = '';
+    const row = document.createElement('div'); row.className = 'mt-res-tip-row';
+    const im = document.createElement('img'); im.src = mtImgSrc(type, rk); im.alt = ''; im.className = 'mt-res-tip-ic';
+    const txt = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'mt-res-tip-name'; nm.textContent = MT_RES_NAMES[type][rk];
+    const tot = document.createElement('div'); tot.className = 'mt-res-tip-line';
+    tot.textContent = 'Total: ' + fmtNum(Number(td.dataset.total) || 0) + (td.dataset.plus || '');
+    const mn = document.createElement('div'); mn.className = 'mt-res-tip-line';
+    mn.textContent = 'From ' + fmtNum(mines) + (mines === 1 ? ' mine' : ' mines');
+    txt.append(nm, tot, mn);
+    row.append(im, txt);
+    tip.appendChild(row);
+    const gap = 14, edge = 8;
+    tip.style.visibility = 'hidden'; tip.style.display = 'block';
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    const vh = document.documentElement.clientHeight || window.innerHeight;
+    let left = x + gap, top = y + gap;
+    if (left + w > vw - edge) left = x - gap - w;
+    if (top + h > vh - edge) top = y - gap - h;
+    tip.style.left = Math.max(edge, left) + 'px'; tip.style.top = Math.max(edge, top) + 'px';
+    tip.style.visibility = 'visible';
+  }
+  function mtHideResTip() { mtResTarget = null; if (mtResTip) mtResTip.style.display = 'none'; }
+  (function bindMtResTips() {
+    const host = $('maint-today-table');
+    if (!host) return;
+    host.addEventListener('mousemove', function (e) {
+      const td = e.target.closest && e.target.closest('td.mt-res[data-rk]');
+      if (!td) { if (mtResTarget) mtHideResTip(); return; }
+      mtShowResTip(td, e.clientX, e.clientY);
+    });
+    host.addEventListener('mouseleave', mtHideResTip);
+    host.addEventListener('click', function (e) {   // tap (touch) toggles
+      const td = e.target.closest && e.target.closest('td.mt-res[data-rk]');
+      if (!td) return;
+      if (mtResTarget === td && mtResTip && mtResTip.style.display === 'block' && e.pointerType !== 'mouse') { mtHideResTip(); return; }
+      const r = td.getBoundingClientRect();
+      mtShowResTip(td, e.clientX || r.right, e.clientY || r.bottom);
+    });
+    host.addEventListener('focusin', function (e) {
+      const td = e.target.closest && e.target.closest('td.mt-res[data-rk]');
+      if (td) { const r = td.getBoundingClientRect(); mtShowResTip(td, r.right, r.bottom); }
+    });
+    host.addEventListener('focusout', mtHideResTip);
+    document.addEventListener('scroll', mtHideResTip, { passive: true, capture: true });
+  })();
   function setMtTodayMsg(text) {
     const m = $('maint-today-msg'); if (!m) return;
     m.textContent = text || ''; m.hidden = !text;
   }
   function renderMtToday(day, loading) {
     const host = $('maint-today-table'); if (!host) return;
+    mtHideResTip();
     host.replaceChildren(renderMaintTable(day));
     if (loading) {
       const ov = document.createElement('div'); ov.className = 'mg-loading'; ov.innerHTML = dashLoadingHtml(); host.appendChild(ov);
@@ -4044,7 +4207,9 @@
       emptyDays: function () { return mt30BuildDays().days; },
       total: function (d) { return d.count; },
       segments: function (d) {
-        return [{ key: 'regular', v: d.count - d.perfect, color: MT30_REG_COLOR }, { key: 'perfect', v: d.perfect, color: MT30_PERF_COLOR }];
+        const segs = MG_TYPES.map(function (t) { return { key: t, v: d.types[t].count, color: MINE_TYPE_PIE_COLORS[t] }; });
+        if (d.unknown) segs.unshift({ key: 'unknown', v: d.unknown, color: '#B0BEC5' });
+        return segs;
       },
       second: { total: function (d) { return d.res; }, color: MT30_RES_COLOR, labelColor: MT30_RES_LABEL, axis: mg30AxisTb },
       titles: { left: 'Maint.', right: 'Res.' },
@@ -4052,7 +4217,7 @@
       hoverOutlineColor: '#5C3317',
       aria: function (sum, max) {
         const res = (_mt30.days || []).reduce(function (a, d) { return a + d.res; }, 0);
-        return 'Bar graph of mine maintenances per day for the last 30 days (maintenances on the left axis, perfect timing highlighted; resources earned on the right axis): '
+        return 'Bar graph of mine maintenances per day for the last 30 days (by mine type on the left axis; resources earned on the right axis): '
           + (_mt30.status === 'loading' ? 'loading' : fmtNum(sum) + (sum === 1 ? ' maintenance, ' : ' maintenances, ') + fmtNum(res) + ' resources, most in one day ' + fmtNum(max));
       }
     });
@@ -4067,16 +4232,19 @@
     dt.textContent = (idx === _mt30.days.length - 1 ? 'Today \u2014 ' : '')
       + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
     tip.appendChild(dt);
-    tip.appendChild(renderMaintTable(day));
+    const t = renderMaintTable(day);
+    t.classList.add('mt-in-tip');
+    tip.appendChild(t);
   }
   function mt30PreviewEntries(win) {
+    const pids = Object.keys(mtPropType);
     const out = [];
+    if (!pids.length) return out;
     win.days.forEach(function (d, i) {
-      const n = (i * 5 + 3) % 7 === 0 ? 0 : (i * 3 + 2) % 6;
+      const n = (i * 5 + 3) % 7 === 0 ? 0 : 1 + (i * 3 + 2) % 3;
       for (let k = 0; k < n; k++) {
         const r = { common: 3 + (k % 3), uncommon: k % 2 ? 2 : 1, rare: k % 3 === 0 ? 1 : 0, epic: (i + k) % 9 === 0 ? 1 : 0 };
-        out.push({ ms: d.date.getTime() + (8 + k) * 3600000, r: r, res: r.common + r.uncommon + r.rare + r.epic,
-          perfect: k % 3 === 0, doubled: k % 4 === 1, ad: k % 5 === 2 });
+        out.push({ ms: d.date.getTime() + (8 + k) * 3600000, pid: pids[(i + k) % pids.length], r: r, res: r.common + r.uncommon + r.rare + r.epic });
       }
     });
     return out;
@@ -4094,11 +4262,15 @@
   }
   function mt30Show(win, completeFromMs, final) {
     win.days.forEach(function (d) { d.incomplete = d.date.getTime() < completeFromMs; });
+    const today = win.days[win.days.length - 1];
+    if (_mt30.todayOnly) {
+      if (final) renderMtToday(today);
+      return;
+    }
     const count = win.days.reduce(function (a, d) { return a + d.count; }, 0);
     const res = win.days.reduce(function (a, d) { return a + d.res; }, 0);
     const partial = completeFromMs > win.startMs;
     _mt30.days = win.days;
-    _mt30.completeFromMs = completeFromMs;
     _mt30.status = final ? (count ? 'ready' : 'empty') : (count ? 'partial' : 'loading');
     const plus = partial && final ? '+' : '';
     const total = $('dash-maint-total');
@@ -4109,7 +4281,6 @@
     else if (count) setMt30Msg('', '');
     if (final && partial) setMt30Note('Older days may be incomplete: read limit of ' + fmtNum(MT30_PAGE * MT30_MAX_PAGES) + ' maintenances reached.');
     else setMt30Note('');
-    const today = win.days[win.days.length - 1];
     if (final || !today.incomplete) renderMtToday(today);
     renderMaint30();
     if (vis60TipChart === MT30_CHART && _mt30.hover >= 0) fillMt30Tip(_mt30.hover);
@@ -4119,33 +4290,37 @@
     options = options || {}; opts = opts || {};
     const todayOnly = !!opts.todayOnly;
     const seq = ++_mt30.seq;
-    let win = mt30BuildDays();
-    const todayMs = win.days[win.days.length - 1].date.getTime();
-    const fetchWin = todayOnly ? { days: win.days, startMs: todayMs, endMs: win.endMs } : win;
+    const win0 = mt30BuildDays();
+    const todayMs = win0.days[win0.days.length - 1].date.getTime();
+    const fetchWin = todayOnly ? { days: win0.days, startMs: todayMs, endMs: win0.endMs } : win0;
+    _mt30.preview = !!options.preview;
+    _mt30.todayOnly = todayOnly;
+    _mt30.entries = []; _mt30.win = win0; _mt30.final = false; _mt30.completeFromMs = Infinity;
     if (todayOnly) { renderMtToday(null, true); setMtTodayMsg(''); }
-    else mt30SetLoading(win);
+    else mt30SetLoading(win0);
     let src = null, used = 0, seen = new Set();
     const consume = function (docs) {
-      if (docs !== src) { src = docs; used = 0; seen = new Set(); win = mt30BuildDays(); }
+      if (docs !== src) { src = docs; used = 0; seen = new Set(); _mt30.entries = []; }
       for (; used < docs.length; used++) {
         const doc = docs[used];
         if (seen.has(doc.id)) continue;
         seen.add(doc.id);
         const e = mtEntry(doc.data() || {});
-        if (e) mt30Add(win, e);
+        if (e) _mt30.entries.push(e);
       }
     };
     let res = null;
     try {
       if (options.preview) {
-        mt30PreviewEntries(win).forEach(function (e) { mt30Add(win, e); });
+        _mt30.entries = mt30PreviewEntries(win0);
       } else {
         res = await fetchWindowWithFallback({ tag: '[maintenance]', coll: 'dailyActivities', field: 'userId', uid: uid, tsField: 'timestamp',
           page: MT30_PAGE, maxPages: MT30_MAX_PAGES, fallbackMaxPages: MT30_FALLBACK_MAX_PAGES, days: todayOnly ? 1 : MT30_DAYS,
           onPage: todayOnly ? null : function (docs, info) {
             if (seq !== _mt30.seq) return;
             consume(docs);
-            mt30Show(win, info.completeFromMs, false);
+            _mt30.completeFromMs = info.completeFromMs;
+            mtRebuild();
           } }, fetchWin);
         consume(res.docs);
       }
@@ -4164,17 +4339,14 @@
       return;
     }
     if (seq !== _mt30.seq) return;
-    if (todayOnly) {
-      const today = win.days[win.days.length - 1];
-      today.incomplete = !!(res && res.capped);
-      renderMtToday(today);
-      return;
-    }
     _mt30.path = res ? res.path : 'preview';
     _mt30.capped = !!(res && res.capped);
-    const completeFromMs = res ? Math.max(win.startMs, res.completeFromMs) : win.startMs;
-    mt30Show(win, completeFromMs, true);
-    console.info('[maintenance] ' + (res ? res.docs.length : 0) + ' dailyActivities doc(s) read (' + _mt30.path + ' path).');
+    _mt30.completeFromMs = res ? Math.max(fetchWin.startMs, res.completeFromMs) : fetchWin.startMs;
+    if (todayOnly && res && res.capped) _mt30.completeFromMs = Infinity;
+    _mt30.final = true;
+    mtRebuild();
+    mtResolveUnknown();
+    console.info('[maintenance] ' + _mt30.entries.length + ' dailyActivities doc(s) read (' + _mt30.path + ' path).');
   }
   const MT30_CHART = { canvasId: 'dash-maint-chart', st: _mt30, render: renderMaint30, fill: fillMt30Tip };
   bindDayBarTip(MT30_CHART);
