@@ -91,6 +91,30 @@
     .mt-res-tip-name { font-weight: 700; color: #fde68a; font-size: 14px; }
     .mt-res-tip-line { font-size: 12px; color: #e2e8f0; font-variant-numeric: tabular-nums; }
     html[data-theme="dusk"] .mt-table td.mt-total-note, html[data-theme="mine"] .mt-table td.mt-total-note { color: #8fb3d9; }
+    /* Oct 12, 2026: Mine Countdown */
+    .cd-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 2px 0 8px; }
+    .cd-chip { border-radius: 8px; padding: 5px 6px; text-align: center; background: rgba(139,115,85,0.10); border: 1px solid rgba(139,115,85,0.25); }
+    .cd-chip-n { display: block; font-family: 'Bebas Neue', sans-serif; font-size: 22px; line-height: 1; color: #1e293b; }
+    .cd-chip-l { display: block; font-size: 10px; color: #64748b; margin-top: 2px; white-space: nowrap; }
+    .cd-chip-zero { background: rgba(220,38,38,0.10); border-color: rgba(220,38,38,0.35); } .cd-chip-zero .cd-chip-n { color: #b91c1c; }
+    .cd-chip-d7 { background: rgba(220,38,38,0.06); border-color: rgba(220,38,38,0.25); } .cd-chip-d7 .cd-chip-n { color: #dc2626; }
+    .cd-chip-d30 { background: rgba(217,119,6,0.08); border-color: rgba(217,119,6,0.3); } .cd-chip-d30 .cd-chip-n { color: #b45309; }
+    .dash-visits-wrap.cd-wrap { position: relative; height: auto; min-height: 80px; }
+    .cd-wrap canvas { display: block; }
+    .cd-tip { max-width: 280px; }
+    .cd-tip-list { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+    .cd-tip-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .cd-tip-row img { width: 16px; height: 16px; flex-shrink: 0; }
+    .cd-tip-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cd-tip-days { font-variant-numeric: tabular-nums; font-weight: 700; color: #fde68a; }
+    .cd-tip-more { font-size: 11px; opacity: .75; }
+    html[data-theme="dusk"] .cd-chip, html[data-theme="mine"] .cd-chip { background: rgba(79,195,247,0.08); border-color: rgba(79,195,247,0.22); }
+    html[data-theme="dusk"] .cd-chip-n, html[data-theme="mine"] .cd-chip-n { color: #e8eef6; }
+    html[data-theme="dusk"] .cd-chip-l, html[data-theme="mine"] .cd-chip-l { color: #9aadc2; }
+    html[data-theme="dusk"] .cd-chip-zero, html[data-theme="mine"] .cd-chip-zero { background: rgba(239,68,68,0.16); border-color: rgba(239,68,68,0.4); }
+    html[data-theme="dusk"] .cd-chip-zero .cd-chip-n, html[data-theme="mine"] .cd-chip-zero .cd-chip-n,
+    html[data-theme="dusk"] .cd-chip-d7 .cd-chip-n, html[data-theme="mine"] .cd-chip-d7 .cd-chip-n { color: #f87171; }
+    html[data-theme="dusk"] .cd-chip-d30 .cd-chip-n, html[data-theme="mine"] .cd-chip-d30 .cd-chip-n { color: #fbbf24; }
   </style>
   <link rel="stylesheet" href="/portal-theme.css?v=20261012-3" />
 </head>
@@ -295,6 +319,22 @@
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
             </div>
+            <!-- Oct 12, 2026: Mine Countdown (180-day activity clock per mine; same rule as mines.html) -->
+            <section class="dash-visits-card dash-cd-card" id="dash-cd-card" aria-labelledby="dash-cd-title">
+              <div class="dash-visits-head has-share">
+                <h2 class="dash-visits-title" id="dash-cd-title">Mine Countdown</h2>
+                <div class="dash-visits-total" id="cd-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-cd-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
+              <div class="dash-visits-body">
+                <div class="cd-chips" id="cd-chips"></div>
+                <div class="dash-visits-wrap cd-wrap" id="cd-wrap">
+                  <canvas id="cd-chart" role="img" aria-label="Mine countdown"></canvas>
+                  <div class="dash-visits-msg is-loading" id="cd-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+                </div>
+                <div class="dash-games-note" id="cd-note" role="note" hidden></div>
+              </div>
+            </section>
             <section class="dash-dominance-card" id="dash-dominance-card" aria-labelledby="dash-dominance-title">
               <div class="dash-dominance-head has-share">
                 <h2 class="dash-dominance-title" id="dash-dominance-title">Mine Dominance</h2>
@@ -1884,6 +1924,7 @@
             .where('ownerId', '==', user.uid)
             .get()).docs.map(d => ({ id: d.id, ...d.data(), _details: {} }));
       renderPropertyBreakdown(props);
+      try { setMineCountdown(props, { preview: options.preview, pending: !options.preview }); } catch (e) { console.warn('[mine-countdown] failed:', e); }
       try { mtSetProps(props); } catch (e) { console.warn('[maintenance] props map failed:', e); }
 
       // Column 2: "Mines Purchased — Last 60 Days", drawn right away from each
@@ -1907,6 +1948,7 @@
         } : null);
       }
       allMines = props;
+      try { if (!options.preview) setMineCountdown(props, {}); } catch (e) { console.warn('[mine-countdown] failed:', e); }
       // Column 2: Mine Dominance (Reach outline map). Not awaited — Maps load
       // must never hold up the rest of the dashboard.
       if (window.TerraMineDominance) {
@@ -4603,7 +4645,7 @@
       const n = i === VIS60_DAYS - 1 ? 4 : ((i * 5 + 1) % 7 === 0 ? 0 : (i * 3 + 2) % 6);
       for (let k = 0; k < n; k++) {
         rows.push({ id: 'pv-ci-' + i + '-' + k, data: { userId: 'me', propertyOwnerId: owners[(i + k) % owners.length], propertyId: 'pv-m' + ((i + k) % 9),
-          timestamp: new Date(d.date.getTime() + (8 + k) * 3600000).toISOString() } });
+          points: 1, timestamp: new Date(d.date.getTime() + (8 + k) * 3600000).toISOString() } });
       }
     });
     return rows;
@@ -4722,6 +4764,7 @@
         const ms = checkInTsMillis(v.timestamp); if (!ms) return;
         const owner = myciOwnerUid(v); if (!owner || owner === uid) return;
         const n = pickCheckInTb(v, 'visitor'); if (n == null) return;
+        if (!anyKnown) { const kk = ['visitorReward', 'visitorTB', 'visitorTb', 'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb', 'points', 'tb'].find(function (q) { return v[q] != null && v[q] !== '' && !isNaN(Number(v[q])); }); console.info('[tb-30d] your check-ins TB read from field: ' + kk + ' (same as the TerraBucks Earned Today card).'); }
         const k = vis60DayKey(new Date(ms)); m[k] = (m[k] || 0) + n; known[k] = (known[k] || 0) + 1; anyKnown++;
       });
       if (!anyKnown && res.rows.length) console.info('[tb-30d] your check-ins carry no TB field; that part is left out.');
@@ -4866,6 +4909,228 @@
   const TB30_CHART = { canvasId: 'dash-tb30-chart', st: _tb30, render: renderTb30, fill: fillTb30Tip };
   bindDayBarTip(TB30_CHART);
   renderTb30(); // empty 30-slot frame under the "Loading…" message
+
+  // ── Mine Countdown (column 1, under Mines by Type) ─────────────────────────
+  // Oct 12, 2026. The 180-day maintenance clock exactly as mines.html computes it
+  // (maintenanceActivity / daysLeftOf): last activity = propertyDetails/{id}.lastUpdated
+  // (mine._details.lastUpdated, bumped by every check-in, game, upgrade, daily
+  // activity and edit); no lastUpdated -> purchasedAt (doc, _raw, details).
+  // daysLeft = 180 - whole days since, clamped 0..180. No extra queries.
+  const CD_WINDOW = 180, CD_DAY_MS = 86400000;
+  const _cd = { mines: null, preview: false, pending: true, cols: null, geom: null, ro: null, timer: 0, hoverDay: -1 };
+  function cdActivityMs(p) {
+    const d = (p && p._details) || {};
+    const lu = anyTimeMs(d.lastUpdated);
+    if (isFinite(lu)) return { ms: lu, src: 'lastUpdated' };
+    const raw = (p && p._raw) || {};
+    const tries = [p.purchasedAt, raw.purchasedAt, d.purchasedAt];
+    for (let i = 0; i < tries.length; i++) { const ms = anyTimeMs(tries[i]); if (isFinite(ms)) return { ms: ms, src: 'purchasedAt' }; }
+    return { ms: null, src: null };
+  }
+  function cdTitle(p) {
+    const d = (p && p._details) || {};
+    const n = typeof d.customName === 'string' && d.customName.trim() ? d.customName.trim()
+      : (typeof p.customName === 'string' && p.customName.trim() ? p.customName.trim() : '');
+    return n || (p.id ? String(p.id) : 'Unnamed Mine');
+  }
+  function cdType(p) {
+    const t = String(p.mineType == null ? '' : p.mineType).trim().toLowerCase();
+    return MG_TYPES.indexOf(t) !== -1 ? t : 'rock';
+  }
+  function cdPreviewMines() {
+    const out = [];
+    for (let i = 0; i < 64; i++) {
+      const dl = i < 3 ? 0 : (i < 9 ? 1 + (i * 3) % 7 : ((i * 37) % 181));
+      out.push({ id: 'pv-' + i, name: ['Iron Ridge', 'Gold Vein', 'Sky Crater', 'Coal Hollow'][i % 4] + ' ' + (i + 1), type: MG_TYPES[(i * 5 + 1) % 4], daysLeft: dl });
+    }
+    return out;
+  }
+  /** props landed (details loaded or not). */
+  function setMineCountdown(props, opts) {
+    opts = opts || {};
+    _cd.preview = !!opts.preview;
+    _cd.pending = !!opts.pending;
+    if (_cd.preview) { _cd.mines = cdPreviewMines(); _cd.noDate = 0; }
+    else {
+      const now = Date.now();
+      let noDate = 0, fromPurchase = 0;
+      _cd.mines = [];
+      (props || []).forEach(function (p) {
+        const a = cdActivityMs(p);
+        if (a.ms == null) { noDate++; return; }
+        if (a.src === 'purchasedAt') fromPurchase++;
+        let dl = CD_WINDOW - Math.floor((now - a.ms) / CD_DAY_MS);
+        dl = Math.max(0, Math.min(CD_WINDOW, dl));
+        _cd.mines.push({ id: String(p.id), name: cdTitle(p), type: cdType(p), daysLeft: dl });
+      });
+      _cd.noDate = noDate;
+      if (!_cd.pending && (noDate || fromPurchase)) console.info('[mine-countdown] ' + fromPurchase + ' mine(s) without lastUpdated used purchasedAt; ' + noDate + ' with no date left out.');
+    }
+    renderMineCountdown();
+  }
+  function cdSetChips() {
+    const host = $('cd-chips'); if (!host) return;
+    const m = _cd.mines || [];
+    const cnt = function (lo, hi) { return m.filter(function (x) { return x.daysLeft >= lo && x.daysLeft <= hi; }).length; };
+    const chips = [
+      { k: 'zero', label: 'Expired / 0', n: cnt(0, 0) },
+      { k: 'd7', label: 'Next 7 days', n: cnt(1, 7) },
+      { k: 'd30', label: 'Next 30', n: cnt(1, 30) },
+      { k: 'd60', label: 'Next 60', n: cnt(1, 60) }
+    ];
+    host.innerHTML = chips.map(function (c) {
+      return '<div class="cd-chip cd-chip-' + c.k + '"><span class="cd-chip-n">' + (_cd.mines ? fmtNum(c.n) : '\u2014') + '</span><span class="cd-chip-l">' + c.label + '</span></div>';
+    }).join('');
+  }
+  function renderMineCountdown() {
+    cdSetChips();
+    const canvas = $('cd-chart'); const wrap = $('cd-wrap');
+    if (!canvas || !wrap) return;
+    bindDayBarResize(_cd, wrap, renderMineCountdown);
+    const th = (document.documentElement.getAttribute('data-theme') || 'day').toLowerCase();
+    const dark = th === 'dusk' || th === 'mine';
+    const chrome = dayBarChrome();
+    const dpr = window.devicePixelRatio || 1;
+    const W = Math.max(200, Math.round(wrap.clientWidth || 300));
+    _cd.w = W; _cd.dpr = dpr;
+    const padL = 12, padR = 12, padT = 8, axisH = 22;
+    const innerW = W - padL - padR;
+    // columns by day
+    const cols = []; for (let i = 0; i <= CD_WINDOW; i++) cols.push([]);
+    (_cd.mines || []).forEach(function (m) { cols[m.daysLeft].push(m); });
+    cols.forEach(function (c) { c.sort(function (a, b) { return MG_TYPES.indexOf(a.type) - MG_TYPES.indexOf(b.type); }); });
+    _cd.cols = cols;
+    const maxStack = cols.reduce(function (a, c) { return Math.max(a, c.length); }, 0);
+    const colW = innerW / (CD_WINDOW + 1);
+    const dia = Math.max(2.5, Math.min(7, colW * 1.6));
+    const maxPlotH = 150;
+    const step = maxStack ? Math.min(dia + 1, Math.max(0.8, (maxPlotH - dia) / Math.max(1, maxStack - 1))) : dia + 1;
+    const plotH = Math.max(60, Math.min(maxPlotH, maxStack ? (maxStack - 1) * step + dia + 6 : 60));
+    const H = padT + plotH + axisH;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const x = function (d) { return padL + (d + 0.5) * colW; };
+    const base = padT + plotH;
+    // zones
+    ctx.fillStyle = dark ? 'rgba(239,68,68,0.20)' : 'rgba(220,38,38,0.12)';
+    ctx.fillRect(padL, padT, 8 * colW, plotH);
+    ctx.fillStyle = dark ? 'rgba(245,158,11,0.18)' : 'rgba(217,119,6,0.12)';
+    ctx.fillRect(padL + 8 * colW, padT, 23 * colW, plotH);
+    // axis
+    ctx.strokeStyle = chrome.baseline; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, base + 0.5); ctx.lineTo(W - padR, base + 0.5); ctx.stroke();
+    ctx.fillStyle = chrome.label; ctx.font = "10px 'DM Sans', sans-serif"; ctx.textBaseline = 'top';
+    [0, 7, 30, 60, 90, 120, 150, 180].forEach(function (d) {
+      const xx = x(d);
+      ctx.beginPath(); ctx.moveTo(xx + 0.5, base); ctx.lineTo(xx + 0.5, base + 4); ctx.stroke();
+      ctx.textAlign = d === 0 ? 'left' : (d === 180 ? 'right' : 'center');
+      ctx.fillText(String(d), d === 0 ? xx - 2 : (d === 180 ? xx + 2 : xx), base + 6);
+    });
+    ctx.textAlign = 'right'; ctx.fillText('days left', W - padR, padT);
+    // dots
+    const outline = dark ? 'rgba(232,238,246,0.55)' : 'rgba(13,27,42,0.35)';
+    cols.forEach(function (c, d) {
+      c.forEach(function (m, k) {
+        const cy = base - dia / 2 - 2 - k * step;
+        ctx.beginPath(); ctx.arc(x(d), cy, dia / 2, 0, Math.PI * 2);
+        ctx.fillStyle = MINE_TYPE_PIE_COLORS[m.type]; ctx.fill();
+        if (dia >= 3.5) { ctx.lineWidth = 0.75; ctx.strokeStyle = outline; ctx.stroke(); }
+      });
+    });
+    if (_cd.hoverDay >= 0 && cols[_cd.hoverDay] && cols[_cd.hoverDay].length) {
+      const d = _cd.hoverDay, n = cols[d].length;
+      ctx.strokeStyle = dark ? '#8fb3d9' : '#5C3317'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x(d) - dia / 2 - 2, base - 2 - (n - 1) * step - dia - 2, dia + 4, (n - 1) * step + dia + 4);
+    }
+    _cd.geom = { padL: padL, colW: colW, base: base, padT: padT };
+    const total = $('cd-total');
+    if (total) total.textContent = _cd.mines ? (fmtNum(_cd.mines.length) + (_cd.mines.length === 1 ? ' mine' : ' mines') + (_cd.pending ? '\u2026' : '')) : '\u2014';
+    const msg = $('cd-msg');
+    if (msg) setDashMsg(msg, !_cd.mines ? '' : (_cd.mines.length ? '' : 'No mines yet'), !_cd.mines ? 'is-loading' : '');
+    const note = $('cd-note');
+    if (note) {
+      const t = _cd.pending && !_cd.preview ? 'Loading last-activity dates\u2026' : (_cd.noDate ? fmtNum(_cd.noDate) + ' mine(s) have no activity or purchase date and are not shown.' : '');
+      note.textContent = t; note.hidden = !t;
+    }
+    canvas.setAttribute('aria-label', 'Mine countdown: days left on each mine\u2019s 180-day activity clock. '
+      + (_cd.mines ? cdSummaryText() : 'Loading'));
+  }
+  function cdSummaryText() {
+    const m = _cd.mines || [];
+    const c = function (lo, hi) { return m.filter(function (x) { return x.daysLeft >= lo && x.daysLeft <= hi; }).length; };
+    return fmtNum(c(0, 0)) + ' at 0, ' + fmtNum(c(1, 7)) + ' in the next 7 days, ' + fmtNum(c(1, 30)) + ' in the next 30, ' + fmtNum(c(1, 60)) + ' in the next 60.';
+  }
+  let cdTip = null;
+  function cdEnsureTip() {
+    if (cdTip) return cdTip;
+    cdTip = document.createElement('div');
+    cdTip.className = 'dash-visits-tip cd-tip'; cdTip.setAttribute('role', 'tooltip');
+    document.body.appendChild(cdTip);
+    return cdTip;
+  }
+  function cdHideTip() {
+    if (cdTip) cdTip.style.display = 'none';
+    if (_cd.hoverDay !== -1) { _cd.hoverDay = -1; renderMineCountdown(); }
+  }
+  function cdDayAt(clientX) {
+    const c = $('cd-chart'); if (!c || !_cd.geom || !_cd.cols) return -1;
+    const r = c.getBoundingClientRect();
+    const px = clientX - r.left;
+    const d0 = Math.floor((px - _cd.geom.padL) / _cd.geom.colW);
+    let best = -1, bestDist = Infinity;
+    for (let d = Math.max(0, d0 - 3); d <= Math.min(CD_WINDOW, d0 + 3); d++) {
+      if (!_cd.cols[d] || !_cd.cols[d].length) continue;
+      const cx = _cd.geom.padL + (d + 0.5) * _cd.geom.colW;
+      const dist = Math.abs(cx - px);
+      if (dist < bestDist && dist <= Math.max(6, _cd.geom.colW * 2)) { best = d; bestDist = dist; }
+    }
+    return best;
+  }
+  function cdShowTip(d, x, y) {
+    const tip = cdEnsureTip();
+    const list = _cd.cols[d];
+    tip.replaceChildren();
+    const hd = document.createElement('div'); hd.className = 'dash-visits-tip-date';
+    hd.textContent = (d === 0 ? '0 days left (expired)' : d + (d === 1 ? ' day left' : ' days left')) + ' \u2014 ' + fmtNum(list.length) + (list.length === 1 ? ' mine' : ' mines');
+    tip.appendChild(hd);
+    const ul = document.createElement('div'); ul.className = 'cd-tip-list';
+    list.slice(0, 12).forEach(function (m) {
+      const row = document.createElement('div'); row.className = 'cd-tip-row';
+      const im = document.createElement('img'); im.src = '/images/mine-icons/' + m.type + '.svg'; im.alt = MINE_TYPE_PIE_LABELS[m.type];
+      const nm = document.createElement('span'); nm.className = 'cd-tip-name'; nm.textContent = m.name;
+      const dl = document.createElement('span'); dl.className = 'cd-tip-days'; dl.textContent = m.daysLeft + 'd';
+      row.append(im, nm, dl); ul.appendChild(row);
+    });
+    if (list.length > 12) { const more = document.createElement('div'); more.className = 'cd-tip-more'; more.textContent = 'and ' + fmtNum(list.length - 12) + ' more'; ul.appendChild(more); }
+    tip.appendChild(ul);
+    const gap = 14, edge = 8;
+    tip.style.visibility = 'hidden'; tip.style.display = 'block';
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    let left = x + gap, top = y + gap;
+    if (left + w > vw - edge) left = x - gap - w;
+    if (top + h > vh - edge) top = y - gap - h;
+    tip.style.left = Math.max(edge, left) + 'px'; tip.style.top = Math.max(edge, top) + 'px';
+    tip.style.visibility = 'visible';
+  }
+  (function bindCdTip() {
+    const c = $('cd-chart'); if (!c) return;
+    const move = function (e) {
+      const d = cdDayAt(e.clientX);
+      if (d < 0) { cdHideTip(); return; }
+      if (d !== _cd.hoverDay) { _cd.hoverDay = d; renderMineCountdown(); }
+      cdShowTip(d, e.clientX, e.clientY);
+    };
+    c.addEventListener('mousemove', move);
+    c.addEventListener('click', move);
+    c.addEventListener('mouseleave', cdHideTip);
+    document.addEventListener('scroll', function () { if (cdTip && cdTip.style.display === 'block') cdHideTip(); }, { passive: true, capture: true });
+  })();
+  document.addEventListener('tm-theme-change', function () { try { renderMineCountdown(); } catch (e) {} });
+  renderMineCountdown();
 
   // ── Inventory card (column 2, under TerraBucks Earned Today) ─────────────
   // Oct 1, 2026. Read-only. One tile per item/resource exactly as the portal
