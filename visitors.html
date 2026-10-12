@@ -4345,11 +4345,33 @@
     if (!uid || v.propertyOwnerId !== uid) return false;
     return !ownerReplyText(v);
   }
+  // Open-form state survives board re-renders (progressive loading / avatar refresh
+  // call renderFromFilters() and rebuild every card, which used to wipe the form).
+  let replyDraft = null; // { id, text }
+  function replyFormHtml(text) {
+    const t = String(text || '');
+    return '<div class="vo-reply-form">'
+      + '<textarea class="vo-reply-input" maxlength="' + REPLY_MAX + '" rows="3" placeholder="Write a reply to this visitor…" aria-label="Reply to visitor">' + escapeHtml(t) + '</textarea>'
+      + '<div class="vo-reply-row"><span class="vo-reply-count">' + t.length + '/' + REPLY_MAX + '</span>'
+      + '<span class="vo-reply-err" role="alert"></span>'
+      + '<button type="button" class="vo-reply-cancel">Cancel</button>'
+      + '<button type="button" class="vo-reply-save"' + (t.trim() ? '' : ' disabled') + '>Save</button></div></div>';
+  }
   function addReplyHtml(v) {
     if (!canAddReply(v)) return '';
+    const open = replyDraft && replyDraft.id === v.id;
     return '<div class="vo-reply-add-wrap" data-checkin-id="' + escapeHtml(v.id) + '">'
-      + '<button type="button" class="vo-reply-add">Add reply</button>'
+      + '<button type="button" class="vo-reply-add"' + (open ? ' hidden' : '') + '>Add reply</button>'
+      + (open ? replyFormHtml(replyDraft.text) : '')
       + '</div>';
+  }
+  /** After a board rebuild: put focus/caret back in the open reply box if it had it. */
+  function restoreReplyFocus(hadFocusId) {
+    if (!replyDraft || hadFocusId !== replyDraft.id) return;
+    const ta = document.querySelector('#visitors-board .vo-reply-add-wrap[data-checkin-id="' + CSS.escape(replyDraft.id) + '"] .vo-reply-input');
+    if (!ta) return;
+    ta.focus();
+    try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
   }
   /** Match existing data type for ownerReplyAt: ISO string if existing replies use strings, else server Timestamp. */
   function replyAtUsesString() {
@@ -4363,26 +4385,33 @@
   }
   function openReplyForm(wrap) {
     if (!wrap || wrap.querySelector('.vo-reply-form')) return;
+    const id = wrap.getAttribute('data-checkin-id');
+    if (replyDraft && replyDraft.id !== id) {
+      // one open form at a time
+      document.querySelectorAll('.vo-reply-add-wrap[data-checkin-id="' + CSS.escape(replyDraft.id) + '"]').forEach(w => {
+        const f = w.querySelector('.vo-reply-form'); if (f) f.remove();
+        const b = w.querySelector('.vo-reply-add'); if (b) b.hidden = false;
+      });
+    }
+    replyDraft = { id: id, text: (replyDraft && replyDraft.id === id) ? replyDraft.text : '' };
     const btn = wrap.querySelector('.vo-reply-add');
     if (btn) btn.hidden = true;
-    const form = document.createElement('div');
-    form.className = 'vo-reply-form';
-    form.innerHTML = '<textarea class="vo-reply-input" maxlength="' + REPLY_MAX + '" rows="3" placeholder="Write a reply to this visitor…" aria-label="Reply to visitor"></textarea>'
-      + '<div class="vo-reply-row"><span class="vo-reply-count">0/' + REPLY_MAX + '</span>'
-      + '<span class="vo-reply-err" role="alert"></span>'
-      + '<button type="button" class="vo-reply-cancel">Cancel</button>'
-      + '<button type="button" class="vo-reply-save" disabled>Save</button></div>';
-    wrap.appendChild(form);
-    const ta = form.querySelector('.vo-reply-input');
+    wrap.insertAdjacentHTML('beforeend', replyFormHtml(replyDraft.text));
+    const ta = wrap.querySelector('.vo-reply-input');
     ta.focus();
   }
   function closeReplyForm(wrap) {
     if (!wrap) return;
     const form = wrap.querySelector('.vo-reply-form');
     if (form && form.dataset.saving === '1') return;
-    if (form) form.remove();
+    const id = wrap.getAttribute('data-checkin-id');
+    if (replyDraft && replyDraft.id === id) replyDraft = null;
+    document.querySelectorAll('.vo-reply-add-wrap[data-checkin-id="' + CSS.escape(id) + '"]').forEach(w => {
+      const f = w.querySelector('.vo-reply-form'); if (f) f.remove();
+      const b = w.querySelector('.vo-reply-add'); if (b) b.hidden = false;
+    });
     const btn = wrap.querySelector('.vo-reply-add');
-    if (btn) { btn.hidden = false; btn.focus(); }
+    if (btn) btn.focus();
   }
   async function saveReply(wrap) {
     const form = wrap && wrap.querySelector('.vo-reply-form');
@@ -4405,6 +4434,7 @@
     try {
       await db.collection('checkIns').doc(id).update(payload);
       v.ownerReply = text;
+      replyDraft = null;
       v.ownerReplyAt = useStr ? payload.ownerReplyAt : firebase.firestore.Timestamp.now();
       // Render reply in place (board card and detail card if open), remove the button.
       document.querySelectorAll('.vo-reply-add-wrap[data-checkin-id="' + CSS.escape(id) + '"]').forEach(w => {
@@ -4436,6 +4466,8 @@
       const ta = e.target;
       if (!(ta instanceof Element) || !ta.classList.contains('vo-reply-input')) return;
       const form = ta.closest('.vo-reply-form');
+      const w = ta.closest('.vo-reply-add-wrap');
+      if (w && replyDraft && replyDraft.id === w.getAttribute('data-checkin-id')) replyDraft.text = ta.value;
       const n = ta.value.length;
       form.querySelector('.vo-reply-count').textContent = n + '/' + REPLY_MAX;
       form.querySelector('.vo-reply-save').disabled = !ta.value.trim();
@@ -4488,6 +4520,9 @@
   }
 
   function renderFromFilters() {
+    const _ae = document.activeElement;
+    const _replyFocusId = (_ae && _ae.classList && _ae.classList.contains('vo-reply-input') && _ae.closest('#visitors-board'))
+      ? (_ae.closest('.vo-reply-add-wrap') || {}).getAttribute?.('data-checkin-id') : null;
     updateSortButtons();
     const list = filteredSortedVisits();
     const countEl = $('match-count');
@@ -4505,6 +4540,7 @@
     bindShowcasePinTips(board);
     bindShowcasePinClicksOnce();
     bindMineBadgeClicksOnce();
+    restoreReplyFocus(_replyFocusId);
   }
 
   function buildMineMapEntry(m, details) {
