@@ -871,7 +871,8 @@
       ctx.moveTo(edgeX, edgeY);
       ctx.lineTo(elbowX, elbowY);
       ctx.lineTo(labelX + (side > 0 ? -4 : 4) * k, labelY);
-      ctx.strokeStyle = 'rgba(13,27,42,0.45)';
+      const thL = (document.documentElement.getAttribute('data-theme') || 'day').toLowerCase();
+      ctx.strokeStyle = (thL === 'dusk' || thL === 'mine') ? '#8fb3d9' : 'rgba(13,27,42,0.45)';
       ctx.lineWidth = 1.25 * k;
       ctx.stroke();
       ctx.restore();
@@ -1527,8 +1528,32 @@
   async function captureDashCard(card) {
     try {
       const h2c = await loadHtml2Canvas();
+      // Dusk/Mine: cards are translucent rgba over the darkened page photo, which
+      // html2canvas doesn't capture (so the card came out near-black), and its
+      // box-shadow is painted over the card itself (dark body + light top strip,
+      // double edges). In the clone: solid on-screen card colour (--tm-card-solid,
+      // what rgba over the page composites to), no shadows, transparent PNG
+      // corners so the radius shows, and a legible title.
+      const thC = (document.documentElement.getAttribute('data-theme') || 'day').toLowerCase();
+      const darkC = thC === 'dusk' || thC === 'mine';
+      const solid = darkC ? (getComputedStyle(document.documentElement).getPropertyValue('--tm-card-solid').trim() || '#16263a') : '';
+      const rect = card.getBoundingClientRect();
       const canvas = await h2c(card, {
-        backgroundColor: '#ffffff',
+        backgroundColor: darkC ? null : '#ffffff',
+        width: Math.ceil(rect.width), height: Math.ceil(rect.height),
+        onclone: darkC ? function (doc) {
+          const c = doc.getElementById(card.id);
+          if (!c) return;
+          c.style.setProperty('background', solid, 'important');
+          c.style.setProperty('box-shadow', 'none', 'important');
+          c.style.setProperty('backdrop-filter', 'none', 'important');
+          c.querySelectorAll('*').forEach(function (el) {
+            const cs = doc.defaultView.getComputedStyle(el);
+            if (cs.boxShadow && cs.boxShadow !== 'none' && !el.classList.contains('mt-res')) el.style.setProperty('box-shadow', 'none', 'important');
+          });
+          const lab = c.querySelector(':scope > .stat-card-label');
+          if (lab) { lab.style.setProperty('font-size', '16px', 'important'); lab.style.setProperty('letter-spacing', '2px', 'important'); }
+        } : null,
         scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1)),
         useCORS: true,
         logging: false,
@@ -2883,6 +2908,8 @@
     try { renderReferrals60(); } catch (e) {}
     try { renderMiniGames30(); } catch (e) {}
     try { renderMyCheckIns60(); } catch (e) {}
+    try { if (typeof renderMaint30 === 'function') renderMaint30(); } catch (e) {}
+    try { if (_pieState.counts) renderMineTypePie(_pieState.counts, _pieState.total); } catch (e) {}
   });
 
   // ── Mines Purchased — Last 60 Days (column 2, under Visitors) ────────────
