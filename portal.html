@@ -377,6 +377,21 @@
               </div>
             </div>
             <!-- Oct 12, 2026: Mine Maintenance today (dailyActivities where userId == uid) -->
+            <!-- Oct 12, 2026: TerraBucks earned per day (same sources as "TerraBucks Earned Today"), last 30 days -->
+            <section class="dash-visits-card dash-tb30-card" id="dash-tb30-card" aria-labelledby="dash-tb30-title">
+              <div class="dash-visits-head has-share">
+                <h2 class="dash-visits-title" id="dash-tb30-title">TerraBucks Earned &mdash; Last 30 Days</h2>
+                <div class="dash-visits-total" id="dash-tb30-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-tb30-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-tb30-wrap">
+                  <canvas id="dash-tb30-chart" role="img" aria-label="Bar graph of TerraBucks earned per day for the last 30 days"></canvas>
+                  <div class="dash-visits-msg is-loading" id="dash-tb30-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+                </div>
+                <div class="dash-games-note" id="dash-tb30-note" role="note" hidden></div>
+              </div>
+            </section>
             <div class="stat-card dash-slot-card dash-maint-today-card has-share" id="dash-maint-today-card" aria-label="Mine maintenance today">
               <div class="stat-card-label">Mine Maintenance Today</div>
               <button type="button" class="dash-share-btn" data-share-card="dash-maint-today-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
@@ -2327,6 +2342,7 @@
     } catch (err) {
       if (seq !== _vis60.seq) return;
       console.warn('[visitors-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
+      tb30Fail('visitors');
       setDistinctVisitors(null);
       setTotalCheckIns(null);
       if (_vis60.locked) return;
@@ -2344,6 +2360,15 @@
   }
   function vis60Draw(res, uid, win) {
     const total = $('dash-visits-total');
+    try {   // TB 30-day graph: visitor check-ins (not self) x 2 TB
+      const m = {};
+      res.rows.forEach(function (v) {
+        const ms = checkInTsMillis(v.timestamp); if (!ms) return;
+        const vUid = vis60VisitorUid(v); if (!vUid || vUid === uid) return;
+        const k = vis60DayKey(new Date(ms)); m[k] = (m[k] || 0) + 2;
+      });
+      tb30Feed('visitors', m, res.capped ? { partialBefore: Infinity } : null);
+    } catch (e) { console.warn('[tb-30d] visitors part failed:', e); }
     vis60Aggregate(res.rows, uid, win);
     _vis60.days = win.days;
     _vis60.pages = res.pages;
@@ -3670,6 +3695,7 @@
     } catch (err) {
       if (seq !== _ref60.seq) return;
       console.warn('[referrals] referralLogs query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      tb30Fail('refs');
       _ref60.status = 'error';
       setRef60Msg('Could not load referrals.', 'is-error');
       setRefTodayMsg('Could not load referrals; not included in Known TB today.');
@@ -3681,6 +3707,7 @@
     _ref60.path = res.path;
     _ref60.capped = !!res.capped;
     ref60Aggregate(res.rows, win);
+    tb30Feed('refs', tb30MapFromDays(win.days, 'tb'), res.capped ? { partialBefore: Infinity } : null);
     const sum = win.days.reduce(function (a, d) { return a + d.count; }, 0);
     _ref60.status = sum ? 'ready' : 'empty';
     if (total) total.textContent = fmtNum(sum) + (res.capped ? '+' : '') + (sum === 1 ? ' referral' : ' referrals');
@@ -3924,6 +3951,7 @@
       if (!_mg30.todayShown && !final) console.info('[mini-games] today rendered after ' + (_mg30.pagesSoFar || 0) + ' page(s), before older pages finished.');
       _mg30.todayShown = true;
     }
+    if (final) tb30Feed('games', tb30MapFromDays(win.days, 'tb'), { partialBefore: completeFromMs > win.startMs ? completeFromMs : 0 });
     renderMiniGames30();
     if (vis60TipChart === MG30_CHART && _mg30.hover >= 0) fillMg30Tip(_mg30.hover);   // keep an open popup current
   }
@@ -3972,6 +4000,7 @@
     } catch (err) {
       if (seq !== _mg30.seq) return;
       console.warn('[mini-games] gameResults query failed (' + ((err && err.code) || '') + ': ' + ((err && err.message) || err) + ').');
+      tb30Fail('games');
       _mg30.status = 'error';
       _mg30.days = mg30BuildDays().days;
       setMg30Note('');
@@ -4678,6 +4707,7 @@
       rejectToday(err);
       if (seq !== _myci.seq) return;
       console.warn('[my-checkins-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
+      tb30Fail('yours');
       _myci.status = 'error';
       setMyciMsg('Could not load your check-ins.', 'is-error');
       renderMyCheckIns60();
@@ -4685,6 +4715,18 @@
     }
     if (seq !== _myci.seq) return;
     _myci.skipped = myciAggregate(res.rows, uid, win);
+    try {   // TB 30-day graph: TB on your check-ins at other mines (when the doc has a TB field)
+      const m = {}, known = {}; let anyKnown = 0;
+      res.rows.forEach(function (r) {
+        const v = r.data || {};
+        const ms = checkInTsMillis(v.timestamp); if (!ms) return;
+        const owner = myciOwnerUid(v); if (!owner || owner === uid) return;
+        const n = pickCheckInTb(v, 'visitor'); if (n == null) return;
+        const k = vis60DayKey(new Date(ms)); m[k] = (m[k] || 0) + n; known[k] = (known[k] || 0) + 1; anyKnown++;
+      });
+      if (!anyKnown && res.rows.length) console.info('[tb-30d] your check-ins carry no TB field; that part is left out.');
+      tb30Feed('yours', m, Object.assign({ known: known }, res.capped ? { partialBefore: Infinity } : {}));
+    } catch (e) { console.warn('[tb-30d] your check-ins part failed:', e); }
     _myci.days = win.days;
     _myci.pages = res.pages;
     _myci.capped = res.capped;
@@ -4699,6 +4741,131 @@
   const MYCI_CHART = { canvasId: 'dash-myci-chart', st: _myci, render: renderMyCheckIns60, fill: fillMyciTip };
   bindDayBarTip(MYCI_CHART);
   renderMyCheckIns60(); // empty 60-slot frame under the spinner
+
+  // ── TerraBucks Earned — Last 30 Days (column 2, above Mine Maintenance Today) ──
+  // Oct 12, 2026. No extra queries: per-day sums of the same sources the
+  // "TerraBucks Earned Today" card adds up, taken from the fetches the other
+  // graphs already make:
+  //   visitors  checkIns propertyOwnerId == uid (Visitors graph rows), not self, 2 TB each
+  //   games     gameResults rewardsEarned.tb (Mini Games graph)
+  //   refs      referralLogs tbAwarded by completedAt (Referrals graph)
+  //   yours     your checkIns at other mines, TB via pickCheckInTb (My Check-ins graph);
+  //             those docs normally carry no TB field, so this part is usually 0/unknown.
+  const TB30_DAYS = 30;
+  const TB30_SRC = ['visitors', 'games', 'refs', 'yours'];
+  const TB30_SRC_LABEL = { visitors: 'Visitor check-ins', games: 'Mini games', refs: 'Referral rewards', yours: 'Your check-ins' };
+  const _tb30 = {
+    seq: 0, status: 'loading', days: null, axis: null, geom: null, hover: -1,
+    w: 0, dpr: 0, ro: null, timer: 0, preview: false,
+    src: { visitors: null, games: null, refs: null, yours: null }   // null = loading, false = failed, {map, partial, known}
+  };
+  function tb30BuildDays() {
+    const win = vis60BuildDays(null, TB30_DAYS);
+    win.days.forEach(function (d) { d.tb = 0; d.parts = { visitors: 0, games: 0, refs: 0, yours: 0 }; d.yoursKnown = 0; d.incomplete = false; });
+    return win;
+  }
+  function tb30Reset() {
+    _tb30.src = { visitors: null, games: null, refs: null, yours: null };
+    tb30Rebuild();
+  }
+  /** A source landed: map dayKey -> TB (yours also passes knownByKey). */
+  function tb30Feed(src, map, extra) {
+    if (_tb30.locked) return;
+    _tb30.src[src] = Object.assign({ map: map || {} }, extra || {});
+    tb30Rebuild();
+  }
+  function tb30Fail(src) {
+    if (_tb30.locked) return;
+    _tb30.src[src] = false;
+    tb30Rebuild();
+  }
+  function tb30MapFromDays(days, field) {
+    const m = {};
+    (days || []).forEach(function (d) { if (d && d.key) m[d.key] = Number(d[field || 'tb']) || 0; });
+    return m;
+  }
+  function tb30Rebuild() {
+    if (_tb30.locked) return;
+    const win = tb30BuildDays();
+    const s = _tb30.src;
+    win.days.forEach(function (d) {
+      TB30_SRC.forEach(function (k) {
+        const v = s[k] && s[k].map[d.key];
+        if (v) { d.parts[k] += v; d.tb += v; }
+      });
+      if (s.yours && s.yours.known) d.yoursKnown = s.yours.known[d.key] || 0;
+      d.incomplete = TB30_SRC.some(function (k) { return s[k] && s[k].partialBefore && d.date.getTime() < s[k].partialBefore; });
+    });
+    _tb30.days = win.days;
+    const done = TB30_SRC.every(function (k) { return s[k] !== null; });
+    const failed = TB30_SRC.filter(function (k) { return s[k] === false; });
+    const sum = win.days.reduce(function (a, d) { return a + d.tb; }, 0);
+    _tb30.status = done ? (sum ? 'ready' : 'empty') : (sum ? 'partial' : 'loading');
+    const total = $('dash-tb30-total');
+    if (total) total.textContent = (done || sum) ? (fmtNum(sum) + ' TB' + (done ? '' : '\u2026')) : '\u2014';
+    if (done) setDashMsg($('dash-tb30-msg'), sum ? '' : 'No TerraBucks earned in the last 30 days', '');
+    else if (sum) setDashMsg($('dash-tb30-msg'), '', '');
+    else setDashMsg($('dash-tb30-msg'), '', 'is-loading');
+    const note = $('dash-tb30-note');
+    if (note) {
+      const bits = [];
+      if (failed.length) bits.push('Not included (could not load): ' + failed.map(function (k) { return TB30_SRC_LABEL[k]; }).join(', ') + '.');
+      note.textContent = bits.join(' ');
+      note.hidden = !bits.length;
+    }
+    renderTb30();
+    if (vis60TipChart === TB30_CHART && _tb30.hover >= 0) fillTb30Tip(_tb30.hover);
+  }
+  function renderTb30() {
+    drawDayBars($('dash-tb30-chart'), _tb30, {
+      render: renderTb30,
+      emptyDays: function () { return tb30BuildDays().days; },
+      total: function (d) { return d.tb; },
+      segments: function (d) { return [{ key: 'tb', v: d.tb, color: MG30_TB_COLOR }]; },
+      titles: { left: 'TB' },
+      hoverOutline: true,
+      hoverOutlineColor: '#5C3317',
+      aria: function (sum, max) {
+        return 'Bar graph of TerraBucks earned per day for the last 30 days: '
+          + (_tb30.status === 'loading' ? 'loading' : fmtNum(sum) + ' TB, most in one day ' + fmtNum(max) + ' TB');
+      }
+    });
+  }
+  function fillTb30Tip(idx) {
+    const tip = ensureVis60Tip();
+    const day = _tb30.days && _tb30.days[idx];
+    tip.replaceChildren();
+    if (!day) return;
+    const dt = document.createElement('div');
+    dt.className = 'dash-visits-tip-date';
+    dt.textContent = (idx === _tb30.days.length - 1 ? 'Today \u2014 ' : '')
+      + day.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    tip.appendChild(dt);
+    const table = document.createElement('table');
+    table.className = 'tb-today-table tb30-tip-table';
+    const tbody = document.createElement('tbody');
+    const plus = day.incomplete ? '+' : '';
+    const row = function (label, v, cls) {
+      const tr = document.createElement('tr'); if (cls) tr.className = cls;
+      const th = document.createElement('th'); th.scope = 'row'; th.textContent = label;
+      const td = document.createElement('td');
+      if (v == null) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); }
+      else td.innerHTML = mgTbHtml(v, plus);
+      tr.append(th, td); tbody.appendChild(tr);
+    };
+    const s = _tb30.src;
+    TB30_SRC.forEach(function (k) {
+      let v = s[k] ? day.parts[k] : null;
+      if (k === 'yours' && s.yours && !day.yoursKnown) v = null;   // no TB field on those docs
+      row(TB30_SRC_LABEL[k], v);
+    });
+    row('Total', day.tb, 'mg-total-row');
+    table.appendChild(tbody);
+    tip.appendChild(table);
+  }
+  const TB30_CHART = { canvasId: 'dash-tb30-chart', st: _tb30, render: renderTb30, fill: fillTb30Tip };
+  bindDayBarTip(TB30_CHART);
+  renderTb30(); // empty 30-slot frame under the "Loading…" message
 
   // ── Inventory card (column 2, under TerraBucks Earned Today) ─────────────
   // Oct 1, 2026. Read-only. One tile per item/resource exactly as the portal
@@ -5523,6 +5690,7 @@
       { key: 'visitors', card: 'dash-visits-card', wrap: 'dash-visits-wrap', msg: 'dash-visits-msg', total: 'dash-visits-total', st: _vis60, chart: VIS60_CHART, empty: function () { return vis60BuildDays().days; }, render: renderVisitors60 },
       { key: 'buys', card: 'dash-buys-card', wrap: 'dash-buys-wrap', msg: 'dash-buys-msg', total: 'dash-buys-total', st: _buys60, chart: BUYS60_CHART, empty: function () { return buys60BuildDays().days; }, render: renderBuys60 },
       { key: 'games', card: 'dash-games-card', wrap: 'dash-games-wrap', msg: 'dash-games-msg', total: 'dash-games-total', note: 'dash-games-note', st: _mg30, chart: MG30_CHART, empty: function () { return mg30BuildDays().days; }, render: renderMiniGames30 },
+      { key: 'tb30', card: 'dash-tb30-card', wrap: 'dash-tb30-wrap', msg: 'dash-tb30-msg', total: 'dash-tb30-total', note: 'dash-tb30-note', st: _tb30, chart: TB30_CHART, empty: function () { return tb30BuildDays().days; }, render: renderTb30 },
       { key: 'maint', card: 'dash-maint-card', wrap: 'dash-maint-wrap', msg: 'dash-maint-msg', total: 'dash-maint-total', note: 'dash-maint-note', st: _mt30, chart: MT30_CHART, empty: function () { return mt30BuildDays().days; }, render: renderMaint30 },
       { key: 'refs', card: 'dash-refs-card', wrap: 'dash-refs-wrap', msg: 'dash-refs-msg', total: 'dash-refs-total', st: _ref60, chart: REF60_CHART, empty: function () { return ref60BuildDays().days; }, render: renderReferrals60 },
       { key: 'myci', card: 'dash-myci-card', wrap: 'dash-myci-wrap', msg: 'dash-myci-msg', total: 'dash-myci-total', st: _myci, chart: MYCI_CHART, empty: function () { return myciBuildDays().days; }, render: renderMyCheckIns60 }
@@ -5616,6 +5784,7 @@
     pioneerLocked = false;               // in-flight today-only reads drop their results (full loads own the boxes)
     clearTimeout(ppTrialTimer);
     ppGraphs().forEach(ppUnlockGraph);
+    tb30Reset();
     console.info('[pioneer] free trial: graphs opened; loading the Pioneer Pass graph data.');
     // Visitors: the 90-day rows already fetched for the stat boxes (or still on their way).
     if (_vis60.lockedRes) { const r = _vis60.lockedRes; _vis60.lockedRes = null; vis60Draw(r.res, r.uid, r.win); }
