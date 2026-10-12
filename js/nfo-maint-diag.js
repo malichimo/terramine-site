@@ -4,7 +4,8 @@
  * Gate: uid 8HnXWZjRYQZrYPZi5NGdRsWRCvd2 only; once per tab session.
  */
 (function () {
-  var NFO_MAINT_DIAG_ENABLED = true;
+  // DISABLED Oct 12, 2026 after test (see notes: dailyActivities readable by userId).
+  var NFO_MAINT_DIAG_ENABLED = false;
   if (!NFO_MAINT_DIAG_ENABLED) return;
   var NFO_UID = '8HnXWZjRYQZrYPZi5NGdRsWRCvd2';
   var TAG = '[nfo-maint-diag]';
