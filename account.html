@@ -1309,9 +1309,9 @@
     } catch (e) { return false; }
   }
   function goToCalculator() {
-    const URL_CALC = 'https://terraminecalculator.com/premium';
     const raw = window.__tmLinkCode || ($('link-code-value').textContent || '');
     const code = String(raw).replace(/\s+/g, '');
+    const URL_CALC = 'https://terraminecalculator.com/premium' + (code ? ('?tmcode=' + encodeURIComponent(code)) : '');
     // 1) Start the copy synchronously inside the user gesture.
     let copyP = Promise.resolve(false);
     if (code) {
