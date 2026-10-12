@@ -64,7 +64,10 @@
     .mt-table thead th:nth-child(n+2) { text-align: center; }
     .mt-table.tb-today-table-games td:nth-child(2), .mt-table.tb-today-table-games td:nth-child(3) { width: auto; }
     .mt-table td.mt-mines { text-align: center; font-weight: 700; width: 13%; }
-    .mt-table td.mt-res { width: 14%; }
+    .mt-table td.mt-res { width: 13%; }
+    .mt-table td.mt-tb { width: 13%; text-align: right; white-space: nowrap; }
+    .mt-table td.mt-tb.is-zero { opacity: .55; }
+    .mt-table tbody th[scope="row"] img { width: 20px; height: 20px; }
     .mt-table td.mt-res { text-align: left; padding-left: 4px; padding-right: 4px; cursor: default; }
     .mt-table td.mt-res .mt-res-ic { width: 18px; height: 18px; object-fit: contain; vertical-align: -4px; margin-right: 3px; }
     .mt-table td.mt-res.is-zero { opacity: .45; }
@@ -4010,12 +4013,12 @@
     mtRebuild();
   }
   function mtEmptyDay(d) {
-    d.count = 0; d.res = 0; d.incomplete = false; d.unknown = 0;
+    d.count = 0; d.res = 0; d.tb = 0; d.incomplete = false; d.unknown = 0;
     d.types = {};
     MG_TYPES.forEach(function (t) {
       const r = {}, contrib = {};
       MT_RES.forEach(function (k) { r[k] = 0; contrib[k] = new Set(); });
-      d.types[t] = { count: 0, mines: new Set(), r: r, contrib: contrib };
+      d.types[t] = { count: 0, mines: new Set(), r: r, contrib: contrib, tb: 0 };
     });
     return d;
   }
@@ -4030,18 +4033,38 @@
     const re = (d.rewardsEarned && typeof d.rewardsEarned === 'object') ? d.rewardsEarned : {};
     const r = {}; let res = 0;
     MT_RES.forEach(function (k) { const v = Number(re[k]); r[k] = Number.isFinite(v) ? v : 0; res += r[k]; });
-    return { ms: ms, pid: d.propertyId != null ? String(d.propertyId) : '', r: r, res: res };
+    const tb = mtReadTb(d, re);
+    return { ms: ms, pid: d.propertyId != null ? String(d.propertyId) : '', r: r, res: res, tb: tb };
+  }
+  // TB from maintenance: field name not confirmed yet, so read tolerantly and
+  // log (once per key) which one was found.
+  const MT_TB_RE_KEYS = ['tb', 'TB', 'terrabucks'];
+  const MT_TB_TOP_KEYS = ['tbEarned', 'tbBonus', 'bonusTb', 'tb'];
+  const mtTbKeysLogged = new Set();
+  function mtReadTb(d, re) {
+    let key = '', v = NaN;
+    for (let i = 0; i < MT_TB_RE_KEYS.length && !key; i++) {
+      const k = MT_TB_RE_KEYS[i];
+      if (re[k] != null && Number.isFinite(Number(re[k]))) { key = 'rewardsEarned.' + k; v = Number(re[k]); }
+    }
+    for (let i = 0; i < MT_TB_TOP_KEYS.length && !key; i++) {
+      const k = MT_TB_TOP_KEYS[i];
+      if (d[k] != null && Number.isFinite(Number(d[k]))) { key = k; v = Number(d[k]); }
+    }
+    if (!key) return 0;
+    if (!mtTbKeysLogged.has(key)) { mtTbKeysLogged.add(key); console.log('[maintenance] TB found at key: ' + key); }
+    return v;
   }
   function mtAdd(win, e) {
     if (!win.byKey) { win.byKey = Object.create(null); win.days.forEach(function (d) { win.byKey[d.key] = d; }); }
     if (e.ms < win.startMs || e.ms >= win.endMs) return;
     const day = win.byKey[vis60DayKey(new Date(e.ms))];
     if (!day) return;
-    day.count++; day.res += e.res;
+    day.count++; day.res += e.res; day.tb += (e.tb || 0);
     const type = mtPropType[e.pid];
     if (!type) { day.unknown++; return; }
     const t = day.types[type];
-    t.count++;
+    t.count++; t.tb += (e.tb || 0);
     if (e.pid) t.mines.add(e.pid);
     MT_RES.forEach(function (k) { t.r[k] += e.r[k]; if (e.r[k] > 0 && e.pid) t.contrib[k].add(e.pid); });
   }
@@ -4079,7 +4102,7 @@
     table.className = 'tb-today-table tb-today-table-games mg-table mt-table';
     table.setAttribute('aria-label', 'Mine maintenance');
     const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Mines</th><th scope="col" colspan="4">Resources earned</th></tr>';
+    thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Mines</th><th scope="col" colspan="4">Resources earned</th><th scope="col">TB</th></tr>';
     const tbody = document.createElement('tbody');
     const plus = (day && day.incomplete) ? '+' : '';
     const na = function (td) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); };
@@ -4089,8 +4112,10 @@
       const tr = document.createElement('tr');
       tr.dataset.type = type;
       const th = document.createElement('th'); th.scope = 'row';
-      const im = document.createElement('img'); im.src = '/images/mine-icons/' + type + '.svg'; im.alt = '';
-      th.append(im, document.createTextNode(' ' + MINE_TYPE_PIE_LABELS[type]));
+      const im = document.createElement('img'); im.src = '/images/mine-icons/' + type + '.svg';
+      im.alt = MINE_TYPE_PIE_LABELS[type]; im.title = MINE_TYPE_PIE_LABELS[type];
+      th.setAttribute('aria-label', MINE_TYPE_PIE_LABELS[type]); th.title = MINE_TYPE_PIE_LABELS[type];
+      th.appendChild(im);
       const tdM = document.createElement('td'); tdM.className = 'mt-mines';
       if (v) { tdM.textContent = fmtNum(v.mines.size) + plus; totalMines += v.mines.size; } else na(tdM);
       tr.append(th, tdM);
@@ -4110,6 +4135,7 @@
         td.append(ic, n);
         tr.appendChild(td);
       });
+      tr.appendChild(mtTbCell(v ? v.tb : null, plus));
       tbody.appendChild(tr);
     });
     const tr = document.createElement('tr'); tr.className = 'mg-total-row';
@@ -4118,11 +4144,18 @@
     if (day) tdM.textContent = fmtNum(totalMines) + plus; else na(tdM);
     const tdC = document.createElement('td'); tdC.colSpan = 4; tdC.className = 'mt-total-note';
     tdC.textContent = day ? (fmtNum(day.count) + plus + (day.count === 1 ? ' maintenance' : ' maintenances')) : '\u2014';
-    tr.append(th, tdM, tdC);
+    tr.append(th, tdM, tdC, mtTbCell(day ? day.tb : null, plus));
     tbody.appendChild(tr);
     table.append(thead, tbody);
     wrap.appendChild(table);
     return wrap;
+  }
+  function mtTbCell(n, plus) {
+    const td = document.createElement('td'); td.className = 'mt-tb';
+    if (n == null) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); return td; }
+    td.innerHTML = '<span class="tb-today-tb-val"><img src="images/mine-icons/terrabucks-small.png" alt="">' + fmtNum(n) + (plus || '') + '</span>';
+    if (!n) td.classList.add('is-zero');
+    return td;
   }
   // Resource cell popup (today box): bigger icon, name, total, contributing mines.
   let mtResTip = null, mtResTarget = null;
@@ -4295,7 +4328,7 @@
     const fetchWin = todayOnly ? { days: win0.days, startMs: todayMs, endMs: win0.endMs } : win0;
     _mt30.preview = !!options.preview;
     _mt30.todayOnly = todayOnly;
-    _mt30.entries = []; _mt30.win = win0; _mt30.final = false; _mt30.completeFromMs = Infinity;
+    _mt30.entries = []; _mt30.newest = null; _mt30.win = win0; _mt30.final = false; _mt30.completeFromMs = Infinity;
     if (todayOnly) { renderMtToday(null, true); setMtTodayMsg(''); }
     else mt30SetLoading(win0);
     let src = null, used = 0, seen = new Set();
@@ -4305,7 +4338,9 @@
         const doc = docs[used];
         if (seen.has(doc.id)) continue;
         seen.add(doc.id);
-        const e = mtEntry(doc.data() || {});
+        const raw = doc.data() || {};
+        const e = mtEntry(raw);
+        if (e && (!_mt30.newest || e.ms > _mt30.newest.ms)) _mt30.newest = { ms: e.ms, id: doc.id, data: raw };
         if (e) _mt30.entries.push(e);
       }
     };
@@ -4339,6 +4374,9 @@
       return;
     }
     if (seq !== _mt30.seq) return;
+    if (res && _mt30.newest && vis60DayKey(new Date(_mt30.newest.ms)) === vis60DayKey(new Date())) {
+      console.log('[maintenance] newest doc', _mt30.newest.id, JSON.parse(JSON.stringify(_mt30.newest.data)));
+    } else if (res) console.log('[maintenance] newest doc: none today');
     _mt30.path = res ? res.path : 'preview';
     _mt30.capped = !!(res && res.capped);
     _mt30.completeFromMs = res ? Math.max(fetchWin.startMs, res.completeFromMs) : fetchWin.startMs;
