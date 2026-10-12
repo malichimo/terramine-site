@@ -283,7 +283,7 @@ html[data-theme="mine"] .compare-pill {
   border-color: var(--tm-toolbar-border) !important;
 }
 html[data-theme="dusk"] .dash-share-btn,
-html[data-theme="mine"] .dash-share-btn { color: #354355; }
+html[data-theme="mine"] .dash-share-btn { color: #8fb3d9; }
 
 /* ── Theme toggle pill ────────────────────────────────────────────────────── */
 .theme-toggle {
@@ -387,16 +387,36 @@ html[data-theme="mine"] .dash-share-btn,
 html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn,
 html[data-theme="mine"] .stat-card.has-share > .dash-share-btn {
   background: transparent !important;
-  border-color: #354355 !important;
-  color: #354355 !important;
+  border-color: #8fb3d9 !important;
+  color: #8fb3d9 !important;
 }
 html[data-theme="dusk"] .dash-share-btn:hover,
 html[data-theme="mine"] .dash-share-btn:hover,
 html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn:hover,
 html[data-theme="mine"] .stat-card.has-share > .dash-share-btn:hover {
   background: transparent !important;
-  border-color: #354355 !important;
+  border-color: #ffffff !important;
   color: #fff !important;
+}
+html[data-theme="dusk"] .dash-share-btn:focus-visible,
+html[data-theme="mine"] .dash-share-btn:focus-visible {
+  outline-color: #8fb3d9 !important;
+}
+
+/* B2) Dashboard box title strips — right-side meta ("132 check-ins", area
+   totals) used var(--bg) = near-black in dusk; title text-shadow used
+   var(--brown-dark) = light in dusk (fuzzy). PP lock overlay untouched. */
+html[data-theme="dusk"] .dash-visits-total,
+html[data-theme="mine"] .dash-visits-total,
+html[data-theme="dusk"] .dash-dominance-area,
+html[data-theme="mine"] .dash-dominance-area {
+  color: #8fb3d9 !important;
+}
+html[data-theme="dusk"] .dash-visits-title,
+html[data-theme="mine"] .dash-visits-title,
+html[data-theme="dusk"] .dash-dominance-title,
+html[data-theme="mine"] .dash-dominance-title {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45) !important;
 }
 
 
