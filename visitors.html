@@ -4335,11 +4335,14 @@
   }
 
   // ── Owner "Add reply" (Oct 12, 2026): only own visits with NO ownerReply; no edit. ──
+  // Oct 12, 2026: off until Firestore rules allow owner ownerReply writes (save → permission-denied).
+  const VO_REPLY_ENABLED = false;
   const REPLY_MAX = 500;
   function currentUidSafe() {
     try { const u = firebase.auth().currentUser; return u ? u.uid : ''; } catch (e) { return ''; }
   }
   function canAddReply(v) {
+    if (!VO_REPLY_ENABLED) return false;
     if (!v || !v.id) return false;
     const uid = currentUidSafe();
     if (!uid || v.propertyOwnerId !== uid) return false;
