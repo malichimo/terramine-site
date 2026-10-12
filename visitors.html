@@ -256,6 +256,30 @@
     .vo-message::after { content:'"'; }
     .vo-no-message { font-size:12px; color:var(--text-light); font-style:italic; }
 
+    .vo-reply-add-wrap { margin-top: 10px; text-align: left; }
+    .vo-reply-add {
+      font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+      padding: 6px 12px; border-radius: 8px;
+      border: 1px solid #42a5f5; background: #e3f2fd; color: #1565c0;
+    }
+    .vo-reply-add:hover { background: #bbdefb; }
+    .vo-reply-add:focus-visible { outline: 2px solid #1e88e5; outline-offset: 1px; }
+    .vo-reply-form { margin-top: 2px; padding: 10px 12px 12px; background: #e3f2fd; border-left: 3px solid #42a5f5; border-radius: 0 8px 8px 0; }
+    .vo-reply-input {
+      width: 100%; box-sizing: border-box; resize: vertical; min-height: 64px;
+      font: inherit; font-size: 14px; line-height: 1.45; padding: 8px 10px;
+      border: 1px solid #90caf9; border-radius: 8px; background: #fff; color: #1f2937;
+    }
+    .vo-reply-input:focus { outline: none; border-color: #1e88e5; box-shadow: 0 0 0 2px rgba(30,136,229,.2); }
+    .vo-reply-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .vo-reply-count { font-size: 12px; color: #64748b; font-variant-numeric: tabular-nums; }
+    .vo-reply-err { flex: 1 1 auto; font-size: 12px; color: #c62828; min-width: 0; }
+    .vo-reply-cancel, .vo-reply-save {
+      font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; padding: 6px 12px; border-radius: 8px;
+    }
+    .vo-reply-cancel { margin-left: auto; border: 1px solid #b0bec5; background: transparent; color: #455a64; }
+    .vo-reply-save { border: 1px solid #1e88e5; background: #1e88e5; color: #fff; }
+    .vo-reply-save:disabled, .vo-reply-cancel:disabled { opacity: .55; cursor: default; }
     .vo-owner-reply {
       margin-top: 10px;
       padding: 10px 12px 12px;
@@ -688,7 +712,7 @@
       max-width:min(280px, calc(100vw - 16px));
     }
 </style>
-  <link rel="stylesheet" href="/portal-theme.css?v=20261012-2" />
+  <link rel="stylesheet" href="/portal-theme.css?v=20261012-3" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -4306,9 +4330,123 @@
       + pinHtml
       + '</div>'
       + '</div></div>'
-      + '<div class="vo-card-body">' + photoHtml + msgHtml + ownerReplyHtml(v) + '</div>'
+      + '<div class="vo-card-body">' + photoHtml + msgHtml + ownerReplyHtml(v) + addReplyHtml(v) + '</div>'
       + '</article>';
   }
+
+  // ── Owner "Add reply" (Oct 12, 2026): only own visits with NO ownerReply; no edit. ──
+  const REPLY_MAX = 500;
+  function currentUidSafe() {
+    try { const u = firebase.auth().currentUser; return u ? u.uid : ''; } catch (e) { return ''; }
+  }
+  function canAddReply(v) {
+    if (!v || !v.id) return false;
+    const uid = currentUidSafe();
+    if (!uid || v.propertyOwnerId !== uid) return false;
+    return !ownerReplyText(v);
+  }
+  function addReplyHtml(v) {
+    if (!canAddReply(v)) return '';
+    return '<div class="vo-reply-add-wrap" data-checkin-id="' + escapeHtml(v.id) + '">'
+      + '<button type="button" class="vo-reply-add">Add reply</button>'
+      + '</div>';
+  }
+  /** Match existing data type for ownerReplyAt: ISO string if existing replies use strings, else server Timestamp. */
+  function replyAtUsesString() {
+    for (let i = 0; i < allVisits.length; i++) {
+      const at = allVisits[i] && allVisits[i].ownerReplyAt;
+      if (at == null) continue;
+      if (typeof at === 'string') return true;
+      if (typeof at.toDate === 'function') return false;
+    }
+    return false;
+  }
+  function openReplyForm(wrap) {
+    if (!wrap || wrap.querySelector('.vo-reply-form')) return;
+    const btn = wrap.querySelector('.vo-reply-add');
+    if (btn) btn.hidden = true;
+    const form = document.createElement('div');
+    form.className = 'vo-reply-form';
+    form.innerHTML = '<textarea class="vo-reply-input" maxlength="' + REPLY_MAX + '" rows="3" placeholder="Write a reply to this visitor…" aria-label="Reply to visitor"></textarea>'
+      + '<div class="vo-reply-row"><span class="vo-reply-count">0/' + REPLY_MAX + '</span>'
+      + '<span class="vo-reply-err" role="alert"></span>'
+      + '<button type="button" class="vo-reply-cancel">Cancel</button>'
+      + '<button type="button" class="vo-reply-save" disabled>Save</button></div>';
+    wrap.appendChild(form);
+    const ta = form.querySelector('.vo-reply-input');
+    ta.focus();
+  }
+  function closeReplyForm(wrap) {
+    if (!wrap) return;
+    const form = wrap.querySelector('.vo-reply-form');
+    if (form && form.dataset.saving === '1') return;
+    if (form) form.remove();
+    const btn = wrap.querySelector('.vo-reply-add');
+    if (btn) { btn.hidden = false; btn.focus(); }
+  }
+  async function saveReply(wrap) {
+    const form = wrap && wrap.querySelector('.vo-reply-form');
+    if (!form || form.dataset.saving === '1') return;
+    const id = wrap.getAttribute('data-checkin-id');
+    const ta = form.querySelector('.vo-reply-input');
+    const err = form.querySelector('.vo-reply-err');
+    const saveBtn = form.querySelector('.vo-reply-save');
+    const text = String(ta.value || '').trim().slice(0, REPLY_MAX);
+    err.textContent = '';
+    if (!text) { err.textContent = 'Reply can’t be empty.'; return; }
+    const v = allVisits.find(x => x && x.id === id);
+    if (!v || !canAddReply(v)) { err.textContent = 'This visit already has a reply.'; return; }
+    const useStr = replyAtUsesString();
+    const FV = firebase.firestore.FieldValue;
+    const payload = { ownerReply: text, ownerReplyAt: useStr ? new Date().toISOString() : FV.serverTimestamp() };
+    form.dataset.saving = '1';
+    ta.disabled = true; saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    form.querySelector('.vo-reply-cancel').disabled = true;
+    try {
+      await db.collection('checkIns').doc(id).update(payload);
+      v.ownerReply = text;
+      v.ownerReplyAt = useStr ? payload.ownerReplyAt : firebase.firestore.Timestamp.now();
+      // Render reply in place (board card and detail card if open), remove the button.
+      document.querySelectorAll('.vo-reply-add-wrap[data-checkin-id="' + CSS.escape(id) + '"]').forEach(w => {
+        const holder = document.createElement('div');
+        holder.innerHTML = ownerReplyHtml(v);
+        const node = holder.firstElementChild;
+        if (node) w.replaceWith(node); else w.remove();
+      });
+    } catch (e) {
+      form.dataset.saving = '0';
+      ta.disabled = false; saveBtn.disabled = false; saveBtn.textContent = 'Save';
+      form.querySelector('.vo-reply-cancel').disabled = false;
+      err.textContent = 'Could not save' + (e && e.code ? ' (' + e.code + ')' : '') + (e && e.message ? ': ' + e.message : '');
+      try { console.error('[vo-reply] save failed', id, e); } catch (_) {}
+    }
+  }
+  (function bindReplyUiOnce() {
+    document.addEventListener('click', e => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const wrap = t.closest('.vo-reply-add-wrap');
+      if (!wrap) return;
+      if (t.closest('.vo-reply-add')) { e.preventDefault(); e.stopPropagation(); openReplyForm(wrap); }
+      else if (t.closest('.vo-reply-cancel')) { e.preventDefault(); e.stopPropagation(); closeReplyForm(wrap); }
+      else if (t.closest('.vo-reply-save')) { e.preventDefault(); e.stopPropagation(); saveReply(wrap); }
+      else e.stopPropagation();
+    }, true);
+    document.addEventListener('input', e => {
+      const ta = e.target;
+      if (!(ta instanceof Element) || !ta.classList.contains('vo-reply-input')) return;
+      const form = ta.closest('.vo-reply-form');
+      const n = ta.value.length;
+      form.querySelector('.vo-reply-count').textContent = n + '/' + REPLY_MAX;
+      form.querySelector('.vo-reply-save').disabled = !ta.value.trim();
+      form.querySelector('.vo-reply-err').textContent = '';
+    });
+    document.addEventListener('keydown', e => {
+      const ta = e.target;
+      if (!(ta instanceof Element) || !ta.classList.contains('vo-reply-input')) return;
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeReplyForm(ta.closest('.vo-reply-add-wrap')); }
+    }, true);
+  })();
 
   function filteredSortedVisits() {
     const q = (($('filter-search') || {}).value || '').trim().toLowerCase();
