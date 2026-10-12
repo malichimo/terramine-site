@@ -4038,6 +4038,7 @@
   }
   // TB from maintenance: field name not confirmed yet, so read tolerantly and
   // log (once per key) which one was found.
+  const MAINT_SHOW_TB = false;   // Oct 12: dailyActivities has no TB field yet
   const MT_TB_RE_KEYS = ['tb', 'TB', 'terrabucks'];
   const MT_TB_TOP_KEYS = ['tbEarned', 'tbBonus', 'bonusTb', 'tb'];
   const mtTbKeysLogged = new Set();
@@ -4102,7 +4103,7 @@
     table.className = 'tb-today-table tb-today-table-games mg-table mt-table';
     table.setAttribute('aria-label', 'Mine maintenance');
     const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Mines</th><th scope="col" colspan="4">Resources earned</th><th scope="col">TB</th></tr>';
+    thead.innerHTML = '<tr><th scope="col">Type</th><th scope="col">Mines</th><th scope="col" colspan="4">Resources earned</th>' + (MAINT_SHOW_TB ? '<th scope="col">TB</th>' : '') + '</tr>';
     const tbody = document.createElement('tbody');
     const plus = (day && day.incomplete) ? '+' : '';
     const na = function (td) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); };
@@ -4135,7 +4136,7 @@
         td.append(ic, n);
         tr.appendChild(td);
       });
-      tr.appendChild(mtTbCell(v ? v.tb : null, plus));
+      if (MAINT_SHOW_TB) tr.appendChild(mtTbCell(v ? v.tb : null, plus));
       tbody.appendChild(tr);
     });
     const tr = document.createElement('tr'); tr.className = 'mg-total-row';
@@ -4143,8 +4144,9 @@
     const tdM = document.createElement('td'); tdM.className = 'mt-mines';
     if (day) tdM.textContent = fmtNum(totalMines) + plus; else na(tdM);
     const tdC = document.createElement('td'); tdC.colSpan = 4; tdC.className = 'mt-total-note';
-    tdC.textContent = day ? (fmtNum(day.count) + plus + (day.count === 1 ? ' maintenance' : ' maintenances')) : '\u2014';
-    tr.append(th, tdM, tdC, mtTbCell(day ? day.tb : null, plus));
+    tdC.textContent = day ? (fmtNum(day.count) + plus + (day.count === 1 ? ' mine maintained' : ' mines maintained')) : '\u2014';
+    tr.append(th, tdM, tdC);
+    if (MAINT_SHOW_TB) tr.appendChild(mtTbCell(day ? day.tb : null, plus));
     tbody.appendChild(tr);
     table.append(thead, tbody);
     wrap.appendChild(table);
