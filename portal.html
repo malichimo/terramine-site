@@ -384,6 +384,22 @@
               <div class="tb-today-ref-msg" id="maint-today-msg" role="status" hidden></div>
             </div>
             <!-- Oct 1, 2026: Inventory (same items, order and art as inventory.html; from the users doc already loaded) -->
+            <!-- Oct 12, 2026: mine maintenances per day (perfect / regular) + resources earned, last 30 days -->
+            <section class="dash-visits-card dash-maint-card" id="dash-maint-card" aria-labelledby="dash-maint-title">
+              <div class="dash-visits-head has-share">
+                <h2 class="dash-visits-title" id="dash-maint-title">Mine Maintenance &mdash; Last 30 Days</h2>
+                <div class="dash-visits-total" id="dash-maint-total" aria-live="polite">&mdash;</div>
+                <button type="button" class="dash-share-btn" data-share-card="dash-maint-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
+              <div class="dash-visits-body">
+                <div class="dash-visits-wrap" id="dash-maint-wrap">
+                  <canvas id="dash-maint-chart" role="img" aria-label="Bar graph of mine maintenances per day for the last 30 days, with resources earned"></canvas>
+                  <div class="dash-visits-msg is-loading" id="dash-maint-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
+                </div>
+                <div class="dash-games-note" id="dash-maint-note" role="note" hidden></div>
+              </div>
+            </section>
+            <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
             <section class="dash-visits-card dash-inv-card" id="dash-inv-card" aria-labelledby="dash-inv-title">
               <div class="dash-visits-head">
                 <h2 class="dash-visits-title" id="dash-inv-title">Inventory</h2>
@@ -440,22 +456,6 @@
                 <div class="dash-games-note" id="dash-games-note" role="note" hidden></div>
               </div>
             </section>
-            <!-- Oct 12, 2026: mine maintenances per day (perfect / regular) + resources earned, last 30 days -->
-            <section class="dash-visits-card dash-maint-card" id="dash-maint-card" aria-labelledby="dash-maint-title">
-              <div class="dash-visits-head has-share">
-                <h2 class="dash-visits-title" id="dash-maint-title">Mine Maintenance &mdash; Last 30 Days</h2>
-                <div class="dash-visits-total" id="dash-maint-total" aria-live="polite">&mdash;</div>
-                <button type="button" class="dash-share-btn" data-share-card="dash-maint-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
-              </div>
-              <div class="dash-visits-body">
-                <div class="dash-visits-wrap" id="dash-maint-wrap">
-                  <canvas id="dash-maint-chart" role="img" aria-label="Bar graph of mine maintenances per day for the last 30 days, with resources earned"></canvas>
-                  <div class="dash-visits-msg is-loading" id="dash-maint-msg"><span class="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span>Loading&hellip;</span></div>
-                </div>
-                <div class="dash-games-note" id="dash-maint-note" role="note" hidden></div>
-              </div>
-            </section>
-            <!-- Oct 1, 2026: referral bonuses paid per day (completedAt), last 60 days -->
             <section class="dash-visits-card dash-refs-card" id="dash-refs-card" aria-labelledby="dash-refs-title">
               <div class="dash-visits-head has-share">
                 <h2 class="dash-visits-title" id="dash-refs-title">Referrals &mdash; Last 60 Days</h2>
