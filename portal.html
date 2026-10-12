@@ -63,12 +63,14 @@
     .mt-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
     .mt-table thead th:nth-child(n+2) { text-align: center; }
     .mt-table thead th.mt-mines { text-align: center; }
+    .mt-table.tb-today-table-games tbody th.mt-mines { white-space: nowrap; font-weight: 700; color: inherit; }
+    .mt-table .mt-mines-n { margin-right: 3px; display: inline-block; min-width: 1ch; text-align: right; vertical-align: middle; }
     .mt-table td.mt-total-note { text-align: right; }
-    .mt-table.tb-today-table-games td:nth-child(2), .mt-table.tb-today-table-games td:nth-child(3) { width: 13%; }
-    .mt-table.tb-today-table-games tbody th[scope="row"] { display: table-cell; width: 12%; text-align: center; }
+    .mt-table.tb-today-table-games td:nth-child(2), .mt-table.tb-today-table-games td:nth-child(3) { width: auto; }
+    .mt-table.tb-today-table-games tbody th[scope="row"] { display: table-cell; width: 16%; text-align: center; }
     .mt-table tbody th[scope="row"] img { vertical-align: middle; }
     .mt-table td.mt-mines { text-align: center; font-weight: 700; width: 13%; }
-    .mt-table td.mt-res { width: 13%; }
+    .mt-table td.mt-res, .mt-table.tb-today-table-games td.mt-res { width: 21%; }
     .mt-table td.mt-tb { width: 13%; text-align: right; white-space: nowrap; }
     .mt-table td.mt-tb.is-zero { opacity: .55; }
     .mt-table tbody th[scope="row"] img { width: 20px; height: 20px; }
@@ -4129,7 +4131,7 @@
     table.className = 'tb-today-table tb-today-table-games mg-table mt-table';
     table.setAttribute('aria-label', 'Mine maintenance');
     const thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th scope="col" class="mt-mines">Mines</th><th scope="col">Type</th><th scope="col" colspan="4">Resources earned</th>' + (MAINT_SHOW_TB ? '<th scope="col">TB</th>' : '') + '</tr>';
+    thead.innerHTML = '<tr><th scope="col" class="mt-mines">Mines</th><th scope="col" colspan="4">Resources earned</th>' + (MAINT_SHOW_TB ? '<th scope="col">TB</th>' : '') + '</tr>';
     const tbody = document.createElement('tbody');
     const plus = (day && day.incomplete) ? '+' : '';
     const na = function (td) { td.textContent = '\u2014'; td.classList.add('tb-today-na'); };
@@ -4141,11 +4143,12 @@
       const th = document.createElement('th'); th.scope = 'row';
       const im = document.createElement('img'); im.src = '/images/mine-icons/' + type + '.svg';
       im.alt = MINE_TYPE_PIE_LABELS[type]; im.title = MINE_TYPE_PIE_LABELS[type];
-      th.setAttribute('aria-label', MINE_TYPE_PIE_LABELS[type]); th.title = MINE_TYPE_PIE_LABELS[type];
-      th.appendChild(im);
-      const tdM = document.createElement('td'); tdM.className = 'mt-mines';
-      if (v) { tdM.textContent = fmtNum(v.mines.size) + plus; totalMines += v.mines.size; } else na(tdM);
-      tr.append(tdM, th);
+      th.className = 'mt-mines'; th.title = MINE_TYPE_PIE_LABELS[type];
+      const cnt = document.createElement('span'); cnt.className = 'mt-mines-n';
+      if (v) { cnt.textContent = fmtNum(v.mines.size) + plus; totalMines += v.mines.size; }
+      else { cnt.textContent = '\u2014'; cnt.classList.add('tb-today-na'); }
+      th.append(cnt, im);
+      tr.appendChild(th);
       MT_RES.forEach(function (rk) {
         const td = document.createElement('td');
         td.className = 'mt-res';
@@ -4166,7 +4169,7 @@
       tbody.appendChild(tr);
     });
     const tr = document.createElement('tr'); tr.className = 'mg-total-row';
-    const tdC = document.createElement('td'); tdC.colSpan = MAINT_SHOW_TB ? 7 : 6; tdC.className = 'mt-total-note';
+    const tdC = document.createElement('td'); tdC.colSpan = MAINT_SHOW_TB ? 6 : 5; tdC.className = 'mt-total-note';
     tdC.style.textAlign = 'right';
     tdC.textContent = 'Total Mines Maintained: ' + (day ? (fmtNum(day.count) + plus) : '\u2014');
     tr.appendChild(tdC);
