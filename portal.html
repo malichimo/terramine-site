@@ -5030,7 +5030,7 @@
     cols.forEach(function (c) { c.sort(function (a, b) { return MG_TYPES.indexOf(a.type) - MG_TYPES.indexOf(b.type) || a.daysLeft - b.daysLeft; }); });
     _cd.cols = cols;
     const maxBin = cols.reduce(function (a, c) { return Math.max(a, c.length); }, 0);
-    const colW = innerW / (CD_WINDOW + 1);           // px per day
+    const colW = innerW / (nBins * BIN);             // px per day; axis runs 0..183 so the 180-182 bin is full width
     const plotH = 225;
     const H = padT + plotH + axisH;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
@@ -5058,8 +5058,8 @@
     [0, 7, 30, 60, 90, 120, 150, 180].forEach(function (d) {
       const xx = x(d);
       ctx.beginPath(); ctx.moveTo(xx + 0.5, base); ctx.lineTo(xx + 0.5, base + 4); ctx.stroke();
-      ctx.textAlign = d === 0 ? 'left' : (d === 180 ? 'right' : 'center');
-      ctx.fillText(String(d), d === 0 ? xx - 2 : (d === 180 ? xx + 2 : xx), base + 6);
+      ctx.textAlign = d === 0 ? 'left' : 'center';
+      ctx.fillText(String(d), d === 0 ? xx - 2 : xx, base + 6);
     });
     ctx.textAlign = 'right'; ctx.fillText('days left', W - padR, padT);
     if (maxBin) { ctx.textAlign = 'left'; ctx.fillText('max ' + fmtNum(maxBin) + ' / 3 days', padL + 2, padT); }
@@ -5067,7 +5067,7 @@
     const gap = Math.max(1, Math.min(3, BIN * colW * 0.18));
     cols.forEach(function (c, b) {
       if (!c.length) return;
-      const d0 = b * BIN, d1 = Math.min(CD_WINDOW + 1, d0 + BIN);
+      const d0 = b * BIN, d1 = d0 + BIN;
       const bx = xd(d0) + gap / 2, bw = Math.max(1, xd(d1) - xd(d0) - gap);
       const h = usable * c.length / maxBin;
       let y = base;
@@ -5082,7 +5082,7 @@
       if (dark) { ctx.strokeStyle = 'rgba(232,238,246,0.35)'; ctx.lineWidth = 0.75; ctx.strokeRect(bx + 0.5, base - h + 0.5, bw - 1, h - 1); }
     });
     if (_cd.hoverDay >= 0 && cols[_cd.hoverDay] && cols[_cd.hoverDay].length) {
-      const b = _cd.hoverDay, d0 = b * BIN, d1 = Math.min(CD_WINDOW + 1, d0 + BIN);
+      const b = _cd.hoverDay, d0 = b * BIN, d1 = d0 + BIN;
       const h = usable * cols[b].length / maxBin;
       ctx.strokeStyle = dark ? '#8fb3d9' : '#5C3317'; ctx.lineWidth = 1.5;
       ctx.strokeRect(xd(d0) + gap / 2 - 1, base - h - 1, xd(d1) - xd(d0) - gap + 2, h + 1);
@@ -5121,7 +5121,7 @@
     const c = $('cd-chart'); if (!c || !_cd.geom || !_cd.cols) return -1;
     const r = c.getBoundingClientRect();
     const day = (clientX - r.left - _cd.geom.padL) / _cd.geom.colW;
-    if (day < 0 || day > CD_WINDOW + 1) return -1;
+    if (day < 0 || day >= _cd.cols.length * _cd.geom.bin) return -1;
     const b = Math.min(_cd.cols.length - 1, Math.floor(day / _cd.geom.bin));
     return _cd.cols[b] && _cd.cols[b].length ? b : -1;
   }
