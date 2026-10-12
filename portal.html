@@ -113,6 +113,9 @@
     .cd-tip-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cd-tip-days { font-variant-numeric: tabular-nums; font-weight: 700; color: #fde68a; }
     .cd-tip-more { font-size: 11px; opacity: .75; }
+    .cd-tip-types { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 3px 0 4px; font-size: 12px; font-weight: 700; }
+    .cd-tip-type { display: inline-flex; align-items: center; gap: 4px; }
+    .cd-tip-type img { width: 14px; height: 14px; }
     html[data-theme="dusk"] .cd-chip, html[data-theme="mine"] .cd-chip { background: rgba(79,195,247,0.08); border-color: rgba(79,195,247,0.22); }
     html[data-theme="dusk"] .cd-chip-n, html[data-theme="mine"] .cd-chip-n { color: #e8eef6; }
     html[data-theme="dusk"] .cd-chip-l, html[data-theme="mine"] .cd-chip-l { color: #9aadc2; }
@@ -5019,37 +5022,35 @@
     _cd.w = W; _cd.dpr = dpr;
     const padL = 12, padR = 12, padT = 8, axisH = 22;
     const innerW = W - padL - padR;
-    // columns by day
-    const cols = []; for (let i = 0; i <= CD_WINDOW; i++) cols.push([]);
-    (_cd.mines || []).forEach(function (m) { cols[m.daysLeft].push(m); });
-    cols.forEach(function (c) { c.sort(function (a, b) { return MG_TYPES.indexOf(a.type) - MG_TYPES.indexOf(b.type); }); });
+    // Oct 12: 3-day bins (0-2, 3-5, ... 180), one wide bar each, stacked by mine
+    // type; height scaled to the busiest bin so nothing clips.
+    const BIN = 3, nBins = Math.floor(CD_WINDOW / BIN) + 1;
+    const cols = []; for (let i = 0; i < nBins; i++) cols.push([]);
+    (_cd.mines || []).forEach(function (m) { cols[Math.floor(m.daysLeft / BIN)].push(m); });
+    cols.forEach(function (c) { c.sort(function (a, b) { return MG_TYPES.indexOf(a.type) - MG_TYPES.indexOf(b.type) || a.daysLeft - b.daysLeft; }); });
     _cd.cols = cols;
-    const maxStack = cols.reduce(function (a, c) { return Math.max(a, c.length); }, 0);
-    const colW = innerW / (CD_WINDOW + 1);
-    // Oct 12: 50% taller (225px max, 90 min); a stack never clips: shrink spacing,
-    // then dot size, so the tallest stack fits.
-    let dia = Math.max(2.5, Math.min(7, colW * 1.6));
-    const maxPlotH = 225, minPlotH = 90;
-    const plotH = Math.max(minPlotH, Math.min(maxPlotH, maxStack ? (maxStack - 1) * (dia + 1) + dia + 8 : minPlotH));
-    const avail = plotH - 6;                 // 2px base gap + 4px headroom
-    let step = dia + 1;
-    if (maxStack > 1 && (maxStack - 1) * step + dia > avail) {
-      step = (avail - dia) / (maxStack - 1);
-      if (step < dia * 0.6) { dia = Math.max(1, Math.min(dia, avail / (maxStack * 0.6 + 0.4))); step = (avail - dia) / (maxStack - 1); }
-    }
+    const maxBin = cols.reduce(function (a, c) { return Math.max(a, c.length); }, 0);
+    const colW = innerW / (CD_WINDOW + 1);           // px per day
+    const plotH = 225;
     const H = padT + plotH + axisH;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const x = function (d) { return padL + (d + 0.5) * colW; };
+    const xd = function (d) { return padL + d * colW; };          // left edge of day d
+    const x = function (d) { return padL + (d + 0.5) * colW; };   // centre of day d
     const base = padT + plotH;
     // zones
     ctx.fillStyle = dark ? 'rgba(239,68,68,0.20)' : 'rgba(220,38,38,0.12)';
     ctx.fillRect(padL, padT, 8 * colW, plotH);
     ctx.fillStyle = dark ? 'rgba(245,158,11,0.18)' : 'rgba(217,119,6,0.12)';
     ctx.fillRect(padL + 8 * colW, padT, 23 * colW, plotH);
+    // light gridlines + max label
+    const usable = plotH - 14;
+    ctx.strokeStyle = chrome.grid; ctx.globalAlpha = dark ? 0.35 : 1; ctx.lineWidth = 1;
+    [0.25, 0.5, 0.75, 1].forEach(function (f) { const yy = Math.round(base - usable * f) + 0.5; ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(W - padR, yy); ctx.stroke(); });
+    ctx.globalAlpha = 1;
     // axis
     ctx.strokeStyle = chrome.baseline; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(padL, base + 0.5); ctx.lineTo(W - padR, base + 0.5); ctx.stroke();
@@ -5061,22 +5062,32 @@
       ctx.fillText(String(d), d === 0 ? xx - 2 : (d === 180 ? xx + 2 : xx), base + 6);
     });
     ctx.textAlign = 'right'; ctx.fillText('days left', W - padR, padT);
-    // dots
-    const outline = dark ? 'rgba(232,238,246,0.55)' : 'rgba(13,27,42,0.35)';
-    cols.forEach(function (c, d) {
-      c.forEach(function (m, k) {
-        const cy = base - dia / 2 - 2 - k * step;
-        ctx.beginPath(); ctx.arc(x(d), cy, dia / 2, 0, Math.PI * 2);
-        ctx.fillStyle = MINE_TYPE_PIE_COLORS[m.type]; ctx.fill();
-        if (dia >= 3.5) { ctx.lineWidth = 0.75; ctx.strokeStyle = outline; ctx.stroke(); }
+    if (maxBin) { ctx.textAlign = 'left'; ctx.fillText('max ' + fmtNum(maxBin) + ' / 3 days', padL + 2, padT); }
+    // bars
+    const gap = Math.max(1, Math.min(3, BIN * colW * 0.18));
+    cols.forEach(function (c, b) {
+      if (!c.length) return;
+      const d0 = b * BIN, d1 = Math.min(CD_WINDOW + 1, d0 + BIN);
+      const bx = xd(d0) + gap / 2, bw = Math.max(1, xd(d1) - xd(d0) - gap);
+      const h = usable * c.length / maxBin;
+      let y = base;
+      MG_TYPES.forEach(function (t) {
+        const n = c.filter(function (m) { return m.type === t; }).length;
+        if (!n) return;
+        const sh = h * n / c.length;
+        ctx.fillStyle = MINE_TYPE_PIE_COLORS[t];
+        ctx.fillRect(bx, y - sh, bw, sh);
+        y -= sh;
       });
+      if (dark) { ctx.strokeStyle = 'rgba(232,238,246,0.35)'; ctx.lineWidth = 0.75; ctx.strokeRect(bx + 0.5, base - h + 0.5, bw - 1, h - 1); }
     });
     if (_cd.hoverDay >= 0 && cols[_cd.hoverDay] && cols[_cd.hoverDay].length) {
-      const d = _cd.hoverDay, n = cols[d].length;
+      const b = _cd.hoverDay, d0 = b * BIN, d1 = Math.min(CD_WINDOW + 1, d0 + BIN);
+      const h = usable * cols[b].length / maxBin;
       ctx.strokeStyle = dark ? '#8fb3d9' : '#5C3317'; ctx.lineWidth = 1.5;
-      ctx.strokeRect(x(d) - dia / 2 - 2, base - 2 - (n - 1) * step - dia - 2, dia + 4, (n - 1) * step + dia + 4);
+      ctx.strokeRect(xd(d0) + gap / 2 - 1, base - h - 1, xd(d1) - xd(d0) - gap + 2, h + 1);
     }
-    _cd.geom = { padL: padL, colW: colW, base: base, padT: padT };
+    _cd.geom = { padL: padL, colW: colW, base: base, padT: padT, bin: BIN };
     const total = $('cd-total');
     if (total) total.textContent = _cd.mines ? (fmtNum(_cd.mines.length) + (_cd.mines.length === 1 ? ' mine' : ' mines') + (_cd.pending ? '\u2026' : '')) : '\u2014';
     const msg = $('cd-msg');
@@ -5109,24 +5120,29 @@
   function cdDayAt(clientX) {
     const c = $('cd-chart'); if (!c || !_cd.geom || !_cd.cols) return -1;
     const r = c.getBoundingClientRect();
-    const px = clientX - r.left;
-    const d0 = Math.floor((px - _cd.geom.padL) / _cd.geom.colW);
-    let best = -1, bestDist = Infinity;
-    for (let d = Math.max(0, d0 - 3); d <= Math.min(CD_WINDOW, d0 + 3); d++) {
-      if (!_cd.cols[d] || !_cd.cols[d].length) continue;
-      const cx = _cd.geom.padL + (d + 0.5) * _cd.geom.colW;
-      const dist = Math.abs(cx - px);
-      if (dist < bestDist && dist <= Math.max(6, _cd.geom.colW * 2)) { best = d; bestDist = dist; }
-    }
-    return best;
+    const day = (clientX - r.left - _cd.geom.padL) / _cd.geom.colW;
+    if (day < 0 || day > CD_WINDOW + 1) return -1;
+    const b = Math.min(_cd.cols.length - 1, Math.floor(day / _cd.geom.bin));
+    return _cd.cols[b] && _cd.cols[b].length ? b : -1;
   }
   function cdShowTip(d, x, y) {
     const tip = cdEnsureTip();
     const list = _cd.cols[d];
     tip.replaceChildren();
     const hd = document.createElement('div'); hd.className = 'dash-visits-tip-date';
-    hd.textContent = (d === 0 ? '0 days left (expired)' : d + (d === 1 ? ' day left' : ' days left')) + ' \u2014 ' + fmtNum(list.length) + (list.length === 1 ? ' mine' : ' mines');
+    const lo = d * 3, hi = Math.min(CD_WINDOW, lo + 2);
+    hd.textContent = (lo === hi ? lo : lo + '\u2013' + hi) + ' days left \u2014 ' + fmtNum(list.length) + (list.length === 1 ? ' mine' : ' mines');
     tip.appendChild(hd);
+    const ty = document.createElement('div'); ty.className = 'cd-tip-types';
+    MG_TYPES.forEach(function (t) {
+      const n = list.filter(function (m) { return m.type === t; }).length;
+      if (!n) return;
+      const s = document.createElement('span'); s.className = 'cd-tip-type';
+      const im = document.createElement('img'); im.src = '/images/mine-icons/' + t + '.svg'; im.alt = MINE_TYPE_PIE_LABELS[t];
+      s.append(im, document.createTextNode(MINE_TYPE_PIE_LABELS[t] + ' ' + fmtNum(n)));
+      ty.appendChild(s);
+    });
+    tip.appendChild(ty);
     const ul = document.createElement('div'); ul.className = 'cd-tip-list';
     list.slice(0, 12).forEach(function (m) {
       const row = document.createElement('div'); row.className = 'cd-tip-row';
