@@ -1308,14 +1308,28 @@
       const ok = document.execCommand('copy'); ta.remove(); return ok;
     } catch (e) { return false; }
   }
-  async function goToCalculator() {
+  function goToCalculator() {
+    const URL_CALC = 'https://terraminecalculator.com/premium';
     const raw = window.__tmLinkCode || ($('link-code-value').textContent || '');
     const code = String(raw).replace(/\s+/g, '');
+    // 1) Start the copy synchronously inside the user gesture.
+    let copyP = Promise.resolve(false);
     if (code) {
-      const ok = await copyLinkCodeText(code);
-      $('link-calc-sub').textContent = ok ? 'Code copied! Opening Calculator…' : 'Opening Calculator…';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        copyP = navigator.clipboard.writeText(code).then(() => true, () => copyLinkCodeText(code));
+      } else {
+        copyP = copyLinkCodeText(code);
+      }
     }
-    window.location.href = 'https://terraminecalculator.com/premium';
+    // 2) Open the new tab synchronously (same gesture → not popup-blocked); drop opener.
+    let w = null;
+    try { w = window.open(URL_CALC, '_blank'); if (w) { try { w.opener = null; } catch (e) {} } } catch (e) { w = null; }
+    // 3) Feedback on the account page.
+    copyP.then((ok) => {
+      $('link-calc-sub').textContent = ok ? 'Code copied! Calculator opened in a new tab.' : 'Calculator opened in a new tab.';
+      setTimeout(() => { $('link-calc-sub').textContent = 'Click here to go enter your code.'; }, 4000);
+      if (!w) window.location.href = URL_CALC; // popup blocked anyway → same-tab fallback
+    });
   }
   (function bindCalcGo() {
     const el = $('link-calc-go');
