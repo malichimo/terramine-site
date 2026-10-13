@@ -123,6 +123,12 @@
     html[data-theme="dusk"] .cd-chip-zero .cd-chip-n, html[data-theme="mine"] .cd-chip-zero .cd-chip-n,
     html[data-theme="dusk"] .cd-chip-d7 .cd-chip-n, html[data-theme="mine"] .cd-chip-d7 .cd-chip-n { color: #f87171; }
     html[data-theme="dusk"] .cd-chip-d30 .cd-chip-n, html[data-theme="mine"] .cd-chip-d30 .cd-chip-n { color: #fbbf24; }
+    /* Oct 13, 2026: stat-card boxes use the column-3 title bar */
+    .stat-card.tm-has-head { padding-top: 0; }
+    .stat-card.tm-has-head > .tm-card-head { margin: 0 -18px 12px; border-radius: 10px 10px 0 0; }
+    .tm-card-head.tm-head-center { justify-content: center; padding-left: 48px; }
+    .tm-card-head.tm-head-center .dash-visits-title { text-align: center; }
+    .stat-card-properties .stat-card-head { padding: 0; }
   </style>
   <link rel="stylesheet" href="/portal-theme.css?v=20261012-3" />
 </head>
@@ -267,10 +273,12 @@
                 <div class="dash-breakdown-row">
           <div class="dash-breakdown-col dash-breakdown-col-stats">
 <div class="stat-stack">
-          <div class="stat-card stat-card-properties has-share" id="dash-props-card">
-            <button type="button" class="dash-share-btn" data-share-card="dash-props-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+          <div class="stat-card stat-card-properties tm-has-head" id="dash-props-card">
+            <div class="dash-visits-head has-share tm-card-head tm-head-center">
+              <h2 class="dash-visits-title">TerraMines Owned</h2>
+              <button type="button" class="dash-share-btn" data-share-card="dash-props-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+            </div>
             <div class="stat-card-head">
-              <div class="stat-card-label">TerraMines Owned</div>
               <div class="stat-card-value cyan" id="stat-props">—</div>
             </div>
             <div class="prop-breakdown" id="prop-breakdown">
@@ -320,9 +328,11 @@
             </div>
           </div>
         </div>
-            <div class="stat-card dash-pie-card has-share" id="dash-pie-card">
-              <div class="stat-card-label">Mines by Type</div>
-              <button type="button" class="dash-share-btn" data-share-card="dash-pie-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+            <div class="stat-card dash-pie-card tm-has-head" id="dash-pie-card">
+              <div class="dash-visits-head has-share tm-card-head">
+                <h2 class="dash-visits-title">Mines by Type</h2>
+                <button type="button" class="dash-share-btn" data-share-card="dash-pie-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
               <div class="dash-pie-wrap">
                 <canvas id="mine-type-pie" width="280" height="280" aria-label="Mine types pie chart"></canvas>
               </div>
@@ -374,9 +384,11 @@
           </div>
           <div class="dash-breakdown-col dash-breakdown-col-visits">
             <!-- Oct 1, 2026 layout: column 2 = TerraBucks Earned Today, then Inventory (class names are grid slots: -visits = column 2, -slot = column 3) -->
-            <div class="stat-card dash-slot-card has-share" id="dash-slot-card" aria-label="TerraBucks earned today">
-              <div class="stat-card-label">TerraBucks Earned Today</div>
-              <button type="button" class="dash-share-btn" data-share-card="dash-slot-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+            <div class="stat-card dash-slot-card tm-has-head" id="dash-slot-card" aria-label="TerraBucks earned today">
+              <div class="dash-visits-head has-share tm-card-head">
+                <h2 class="dash-visits-title">TerraBucks Earned Today</h2>
+                <button type="button" class="dash-share-btn" data-share-card="dash-slot-card" data-tip="Copy image to your clipboard for sharing" aria-label="Copy image to your clipboard for sharing"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5a2 2 0 0 1 2-2h2.4l1.5-2.2h6.2l1.5 2.2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.7"></circle></svg></button>
+              </div>
               <div class="tb-today" id="tb-today">
                 <div class="tb-today-section">
                   <div class="tb-today-section-title">Visitor check-ins to your mines</div>
