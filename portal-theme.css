@@ -1016,3 +1016,13 @@ html[data-theme="dusk"] .vo-reply-cancel,
 html[data-theme="mine"] .vo-reply-cancel { border-color: rgba(143, 179, 217, 0.5) !important; color: #8fb3d9 !important; }
 html[data-theme="dusk"] .vo-reply-save,
 html[data-theme="mine"] .vo-reply-save { background: #4FC3F7 !important; border-color: #4FC3F7 !important; color: #0a1522 !important; }
+
+/* Oct 13, 2026: High Noon (Day) camera share buttons: light icon + border on the brown title bars. */
+html[data-theme="day"] .dash-share-btn,
+html:not([data-theme]) .dash-share-btn,
+html[data-theme="day"] .stat-card.has-share > .dash-share-btn,
+html:not([data-theme]) .stat-card.has-share > .dash-share-btn { color: #eeeeee; border-color: #eeeeee; }
+html[data-theme="day"] .dash-share-btn:hover,
+html:not([data-theme]) .dash-share-btn:hover,
+html[data-theme="day"] .stat-card.has-share > .dash-share-btn:hover,
+html:not([data-theme]) .stat-card.has-share > .dash-share-btn:hover { color: #ffffff; border-color: #ffffff; }
