@@ -2132,8 +2132,8 @@
     const chip = function (cls, n, label, lit) {
       return '<div class="cd-chip ci-chip ' + cls + (lit ? ' is-lit' : '') + '"><span class="cd-chip-n">' + n + '</span><span class="cd-chip-l">' + label + '</span></div>';
     };
-    host.innerHTML = CI_BONUS.map(function (b) { return chip('ci-chip-' + b.n, '+' + b.tb, b.label, known && count >= b.n); }).join('')
-      + chip('ci-chip-total', known ? '+' + fmtNum(ciBonusFor(count)) : '\u2014', 'Total Bonus', known && ciBonusFor(count) > 0);
+    host.innerHTML = CI_BONUS.map(function (b) { return chip('ci-chip-' + b.n, '+' + b.tb + ' TB', b.label, known && count >= b.n); }).join('')
+      + chip('ci-chip-total', known ? '+' + fmtNum(ciBonusFor(count)) + ' TB' : '\u2014', 'Total Bonus', known && ciBonusFor(count) > 0);
   }
   // Mouse-following popup on the bonus chips: today's unique owners (My Check-ins popup style).
   let ciTip = null;
