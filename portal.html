@@ -129,6 +129,19 @@
     .tm-card-head.tm-head-center { justify-content: center; padding-left: 48px; }
     .tm-card-head.tm-head-center .dash-visits-title { text-align: center; }
     .stat-card-properties .stat-card-head { padding: 0; }
+    /* Oct 13, 2026: daily check-in bonus chips (Your activity) */
+    .ci-chips { margin: 8px 0 2px; }
+    .ci-chip { opacity: .5; filter: grayscale(1); }
+    .ci-chip .cd-chip-n { font-size: 18px; }
+    .ci-chip.is-lit { opacity: 1; filter: none; background: rgba(22,163,74,0.12); border-color: rgba(22,163,74,0.5); }
+    .ci-chip.is-lit .cd-chip-n { color: #15803d; }
+    .ci-chip-total.is-lit { background: rgba(217,119,6,0.14); border-color: rgba(217,119,6,0.5); }
+    .ci-chip-total.is-lit .cd-chip-n { color: #b45309; }
+    html[data-theme="dusk"] .ci-chip.is-lit, html[data-theme="mine"] .ci-chip.is-lit { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.5); }
+    html[data-theme="dusk"] .ci-chip.is-lit .cd-chip-n, html[data-theme="mine"] .ci-chip.is-lit .cd-chip-n { color: #4ade80; }
+    html[data-theme="dusk"] .ci-chip-total.is-lit, html[data-theme="mine"] .ci-chip-total.is-lit { background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.5); }
+    html[data-theme="dusk"] .ci-chip-total.is-lit .cd-chip-n, html[data-theme="mine"] .ci-chip-total.is-lit .cd-chip-n { color: #fbbf24; }
+    html[data-theme="dusk"] .ci-chip.is-lit .cd-chip-l, html[data-theme="mine"] .ci-chip.is-lit .cd-chip-l { color: #d7e6f5; }
   </style>
   <link rel="stylesheet" href="/portal-theme.css?v=20261013-1" />
 </head>
@@ -445,6 +458,7 @@
                       </tr>
                     </tbody>
                   </table>
+                  <div class="cd-chips ci-chips" id="ci-bonus-chips" aria-label="Daily check-in bonuses"></div>
                 </div>
                 <div class="tb-today-total">
                   <span>Earned TerraBucks Today</span>
@@ -2099,6 +2113,21 @@
   // "Known TB today" sums the boxes above it: check-ins (visitors + yours
   // when known), mini games played today and referral bonuses paid today. Each part lands on its own
   // fetch; a part that is still loading or failed is left out.
+  // Oct 13, 2026: daily check-in milestone bonuses (your check-ins at other mines,
+  // per local day): 3rd +10, 5th +25, 10th +50 (cumulative, max 85). Stored check-in
+  // TB is a flat per-check-in amount (22 check-ins = 308 TB = 14 each), so the
+  // bonuses are not in the docs and are added here.
+  const CI_BONUS = [{ n: 3, tb: 10, label: '3rd check-in' }, { n: 5, tb: 25, label: '5th check-in' }, { n: 10, tb: 50, label: '10th check-in' }];
+  function ciBonusFor(count) { return CI_BONUS.reduce(function (s, b) { return s + (count >= b.n ? b.tb : 0); }, 0); }
+  function renderCiBonusChips(count) {
+    const host = $('ci-bonus-chips'); if (!host) return;
+    const known = count != null;
+    const chip = function (cls, n, label, lit) {
+      return '<div class="cd-chip ci-chip ' + cls + (lit ? ' is-lit' : '') + '"><span class="cd-chip-n">' + n + '</span><span class="cd-chip-l">' + label + '</span></div>';
+    };
+    host.innerHTML = CI_BONUS.map(function (b) { return chip('ci-chip-' + b.n, '+' + b.tb, b.label, known && count >= b.n); }).join('')
+      + chip('ci-chip-total', known ? '+' + fmtNum(ciBonusFor(count)) : '\u2014', 'Total Bonus', known && ciBonusFor(count) > 0);
+  }
   const tbTodayKnown = { checkIns: null, games: null, referrals: null };
   function updateKnownTbTotal() {
     const parts = [tbTodayKnown.checkIns, tbTodayKnown.games, tbTodayKnown.referrals].filter(function (v) { return v != null; });
@@ -2112,9 +2141,10 @@
       { data: { userId: 'pv-bo', nickname: 'Bo', timestamp: new Date().toISOString() } }
     ], { preview: true });
     setTbTodayCell('tb-today-visitors-tb', 6, { tb: true });
-    setTbTodayCell('tb-today-yours-count', 2);
-    setTbTodayCell('tb-today-yours-tb', null);
-    tbTodayKnown.checkIns = 6;
+    setTbTodayCell('tb-today-yours-count', 5);
+    setTbTodayCell('tb-today-yours-tb', 5 * 14 + ciBonusFor(5), { tb: true });
+    renderCiBonusChips(5);
+    tbTodayKnown.checkIns = 6 + 5 * 14 + ciBonusFor(5);
     updateKnownTbTotal();
     var note = $('tb-today-note');
     if (note) {
@@ -2188,10 +2218,12 @@
       if (n != null) { yoursTbSum += n; yoursTbKnown++; }
     });
 
+    var ciBonus = loadErr ? 0 : ciBonusFor(yours.length);
+    renderCiBonusChips(loadErr ? null : yours.length);
     setTbTodayCell('tb-today-visitors-tb', visitorsTbSum, { tb: true });
-    setTbTodayCell('tb-today-yours-tb', yoursTbKnown ? yoursTbSum : null, { tb: true });
+    setTbTodayCell('tb-today-yours-tb', (yoursTbKnown || ciBonus) ? yoursTbSum + ciBonus : null, { tb: true });
 
-    var knownTotal = visitorsTbSum + (yoursTbKnown ? yoursTbSum : 0);
+    var knownTotal = visitorsTbSum + (yoursTbKnown ? yoursTbSum : 0) + ciBonus;
     tbTodayKnown.checkIns = knownTotal;
     updateKnownTbTotal(); // + referral TB paid today once that fetch lands
 
@@ -2213,6 +2245,7 @@
     var bits = [];
     bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
     bits.push('Visitor check-in TB is counted at 2 TB each.');
+    bits.push('Your check-ins also earn daily bonuses: 3rd +10, 5th +25, 10th +50 TB.');
     bits.push('Referral TB is the tbAwarded on referral bonuses paid today (referralLogs completedAt).');
     if (yours.length && !yoursTbKnown) {
       bits.push('Your check-in TB amounts were not on those docs, so that total stays blank.');
@@ -4776,7 +4809,7 @@
       rejectToday(err);
       if (seq !== _myci.seq) return;
       console.warn('[my-checkins-60d] checkIns query failed:', err && (err.code || ''), err && err.message);
-      tb30Fail('yours');
+      tb30Fail('yours'); tb30Fail('bonus');
       _myci.status = 'error';
       setMyciMsg('Could not load your check-ins.', 'is-error');
       renderMyCheckIns60();
@@ -4785,17 +4818,20 @@
     if (seq !== _myci.seq) return;
     _myci.skipped = myciAggregate(res.rows, uid, win);
     try {   // TB 30-day graph: TB on your check-ins at other mines (when the doc has a TB field)
-      const m = {}, known = {}; let anyKnown = 0;
+      const m = {}, known = {}, perDay = {}; let anyKnown = 0;
       res.rows.forEach(function (r) {
         const v = r.data || {};
         const ms = checkInTsMillis(v.timestamp); if (!ms) return;
         const owner = myciOwnerUid(v); if (!owner || owner === uid) return;
+        const dk = vis60DayKey(new Date(ms)); perDay[dk] = (perDay[dk] || 0) + 1;
         const n = pickCheckInTb(v, 'visitor'); if (n == null) return;
         if (!anyKnown) { const kk = ['visitorReward', 'visitorTB', 'visitorTb', 'tbEarned', 'tbReward', 'rewardTB', 'rewardTb', 'checkInTB', 'checkInTb', 'points', 'tb'].find(function (q) { return v[q] != null && v[q] !== '' && !isNaN(Number(v[q])); }); console.info('[tb-30d] your check-ins TB read from field: ' + kk + ' (same as the TerraBucks Earned Today card).'); }
         const k = vis60DayKey(new Date(ms)); m[k] = (m[k] || 0) + n; known[k] = (known[k] || 0) + 1; anyKnown++;
       });
       if (!anyKnown && res.rows.length) console.info('[tb-30d] your check-ins carry no TB field; that part is left out.');
       tb30Feed('yours', m, Object.assign({ known: known }, res.capped ? { partialBefore: Infinity } : {}));
+      const bm = {}; Object.keys(perDay).forEach(function (k) { const b = ciBonusFor(perDay[k]); if (b) bm[k] = b; });
+      tb30Feed('bonus', bm, res.capped ? { partialBefore: Infinity } : null);
     } catch (e) { console.warn('[tb-30d] your check-ins part failed:', e); }
     _myci.days = win.days;
     _myci.pages = res.pages;
@@ -4822,20 +4858,20 @@
   //   yours     your checkIns at other mines, TB via pickCheckInTb (My Check-ins graph);
   //             those docs normally carry no TB field, so this part is usually 0/unknown.
   const TB30_DAYS = 30;
-  const TB30_SRC = ['visitors', 'games', 'refs', 'yours'];
-  const TB30_SRC_LABEL = { visitors: 'Visitor check-ins', games: 'Mini games', refs: 'Referral rewards', yours: 'Your check-ins' };
+  const TB30_SRC = ['visitors', 'games', 'refs', 'yours', 'bonus'];
+  const TB30_SRC_LABEL = { visitors: 'Visitor check-ins', games: 'Mini games', refs: 'Referral rewards', yours: 'Your check-ins', bonus: 'Check-in bonus' };
   const _tb30 = {
     seq: 0, status: 'loading', days: null, axis: null, geom: null, hover: -1,
     w: 0, dpr: 0, ro: null, timer: 0, preview: false,
-    src: { visitors: null, games: null, refs: null, yours: null }   // null = loading, false = failed, {map, partial, known}
+    src: { visitors: null, games: null, refs: null, yours: null, bonus: null }   // null = loading, false = failed, {map, partial, known}
   };
   function tb30BuildDays() {
     const win = vis60BuildDays(null, TB30_DAYS);
-    win.days.forEach(function (d) { d.tb = 0; d.parts = { visitors: 0, games: 0, refs: 0, yours: 0 }; d.yoursKnown = 0; d.incomplete = false; });
+    win.days.forEach(function (d) { d.tb = 0; d.parts = { visitors: 0, games: 0, refs: 0, yours: 0, bonus: 0 }; d.yoursKnown = 0; d.incomplete = false; });
     return win;
   }
   function tb30Reset() {
-    _tb30.src = { visitors: null, games: null, refs: null, yours: null };
+    _tb30.src = { visitors: null, games: null, refs: null, yours: null, bonus: null };
     tb30Rebuild();
   }
   /** A source landed: map dayKey -> TB (yours also passes knownByKey). */
@@ -4936,6 +4972,7 @@
   const TB30_CHART = { canvasId: 'dash-tb30-chart', st: _tb30, render: renderTb30, fill: fillTb30Tip };
   bindDayBarTip(TB30_CHART);
   renderTb30(); // empty 30-slot frame under the "Loading…" message
+  renderCiBonusChips(null);
 
   // ── Mine Countdown (column 1, under Mines by Type) ─────────────────────────
   // Oct 12, 2026. The 180-day maintenance clock exactly as mines.html computes it
