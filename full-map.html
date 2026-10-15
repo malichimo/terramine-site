@@ -40,6 +40,13 @@
       .mine-map-nearby-btn.is-locked { opacity:.55; cursor:not-allowed; }
     .mine-map-nearby-status { font-size:12px; font-weight:700; color:#7c3aed; white-space:nowrap; }
     html[data-theme="dusk"] .mine-map-nearby-status, html[data-theme="mine"] .mine-map-nearby-status { color:#c4b5fd; }
+    .nearby-tip-head { display:flex; align-items:center; gap:8px; }
+    .nearby-tip-av { width:32px; height:32px; border-radius:6px; overflow:hidden; flex:0 0 32px; display:inline-flex; align-items:center; justify-content:center; background:#F9B95A; color:#7a2e00; font-size:12px; font-weight:700; border:1px solid #E65100; }
+    .nearby-tip-av img { width:100%; height:100%; object-fit:cover; display:block; }
+    .nearby-tip-nick { font-weight:700; }
+    .nearby-tip-sub { display:flex; align-items:center; gap:4px; font-size:12px; opacity:.9; }
+    .nearby-tip-sub img { width:16px; height:16px; }
+    .nearby-tip-dist { font-size:11px; opacity:.75; margin-top:4px; }
 </style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -1558,7 +1565,6 @@
   const NEARBY_URL = 'https://us-central1-terramine-5cda5.cloudfunctions.net/getPropertiesInViewport';
   const NEARBY_RADIUS_M = 1609.344;
   const NEARBY_MAX_DRAW = 3000;
-  const NEARBY_COLORS = { rock: '#9e9e9e', coal: '#37474f', gold: '#ffc400', diamond: '#4dd0e1' };
   const PIONEER_TRIAL_END_MS = Date.parse('2026-10-10T00:00:00-04:00');   // same as dashboard
   let nearbyUnlocked = false, nearbyOn = false, nearbyOverlays = [], nearbySeq = 0;
   function nearbyTrialRemembered(uid) {
@@ -1611,27 +1617,97 @@
     list.sort((x, y) => x.d - y.d);
     const shown = list.slice(0, NEARBY_MAX_DRAW);
     nearbyOverlays.push(new google.maps.Circle({ map, center: c, radius: NEARBY_RADIUS_M, strokeColor: '#7c3aed', strokeOpacity: 0.9, strokeWeight: 2, fillColor: '#7c3aed', fillOpacity: 0.05, clickable: false, zIndex: 0 }));
-    const h = 0.00004;   // parcel cells are 0.0001°; draw a smaller outlined cell so own (solid) mines stay distinct
+    const cell = nearbyCellSize();
     shown.forEach(m => {
-      const col = NEARBY_COLORS[m.type] || NEARBY_COLORS.rock;
-      const hw = h / Math.max(0.01, Math.cos(m.lat * Math.PI / 180)) * Math.cos(m.lat * Math.PI / 180);
-      const rect = new google.maps.Rectangle({ map, bounds: { north: m.lat + h, south: m.lat - h, east: m.lng + hw / Math.cos(m.lat * Math.PI / 180) * 1, west: m.lng - hw / Math.cos(m.lat * Math.PI / 180) * 1 },
-        strokeColor: col, strokeOpacity: 1, strokeWeight: 2, fillColor: '#ffffff', fillOpacity: 0.55, clickable: true, zIndex: 1 });
-      const typeName = m.type.charAt(0).toUpperCase() + m.type.slice(1);
-      rect.addListener('mouseover', e => {
-        const tip = $('mine-map-hover-tip'); if (!tip) return;
-        tip.innerHTML = '<div class="mine-map-hover-tip-row"><img src="' + (ICONS[m.type] || ICONS.rock) + '" alt=""><span></span></div><div class="mine-map-hover-tip-greeting"></div>';
-        tip.querySelector('span').textContent = 'Other player\u2019s ' + typeName + ' mine';
-        tip.querySelector('.mine-map-hover-tip-greeting').textContent = (m.d / 1609.344).toFixed(2) + ' mi away \u00b7 owner not shared by the map data';
-        tip.hidden = false; moveMineMapHoverTip(e);
-      });
+      // App style: full parcel square, orange fill + dark orange stroke (not by mine type).
+      const rect = new google.maps.Rectangle({ map, bounds: { north: m.lat + cell.lat / 2, south: m.lat - cell.lat / 2, east: m.lng + cell.lng / 2, west: m.lng - cell.lng / 2 },
+        strokeColor: '#E65100', strokeOpacity: 0.95, strokeWeight: 1.5, fillColor: '#F9B95A', fillOpacity: 0.7, clickable: true, zIndex: 1 });
+      rect.addListener('mouseover', e => { nearbyHover = m; nearbyRenderTip(m, e); nearbyLookup(m).then(() => { if (nearbyHover === m) nearbyRenderTip(m, null); }); });
       rect.addListener('mousemove', e => moveMineMapHoverTip(e));
-      rect.addListener('mouseout', () => hideMineMapHoverTip());
+      rect.addListener('mouseout', () => { nearbyHover = null; hideMineMapHoverTip(); });
       nearbyOverlays.push(rect);
     });
     nearbyStatus(list.length.toLocaleString('en-US') + ' nearby mine' + (list.length === 1 ? '' : 's')
       + (list.length > shown.length ? ' (showing closest ' + shown.length.toLocaleString('en-US') + ')' : '')
       + (data.truncated ? ' \u00b7 area capped by server' : ''));
+  }
+  // Parcel size from one of the user's own mines (corner path bounds); fallback 0.0001°.
+  function nearbyCellSize() {
+    for (const mine of (allMines || [])) {
+      const c = findCorners(mine);
+      if (c && c.path && c.path.length >= 3) {
+        const la = c.path.map(q => q.lat), lo = c.path.map(q => q.lng);
+        const dl = Math.max(...la) - Math.min(...la), dg = Math.max(...lo) - Math.min(...lo);
+        if (dl > 0 && dl < 0.001 && dg > 0 && dg < 0.001) return { lat: dl, lng: dg };
+      }
+    }
+    return { lat: 0.0001, lng: 0.0001 };
+  }
+  // Owner / greeting lookup per hovered nearby mine (signed-in reads, cached; read-only).
+  let nearbyHover = null, nearbyLookupBlocked = '';
+  const nearbyInfo = new Map();   // key -> Promise<info|null>; info { id, name, ownerId, nick, avatar, greeting }
+  const nearbyProfiles = new Map();
+  function nearbyGpsPaths() {
+    for (const mine of (allMines || [])) {
+      const g = findGps(mine);
+      if (g && g.field && g.field.indexOf('properties.') === 0) {
+        const rest = g.field.slice('properties.'.length), plus = rest.split('+');
+        const dot = plus[0].lastIndexOf('.'), nest = dot >= 0 ? plus[0].slice(0, dot + 1) : '';
+        return { lat: plus[0], lng: nest + plus[1] };
+      }
+    }
+    return null;
+  }
+  function nearbyLookup(m) {
+    const key = nearbyKey(m.lat, m.lng);
+    if (nearbyInfo.has(key)) return nearbyInfo.get(key);
+    const pr = (async () => {
+      if (nearbyLookupBlocked) return null;
+      const paths = nearbyGpsPaths(); if (!paths) { nearbyLookupBlocked = 'no GPS field on own mines'; return null; }
+      let snap;
+      try {
+        snap = await db.collection('properties').where(paths.lat, '>=', m.lat - 0.00006).where(paths.lat, '<=', m.lat + 0.00006).limit(25).get();
+      } catch (e) {
+        nearbyLookupBlocked = (e && e.code) || String(e);
+        console.warn('[nearby] properties location query blocked (' + paths.lat + ' range):', e);
+        return null;
+      }
+      const lngOf = d => { let v = d; paths.lng.split('.').forEach(k => { v = v == null ? v : v[k]; }); return Number(v); };
+      let best = null, bd = Infinity;
+      snap.docs.forEach(doc => { const d = doc.data() || {}; const dd = Math.abs(lngOf(d) - m.lng); if (dd < bd && dd < 0.00006) { bd = dd; best = { id: doc.id, data: d }; } });
+      if (!best) return null;
+      const d = best.data;
+      const info = { id: best.id, name: titleOf({ id: best.id, ...d, _details: {} }), ownerId: d.ownerId || '', nick: d.ownerNickname || '', avatar: '', greeting: '' };
+      const jobs = [];
+      if (info.ownerId) {
+        if (!nearbyProfiles.has(info.ownerId)) nearbyProfiles.set(info.ownerId, db.collection('publicProfiles').doc(info.ownerId).get().then(s => s.exists ? s.data() : null).catch(e => { console.warn('[nearby] publicProfiles read failed:', e); return null; }));
+        jobs.push(nearbyProfiles.get(info.ownerId).then(pp => { if (pp) { info.nick = pp.nickname || info.nick; const u = String(pp.avatarUrl || ''); if (u.startsWith('https://')) info.avatar = u; } }));
+      }
+      jobs.push(db.collection('propertyDetails').doc(info.id).get().then(s => { const dd = (s.exists && s.data()) || {}; if (typeof dd.greeting === 'string') info.greeting = dd.greeting; if (dd.customName) info.name = String(dd.customName); }).catch(e => console.warn('[nearby] propertyDetails read failed:', e)));
+      await Promise.all(jobs);
+      return info;
+    })();
+    pr.then(v => { pr.__done = true; pr.__val = v; });
+    nearbyInfo.set(key, pr);
+    return pr;
+  }
+  function nearbyEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function nearbyRenderTip(m, e) {
+    const tip = $('mine-map-hover-tip'); if (!tip) return;
+    const typeName = m.type.charAt(0).toUpperCase() + m.type.slice(1);
+    const dist = (m.d / 1609.344).toFixed(2) + ' mi away';
+    const pr = nearbyInfo.get(nearbyKey(m.lat, m.lng));
+    let info = null, pending = false;
+    if (pr && pr.__done) info = pr.__val; else if (!nearbyLookupBlocked) pending = true;
+    const nick = info && info.nick ? '@' + info.nick : (pending ? 'Loading owner\u2026' : 'Owner unavailable');
+    const init = (info && info.nick ? info.nick : '?').replace(/^@/, '').slice(0, 2).toUpperCase();
+    const av = info && info.avatar ? '<img src="' + nearbyEsc(info.avatar) + '" alt="">' : nearbyEsc(init);
+    tip.innerHTML = '<div class="nearby-tip-head"><span class="nearby-tip-av">' + av + '</span><div><div class="nearby-tip-nick">' + nearbyEsc(nick) + '</div>'
+      + '<div class="nearby-tip-sub"><img src="' + (ICONS[m.type] || ICONS.rock) + '" alt=""> ' + nearbyEsc((info && info.name) ? info.name : typeName + ' mine') + '</div></div></div>'
+      + (info && info.greeting ? '<div class="mine-map-hover-tip-greeting">Greeting: <em>\u201c' + nearbyEsc(info.greeting) + '\u201d</em></div>' : '')
+      + '<div class="nearby-tip-dist">' + nearbyEsc(typeName + ' \u00b7 ' + dist) + '</div>';
+    tip.hidden = false;
+    if (e) moveMineMapHoverTip(e);
   }
   (function bindNearbyBtn() {
     const btn = $('mine-map-nearby'); if (!btn) return;
