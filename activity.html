@@ -37,6 +37,14 @@
     }
     html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
     html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
+      /* Oct 15, 2026: Clear all filters (last item on the filter bar) */
+    .clear-filters-btn { width:36px; height:36px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; border:1px solid #d0d5dc; border-radius:999px; background:#fff; color:#64748b; cursor:pointer; padding:0; margin-left:2px; transition:opacity .15s, color .15s; }
+    .clear-filters-btn:hover { color:#b91c1c; border-color:#b91c1c; }
+    .clear-filters-btn.is-idle { opacity:.45; }
+    .clear-filters-btn.is-idle:hover { color:#64748b; border-color:#d0d5dc; }
+    .clear-filters-btn svg { display:block; }
+    html[data-theme="dusk"] .clear-filters-btn, html[data-theme="mine"] .clear-filters-btn { background: var(--tm-chip-bg); color: var(--tm-chip-fg); border-color: var(--tm-toolbar-border); }
+    html[data-theme="dusk"] .clear-filters-btn:not(.is-idle):hover, html[data-theme="mine"] .clear-filters-btn:not(.is-idle):hover { color:#fca5a5; border-color:#fca5a5; }
   </style>
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -788,6 +796,9 @@
         <input class="tool-search" id="filter-search" type="search" placeholder="Search visitor or mine name" autocomplete="off" disabled />
         <span class="visitors-note" id="visitors-note" hidden>Loading more check-ins…</span>
         <span class="mine-count" id="match-count"></span>
+        <button type="button" class="clear-filters-btn is-idle" id="clear-filters-btn" aria-label="Clear all filters">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/><path d="M16.5 15.5l5 5M21.5 15.5l-5 5"/></svg>
+        </button>
       </div>
       <div class="visitors-status" id="visitors-status"></div>
       <div class="visitors-board-wrap">
@@ -5042,6 +5053,44 @@
     });
   });
 
+  function clearFiltersDirty() {
+    const s = $('filter-search');
+    return selectedTypes.size > 0 || sortKey !== 'date' || sortDir !== 1 || !!(s && s.value.trim());
+  }
+  /** Reset: no mine types selected, sort back to Date (default), empty search; drop saved prefs. */
+  function clearAllFilters() {
+    selectedTypes = new Set();
+    sortKey = 'date'; sortDir = 1;
+    const s = $('filter-search'); if (s) s.value = '';
+    try { TMPrefs.remove(FILTER_TYPES_KEY); TMPrefs.remove(SORT_PREF_KEY); TMPrefs.remove(SEARCH_PREF_KEY); } catch (e) {}
+    updateTypeFilterButtons(); updateSortButtons();
+    if (loadedUid) renderFromFilters();
+  }
+  // Oct 15, 2026: "Clear all filters" button (furthest right on the filter bar).
+  (function bindClearFilters() {
+    const btn = $('clear-filters-btn'); if (!btn) return;
+    const TIP = 'Clear all filters';
+    let tip = null;
+    function place(x, y) {
+      if (!tip) { tip = document.createElement('div'); tip.className = 'toolbar-follow-tip'; tip.setAttribute('role', 'tooltip'); tip.textContent = TIP; document.body.appendChild(tip); }
+      tip.style.visibility = 'hidden'; tip.style.display = 'block';
+      const w = tip.offsetWidth, h = tip.offsetHeight, gap = 14, edge = 8;
+      let l = x + gap, t = y + gap;
+      if (l + w > window.innerWidth - edge) l = x - gap - w;
+      if (t + h > window.innerHeight - edge) t = y - gap - h;
+      tip.style.left = Math.max(edge, l) + 'px'; tip.style.top = Math.max(edge, t) + 'px'; tip.style.visibility = 'visible';
+    }
+    function hide() { if (tip) tip.style.display = 'none'; }
+    btn.addEventListener('mouseenter', e => place(e.clientX, e.clientY));
+    btn.addEventListener('mousemove', e => place(e.clientX, e.clientY));
+    btn.addEventListener('mouseleave', hide);
+    const refresh = () => { try { btn.classList.toggle('is-idle', !clearFiltersDirty()); } catch (e) {} };
+    window.tmRefreshClearFilters = refresh;
+    btn.addEventListener('click', () => { hide(); clearAllFilters(); refresh(); });
+    const bar = btn.parentElement;
+    ['click', 'input', 'change'].forEach(ev => bar.addEventListener(ev, () => setTimeout(refresh, 0)));
+    refresh(); window.addEventListener('load', refresh); setTimeout(refresh, 1500);
+  })();
   (function bindNavPillFollowTips() {
     var DELAY = 320;
     var tipEl = null, tipTimer = null, tipTarget = null, tipX = 0, tipY = 0;
