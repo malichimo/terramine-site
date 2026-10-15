@@ -637,7 +637,7 @@
         <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
         <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
         <button type="button" class="mine-map-labels" id="mine-map-reach" aria-pressed="false" data-tip="Show the overall area ALL of my mines cover" aria-label="Show the overall area ALL of my mines cover">Reach off</button>
-        <button type="button" class="mine-map-labels mine-map-nearby-btn is-locked" id="mine-map-nearby" aria-pressed="false" data-tip="Right-click one of your mines to load the area around it. Requires Pioneer Pass." aria-label="Nearby mines (Pioneer Pass)"><img class="nearby-pp" src="/images/pioneer-pass-logo-44.png" alt="" aria-hidden="true"><span>Nearby</span></button>
+        <button type="button" class="mine-map-labels mine-map-nearby-btn is-locked" id="mine-map-nearby" hidden aria-pressed="false" data-tip="Right-click one of your mines to load the area around it. Requires Pioneer Pass." aria-label="Nearby mines (Pioneer Pass)"><img class="nearby-pp" src="/images/pioneer-pass-logo-44.png" alt="" aria-hidden="true"><span>Nearby</span></button>
         <span class="mine-map-nearby-status" id="mine-map-nearby-status" hidden></span>
         <label class="mine-map-zoom">
           <span>Zoom</span>
@@ -1571,7 +1571,7 @@
     overlay.addListener('mousemove', function (e) { moveMineMapHoverTip(e); });
     overlay.addListener('mouseout', function () { hideMineMapHoverTip(); });
     overlay.addListener('rightclick', function (e) {
-      if (!nearbyOn || !nearbyUnlocked) return;
+      if (!nearbyAllowed || !nearbyOn || !nearbyUnlocked) return;
       try { if (e && e.domEvent) e.domEvent.preventDefault(); } catch (err) {}
       hideMineMapHoverTip();
       loadNearbyFor(mine);
@@ -1600,8 +1600,18 @@
   function nearbyTrialRemembered(uid) {
     try { return Date.now() < PIONEER_TRIAL_END_MS && sessionStorage.getItem('tmPioneerTrialOpen:' + uid) === String(PIONEER_TRIAL_END_MS); } catch (e) { return false; }
   }
-  function setNearbyAccess(ud, uid) {
-    nearbyUnlocked = (!!ud && ud.isPioneerMember === true) || nearbyTrialRemembered(uid);
+  // Oct 15, 2026: Nearby is a private test feature: ONLY on mars.baronstoolbox.com and ONLY for
+  // these nicknames (the same header nickname: users.nickname || displayName || email local part),
+  // compared case-insensitively without a leading '@'. Pioneer Pass is forced on for them.
+  const NEARBY_HOST = 'mars.baronstoolbox.com';
+  const NEARBY_TESTERS = ['nfoguides', 'foggytick'];
+  let nearbyAllowed = false;
+  function setNearbyAccess(ud, uid, nick) {
+    const n = String(nick || '').trim().replace(/^@+/, '').toLowerCase();
+    nearbyAllowed = location.hostname === NEARBY_HOST && NEARBY_TESTERS.indexOf(n) !== -1;
+    const btn = $('mine-map-nearby'); if (btn) btn.hidden = !nearbyAllowed;
+    if (!nearbyAllowed) { nearbyUnlocked = false; if (nearbyOn) { nearbyOn = false; clearNearby(); } updateNearbyBtn(); return; }
+    nearbyUnlocked = true;   // forced Pioneer Pass for the testers
     updateNearbyBtn();
   }
   function updateNearbyBtn() {
@@ -1941,6 +1951,7 @@
   (function bindNearbyBtn() {
     const btn = $('mine-map-nearby'); if (!btn) return;
     btn.addEventListener('click', () => {
+      if (!nearbyAllowed) return;
       if (!nearbyUnlocked) { nearbyStatus('Pioneer Pass required'); setTimeout(() => { if (!nearbyOn) nearbyStatus(''); }, 2500); return; }
       nearbyOn = !nearbyOn; nearbySeq++;
       if (!nearbyOn) clearNearby();
@@ -3382,8 +3393,8 @@
   async function loadHeader(user) {
     const uSnap = await db.collection('users').doc(user.uid).get();
     const ud = uSnap.data() || {};
-    try { setNearbyAccess(ud, user.uid); } catch (e) {}
     const nick = ud.nickname || user.displayName || (user.email && user.email.split('@')[0]) || 'Miner';
+    try { setNearbyAccess(ud, user.uid, nick); } catch (e) {}
     $('nav-nickname').textContent = nick;
     $('sb-tb').textContent = fmtTBBalance(ud.tbBalance || 0);
     $('sb-usd').textContent = fmtUSDBalance(ud.usdEarnings || 0);
