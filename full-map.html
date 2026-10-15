@@ -38,7 +38,10 @@
     }
     html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
     html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
-      .mine-map-nearby-btn.is-locked { opacity:.55; cursor:not-allowed; }
+      .mine-map-nearby-btn { display:inline-flex; align-items:center; gap:5px; }
+    .mine-map-nearby-btn span { color:inherit !important; opacity:1 !important; }
+    .mine-map-nearby-btn .nearby-pp { height:24px; width:auto; display:block; margin:-5px 0; }
+    .mine-map-nearby-btn.is-locked { filter:grayscale(1); opacity:.5; cursor:not-allowed; }
     .mine-map-nearby-status { font-size:12px; font-weight:700; color:#7c3aed; white-space:nowrap; }
     html[data-theme="dusk"] .mine-map-nearby-status, html[data-theme="mine"] .mine-map-nearby-status { color:#c4b5fd; }
     .nearby-tip-head { display:flex; align-items:center; gap:8px; }
@@ -613,7 +616,7 @@
         <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
         <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
         <button type="button" class="mine-map-labels" id="mine-map-reach" aria-pressed="false" data-tip="Show the overall area ALL of my mines cover" aria-label="Show the overall area ALL of my mines cover">Reach off</button>
-        <button type="button" class="mine-map-labels mine-map-nearby-btn is-locked" id="mine-map-nearby" aria-pressed="false" data-tip="Pioneer Pass feature: turn on, then right-click one of your mines to see other players' mines within 1 mile." aria-label="Nearby mines (Pioneer Pass)">&#128274; Nearby off</button>
+        <button type="button" class="mine-map-labels mine-map-nearby-btn is-locked" id="mine-map-nearby" aria-pressed="false" data-tip="Right-click one of your mines to load the area around it. Requires Pioneer Pass." aria-label="Nearby mines (Pioneer Pass)"><img class="nearby-pp" src="/images/pioneer-pass-logo-44.png" alt="" aria-hidden="true"><span>Nearby</span></button>
         <span class="mine-map-nearby-status" id="mine-map-nearby-status" hidden></span>
         <label class="mine-map-zoom">
           <span>Zoom</span>
@@ -1585,10 +1588,7 @@
     btn.classList.toggle('is-locked', !nearbyUnlocked);
     btn.setAttribute('aria-pressed', nearbyOn ? 'true' : 'false');
     btn.setAttribute('aria-disabled', nearbyUnlocked ? 'false' : 'true');
-    btn.innerHTML = (nearbyUnlocked ? '' : '&#128274; ') + (nearbyOn ? 'Nearby on' : 'Nearby off');
-    const tip = nearbyUnlocked
-      ? (nearbyOn ? 'Right-click one of your mines to show other players\u2019 mines within 1 mile. Click to turn off.' : 'Turn on, then right-click one of your mines to show other players\u2019 mines within 1 mile.')
-      : 'Pioneer Pass feature: see other players\u2019 mines within 1 mile of any of your mines (right-click a mine). Get a Pioneer Pass to unlock.';
+    const tip = 'Right-click one of your mines to load the area around it.' + (nearbyUnlocked ? '' : ' Requires Pioneer Pass.');
     btn.setAttribute('data-tip', tip); btn.setAttribute('aria-label', tip);
   }
   function nearbyStatus(text) { const s = $('mine-map-nearby-status'); if (!s) return; s.hidden = !text; s.textContent = text || ''; }
@@ -1800,10 +1800,11 @@
     btn.addEventListener('click', () => {
       if (!nearbyUnlocked) { nearbyStatus('Pioneer Pass required'); setTimeout(() => { if (!nearbyOn) nearbyStatus(''); }, 2500); return; }
       nearbyOn = !nearbyOn; nearbySeq++;
-      if (!nearbyOn) clearNearby(); else nearbyStatus('Right-click one of your mines');
+      if (!nearbyOn) clearNearby();
       updateNearbyBtn();
     });
     updateNearbyBtn();
+    try { bindFollowTip(btn); } catch (e) {}
   })();
   function clearMineMapAreaOverlays() {
     for (let i = 0; i < mineMapAreaOverlays.length; i++) {
