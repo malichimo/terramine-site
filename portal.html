@@ -4,6 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script src="/js/tm-pioneer.js?v=20261015-1"></script>
   <script src="/js/tm-names.js?v=20261015-1"></script>
   <script src="/js/tm-time.js?v=20261006-1"></script>
   <script>
@@ -6132,7 +6133,7 @@
     try { sessionStorage.removeItem(ppTrialKey(uid)); } catch (e) {}
     try { localStorage.removeItem(ppTrialKey(uid)); } catch (e) {}
   }
-  function isPioneerMember(ud) { return !!ud && ud.isPioneerMember === true; }
+  function isPioneerMember(ud) { return window.TMPioneer ? TMPioneer.isMember(ud, auth.currentUser) : (!!ud && ud.isPioneerMember === true); }
   function ppGraphs() {
     return [
       { key: 'visitors', card: 'dash-visits-card', wrap: 'dash-visits-wrap', msg: 'dash-visits-msg', total: 'dash-visits-total', st: _vis60, chart: VIS60_CHART, empty: function () { return vis60BuildDays().days; }, render: renderVisitors60 },

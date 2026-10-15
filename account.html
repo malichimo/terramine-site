@@ -4,6 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script src="/js/tm-pioneer.js?v=20261015-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -899,7 +900,7 @@
   function renderPioneerPass(ud) {
     const card = $('pp-card');
     if (!card) return;
-    const isPioneer = !!ud && ud.isPioneerMember === true;
+    const isPioneer = window.TMPioneer ? TMPioneer.isMember(ud, (typeof currentUser !== 'undefined' && currentUser) || firebase.auth().currentUser) : (!!ud && ud.isPioneerMember === true);
     card.classList.toggle('is-member', isPioneer);
     $('pp-status').textContent = isPioneer ? 'Active Member' : 'Not a member';
     const sub = $('pp-sub');

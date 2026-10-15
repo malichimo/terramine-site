@@ -4,6 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script src="/js/tm-pioneer.js?v=20261015-1"></script>
   <script src="/js/tm-names.js?v=20261015-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
@@ -1608,10 +1609,10 @@
   let nearbyAllowed = false;
   function setNearbyAccess(ud, uid, nick) {
     const n = String(nick || '').trim().replace(/^@+/, '');
-    nearbyAllowed = location.hostname === NEARBY_HOST && NEARBY_TESTERS.indexOf(n) !== -1;
+    nearbyAllowed = window.TMPioneer ? TMPioneer.isTester(ud, auth.currentUser) : (location.hostname === NEARBY_HOST && NEARBY_TESTERS.indexOf(n) !== -1);
     const btn = $('mine-map-nearby'); if (btn) btn.hidden = !nearbyAllowed;
     if (!nearbyAllowed) { nearbyUnlocked = false; if (nearbyOn) { nearbyOn = false; clearNearby(); } updateNearbyBtn(); return; }
-    nearbyUnlocked = true;   // forced Pioneer Pass for the testers
+    nearbyUnlocked = window.TMPioneer ? TMPioneer.isMember(ud, auth.currentUser) : true;   // testers: forced Pioneer Pass
     updateNearbyBtn();
   }
   function updateNearbyBtn() {
