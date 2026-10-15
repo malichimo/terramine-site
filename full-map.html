@@ -1644,11 +1644,11 @@
     list.sort((x, y) => x.d - y.d);
     const room = Math.max(0, NEARBY_MAX_DRAW - nearbyDrawn.size);   // cap applies to total drawn
     const shown = list.slice(0, room);
-    const cell = nearbyCellSize();
+    nearbyGridCheck();
     const drawOne = m => {
       const k = nearbyKey(m.lat, m.lng); if (nearbyDrawn.has(k)) return; nearbyDrawn.add(k);
       // App style: full parcel square, orange fill + dark orange stroke (not by mine type).
-      const rect = new google.maps.Rectangle({ map, bounds: { north: m.lat + cell.lat / 2, south: m.lat - cell.lat / 2, east: m.lng + cell.lng / 2, west: m.lng - cell.lng / 2 },
+      const rect = new google.maps.Rectangle({ map, bounds: nearbyCellBounds(m.lat, m.lng),
         strokeColor: '#E65100', strokeOpacity: 0.95, strokeWeight: 1.5, fillColor: '#F9B95A', fillOpacity: 0.7, clickable: true, zIndex: 1 });
       rect.addListener('mouseover', e => { nearbyHover = m; nearbyRenderTip(m, e); nearbyLookup(m).then(() => { if (nearbyHover === m) nearbyRenderTip(m, null); }); });
       rect.addListener('mousemove', e => moveMineMapHoverTip(e));
@@ -1668,7 +1668,30 @@
       + (list.length > shown.length ? ' \u00b7 ' + NEARBY_MAX_DRAW.toLocaleString('en-US') + ' max reached' : '')
       + (data.truncated ? ' \u00b7 area capped by server' : ''));
   }
-  // Parcel size from one of the user's own mines (corner path bounds); fallback 0.0001°.
+  // TerraMine grid: 0.0001° lat × 0.0001° lng cells (lng NOT scaled by latitude), origin 0,0.
+  // getPropertiesInViewport returns the cell CENTER (every lat/lng ends in …5 at 1e-5).
+  // Snap to the cell index, then build the exact cell edges, so parcels tile with own mines.
+  const GRID_DEG = 1e-4;
+  function nearbyCellBounds(lat, lng) {
+    const i = Math.floor(lat / GRID_DEG + 1e-6), j = Math.floor(lng / GRID_DEG + 1e-6);
+    return { south: i * GRID_DEG, north: (i + 1) * GRID_DEG, west: j * GRID_DEG, east: (j + 1) * GRID_DEG };
+  }
+  let nearbyGridChecked = false;
+  /** One-time console check: rebuild own mines' cells from their center and compare to stored corners. */
+  function nearbyGridCheck() {
+    if (nearbyGridChecked) return; nearbyGridChecked = true;
+    let n = 0, maxErr = 0, worst = null;
+    for (const mine of (allMines || [])) {
+      const c = findCorners(mine), g = mineMapCenterGps(mine);
+      if (!c || !c.path || c.path.length < 3 || !g) continue;
+      const la = c.path.map(q => q.lat), lo = c.path.map(q => q.lng);
+      const cb = { south: Math.min(...la), north: Math.max(...la), west: Math.min(...lo), east: Math.max(...lo) };
+      const rb = nearbyCellBounds((cb.south + cb.north) / 2, (cb.west + cb.east) / 2);
+      const err = Math.max(...['south', 'north', 'west', 'east'].map(k => Math.abs(cb[k] - rb[k])));
+      n++; if (err > maxErr) { maxErr = err; worst = { id: mine.id, stored: cb, rebuilt: rb, gps: g }; }
+    }
+    console.info('[nearby] grid check: ' + n + ' own mines, max corner error ' + maxErr.toExponential(2) + '° (~' + (maxErr * 111320).toFixed(3) + ' m)', worst || '');
+  }
   function nearbyCellSize() {
     for (const mine of (allMines || [])) {
       const c = findCorners(mine);
