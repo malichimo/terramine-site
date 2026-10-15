@@ -47,6 +47,11 @@
     .nearby-tip-sub { display:flex; align-items:center; gap:4px; font-size:12px; opacity:.9; }
     .nearby-tip-sub img { width:16px; height:16px; }
     .nearby-tip-dist { font-size:11px; opacity:.75; margin-top:4px; }
+    .nearby-loading { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:30; display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px; background:rgba(15,23,42,.88); color:#fff; font-weight:700; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.3); pointer-events:none; }
+    .nearby-loading[hidden] { display:none; }
+    .nearby-loading.is-error { background:rgba(153,27,27,.92); }
+    .nearby-spin { width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.3); border-top-color:#F9B95A; animation:nearbySpin .8s linear infinite; }
+    @keyframes nearbySpin { to { transform:rotate(360deg); } }
 </style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -1586,7 +1591,19 @@
     btn.setAttribute('data-tip', tip); btn.setAttribute('aria-label', tip);
   }
   function nearbyStatus(text) { const s = $('mine-map-nearby-status'); if (!s) return; s.hidden = !text; s.textContent = text || ''; }
-  function clearNearby() { nearbyOverlays.forEach(o => { try { o.setMap(null); } catch (e) {} }); nearbyOverlays = []; nearbyStatus(''); }
+  let nearbyMsgTimer = null;
+  function nearbyOverlayMsg(text, kind) {
+    const host = $('mine-map-body'); if (!host) return;
+    let el = $('nearby-loading');
+    if (!el) { el = document.createElement('div'); el.id = 'nearby-loading'; el.className = 'nearby-loading'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); host.appendChild(el); }
+    clearTimeout(nearbyMsgTimer);
+    if (!text) { el.hidden = true; return; }
+    el.className = 'nearby-loading' + (kind === 'error' ? ' is-error' : '');
+    el.innerHTML = (kind === 'busy' ? '<span class="nearby-spin" aria-hidden="true"></span>' : '') + '<span></span>';
+    el.lastChild.textContent = text; el.hidden = false;
+    if (kind === 'error') nearbyMsgTimer = setTimeout(() => { el.hidden = true; }, 3500);
+  }
+  function clearNearby() { nearbyOverlayMsg(''); nearbyOverlays.forEach(o => { try { o.setMap(null); } catch (e) {} }); nearbyOverlays = []; nearbyStatus(''); }
   function haversineM(a1, o1, a2, o2) {
     const R = 6371008.8, r = Math.PI / 180;
     const dA = (a2 - a1) * r, dO = (o2 - o1) * r;
@@ -1598,13 +1615,13 @@
     const c = mineMapCenterGps(mine); const map = mineMapInstance;
     if (!c || !map) return;
     const seq = ++nearbySeq;
-    clearNearby(); nearbyStatus('Loading nearby mines\u2026');
+    clearNearby(); nearbyStatus('Loading nearby mines\u2026'); nearbyOverlayMsg('Loading nearby mines\u2026', 'busy');
     const dLat = NEARBY_RADIUS_M / 111320, dLng = dLat / Math.max(0.01, Math.cos(c.lat * Math.PI / 180));
     const url = NEARBY_URL + '?minLat=' + (c.lat - dLat) + '&maxLat=' + (c.lat + dLat) + '&minLng=' + (c.lng - dLng) + '&maxLng=' + (c.lng + dLng);
     let data;
     try { const res = await fetch(url); if (!res.ok) throw new Error('HTTP ' + res.status); data = await res.json(); }
-    catch (e) { if (seq === nearbySeq) nearbyStatus('Could not load nearby mines'); console.warn('[nearby] load failed:', e); return; }
-    if (seq !== nearbySeq || !nearbyOn) return;
+    catch (e) { if (seq === nearbySeq) { nearbyStatus('Could not load nearby mines'); nearbyOverlayMsg('Could not load nearby mines', 'error'); } console.warn('[nearby] load failed:', e); return; }
+    if (seq !== nearbySeq || !nearbyOn) { nearbyOverlayMsg(''); return; }
     const own = new Set();
     (allMines || []).forEach(m => { const g = mineMapCenterGps(m); if (g) own.add(nearbyKey(g.lat, g.lng)); });
     const list = [];
@@ -1618,7 +1635,7 @@
     const shown = list.slice(0, NEARBY_MAX_DRAW);
     nearbyOverlays.push(new google.maps.Circle({ map, center: c, radius: NEARBY_RADIUS_M, strokeColor: '#7c3aed', strokeOpacity: 0.9, strokeWeight: 2, fillColor: '#7c3aed', fillOpacity: 0.05, clickable: false, zIndex: 0 }));
     const cell = nearbyCellSize();
-    shown.forEach(m => {
+    const drawOne = m => {
       // App style: full parcel square, orange fill + dark orange stroke (not by mine type).
       const rect = new google.maps.Rectangle({ map, bounds: { north: m.lat + cell.lat / 2, south: m.lat - cell.lat / 2, east: m.lng + cell.lng / 2, west: m.lng - cell.lng / 2 },
         strokeColor: '#E65100', strokeOpacity: 0.95, strokeWeight: 1.5, fillColor: '#F9B95A', fillOpacity: 0.7, clickable: true, zIndex: 1 });
@@ -1626,7 +1643,15 @@
       rect.addListener('mousemove', e => moveMineMapHoverTip(e));
       rect.addListener('mouseout', () => { nearbyHover = null; hideMineMapHoverTip(); });
       nearbyOverlays.push(rect);
-    });
+    };
+    nearbyOverlayMsg('Drawing ' + shown.length.toLocaleString('en-US') + ' nearby mines\u2026', 'busy');
+    for (let i = 0; i < shown.length; i += 250) {          // chunked so the UI stays responsive
+      if (seq !== nearbySeq || !nearbyOn) { nearbyOverlayMsg(''); return; }
+      shown.slice(i, i + 250).forEach(drawOne);
+      await new Promise(r => requestAnimationFrame(() => r()));
+    }
+    if (seq !== nearbySeq || !nearbyOn) { nearbyOverlayMsg(''); return; }
+    nearbyOverlayMsg('');
     nearbyStatus(list.length.toLocaleString('en-US') + ' nearby mine' + (list.length === 1 ? '' : 's')
       + (list.length > shown.length ? ' (showing closest ' + shown.length.toLocaleString('en-US') + ')' : '')
       + (data.truncated ? ' \u00b7 area capped by server' : ''));
