@@ -45,8 +45,8 @@
     .mine-map-nearby-status { font-size:12px; font-weight:700; color:#7c3aed; white-space:nowrap; }
     html[data-theme="dusk"] .mine-map-nearby-status, html[data-theme="mine"] .mine-map-nearby-status { color:#c4b5fd; }
     .nearby-tip-head { display:flex; align-items:center; gap:8px; }
-    .nearby-tip-av { width:32px; height:32px; border-radius:6px; overflow:hidden; flex:0 0 32px; display:inline-flex; align-items:center; justify-content:center; background:#F9B95A; color:#7a2e00; font-size:12px; font-weight:700; border:1px solid #E65100; }
-    .nearby-tip-av img { width:100%; height:100%; object-fit:cover; display:block; }
+    .nearby-tip-av { box-sizing:border-box; padding:0; line-height:1; width:32px; height:32px; border-radius:6px; overflow:hidden; flex:0 0 32px; display:inline-flex; align-items:center; justify-content:center; background:#F9B95A; color:#7a2e00; font-size:12px; font-weight:700; border:1px solid #E65100; }
+    .mine-map-hover-tip .nearby-tip-av img { width:100%; height:100%; object-fit:cover; display:block; border-radius:0; }
     .nearby-tip-nick { font-weight:700; }
     .nearby-tip-sub { display:flex; align-items:center; gap:4px; font-size:12px; opacity:.9; }
     .nearby-tip-sub img { width:16px; height:16px; }
