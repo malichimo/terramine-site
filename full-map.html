@@ -1602,12 +1602,12 @@
   }
   // Oct 15, 2026: Nearby is a private test feature: ONLY on mars.baronstoolbox.com and ONLY for
   // these nicknames (the same header nickname: users.nickname || displayName || email local part),
-  // compared case-insensitively without a leading '@'. Pioneer Pass is forced on for them.
+  // compared case-SENSITIVELY (exact) after trimming and dropping a leading '@'. Pioneer Pass is forced on for them.
   const NEARBY_HOST = 'mars.baronstoolbox.com';
-  const NEARBY_TESTERS = ['nfoguides', 'foggytick'];
+  const NEARBY_TESTERS = ['nfoGuides', 'FoggyTick'];   // case-sensitive exact match
   let nearbyAllowed = false;
   function setNearbyAccess(ud, uid, nick) {
-    const n = String(nick || '').trim().replace(/^@+/, '').toLowerCase();
+    const n = String(nick || '').trim().replace(/^@+/, '');
     nearbyAllowed = location.hostname === NEARBY_HOST && NEARBY_TESTERS.indexOf(n) !== -1;
     const btn = $('mine-map-nearby'); if (btn) btn.hidden = !nearbyAllowed;
     if (!nearbyAllowed) { nearbyUnlocked = false; if (nearbyOn) { nearbyOn = false; clearNearby(); } updateNearbyBtn(); return; }
