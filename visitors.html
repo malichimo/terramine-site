@@ -4544,6 +4544,9 @@
         return name.includes(q) || mine.includes(q) || msg.includes(q) || reply.includes(q);
       });
     }
+    if (sortKey === 'replies') {
+      list = list.filter(v => !!ownerReplyText(v));   // Replies sort shows replied cards only
+    }
     const dir = sortDir;
     list.sort((a, b) => {
       const ma = mineMap[a.propertyId] || {};
