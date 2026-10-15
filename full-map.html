@@ -37,7 +37,10 @@
     }
     html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
     html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
-  </style>
+      .mine-map-nearby-btn.is-locked { opacity:.55; cursor:not-allowed; }
+    .mine-map-nearby-status { font-size:12px; font-weight:700; color:#7c3aed; white-space:nowrap; }
+    html[data-theme="dusk"] .mine-map-nearby-status, html[data-theme="mine"] .mine-map-nearby-status { color:#c4b5fd; }
+</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
@@ -597,6 +600,8 @@
         <button type="button" class="mine-map-labels" id="mine-map-buildings" aria-pressed="false" data-tip="Show building footprints and outlines." aria-label="Show building footprints and outlines.">Buildings off</button>
         <button type="button" class="mine-map-labels" id="mine-map-labels" aria-pressed="false" data-tip="Show map labels (streets, places, and building names)." aria-label="Show map labels (streets, places, and building names).">Labels off</button>
         <button type="button" class="mine-map-labels" id="mine-map-reach" aria-pressed="false" data-tip="Show the overall area ALL of my mines cover" aria-label="Show the overall area ALL of my mines cover">Reach off</button>
+        <button type="button" class="mine-map-labels mine-map-nearby-btn is-locked" id="mine-map-nearby" aria-pressed="false" data-tip="Pioneer Pass feature: turn on, then right-click one of your mines to see other players' mines within 1 mile." aria-label="Nearby mines (Pioneer Pass)">&#128274; Nearby off</button>
+        <span class="mine-map-nearby-status" id="mine-map-nearby-status" hidden></span>
         <label class="mine-map-zoom">
           <span>Zoom</span>
           <input type="range" id="mine-map-zoom" min="10" max="21" step="1" value="17" aria-label="Map zoom">
@@ -1528,6 +1533,12 @@
     });
     overlay.addListener('mousemove', function (e) { moveMineMapHoverTip(e); });
     overlay.addListener('mouseout', function () { hideMineMapHoverTip(); });
+    overlay.addListener('rightclick', function (e) {
+      if (!nearbyOn || !nearbyUnlocked) return;
+      try { if (e && e.domEvent) e.domEvent.preventDefault(); } catch (err) {}
+      hideMineMapHoverTip();
+      loadNearbyFor(mine);
+    });
     overlay.addListener('click', function (e) {
       if (typeof bulkRenameMode !== 'undefined' && bulkRenameMode) return;
       try { if (e && typeof e.stop === 'function') e.stop(); } catch (err) {}
@@ -1540,6 +1551,98 @@
       openMineMapEdit(mine);
     });
   }
+  // ── Oct 15, 2026: Nearby mines (Pioneer Pass) ─────────────────────────────
+  // Source: the same public Cloud Function heatmap.html uses at close zoom
+  // (getPropertiesInViewport: bbox -> [{lat,lng,type}], server-capped, 'truncated' flag).
+  // It returns no owner / name / id, so hover shows type + distance only.
+  const NEARBY_URL = 'https://us-central1-terramine-5cda5.cloudfunctions.net/getPropertiesInViewport';
+  const NEARBY_RADIUS_M = 1609.344;
+  const NEARBY_MAX_DRAW = 3000;
+  const NEARBY_COLORS = { rock: '#9e9e9e', coal: '#37474f', gold: '#ffc400', diamond: '#4dd0e1' };
+  const PIONEER_TRIAL_END_MS = Date.parse('2026-10-10T00:00:00-04:00');   // same as dashboard
+  let nearbyUnlocked = false, nearbyOn = false, nearbyOverlays = [], nearbySeq = 0;
+  function nearbyTrialRemembered(uid) {
+    try { return Date.now() < PIONEER_TRIAL_END_MS && sessionStorage.getItem('tmPioneerTrialOpen:' + uid) === String(PIONEER_TRIAL_END_MS); } catch (e) { return false; }
+  }
+  function setNearbyAccess(ud, uid) {
+    nearbyUnlocked = (!!ud && ud.isPioneerMember === true) || nearbyTrialRemembered(uid);
+    updateNearbyBtn();
+  }
+  function updateNearbyBtn() {
+    const btn = $('mine-map-nearby'); if (!btn) return;
+    btn.classList.toggle('is-locked', !nearbyUnlocked);
+    btn.setAttribute('aria-pressed', nearbyOn ? 'true' : 'false');
+    btn.setAttribute('aria-disabled', nearbyUnlocked ? 'false' : 'true');
+    btn.innerHTML = (nearbyUnlocked ? '' : '&#128274; ') + (nearbyOn ? 'Nearby on' : 'Nearby off');
+    const tip = nearbyUnlocked
+      ? (nearbyOn ? 'Right-click one of your mines to show other players\u2019 mines within 1 mile. Click to turn off.' : 'Turn on, then right-click one of your mines to show other players\u2019 mines within 1 mile.')
+      : 'Pioneer Pass feature: see other players\u2019 mines within 1 mile of any of your mines (right-click a mine). Get a Pioneer Pass to unlock.';
+    btn.setAttribute('data-tip', tip); btn.setAttribute('aria-label', tip);
+  }
+  function nearbyStatus(text) { const s = $('mine-map-nearby-status'); if (!s) return; s.hidden = !text; s.textContent = text || ''; }
+  function clearNearby() { nearbyOverlays.forEach(o => { try { o.setMap(null); } catch (e) {} }); nearbyOverlays = []; nearbyStatus(''); }
+  function haversineM(a1, o1, a2, o2) {
+    const R = 6371008.8, r = Math.PI / 180;
+    const dA = (a2 - a1) * r, dO = (o2 - o1) * r;
+    const h = Math.sin(dA / 2) ** 2 + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(dO / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  const nearbyKey = (lat, lng) => Math.round(lat * 1e4) + ',' + Math.round(lng * 1e4);
+  async function loadNearbyFor(mine) {
+    const c = mineMapCenterGps(mine); const map = mineMapInstance;
+    if (!c || !map) return;
+    const seq = ++nearbySeq;
+    clearNearby(); nearbyStatus('Loading nearby mines\u2026');
+    const dLat = NEARBY_RADIUS_M / 111320, dLng = dLat / Math.max(0.01, Math.cos(c.lat * Math.PI / 180));
+    const url = NEARBY_URL + '?minLat=' + (c.lat - dLat) + '&maxLat=' + (c.lat + dLat) + '&minLng=' + (c.lng - dLng) + '&maxLng=' + (c.lng + dLng);
+    let data;
+    try { const res = await fetch(url); if (!res.ok) throw new Error('HTTP ' + res.status); data = await res.json(); }
+    catch (e) { if (seq === nearbySeq) nearbyStatus('Could not load nearby mines'); console.warn('[nearby] load failed:', e); return; }
+    if (seq !== nearbySeq || !nearbyOn) return;
+    const own = new Set();
+    (allMines || []).forEach(m => { const g = mineMapCenterGps(m); if (g) own.add(nearbyKey(g.lat, g.lng)); });
+    const list = [];
+    (data.properties || []).forEach(p => {
+      const lat = Number(p.lat), lng = Number(p.lng);
+      if (!isFinite(lat) || !isFinite(lng) || own.has(nearbyKey(lat, lng))) return;
+      const d = haversineM(c.lat, c.lng, lat, lng);
+      if (d <= NEARBY_RADIUS_M) list.push({ lat, lng, type: String(p.type || 'rock').toLowerCase(), d });
+    });
+    list.sort((x, y) => x.d - y.d);
+    const shown = list.slice(0, NEARBY_MAX_DRAW);
+    nearbyOverlays.push(new google.maps.Circle({ map, center: c, radius: NEARBY_RADIUS_M, strokeColor: '#7c3aed', strokeOpacity: 0.9, strokeWeight: 2, fillColor: '#7c3aed', fillOpacity: 0.05, clickable: false, zIndex: 0 }));
+    const h = 0.00004;   // parcel cells are 0.0001°; draw a smaller outlined cell so own (solid) mines stay distinct
+    shown.forEach(m => {
+      const col = NEARBY_COLORS[m.type] || NEARBY_COLORS.rock;
+      const hw = h / Math.max(0.01, Math.cos(m.lat * Math.PI / 180)) * Math.cos(m.lat * Math.PI / 180);
+      const rect = new google.maps.Rectangle({ map, bounds: { north: m.lat + h, south: m.lat - h, east: m.lng + hw / Math.cos(m.lat * Math.PI / 180) * 1, west: m.lng - hw / Math.cos(m.lat * Math.PI / 180) * 1 },
+        strokeColor: col, strokeOpacity: 1, strokeWeight: 2, fillColor: '#ffffff', fillOpacity: 0.55, clickable: true, zIndex: 1 });
+      const typeName = m.type.charAt(0).toUpperCase() + m.type.slice(1);
+      rect.addListener('mouseover', e => {
+        const tip = $('mine-map-hover-tip'); if (!tip) return;
+        tip.innerHTML = '<div class="mine-map-hover-tip-row"><img src="' + (ICONS[m.type] || ICONS.rock) + '" alt=""><span></span></div><div class="mine-map-hover-tip-greeting"></div>';
+        tip.querySelector('span').textContent = 'Other player\u2019s ' + typeName + ' mine';
+        tip.querySelector('.mine-map-hover-tip-greeting').textContent = (m.d / 1609.344).toFixed(2) + ' mi away \u00b7 owner not shared by the map data';
+        tip.hidden = false; moveMineMapHoverTip(e);
+      });
+      rect.addListener('mousemove', e => moveMineMapHoverTip(e));
+      rect.addListener('mouseout', () => hideMineMapHoverTip());
+      nearbyOverlays.push(rect);
+    });
+    nearbyStatus(list.length.toLocaleString('en-US') + ' nearby mine' + (list.length === 1 ? '' : 's')
+      + (list.length > shown.length ? ' (showing closest ' + shown.length.toLocaleString('en-US') + ')' : '')
+      + (data.truncated ? ' \u00b7 area capped by server' : ''));
+  }
+  (function bindNearbyBtn() {
+    const btn = $('mine-map-nearby'); if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (!nearbyUnlocked) { nearbyStatus('Pioneer Pass required'); setTimeout(() => { if (!nearbyOn) nearbyStatus(''); }, 2500); return; }
+      nearbyOn = !nearbyOn; nearbySeq++;
+      if (!nearbyOn) clearNearby(); else nearbyStatus('Right-click one of your mines');
+      updateNearbyBtn();
+    });
+    updateNearbyBtn();
+  })();
   function clearMineMapAreaOverlays() {
     for (let i = 0; i < mineMapAreaOverlays.length; i++) {
       try { mineMapAreaOverlays[i].setMap(null); } catch (e) {}
@@ -2973,6 +3076,7 @@
   async function loadHeader(user) {
     const uSnap = await db.collection('users').doc(user.uid).get();
     const ud = uSnap.data() || {};
+    try { setNearbyAccess(ud, user.uid); } catch (e) {}
     const nick = ud.nickname || user.displayName || (user.email && user.email.split('@')[0]) || 'Miner';
     $('nav-nickname').textContent = nick;
     $('sb-tb').textContent = fmtTBBalance(ud.tbBalance || 0);
