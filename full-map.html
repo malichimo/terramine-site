@@ -1616,7 +1616,18 @@
     const h = Math.sin(dA / 2) ** 2 + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(dO / 2) ** 2;
     return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
   }
-  const nearbyKey = (lat, lng) => Math.round(lat * 1e4) + ',' + Math.round(lng * 1e4);
+  // Oct 15, 2026: key = grid cell index (floor). The old Math.round(lat*1e4) key hit the exact .5
+  // of every cell center, so float noise rounded neighbors onto the same key and dedupe dropped them.
+  const nearbyKey = (lat, lng) => Math.floor(lat / 1e-4 + 1e-6) + ',' + Math.floor(lng / 1e-4 + 1e-6);
+  /** Own mine's grid cell center (from stored corners when present, else its GPS). */
+  function ownCellCenter(m) {
+    const c = findCorners(m);
+    if (c && c.path && c.path.length >= 3) {
+      const la = c.path.map(q => q.lat), lo = c.path.map(q => q.lng);
+      return { lat: (Math.min(...la) + Math.max(...la)) / 2, lng: (Math.min(...lo) + Math.max(...lo)) / 2 };
+    }
+    return mineMapCenterGps(m);
+  }
   async function loadNearbyFor(mine) {
     const c = mineMapCenterGps(mine); const map = mineMapInstance;
     if (!c || !map) return;
@@ -1631,7 +1642,7 @@
     catch (e) { if (seq === nearbySeq) { nearbyStatus('Could not load nearby mines'); nearbyOverlayMsg('Could not load nearby mines', 'error'); } console.warn('[nearby] load failed:', e); return; }
     if (seq !== nearbySeq || !nearbyOn) { nearbyOverlayMsg(''); return; }
     const own = new Set();
-    (allMines || []).forEach(m => { const g = mineMapCenterGps(m); if (g) own.add(nearbyKey(g.lat, g.lng)); });
+    (allMines || []).forEach(m => { const g = ownCellCenter(m); if (g) own.add(nearbyKey(g.lat, g.lng)); });
     const list = [];
     (data.properties || []).forEach(p => {
       const lat = Number(p.lat), lng = Number(p.lng);
