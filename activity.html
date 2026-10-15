@@ -298,6 +298,10 @@
       margin-bottom: 6px;
     }
     .vo-owner-reply-icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .vo-owner-reply-label { gap: 8px; line-height: 1.2; }
+    .vo-reply-avatar { width:32px; height:32px; border-radius:50%; flex:0 0 32px; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; background:#e3edf8; border:1px solid rgba(30,136,229,.35); color:#1e88e5; font-size:12px; font-weight:700; }
+    .vo-reply-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+    html[data-theme="dusk"] .vo-reply-avatar, html[data-theme="mine"] .vo-reply-avatar { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.35); color:#c5ced8; }
     .vo-owner-reply-text {
       font-size: 14px;
       color: var(--text-dark);
@@ -4179,6 +4183,10 @@
         if (span) span.textContent = '@' + nick + ' reply' + (dateStr ? ' (' + dateStr + ')' : '');
       });
     }
+    document.querySelectorAll('.vo-owner-reply' + sel + ' .vo-reply-avatar').forEach(el => {
+      const n = (prof && prof.nickname) || el.closest('.vo-owner-reply').getAttribute('data-owner-nick') || '';
+      setAvatarBox(el, (prof && prof.avatarUrl) || '', initials(n || '?'));
+    });
     if (mineTipTarget && mineTip && mineTip.style.display === 'block'
       && mineTipTarget.getAttribute('data-owner-id') === uid) {
       showMineTip(mineTipTarget);
@@ -4539,6 +4547,16 @@
     } catch (e) { t = 0; }
     return isFinite(t) && t > 0 ? t : 0;
   }
+  // Oct 15, 2026: replying owner's avatar (publicProfiles cache, same as other avatars; initials fallback).
+  function replyAvatarHtml(oid, nick) {
+    const init = initials(nick || '?');
+    const prof = cachedPublicProfile(oid);
+    const url = (prof && prof.avatarUrl) || '';
+    const inner = url
+      ? '<img src="' + escapeHtml(url) + '" alt="" loading="lazy" decoding="async" onerror="var p=this.parentNode;if(p)p.textContent=p.getAttribute(\'data-initials\')||\'?\';">'
+      : escapeHtml(init);
+    return '<span class="vo-reply-avatar" aria-hidden="true" data-initials="' + escapeHtml(init) + '">' + inner + '</span>';
+  }
   function ownerReplyHtml(v, mine) {
     const text = ownerReplyText(v);
     if (!text) return '';
@@ -4550,7 +4568,7 @@
     const oid = ownerIdOf(mine, v) || '';
     return '<div class="vo-owner-reply" data-owner-id="' + escapeHtml(oid) + '" data-owner-nick="' + escapeHtml(nick || '') + '" data-reply-date="' + escapeHtml(dateStr) + '">'
       + '<div class="vo-owner-reply-label">'
-      + '<svg class="vo-owner-reply-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>'
+      + replyAvatarHtml(oid, nick)
       + '<span>' + escapeHtml(label) + '</span></div>'
       + '<div class="vo-owner-reply-text">' + escapeHtml(text) + '</div>'
       + '</div>';
