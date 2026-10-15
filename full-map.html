@@ -4,6 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script src="/js/tm-names.js?v=20261015-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -1766,7 +1767,7 @@
       const jobs = [];
       if (info.ownerId) {
         if (!nearbyProfiles.has(info.ownerId)) nearbyProfiles.set(info.ownerId, db.collection('publicProfiles').doc(info.ownerId).get().then(s => s.exists ? s.data() : null).catch(e => { console.warn('[nearby] publicProfiles read failed:', e); return null; }));
-        jobs.push(nearbyProfiles.get(info.ownerId).then(pp => { if (pp) { info.nick = pp.nickname || pp.displayName || pp.name || info.nick; const u = String(pp.avatarUrl || ''); if (u.startsWith('https://')) info.avatar = u; } }));
+        jobs.push(nearbyProfiles.get(info.ownerId).then(pp => { if (pp) { info.nick = (window.TMName ? TMName.resolve(pp, 'publicProfiles') : pp.nickname) || info.nick; const u = String(pp.avatarUrl || ''); if (u.startsWith('https://')) info.avatar = u; } }));
       }
       jobs.push(db.collection('propertyDetails').doc(info.id).get().then(s => { const dd = (s.exists && s.data()) || {}; if (typeof dd.greeting === 'string') info.greeting = dd.greeting; if (dd.customName) info.name = String(dd.customName); }).catch(e => console.warn('[nearby] propertyDetails read failed:', e)));
       await Promise.all(jobs);
@@ -1784,7 +1785,7 @@
     const pr = nearbyInfo.get(nearbyKey(m.lat, m.lng));
     let info = null, pending = false;
     if (pr && pr.__done) info = pr.__val; else if (!nearbyLookupBlocked) pending = true;
-    const nick = info && info.nick ? '@' + info.nick : (pending ? 'Loading owner\u2026' : 'Owner unavailable');
+    const nick = info && info.nick ? '@' + info.nick : (pending ? 'Loading owner\u2026' : (info && info.ownerId ? 'Unknown' : 'Owner unavailable'));
     const init = (info && info.nick ? info.nick : '?').replace(/^@/, '').slice(0, 2).toUpperCase();
     const av = info && info.avatar ? '<img src="' + nearbyEsc(info.avatar) + '" alt="">' : nearbyEsc(init);
     tip.innerHTML = '<div class="nearby-tip-head"><span class="nearby-tip-av">' + av + '</span><div><div class="nearby-tip-nick">' + nearbyEsc(nick) + '</div>'

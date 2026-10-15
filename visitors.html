@@ -4,6 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
+  <script src="/js/tm-names.js?v=20261015-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
   (function () {
@@ -3866,7 +3867,7 @@
   let publicProfileDeniedNoted = false;
   function normalizePublicProfile(p) {
     if (!p || typeof p !== 'object') return null;
-    const nick = (typeof p.nickname === 'string') ? p.nickname.trim().replace(/^@+/, '') : '';
+    const nick = (window.TMName ? TMName.resolve(p, 'publicProfiles') : ((typeof p.nickname === 'string') ? p.nickname.trim().replace(/^@+/, '') : ''));
     const url = (typeof p.avatarUrl === 'string') ? p.avatarUrl.trim() : '';
     const cnt = Number(p.propertyCount);
     return {
