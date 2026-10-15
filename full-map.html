@@ -1778,17 +1778,21 @@
       onProgress(Math.min(i + 30, keys.length));
     }
   }
+  // Profiles: individual get() per owner (a documentId 'in' list query on publicProfiles is
+  // not allowed by rules; single gets are). Max 8 in flight. Failures are NOT cached.
+  function nearbyGetProfile(u) {
+    if (nearbyProfiles.has(u)) return nearbyProfiles.get(u);
+    const pr = db.collection('publicProfiles').doc(u).get()
+      .then(s => { const v = s.exists ? (s.data() || {}) : null; pr.__val = v; pr.__done = true; return v; })
+      .catch(e => { console.warn('[nearby] publicProfiles/' + u + ' read failed:', e); nearbyProfiles.delete(u); return null; });
+    nearbyProfiles.set(u, pr);
+    return pr;
+  }
   async function nearbyBatchProfiles(uids) {
     const need = uids.filter(u => u && !nearbyProfiles.has(u));
-    const FP = firebase.firestore.FieldPath.documentId();
-    for (let i = 0; i < need.length; i += 30) {
-      const chunk = need.slice(i, i + 30);
-      const pr = db.collection('publicProfiles').where(FP, 'in', chunk).get()
-        .then(s => new Map(s.docs.map(d => [d.id, d.data()])))
-        .catch(e => { console.warn('[nearby] publicProfiles batch read failed:', e); return new Map(); });
-      chunk.forEach(u => nearbyProfiles.set(u, pr.then(m => m.get(u) || null)));
-      await pr;
-    }
+    let i = 0;
+    const worker = async () => { while (i < need.length) { const u = need[i++]; await nearbyGetProfile(u); } };
+    await Promise.all(Array.from({ length: Math.min(8, need.length) }, worker));
   }
   function nearbyPanelEl() {
     let el = $('nearby-owners');
@@ -1861,7 +1865,7 @@
     await nearbyBatchProps(keys, seq, done => {
       if (seq !== nearbyPanelSeq) return;
       const uids = Array.from(new Set(nearbyDrawnList.map(o => nearbyOwnerOf(o.key)).filter(Boolean)));
-      lastProf = nearbyBatchProfiles(uids).then(() => Promise.all(uids.map(u => { const p = nearbyProfiles.get(u); return p && p.then(v => { p.__val = v; }); })))
+      lastProf = nearbyBatchProfiles(uids)
         .then(() => { if (seq === nearbyPanelSeq) nearbyPanelRender(); });
       nearbyPanelRender(done < keys.length ? 'Resolving owners ' + (base + done) + '/' + total + '\u2026' : '');
       if (nearbySel) nearbyApplySel();
@@ -1906,8 +1910,7 @@
       const info = { id: best.id, name: titleOf({ id: best.id, ...d, _details: {} }), ownerId: d.ownerId || '', nick: d.ownerNickname || d.ownerName || d.propertyOwnerNickname || '', avatar: '', greeting: '' };
       const jobs = [];
       if (info.ownerId) {
-        if (!nearbyProfiles.has(info.ownerId)) nearbyProfiles.set(info.ownerId, db.collection('publicProfiles').doc(info.ownerId).get().then(s => s.exists ? s.data() : null).catch(e => { console.warn('[nearby] publicProfiles read failed:', e); return null; }));
-        jobs.push(nearbyProfiles.get(info.ownerId).then(pp => { if (pp) { info.nick = (window.TMName ? TMName.resolve(pp, 'publicProfiles') : pp.nickname) || info.nick; const u = String(pp.avatarUrl || ''); if (u.startsWith('https://')) info.avatar = u; } }));
+        jobs.push(nearbyGetProfile(info.ownerId).then(pp => { if (pp) { info.nick = (window.TMName ? TMName.resolve(pp, 'publicProfiles') : pp.nickname) || info.nick; const u = String(pp.avatarUrl || ''); if (u.startsWith('https://')) info.avatar = u; } }));
       }
       jobs.push(db.collection('propertyDetails').doc(info.id).get().then(s => { const dd = (s.exists && s.data()) || {}; if (typeof dd.greeting === 'string') info.greeting = dd.greeting; if (dd.customName) info.name = String(dd.customName); }).catch(e => console.warn('[nearby] propertyDetails read failed:', e)));
       await Promise.all(jobs);
