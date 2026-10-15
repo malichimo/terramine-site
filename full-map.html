@@ -56,6 +56,27 @@
     .nearby-loading.is-error { background:rgba(153,27,27,.92); }
     .nearby-spin { width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.3); border-top-color:#F9B95A; animation:nearbySpin .8s linear infinite; }
     @keyframes nearbySpin { to { transform:rotate(360deg); } }
+    .nearby-owners { position:absolute; left:10px; top:10px; bottom:34px; width:250px; z-index:25; display:flex; flex-direction:column; background:#fff; border:1px solid #d0d5dc; border-radius:10px; box-shadow:0 8px 24px rgba(13,27,42,.18); overflow:hidden; font-size:13px; color:#1f2937; }
+    .nearby-owners[hidden] { display:none; }
+    .nearby-owners.is-collapsed { bottom:auto; }
+    .nearby-owners.is-collapsed .nearby-owners-list, .nearby-owners.is-collapsed .nearby-owners-foot, .nearby-owners.is-collapsed .nearby-owners-prog { display:none; }
+    .nearby-owners-head { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:#133665; color:#fff; font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:.06em; border-bottom:2px solid rgba(0,0,0,.15); }
+    .nearby-owners-btns button { background:transparent; border:1px solid rgba(255,255,255,.35); color:#fff; width:22px; height:22px; border-radius:6px; margin-left:4px; cursor:pointer; line-height:1; font-size:14px; padding:0; }
+    .nearby-owners-prog { padding:4px 10px; font-size:12px; color:#6b7280; min-height:0; }
+    .nearby-owners-prog:empty { display:none; }
+    .nearby-owners-list { flex:1; overflow-y:auto; padding:4px 0; }
+    .nearby-owner { display:flex; align-items:center; gap:8px; padding:5px 10px; cursor:pointer; }
+    .nearby-owner:hover { background:rgba(168,85,247,.08); }
+    .nearby-owner.is-sel { background:rgba(168,85,247,.18); box-shadow:inset 3px 0 0 #a855f7; }
+    .nearby-owner-av { width:26px; height:26px; flex:0 0 26px; border-radius:6px; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; background:#F9B95A; color:#7a2e00; font-size:11px; font-weight:700; border:1px solid #E65100; box-sizing:border-box; }
+    .nearby-owner-av img { width:100%; height:100%; object-fit:cover; display:block; }
+    .nearby-owner-nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+    .nearby-owner-n { font-weight:700; color:#E65100; }
+    .nearby-owners-empty { padding:8px 10px; color:#6b7280; }
+    .nearby-owners-foot { padding:6px 10px; font-size:11px; color:#6b7280; border-top:1px solid #e5e7eb; }
+    html[data-theme="dusk"] .nearby-owners, html[data-theme="mine"] .nearby-owners { background:rgba(15,30,52,.96); border-color:rgba(143,179,217,.35); color:#e2e8f0; }
+    html[data-theme="dusk"] .nearby-owners-foot, html[data-theme="mine"] .nearby-owners-foot, html[data-theme="dusk"] .nearby-owners-prog, html[data-theme="mine"] .nearby-owners-prog { color:#9fb3c8; border-color:rgba(143,179,217,.2); }
+    html[data-theme="dusk"] .nearby-owner-n, html[data-theme="mine"] .nearby-owner-n { color:#fdba74; }
 </style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -1608,6 +1629,7 @@
   function clearNearby() {
     nearbyOverlayMsg('');
     nearbyOverlays.forEach(o => { try { o.setMap(null); } catch (e) {} }); nearbyOverlays = []; nearbyDrawn = new Set();
+    nearbyDrawnList = []; nearbySel = null; nearbyPanelSeq++; nearbyPanelHide();
     if (nearbyCircle) { try { nearbyCircle.setMap(null); } catch (e) {} nearbyCircle = null; }
     nearbyStatus('');
   }
@@ -1666,6 +1688,7 @@
       rect.addListener('mousemove', e => moveMineMapHoverTip(e));
       rect.addListener('mouseout', () => { nearbyHover = null; hideMineMapHoverTip(); });
       nearbyOverlays.push(rect);
+      nearbyDrawnList.push({ m, rect, key: k });
     };
     nearbyOverlayMsg('Drawing ' + shown.length.toLocaleString('en-US') + ' nearby mines\u2026', 'busy');
     for (let i = 0; i < shown.length; i += 250) {          // chunked so the UI stays responsive
@@ -1675,6 +1698,7 @@
     }
     if (seq !== nearbySeq || !nearbyOn) { nearbyOverlayMsg(''); return; }
     nearbyOverlayMsg('');
+    try { nearbyPanelResolve(); } catch (e) { console.warn('[nearby] owners panel failed:', e); }
     const tot = nearbyDrawn.size;
     nearbyStatus(tot.toLocaleString('en-US') + ' nearby mine' + (tot === 1 ? '' : 's') + ' (+' + shown.length.toLocaleString('en-US') + ' new)'
       + (list.length > shown.length ? ' \u00b7 ' + NEARBY_MAX_DRAW.toLocaleString('en-US') + ' max reached' : '')
@@ -1730,6 +1754,121 @@
     }
     return null;
   }
+  // ── Unique Nearby Owners panel (Oct 15, 2026) ──────────────────────────
+  // Reads: properties docs by grid id, batched 30 per Firestore 'in' query on documentId
+  // (1 read per doc found, min 1 per query); publicProfiles by owner uid, batched 30 per query
+  // (1 read per owner). Both cached for the page session and shared with the hover popup.
+  let nearbyDrawnList = [], nearbySel = null, nearbyPanelSeq = 0, nearbyPanelCollapsed = false;
+  const nearbyDocCache = new Map();   // cell key -> { id, data } | null
+  const NEARBY_SEL = { fill: '#a855f7', stroke: '#6b21a8' };
+  function nearbyCellId(key) { const [i, j] = key.split(','); return i + '_' + j; }
+  async function nearbyBatchProps(keys, seq, onProgress) {
+    const FP = firebase.firestore.FieldPath.documentId();
+    for (let i = 0; i < keys.length; i += 30) {
+      if (seq !== nearbyPanelSeq) return;
+      const chunk = keys.slice(i, i + 30), ids = chunk.map(nearbyCellId);
+      try {
+        const snap = await db.collection('properties').where(FP, 'in', ids).get();
+        const got = new Map(snap.docs.map(d => [d.id, { id: d.id, data: d.data() || {} }]));
+        chunk.forEach(k => nearbyDocCache.set(k, got.get(nearbyCellId(k)) || null));
+      } catch (e) {
+        console.warn('[nearby] properties batch read failed:', e);
+        chunk.forEach(k => { if (!nearbyDocCache.has(k)) nearbyDocCache.set(k, null); });
+      }
+      onProgress(Math.min(i + 30, keys.length));
+    }
+  }
+  async function nearbyBatchProfiles(uids) {
+    const need = uids.filter(u => u && !nearbyProfiles.has(u));
+    const FP = firebase.firestore.FieldPath.documentId();
+    for (let i = 0; i < need.length; i += 30) {
+      const chunk = need.slice(i, i + 30);
+      const pr = db.collection('publicProfiles').where(FP, 'in', chunk).get()
+        .then(s => new Map(s.docs.map(d => [d.id, d.data()])))
+        .catch(e => { console.warn('[nearby] publicProfiles batch read failed:', e); return new Map(); });
+      chunk.forEach(u => nearbyProfiles.set(u, pr.then(m => m.get(u) || null)));
+      await pr;
+    }
+  }
+  function nearbyPanelEl() {
+    let el = $('nearby-owners');
+    if (el) return el;
+    const host = $('mine-map-body'); if (!host) return null;
+    el = document.createElement('div'); el.id = 'nearby-owners'; el.className = 'nearby-owners'; el.hidden = true;
+    el.innerHTML = '<div class="nearby-owners-head"><span>Unique Nearby Owners</span><span class="nearby-owners-btns">'
+      + '<button type="button" class="nearby-owners-tgl" aria-label="Collapse">\u2212</button><button type="button" class="nearby-owners-x" aria-label="Close">\u00d7</button></span></div>'
+      + '<div class="nearby-owners-prog"></div><div class="nearby-owners-list" role="listbox" aria-label="Nearby owners"></div>'
+      + '<div class="nearby-owners-foot">Select an owner to highlight their mines on the map in purple.</div>';
+    host.appendChild(el);
+    el.querySelector('.nearby-owners-x').addEventListener('click', () => { el.hidden = true; nearbyPanelClosed = true; });
+    el.querySelector('.nearby-owners-tgl').addEventListener('click', () => { nearbyPanelCollapsed = !nearbyPanelCollapsed; el.classList.toggle('is-collapsed', nearbyPanelCollapsed); el.querySelector('.nearby-owners-tgl').textContent = nearbyPanelCollapsed ? '+' : '\u2212'; });
+    el.querySelector('.nearby-owners-list').addEventListener('click', e => {
+      const row = e.target.closest('.nearby-owner'); if (!row) return;
+      const u = row.getAttribute('data-owner');
+      nearbySel = nearbySel === u ? null : u;
+      nearbyApplySel(); nearbyPanelRender();
+    });
+    ['mousedown', 'dblclick', 'wheel', 'contextmenu'].forEach(ev => el.addEventListener(ev, e => e.stopPropagation()));
+    return el;
+  }
+  let nearbyPanelClosed = false;
+  function nearbyPanelHide() { const el = $('nearby-owners'); if (el) el.hidden = true; nearbyPanelClosed = false; }
+  function nearbyOwnerOf(key) {
+    const d = nearbyDocCache.get(key);
+    return d && d.data && d.data.ownerId ? String(d.data.ownerId) : '';
+  }
+  function nearbyApplySel() {
+    nearbyDrawnList.forEach(o => {
+      const on = nearbySel && (nearbySel === '__unknown' ? (nearbyDocCache.has(o.key) && !nearbyOwnerOf(o.key)) : nearbyOwnerOf(o.key) === nearbySel);
+      o.rect.setOptions(on ? { fillColor: NEARBY_SEL.fill, strokeColor: NEARBY_SEL.stroke, fillOpacity: 0.85, zIndex: 2 } : { fillColor: '#F9B95A', strokeColor: '#E65100', fillOpacity: 0.7, zIndex: 1 });
+    });
+  }
+  function nearbyPanelRender(progress) {
+    const el = nearbyPanelEl(); if (!el) return;
+    if (!nearbyDrawnList.length || !nearbyOn) { el.hidden = true; return; }
+    if (!nearbyPanelClosed) el.hidden = false;
+    if (progress != null) el.querySelector('.nearby-owners-prog').textContent = progress;
+    const counts = new Map(); let unknown = 0;
+    const me = (auth.currentUser && auth.currentUser.uid) || '';
+    nearbyDrawnList.forEach(o => {
+      if (!nearbyDocCache.has(o.key)) return;
+      const u = nearbyOwnerOf(o.key);
+      if (u && u === me) return;                       // own mine at that cell: not a nearby owner
+      if (u) counts.set(u, (counts.get(u) || 0) + 1); else unknown++;
+    });
+    const rows = [];
+    for (const [u, n] of counts) {
+      const pp = nearbyProfiles.get(u); const prof = pp && pp.__val;
+      const nm = (prof && window.TMName ? TMName.resolve(prof, 'publicProfiles') : '') || u;
+      const url = prof && typeof prof.avatarUrl === 'string' && prof.avatarUrl.startsWith('https://') ? prof.avatarUrl : '';
+      rows.push({ u, n, nm, url });
+    }
+    rows.sort((x, y) => y.n - x.n || x.nm.localeCompare(y.nm, undefined, { sensitivity: 'base' }));
+    const row = r => '<div class="nearby-owner' + (nearbySel === r.u ? ' is-sel' : '') + '" role="option" aria-selected="' + (nearbySel === r.u) + '" data-owner="' + nearbyEsc(r.u) + '">'
+      + '<span class="nearby-owner-av">' + (r.url ? '<img src="' + nearbyEsc(r.url) + '" alt="">' : nearbyEsc(r.u === '__unknown' ? '?' : (r.nm || '?').slice(0, 2).toUpperCase())) + '</span>'
+      + '<span class="nearby-owner-nm" title="' + nearbyEsc(r.nm) + '">' + nearbyEsc(r.u === '__unknown' ? r.nm : (r.nm === r.u ? r.u : '@' + r.nm)) + '</span>'
+      + '<span class="nearby-owner-n">' + r.n + '</span></div>';
+    let html = rows.map(row).join('');
+    if (unknown) html += row({ u: '__unknown', n: unknown, nm: 'Unknown owner (' + unknown + ')', url: '' });
+    el.querySelector('.nearby-owners-list').innerHTML = html || '<div class="nearby-owners-empty">Resolving\u2026</div>';
+  }
+  async function nearbyPanelResolve() {
+    const seq = ++nearbyPanelSeq;
+    const keys = nearbyDrawnList.map(o => o.key).filter(k => !nearbyDocCache.has(k));
+    const total = nearbyDrawnList.length, base = total - keys.length;
+    nearbyPanelRender(keys.length ? 'Resolving owners ' + base + '/' + total + '\u2026' : '');
+    let lastProf = Promise.resolve();
+    await nearbyBatchProps(keys, seq, done => {
+      if (seq !== nearbyPanelSeq) return;
+      const uids = Array.from(new Set(nearbyDrawnList.map(o => nearbyOwnerOf(o.key)).filter(Boolean)));
+      lastProf = nearbyBatchProfiles(uids).then(() => Promise.all(uids.map(u => { const p = nearbyProfiles.get(u); return p && p.then(v => { p.__val = v; }); })))
+        .then(() => { if (seq === nearbyPanelSeq) nearbyPanelRender(); });
+      nearbyPanelRender(done < keys.length ? 'Resolving owners ' + (base + done) + '/' + total + '\u2026' : '');
+      if (nearbySel) nearbyApplySel();
+    });
+    await lastProf;
+    if (seq === nearbyPanelSeq) { nearbyPanelRender(''); if (nearbySel) nearbyApplySel(); }
+  }
   function nearbyLookup(m) {
     const key = nearbyKey(m.lat, m.lng);
     if (nearbyInfo.has(key)) return nearbyInfo.get(key);
@@ -1741,7 +1880,8 @@
       let best = null;
       // 1) Direct get: property doc ids encode the cell, e.g. "422013_-855973" = floor(lat*1e4)_floor(lng*1e4).
       const [ci, cj] = want.split(',');
-      for (const id of [ci + '_' + cj]) {
+      if (nearbyDocCache.has(want)) best = nearbyDocCache.get(want);
+      for (const id of (best || nearbyDocCache.has(want)) ? [] : [ci + '_' + cj]) {
         try {
           const s = await db.collection('properties').doc(id).get();
           if (s.exists) { best = { id: s.id, data: s.data() || {} }; break; }
