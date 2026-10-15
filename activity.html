@@ -4513,6 +4513,21 @@
       return '';
     }
   }
+  /** Reply date as ms (Firestore Timestamp / {seconds} / {_seconds} / s or ms number / ISO or date string); 0 if none. */
+  function ownerReplyMs(v) {
+    const val = ownerReplyDate(v);
+    if (val == null || val === '') return 0;
+    let t = 0;
+    try {
+      if (typeof val.toDate === 'function') t = val.toDate().getTime();
+      else if (typeof val.toMillis === 'function') t = val.toMillis();
+      else if (typeof val === 'object' && (val.seconds != null || val._seconds != null)) t = Number(val.seconds != null ? val.seconds : val._seconds) * 1000;
+      else if (val instanceof Date) t = val.getTime();
+      else if (typeof val === 'number') t = val < 1e12 ? val * 1000 : val;
+      else if (typeof val === 'string') t = /^\d+$/.test(val.trim()) ? (Number(val) < 1e12 ? Number(val) * 1000 : Number(val)) : Date.parse(val);
+    } catch (e) { t = 0; }
+    return isFinite(t) && t > 0 ? t : 0;
+  }
   function ownerReplyHtml(v, mine) {
     const text = ownerReplyText(v);
     if (!text) return '';
@@ -4599,9 +4614,6 @@
         return name.includes(q) || mine.includes(q) || msg.includes(q) || reply.includes(q);
       });
     }
-    if (sortKey === 'replies') {
-      list = list.filter(v => !!ownerReplyText(v));
-    }
     const dir = sortDir;
     list.sort((a, b) => {
       const ma = mineMap[a.propertyId] || {};
@@ -4613,7 +4625,16 @@
         return cmpStr(visitorName(a), visitorName(b), dir);
       }
       if (sortKey === 'replies') {
-        return cmpStr(ownerReplyText(a), ownerReplyText(b), dir);
+        // Oct 15, 2026: by reply date (same field as the displayed reply date).
+        // dir>0 newest reply first; cards without a reply always last; ties by visit date desc.
+        const ha = !!ownerReplyText(a), hb = !!ownerReplyText(b);
+        if (ha !== hb) return ha ? -1 : 1;
+        if (ha) {
+          const ra = ownerReplyMs(a), rb = ownerReplyMs(b);
+          if (!ra !== !rb) return ra ? -1 : 1;          // replied but undated after dated
+          if (ra !== rb) return (rb - ra) * (dir > 0 ? 1 : -1);
+        }
+        return visitorTsMillis(b.timestamp) - visitorTsMillis(a.timestamp);
       }
       // date (default): dir>0 newest first
       const tA = visitorTsMillis(a.timestamp);
