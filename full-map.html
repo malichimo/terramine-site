@@ -4,7 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
-  <script src="/js/tm-pioneer.js?v=20261015-1"></script>
+  <script src="/js/tm-pioneer.js?v=20261016-1"></script>
   <script src="/js/tm-names.js?v=20261015-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
@@ -1603,13 +1603,13 @@
   }
   // Oct 15, 2026: Nearby is a private test feature: ONLY on mars.baronstoolbox.com and ONLY for
   // these nicknames (the same header nickname: users.nickname || displayName || email local part),
-  // compared case-SENSITIVELY (exact) after trimming and dropping a leading '@'. Pioneer Pass is forced on for them.
+  // compared case-insensitively after trimming and dropping a leading '@'. Pioneer Pass is forced on for them.
   const NEARBY_HOST = 'mars.baronstoolbox.com';
-  const NEARBY_TESTERS = ['nfoGuides', 'FoggyTick'];   // case-sensitive exact match
+  const NEARBY_TESTERS = ['nfoguides', 'foggytick', 'bigglare'];   // fallback only; TMPioneer is the source of truth (case-insensitive)
   let nearbyAllowed = false;
   function setNearbyAccess(ud, uid, nick) {
     const n = String(nick || '').trim().replace(/^@+/, '');
-    nearbyAllowed = window.TMPioneer ? TMPioneer.isTester(ud, auth.currentUser) : (location.hostname === NEARBY_HOST && NEARBY_TESTERS.indexOf(n) !== -1);
+    nearbyAllowed = window.TMPioneer ? TMPioneer.isTester(ud, auth.currentUser) : (location.hostname === NEARBY_HOST && NEARBY_TESTERS.indexOf(String(n).toLowerCase()) !== -1);
     const btn = $('mine-map-nearby'); if (btn) btn.hidden = !nearbyAllowed;
     if (!nearbyAllowed) { nearbyUnlocked = false; if (nearbyOn) { nearbyOn = false; clearNearby(); } updateNearbyBtn(); return; }
     nearbyUnlocked = window.TMPioneer ? TMPioneer.isMember(ud, auth.currentUser) : true;   // testers: forced Pioneer Pass
