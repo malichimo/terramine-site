@@ -534,10 +534,21 @@
 
     // Resolve nickname + referralCode — one getDoc per DISTINCT userId, cached across reloads.
     const uniqueUserIds = [...new Set(raw.map(r => r.userId).filter(Boolean))];
+    // Oct 17, 2026: a failed lookup used to be cached as "first 8 chars of the uid + 0 referrals"
+    // for the whole session, so one transient read error made a 236-referral account look like a
+    // brand-new one until a hard reload. Now: retry once, and if it still fails, DON'T cache it —
+    // the row is flagged lookupFailed so it shows a warning (never a fake "0 referrals") and the
+    // next reload tries again.
+    const lookupFailed = new Set();
     await Promise.all(uniqueUserIds.map(async (uid) => {
       if (nicknameCache.has(uid)) return;
       try {
-        const uSnap = await getDoc(doc(db, 'users', uid));
+        let uSnap;
+        try { uSnap = await getDoc(doc(db, 'users', uid)); }
+        catch (firstErr) {
+          await new Promise(res => setTimeout(res, 400));
+          uSnap = await getDoc(doc(db, 'users', uid));
+        }
         const udata = uSnap.exists() ? uSnap.data() : null;
         nicknameCache.set(uid, (udata && udata.nickname) || uid.substring(0, 8));
         referralCodeCache.set(uid, (udata && udata.referralCode) || null);
@@ -546,12 +557,8 @@
         accountFraudCheckedByCache.set(uid, (udata && udata.referralFraudCheckedBy) || null);
         accountFraudCheckedRefCountCache.set(uid, (udata && udata.referralFraudCheckedAtReferralCount) ?? null);
       } catch (e) {
-        nicknameCache.set(uid, uid.substring(0, 8));
-        referralCodeCache.set(uid, null);
-        referralCountCache.set(uid, 0);
-        accountFraudCheckedAtCache.set(uid, null);
-        accountFraudCheckedByCache.set(uid, null);
-        accountFraudCheckedRefCountCache.set(uid, null);
+        console.warn('user lookup failed for', uid, e);
+        lookupFailed.add(uid);
       }
     }));
 
@@ -573,7 +580,8 @@
     allRequests = raw.map(r => ({
       ...r,
       referralSignups: referralSignupCache.get(r.userId) ?? null,
-      nickname: nicknameCache.get(r.userId) || '—',
+      lookupFailed: lookupFailed.has(r.userId) || !nicknameCache.has(r.userId),
+      nickname: nicknameCache.get(r.userId) || (r.userId ? r.userId.substring(0, 8) : '—'),
       referralCode: referralCodeCache.get(r.userId) || null,
       referralCount: referralCountCache.get(r.userId) ?? 0,
       accountFraudCheckedAt: accountFraudCheckedAtCache.get(r.userId) || null,
@@ -753,6 +761,9 @@
     return `👥 ${count} referral${count === 1 ? '' : 's'}`;
   }
   function renderReferralCodeRow(r) {
+    if (r.lookupFailed) {
+      return `<div class="ref-code-row"><span class="ref-count rc-high" title="The user record could not be read, so nickname, referral code and referral count are unknown. Reload the page; do not treat this as 0 referrals.">⚠️ lookup failed — reload</span></div>`;
+    }
     const count = r.referralCount || 0;
     const signups = (typeof r.referralSignups === 'number') ? r.referralSignups : null;
     const signupBadge = signups === null ? '' :
