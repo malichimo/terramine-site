@@ -188,7 +188,8 @@
   .td-gold { color:var(--gold-light); font-weight:500; }
   .td-green { color:var(--green); }
   .td-red { color:var(--red); }
-  .ref-code { font-size:10px; color:var(--text-muted); letter-spacing:0.5px; }
+  /* Oct 16, 2026 (Scott): referral code made much larger so it can be read at a glance. */
+  .ref-code { font-size:15px; font-weight:700; color:var(--text); letter-spacing:0.8px; }
   .ref-code-row { display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap; }
   .ref-count { font-size:10px; white-space:nowrap; }
   .ref-count.rc-zero { color:var(--text-muted); opacity:0.55; }
@@ -421,7 +422,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
-    getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy
+    getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy, where, getCountFromServer
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
   import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
@@ -452,6 +453,11 @@
   let searchQuery = '';       // lowercased, matched against amount/date/email/referralCode
   const nicknameCache = new Map();     // userId -> nickname, avoids refetching for repeat requesters
   const referralCodeCache = new Map(); // userId -> referralCode, fetched alongside nickname (same doc read)
+  // Oct 16, 2026 (Scott): users.referralCount only goes up when a referral's reward is processed, so it
+  // under-counts (TM-GGKK8 showed 36, but 55 people had signed up with the code). This is the TOTAL who
+  // signed up with the requester's code: count of users whose referredByCode == their referralCode.
+  // One cheap aggregate read per requester with an OPEN request; cached for the session.
+  const referralSignupCache = new Map(); // userId -> total signed up under their code (or null if unknown)
   const referralCountCache = new Map(); // userId -> referralCount, fetched alongside nickname (same doc read,
                                          // zero extra Firestore cost) — added Sept 9, 2026 so a redemption's
                                          // referral count is visible at a glance without running
@@ -549,8 +555,24 @@
       }
     }));
 
+    // Total sign-ups under each open requester's code (aggregate count queries, run in parallel).
+    const openUserIds = [...new Set(raw.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').map(r => r.userId).filter(Boolean))];
+    await Promise.all(openUserIds.map(async (uid) => {
+      if (referralSignupCache.has(uid)) return;
+      const code = referralCodeCache.get(uid);
+      if (!code) { referralSignupCache.set(uid, null); return; }
+      try {
+        const c = await getCountFromServer(query(collection(db, 'users'), where('referredByCode', '==', code)));
+        referralSignupCache.set(uid, c.data().count);
+      } catch (e) {
+        console.warn('signup count failed for', uid, e);
+        referralSignupCache.set(uid, null);
+      }
+    }));
+
     allRequests = raw.map(r => ({
       ...r,
+      referralSignups: referralSignupCache.get(r.userId) ?? null,
       nickname: nicknameCache.get(r.userId) || '—',
       referralCode: referralCodeCache.get(r.userId) || null,
       referralCount: referralCountCache.get(r.userId) ?? 0,
@@ -732,10 +754,13 @@
   }
   function renderReferralCodeRow(r) {
     const count = r.referralCount || 0;
+    const signups = (typeof r.referralSignups === 'number') ? r.referralSignups : null;
+    const signupBadge = signups === null ? '' :
+      ` <span class="ref-count ${referralCountLevel(signups)}" title="Total users who signed up with this code (users.referredByCode). The first number only counts referrals whose reward was processed.">· ${signups} signed up</span>`;
     return `
       <div class="ref-code-row">
         ${r.referralCode ? `<span class="ref-code">${escHtml(r.referralCode)}</span>` : ''}
-        <span class="ref-count ${referralCountLevel(count)}">${referralCountLabel(count)}</span>
+        <span class="ref-count ${referralCountLevel(Math.max(count, signups || 0))}">${referralCountLabel(count)}</span>${signupBadge}
         ${r.referralCode ? `<button class="ref-count-copy" title="Copy referral code for checkReferralFraud.ts" onclick="copyToClipboard('${escAttr(r.referralCode)}', this)">📋</button>` : ''}
       </div>`;
   }
