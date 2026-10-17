@@ -244,6 +244,17 @@
     .link-code-box { display:none; margin-top:14px; padding:16px; border:2px dashed var(--brown-mid); border-radius:10px; background:var(--off-white); text-align:center; }
     .link-code-value { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:30px; font-weight:700; letter-spacing:5px; color:var(--brown-dark); }
     .link-code-meta { font-size:12px; color:var(--text-mid); margin-top:6px; }
+    .link-duo { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:stretch; }
+    .link-duo-left { min-width:0; }
+    .link-duo-left .link-code-box { margin-top:14px; }
+    .link-calc-go { margin-top:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:14px 12px; border:1px solid var(--brown-light); border-radius:10px; background:rgba(255,255,255,.55); cursor:pointer; transition:background .15s, border-color .15s, box-shadow .15s; }
+    .link-calc-go[hidden] { display:none !important; }
+    .link-calc-go:hover { background:rgba(255,255,255,.9); border-color:var(--brown-mid); box-shadow:0 4px 14px rgba(0,0,0,.08); }
+    .link-calc-go:focus-visible { outline:2px solid var(--brown); outline-offset:2px; }
+    .link-calc-logo { width:96px; height:96px; object-fit:contain; display:block; }
+    .link-calc-name { font-weight:700; font-size:15px; color:var(--text-dark); }
+    .link-calc-sub { font-size:13px; color:var(--text-mid); }
+    @media (max-width: 560px) { .link-duo { grid-template-columns:1fr; } }
     .linked-app { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--brown-light); }
     .linked-app:first-child { border-top:none; }
     .linked-app-name { font-weight:700; color:var(--text-dark); font-size:14px; }
@@ -457,7 +468,7 @@
       max-width:min(280px, calc(100vw - 16px));
     }
 </style>
-  <link rel="stylesheet" href="/portal-theme.css?v=20261009-1" />
+  <link rel="stylesheet" href="/portal-theme.css?v=20261013-1" />
 </head>
 <body class="auth-pending">
 <div class="portalbackground" aria-hidden="true"></div>
@@ -662,13 +673,22 @@
               Connect your account to the TerraMine Calculator. It can see your profile, mines, check-in counts and earnings.
               It can never see your email, phone number or password, and you can unlink it anytime.
             </div>
-            <div class="save-row">
-              <button class="btn-save" id="link-code-btn" onclick="generateLinkCode()">Get a link code</button>
-              <span class="save-status" id="link-code-status"></span>
-            </div>
-            <div class="link-code-box" id="link-code-box">
-              <div class="link-code-value" id="link-code-value"></div>
-              <div class="link-code-meta">Enter this code in the Calculator. It works once and expires in <span id="link-code-timer">10:00</span>.</div>
+            <div class="link-duo">
+              <div class="link-duo-left">
+                <div class="save-row">
+                  <button class="btn-save" id="link-code-btn" onclick="generateLinkCode()">Get a link code</button>
+                  <span class="save-status" id="link-code-status"></span>
+                </div>
+                <div class="link-code-box" id="link-code-box">
+                  <div class="link-code-value" id="link-code-value"></div>
+                  <div class="link-code-meta">Enter this code in the Calculator. It works once and expires in <span id="link-code-timer">10:00</span>.</div>
+                </div>
+              </div>
+              <div class="link-calc-go" id="link-calc-go" role="link" tabindex="0" aria-label="Copy your link code and open TerraMine Calculator" hidden>
+                <img class="link-calc-logo" src="/images/terramine-calculator-logo.png" alt="" width="96" height="96" />
+                <div class="link-calc-name">TerraMine Calculator</div>
+                <div class="link-calc-sub" id="link-calc-sub">Click here to go enter your code.</div>
+              </div>
             </div>
             <div id="linked-apps-list" style="margin-top:16px;"></div>
           </div>
@@ -1278,6 +1298,46 @@
   };
 
   let linkTimer = null;
+  // Calculator shortcut: copy the raw link code (no display space), then open the Calculator.
+  async function copyLinkCodeText(t) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return true; } } catch (e) {}
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = t; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy'); ta.remove(); return ok;
+    } catch (e) { return false; }
+  }
+  function goToCalculator() {
+    const raw = window.__tmLinkCode || ($('link-code-value').textContent || '');
+    const code = String(raw).replace(/\s+/g, '');
+    const URL_CALC = 'https://terraminecalculator.com/premium' + (code ? ('?tmcode=' + encodeURIComponent(code)) : '');
+    // 1) Start the copy synchronously inside the user gesture.
+    let copyP = Promise.resolve(false);
+    if (code) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        copyP = navigator.clipboard.writeText(code).then(() => true, () => copyLinkCodeText(code));
+      } else {
+        copyP = copyLinkCodeText(code);
+      }
+    }
+    // 2) Open the new tab synchronously (same gesture → not popup-blocked); drop opener.
+    let w = null;
+    try { w = window.open(URL_CALC, '_blank'); if (w) { try { w.opener = null; } catch (e) {} } } catch (e) { w = null; }
+    // 3) Feedback on the account page.
+    copyP.then((ok) => {
+      $('link-calc-sub').textContent = ok ? 'Code copied! Calculator opened in a new tab.' : 'Calculator opened in a new tab.';
+      setTimeout(() => { $('link-calc-sub').textContent = 'Click here to go enter your code.'; }, 4000);
+      if (!w) window.location.href = URL_CALC; // popup blocked anyway → same-tab fallback
+    });
+  }
+  (function bindCalcGo() {
+    const el = $('link-calc-go');
+    if (!el) return;
+    el.addEventListener('click', goToCalculator);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToCalculator(); } });
+  })();
+
 
   window.generateLinkCode = async function () {
     const btn = $('link-code-btn');
@@ -1288,6 +1348,8 @@
       const code = r.data.code;
       $('link-code-value').textContent = code.slice(0, 4) + ' ' + code.slice(4);
       $('link-code-box').style.display = 'block';
+      window.__tmLinkCode = String(code);
+      if ($('link-calc-go')) { $('link-calc-go').hidden = false; $('link-calc-sub').textContent = 'Click here to go enter your code.'; }
       const expires = Date.parse(r.data.expiresAt);
       clearInterval(linkTimer);
       const tick = () => {
@@ -1297,6 +1359,8 @@
         if (left <= 0) {
           clearInterval(linkTimer);
           $('link-code-box').style.display = 'none';
+          window.__tmLinkCode = '';
+          if ($('link-calc-go')) $('link-calc-go').hidden = true;
           $('link-code-status').textContent = 'Code expired. Get a new one when you are ready.';
           loadLinkedApps();
         }

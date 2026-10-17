@@ -283,7 +283,7 @@ html[data-theme="mine"] .compare-pill {
   border-color: var(--tm-toolbar-border) !important;
 }
 html[data-theme="dusk"] .dash-share-btn,
-html[data-theme="mine"] .dash-share-btn { color: #354355; }
+html[data-theme="mine"] .dash-share-btn { color: #8fb3d9; }
 
 /* ── Theme toggle pill ────────────────────────────────────────────────────── */
 .theme-toggle {
@@ -387,16 +387,36 @@ html[data-theme="mine"] .dash-share-btn,
 html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn,
 html[data-theme="mine"] .stat-card.has-share > .dash-share-btn {
   background: transparent !important;
-  border-color: #354355 !important;
-  color: #354355 !important;
+  border-color: #8fb3d9 !important;
+  color: #8fb3d9 !important;
 }
 html[data-theme="dusk"] .dash-share-btn:hover,
 html[data-theme="mine"] .dash-share-btn:hover,
 html[data-theme="dusk"] .stat-card.has-share > .dash-share-btn:hover,
 html[data-theme="mine"] .stat-card.has-share > .dash-share-btn:hover {
   background: transparent !important;
-  border-color: #354355 !important;
+  border-color: #ffffff !important;
   color: #fff !important;
+}
+html[data-theme="dusk"] .dash-share-btn:focus-visible,
+html[data-theme="mine"] .dash-share-btn:focus-visible {
+  outline-color: #8fb3d9 !important;
+}
+
+/* B2) Dashboard box title strips — right-side meta ("132 check-ins", area
+   totals) used var(--bg) = near-black in dusk; title text-shadow used
+   var(--brown-dark) = light in dusk (fuzzy). PP lock overlay untouched. */
+html[data-theme="dusk"] .dash-visits-total,
+html[data-theme="mine"] .dash-visits-total,
+html[data-theme="dusk"] .dash-dominance-area,
+html[data-theme="mine"] .dash-dominance-area {
+  color: #8fb3d9 !important;
+}
+html[data-theme="dusk"] .dash-visits-title,
+html[data-theme="mine"] .dash-visits-title,
+html[data-theme="dusk"] .dash-dominance-title,
+html[data-theme="mine"] .dash-dominance-title {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45) !important;
 }
 
 
@@ -943,3 +963,66 @@ html[data-theme="dusk"] .vc-qr-copy-btn:focus-visible,
 html[data-theme="mine"] .vc-qr-copy-btn:focus-visible {
   outline-color: #ffffff !important;
 }
+
+/* Account Linked Apps — Calculator shortcut card (dusk/mine) */
+html[data-theme="dusk"] .link-calc-go,
+html[data-theme="mine"] .link-calc-go {
+  background: rgba(79, 195, 247, 0.08) !important;
+  border-color: rgba(79, 195, 247, 0.28) !important;
+}
+html[data-theme="dusk"] .link-calc-go:hover,
+html[data-theme="mine"] .link-calc-go:hover {
+  background: rgba(79, 195, 247, 0.16) !important;
+  border-color: rgba(79, 195, 247, 0.55) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+html[data-theme="dusk"] .link-calc-go:focus-visible,
+html[data-theme="mine"] .link-calc-go:focus-visible { outline-color: #4FC3F7 !important; }
+html[data-theme="dusk"] .link-calc-name,
+html[data-theme="mine"] .link-calc-name { color: #e8f4ff !important; }
+html[data-theme="dusk"] .link-calc-sub,
+html[data-theme="mine"] .link-calc-sub { color: #8fb3d9 !important; }
+
+/* Visitors: owner "Add reply" button + inline form (dusk/mine) */
+html[data-theme="dusk"] .vo-reply-add,
+html[data-theme="mine"] .vo-reply-add {
+  background: rgba(79, 195, 247, 0.10) !important;
+  border-color: rgba(79, 195, 247, 0.45) !important;
+  color: #7fd3fa !important;
+}
+html[data-theme="dusk"] .vo-reply-add:hover,
+html[data-theme="mine"] .vo-reply-add:hover { background: rgba(79, 195, 247, 0.20) !important; color: #e8f4ff !important; }
+html[data-theme="dusk"] .vo-reply-form,
+html[data-theme="mine"] .vo-reply-form {
+  background: rgba(79, 195, 247, 0.08) !important;
+  border: 1px solid rgba(79, 195, 247, 0.25) !important;
+  border-left: 3px solid #4FC3F7 !important;
+}
+html[data-theme="dusk"] .vo-reply-input,
+html[data-theme="mine"] .vo-reply-input {
+  background: #0f1c2c !important;
+  border-color: rgba(79, 195, 247, 0.35) !important;
+  color: #d6e2f0 !important;
+}
+html[data-theme="dusk"] .vo-reply-input::placeholder,
+html[data-theme="mine"] .vo-reply-input::placeholder { color: #6b8099 !important; }
+html[data-theme="dusk"] .vo-reply-input:focus,
+html[data-theme="mine"] .vo-reply-input:focus { border-color: #4FC3F7 !important; box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.25) !important; }
+html[data-theme="dusk"] .vo-reply-count,
+html[data-theme="mine"] .vo-reply-count { color: #8fb3d9 !important; }
+html[data-theme="dusk"] .vo-reply-err,
+html[data-theme="mine"] .vo-reply-err { color: #ff8a80 !important; }
+html[data-theme="dusk"] .vo-reply-cancel,
+html[data-theme="mine"] .vo-reply-cancel { border-color: rgba(143, 179, 217, 0.5) !important; color: #8fb3d9 !important; }
+html[data-theme="dusk"] .vo-reply-save,
+html[data-theme="mine"] .vo-reply-save { background: #4FC3F7 !important; border-color: #4FC3F7 !important; color: #0a1522 !important; }
+
+/* Oct 13, 2026: High Noon (Day) camera share buttons: light icon + border on the brown title bars. */
+html[data-theme="day"] .dash-share-btn,
+html:not([data-theme]) .dash-share-btn,
+html[data-theme="day"] .stat-card.has-share > .dash-share-btn,
+html:not([data-theme]) .stat-card.has-share > .dash-share-btn { color: #eeeeee; border-color: #eeeeee; }
+html[data-theme="day"] .dash-share-btn:hover,
+html:not([data-theme]) .dash-share-btn:hover,
+html[data-theme="day"] .stat-card.has-share > .dash-share-btn:hover,
+html:not([data-theme]) .stat-card.has-share > .dash-share-btn:hover { color: #ffffff; border-color: #ffffff; }
