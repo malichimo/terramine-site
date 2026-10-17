@@ -266,6 +266,10 @@
   .fraud-check input[type="checkbox"] { accent-color:var(--gold); width:13px; height:13px; cursor:pointer; }
   .fraud-check.checked label { color:var(--green); }
   .fraud-check.stale label { color:var(--amber); }
+  .tbp-check { margin:6px 0; }
+  .tbp-check label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); cursor:pointer; user-select:none; }
+  .tbp-check input[type="checkbox"] { accent-color:var(--gold); width:13px; height:13px; cursor:pointer; }
+  .tbp-check.checked label { color:var(--green); font-weight:600; }
   .fraud-check-note { font-size:9px; color:var(--text-muted); margin-top:2px; margin-left:19px; }
   .fraud-check-note.stale-note { color:var(--amber); }
 
@@ -347,7 +351,7 @@
     <div class="table-header">
       <span>Redemption Requests</span>
       <div class="table-header-right">
-        <button class="nav-btn" id="paypalCsvBtn" title="Download a PayPal mass-pay CSV of every PENDING PayPal request whose referral fraud check is ticked (ignores the tab/search filters)" onclick="downloadPaypalMassPayCsv()">📥 PayPal CSV</button>
+        <button class="nav-btn" id="paypalCsvBtn" title="Download a PayPal mass-pay CSV of every PENDING PayPal request whose To Be Paid box is ticked (ignores the tab/search filters)" onclick="downloadPaypalMassPayCsv()">📥 PayPal CSV</button>
         <button class="nav-btn" id="paypalPaidBtn" style="display:none;" title="Marks every request from your last downloaded PayPal CSV as Paid. Only use after PayPal accepted the file." onclick="markCsvBatchPaid()">✅ Mark last CSV as Paid</button>
         <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, referral code, or method…" oninput="onSearchInput()">
         <span class="table-count" id="tableCount">— requests</span>
@@ -869,6 +873,18 @@
         ${fc.note ? `<div class="fraud-check-note${fc.noteClass}">${fc.note}</div>` : ''}
       </div>`;
 
+    // "To Be Paid" checkbox — added Oct 17, 2026 (Scott). This, not the
+    // referral fraud check, decides which pending PayPal requests go into the
+    // mass-pay CSV. Per-request only (no account-level carry-over).
+    const tbpCheck = `
+      <div class="tbp-check${r.toBePaid ? ' checked' : ''}">
+        <label>
+          <input type="checkbox" ${r.toBePaid ? 'checked' : ''} onchange="toggleToBePaid('${r.id}', this.checked)">
+          💵 To Be Paid
+        </label>
+        ${r.toBePaid && r.toBePaidAt ? `<div class="fraud-check-note">${escHtml(r.toBePaidBy || '—')} — ${new Date(r.toBePaidAt).toLocaleString()}</div>` : ''}
+      </div>`;
+
     // Flag toggle — for the "looks fake but not enough evidence to ban"
     // case (Sept 9, 2026, Scott/ossmedia-TM-MCGZ2): approve the redemption
     // but mark the account for a closer look next time. Independent of
@@ -913,7 +929,7 @@
       note += `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
     }
 
-    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${fraudCheck}<div>${flagToggle}</div>${actions}${note}`;
+    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${fraudCheck}${tbpCheck}<div>${flagToggle}</div>${actions}${note}`;
   }
 
   // Payout-method badge — added Sept 11, 2026, alongside the method tabs, so
@@ -1125,6 +1141,31 @@
     }
   };
 
+  // To Be Paid toggle: writes straight to the request doc (isAdmin() grants
+  // update). Per-request only; no users/{uid} write.
+  window.toggleToBePaid = async (requestId, checked) => {
+    const nowIso = new Date().toISOString();
+    const byEmail = auth.currentUser?.email || null;
+    const req = allRequests.find(r => r.id === requestId);
+    try {
+      await updateDoc(doc(db, 'withdrawalRequests', requestId), {
+        toBePaid: checked,
+        toBePaidAt: checked ? nowIso : null,
+        toBePaidBy: checked ? byEmail : null,
+      });
+      if (req) {
+        req.toBePaid = checked;
+        req.toBePaidAt = checked ? nowIso : null;
+        req.toBePaidBy = checked ? byEmail : null;
+      }
+      render();
+    } catch (e) {
+      console.error(e);
+      showToast(e?.message || 'Failed to update To Be Paid flag', 'error');
+      await loadAll();
+    }
+  };
+
   // Flag toggle: for a redemption that gets approved despite a fraud check
   // turning up something suspicious but not ban-worthy (Sept 9, 2026) — puts
   // the 🚩 FLAGGED badge and reason on the request so it's not treated as a
@@ -1174,8 +1215,8 @@
   // ── PayPal mass-pay CSV ────────────────────────────────────────────────
   // Added Oct 10, 2026 (Scott: PayPal approved mass payouts; Hillary will run
   // this too). Builds the upload file from what's already loaded on the page:
-  // PENDING + PayPal + referral-fraud-checked (same fraudCheckState() the
-  // checkbox uses, so carried-over checks count). Ignores the current tab,
+  // PENDING + PayPal + "To Be Paid" ticked (changed Oct 17, 2026 from the
+  // referral fraud check). Ignores the current tab,
   // method filter and search box. Amount = NET payout (after fee). Reference
   // ID = the player's referral code. Columns/constants match the test file
   // PayPal accepted. It does NOT change any request's status — mark rows Paid
@@ -1190,7 +1231,7 @@
     const rows = [], skipped = [], batchItems = [];
     let uncheckedCount = 0;
     for (const r of pendingPaypal) {
-      if (!fraudCheckState(r).checked) { uncheckedCount++; continue; }
+      if (!r.toBePaid) { uncheckedCount++; continue; }
       const email = (r.paypalEmail || '').trim();
       const code = (r.referralCode || '').trim();
       const net = typeof r.netAmountUsd === 'number' ? r.netAmountUsd : r.amountUsd;
@@ -1201,7 +1242,7 @@
       rows.push({ email, code, net });
       batchItems.push({ id: r.id, code, net });
     }
-    if (!rows.length) { showToast('No pending PayPal requests with the fraud check ticked.', 'error'); return; }
+    if (!rows.length) { showToast('No pending PayPal requests with To Be Paid ticked.', 'error'); return; }
 
     const seen = new Map();
     rows.forEach(x => seen.set(x.code, (seen.get(x.code) || 0) + 1));
@@ -1228,7 +1269,7 @@
     } catch (e) { /* storage blocked: the Mark-as-Paid button just won't appear */ }
     refreshPaypalPaidBtn();
 
-    let msg = `Downloaded ${rows.length} payments, $${total.toFixed(2)} total. ${uncheckedCount} pending PayPal left out (fraud check not ticked).`;
+    let msg = `Downloaded ${rows.length} payments, $${total.toFixed(2)} total. ${uncheckedCount} pending PayPal left out (To Be Paid not ticked).`;
     if (skipped.length) msg += ` ${skipped.length} skipped (bad email/code/amount): ${skipped.slice(0, 5).join(', ')}.`;
     if (dupes.length) msg += ` Same Reference ID used twice: ${dupes.join(', ')}.`;
     msg += ' Mark them Paid after PayPal accepts the file.';
