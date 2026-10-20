@@ -346,6 +346,7 @@
     <div class="table-header">
       <span>Redemption Requests</span>
       <div class="table-header-right">
+        <button class="nav-btn" id="paypalCsvBtn" title="Download a PayPal mass-pay CSV of every PENDING PayPal request whose referral fraud check is ticked (ignores the tab/search filters)" onclick="downloadPaypalMassPayCsv()">📥 PayPal CSV</button>
         <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, referral code, or method…" oninput="onSearchInput()">
         <span class="table-count" id="tableCount">— requests</span>
       </div>
@@ -1132,6 +1133,64 @@
   };
 
   // ── Utils ──────────────────────────────────────────────────────────────
+  // ── PayPal mass-pay CSV ────────────────────────────────────────────────
+  // Added Oct 10, 2026 (Scott: PayPal approved mass payouts; Hillary will run
+  // this too). Builds the upload file from what's already loaded on the page:
+  // PENDING + PayPal + referral-fraud-checked (same fraudCheckState() the
+  // checkbox uses, so carried-over checks count). Ignores the current tab,
+  // method filter and search box. Amount = NET payout (after fee). Reference
+  // ID = the player's referral code. Columns/constants match the test file
+  // PayPal accepted. It does NOT change any request's status — mark rows Paid
+  // after the upload succeeds so nobody is paid twice.
+  const PAYPAL_CSV_HEADER = 'Email/Phone,Amount,Currency code,Reference ID (optional),Note to recipient,Recipient wallet,Social Feed Privacy (optional),Holler URL (deprecated),Logo URL (optional),Purpose (optional)';
+  function csvCell(v) {
+    const t = String(v ?? '');
+    return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+  window.downloadPaypalMassPayCsv = () => {
+    const pendingPaypal = allRequests.filter(r => r.status === 'pending' && r.payoutMethod === 'paypal');
+    const rows = [], skipped = [];
+    let uncheckedCount = 0;
+    for (const r of pendingPaypal) {
+      if (!fraudCheckState(r).checked) { uncheckedCount++; continue; }
+      const email = (r.paypalEmail || '').trim();
+      const code = (r.referralCode || '').trim();
+      const net = typeof r.netAmountUsd === 'number' ? r.netAmountUsd : r.amountUsd;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !code || typeof net !== 'number' || !(net > 0)) {
+        skipped.push(code || email || r.id);
+        continue;
+      }
+      rows.push({ email, code, net });
+    }
+    if (!rows.length) { showToast('No pending PayPal requests with the fraud check ticked.', 'error'); return; }
+
+    const seen = new Map();
+    rows.forEach(x => seen.set(x.code, (seen.get(x.code) || 0) + 1));
+    const dupes = [...seen].filter(([, n]) => n > 1).map(([c]) => c);
+    const total = rows.reduce((a, x) => a + Math.round(x.net * 100), 0) / 100;
+
+    const lines = [PAYPAL_CSV_HEADER].concat(rows.map(x =>
+      [x.email, x.net.toFixed(2), 'USD', x.code, "Here's your payment", 'PayPal', '', '', '', ''].map(csvCell).join(',')
+    ));
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });
+    const d = new Date();
+    const stamp = String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getFullYear()).slice(2);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `paypal_${stamp}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+    let msg = `Downloaded ${rows.length} payments, $${total.toFixed(2)} total. ${uncheckedCount} pending PayPal left out (fraud check not ticked).`;
+    if (skipped.length) msg += ` ${skipped.length} skipped (bad email/code/amount): ${skipped.slice(0, 5).join(', ')}.`;
+    if (dupes.length) msg += ` Same Reference ID used twice: ${dupes.join(', ')}.`;
+    msg += ' Mark them Paid after PayPal accepts the file.';
+    console.log(msg);
+    showToast(msg, skipped.length || dupes.length ? 'error' : '');
+    const t = document.getElementById('toast'); clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 15000);
+  };
+
   window.copyToClipboard = async (text, btnEl) => {
     try {
       await navigator.clipboard.writeText(text);
