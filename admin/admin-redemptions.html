@@ -353,7 +353,7 @@
       <div class="table-header-right">
         <button class="nav-btn" id="paypalCsvBtn" title="Download a PayPal mass-pay CSV of every PENDING PayPal request whose To Be Paid box is ticked (ignores the tab/search filters)" onclick="downloadPaypalMassPayCsv()">📥 PayPal CSV</button>
         <button class="nav-btn" id="paypalPaidBtn" style="display:none;" title="Marks every request from your last downloaded PayPal CSV as Paid. Only use after PayPal accepted the file." onclick="markCsvBatchPaid()">✅ Mark last CSV as Paid</button>
-        <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, referral code, or method…" oninput="onSearchInput()">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, referral code, or method…" oninput="onSearchInput()" onkeydown="if(event.key==='Enter')serverSearch()">
         <span class="table-count" id="tableCount">— requests</span>
       </div>
     </div>
@@ -426,7 +426,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import {
-    getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy, where, getCountFromServer
+    getFirestore, collection, getDocs, doc, getDoc, updateDoc, query, orderBy, where, limit, documentId, getCountFromServer
   } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
   import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
@@ -530,48 +530,68 @@
   };
 
   // ── Load ───────────────────────────────────────────────────────────────
-  async function loadAll() {
-    document.getElementById('reqTableBody').innerHTML = '<tr class="empty-row"><td colspan="7">Loading…</td></tr>';
+  // ✅ Oct 21, 2026 (Scott: redemptions page takes a long time to load).
+  // Old behavior: every load downloaded EVERY withdrawalRequests doc ever
+  // (paid/rejected/failed included), did one getDoc per distinct requester,
+  // and every action (approve/reject/flag...) ran that whole thing again.
+  // New behavior:
+  //   1. Load only what needs action (pending / approved_unpaid / needs_info
+  //      plus anything flagged) — small and bounded by the open queue.
+  //   2. Paid / Rejected / Failed / All load on demand when that tab is
+  //      opened, newest HISTORY_LIMIT only.
+  //   3. Tab counts come from server-side count aggregates, not downloaded docs.
+  //   4. Requester info is fetched in batches of 30 users per query, in
+  //      parallel; the table paints first, then fills in. Failed lookups are
+  //      still retried once and never cached (Oct 17 behavior preserved).
+  const HISTORY_LIMIT = 100;
+  const ALL_TAB_LIMIT = 200;
+  const HISTORY_TABS = ['paid', 'rejected', 'failed', 'all'];
+  const rawActive = new Map();     // id -> raw doc: open queue + flagged
+  const rawHistory = new Map();    // id -> raw doc: history tabs loaded so far
+  const rawSearchHits = new Map(); // id -> raw doc: server-side email search hits
+  const lookupFailedIds = new Set();
+  let enrichPromise = Promise.resolve();
+  let loadSeq = 0;
+  const toRaw = (d) => ({ id: d.id, ...d.data() });
 
-    const snap = await getDocs(query(collection(db, 'withdrawalRequests'), orderBy('requestedAt', 'desc')));
-    const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  function cacheUser(uid, udata) {
+    nicknameCache.set(uid, (udata && udata.nickname) || uid.substring(0, 8));
+    referralCodeCache.set(uid, (udata && udata.referralCode) || null);
+    referralCountCache.set(uid, (udata && udata.referralCount) || 0);
+    accountFraudCheckedAtCache.set(uid, (udata && udata.referralFraudCheckedAt) || null);
+    accountFraudCheckedByCache.set(uid, (udata && udata.referralFraudCheckedBy) || null);
+    accountFraudCheckedRefCountCache.set(uid, (udata && udata.referralFraudCheckedAtReferralCount) ?? null);
+  }
 
-    // Resolve nickname + referralCode — one getDoc per DISTINCT userId, cached across reloads.
-    const uniqueUserIds = [...new Set(raw.map(r => r.userId).filter(Boolean))];
-    // Oct 17, 2026: a failed lookup used to be cached as "first 8 chars of the uid + 0 referrals"
-    // for the whole session, so one transient read error made a 236-referral account look like a
-    // brand-new one until a hard reload. Now: retry once, and if it still fails, DON'T cache it —
-    // the row is flagged lookupFailed so it shows a warning (never a fake "0 referrals") and the
-    // next reload tries again.
-    const lookupFailed = new Set();
-    await Promise.all(uniqueUserIds.map(async (uid) => {
-      if (nicknameCache.has(uid)) return;
+  // Batched user lookup: documentId() 'in' takes up to 30 ids per query
+  // (admin may list users — see firestore.rules). A failed batch is retried
+  // once; if it still fails the users are NOT cached and are marked failed so
+  // rows show the warning instead of a fake "0 referrals".
+  async function enrichUsers(rawList) {
+    const need = [...new Set(rawList.map(r => r.userId).filter(Boolean))].filter(u => !nicknameCache.has(u));
+    const chunks = [];
+    for (let i = 0; i < need.length; i += 30) chunks.push(need.slice(i, i + 30));
+    await Promise.all(chunks.map(async (chunk) => {
+      const run = () => getDocs(query(collection(db, 'users'), where(documentId(), 'in', chunk)));
       try {
-        let uSnap;
-        try { uSnap = await getDoc(doc(db, 'users', uid)); }
-        catch (firstErr) {
-          await new Promise(res => setTimeout(res, 400));
-          uSnap = await getDoc(doc(db, 'users', uid));
-        }
-        const udata = uSnap.exists() ? uSnap.data() : null;
-        nicknameCache.set(uid, (udata && udata.nickname) || uid.substring(0, 8));
-        referralCodeCache.set(uid, (udata && udata.referralCode) || null);
-        referralCountCache.set(uid, (udata && udata.referralCount) || 0);
-        accountFraudCheckedAtCache.set(uid, (udata && udata.referralFraudCheckedAt) || null);
-        accountFraudCheckedByCache.set(uid, (udata && udata.referralFraudCheckedBy) || null);
-        accountFraudCheckedRefCountCache.set(uid, (udata && udata.referralFraudCheckedAtReferralCount) ?? null);
+        let snap;
+        try { snap = await run(); }
+        catch (firstErr) { await new Promise(res => setTimeout(res, 400)); snap = await run(); }
+        const seen = new Set();
+        snap.forEach(sn => { cacheUser(sn.id, sn.data()); seen.add(sn.id); lookupFailedIds.delete(sn.id); });
+        chunk.forEach(u => { if (!seen.has(u)) { cacheUser(u, null); lookupFailedIds.delete(u); } });
       } catch (e) {
-        console.warn('user lookup failed for', uid, e);
-        lookupFailed.add(uid);
+        console.warn('user lookup batch failed', e);
+        chunk.forEach(u => lookupFailedIds.add(u));
       }
     }));
 
-    // Total sign-ups under each open requester's code (aggregate count queries, run in parallel).
-    const openUserIds = [...new Set(raw.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').map(r => r.userId).filter(Boolean))];
+    // Total sign-ups under each OPEN requester's code (aggregate count queries, in parallel).
+    const openUserIds = [...new Set(rawList.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').map(r => r.userId).filter(Boolean))];
     await Promise.all(openUserIds.map(async (uid) => {
       if (referralSignupCache.has(uid)) return;
       const code = referralCodeCache.get(uid);
-      if (!code) { referralSignupCache.set(uid, null); return; }
+      if (!code) { if (nicknameCache.has(uid)) referralSignupCache.set(uid, null); return; }
       try {
         const c = await getCountFromServer(query(collection(db, 'users'), where('referredByCode', '==', code)));
         referralSignupCache.set(uid, c.data().count);
@@ -580,11 +600,13 @@
         referralSignupCache.set(uid, null);
       }
     }));
+  }
 
-    allRequests = raw.map(r => ({
+  function joinRaw(r) {
+    return {
       ...r,
       referralSignups: referralSignupCache.get(r.userId) ?? null,
-      lookupFailed: lookupFailed.has(r.userId) || !nicknameCache.has(r.userId),
+      lookupFailed: lookupFailedIds.has(r.userId) || !nicknameCache.has(r.userId),
       nickname: nicknameCache.get(r.userId) || (r.userId ? r.userId.substring(0, 8) : '—'),
       referralCode: referralCodeCache.get(r.userId) || null,
       referralCount: referralCountCache.get(r.userId) ?? 0,
@@ -596,31 +618,110 @@
       // uses when the field is omitted, so a pre-Tango request is treated
       // as PayPal here too, not as an "unknown" third bucket.
       payoutMethod: r.payoutMethod || 'paypal',
-    }));
+    };
+  }
 
-    updateTabCounts();
+  // Rebuild the working list from whatever has been loaded so far. Active
+  // docs win over stale history copies of the same id.
+  function rebuildAll() {
+    const merged = new Map([...rawHistory, ...rawSearchHits, ...rawActive]);
+    allRequests = [...merged.values()].map(joinRaw);
+  }
+
+  async function fetchActive() {
+    const col = collection(db, 'withdrawalRequests');
+    const [open, flagged] = await Promise.all([
+      getDocs(query(col, where('status', 'in', ['pending', 'approved_unpaid', 'needs_info']))),
+      getDocs(query(col, where('flaggedForReview', '==', true))),
+    ]);
+    rawActive.clear();
+    open.docs.forEach(d => rawActive.set(d.id, toRaw(d)));
+    flagged.docs.forEach(d => rawActive.set(d.id, toRaw(d)));
+  }
+
+  async function fetchHistory(tab) {
+    const col = collection(db, 'withdrawalRequests');
+    let snap;
+    if (tab === 'all') {
+      snap = await getDocs(query(col, orderBy('requestedAt', 'desc'), limit(ALL_TAB_LIMIT)));
+    } else {
+      try {
+        snap = await getDocs(query(col, where('status', '==', tab), orderBy('requestedAt', 'desc'), limit(HISTORY_LIMIT)));
+      } catch (e) {
+        // Needs a composite index (status ASC, requestedAt DESC). Until it is
+        // created, fall back to the unordered (slower) per-status fetch so the
+        // tab still works. The console error carries a one-click create link.
+        console.warn('History query needs composite index (status, requestedAt) — falling back:', e);
+        snap = await getDocs(query(col, where('status', '==', tab)));
+      }
+    }
+    snap.docs.forEach(d => rawHistory.set(d.id, toRaw(d)));
+  }
+
+  async function refreshCounts() {
+    const col = collection(db, 'withdrawalRequests');
+    const count = (q) => getCountFromServer(q).then(s => s.data().count).catch(() => null);
+    const set = (id, v) => { if (v !== null) document.getElementById(id).textContent = v; };
+    const [na, ni, fl, pd, rj, fd, all] = await Promise.all([
+      count(query(col, where('status', 'in', ['pending', 'approved_unpaid']))),
+      count(query(col, where('status', '==', 'needs_info'))),
+      count(query(col, where('flaggedForReview', '==', true))),
+      count(query(col, where('status', '==', 'paid'))),
+      count(query(col, where('status', '==', 'rejected'))),
+      count(query(col, where('status', '==', 'failed'))),
+      count(col),
+    ]);
+    set('count-needsAttention', na); set('count-needsInfo', ni); set('count-flagged', fl);
+    set('count-paid', pd); set('count-rejected', rj); set('count-failed', fd); set('count-all', all);
+  }
+
+  async function loadAll() {
+    const seq = ++loadSeq;
+    if (!allRequests.length) {
+      document.getElementById('reqTableBody').innerHTML = '<tr class="empty-row"><td colspan="7">Loading…</td></tr>';
+    }
+    refreshCounts(); // fire and forget — fills the tab badges as they arrive
+
+    await fetchActive();
+    if (HISTORY_TABS.includes(currentTab)) await fetchHistory(currentTab);
+    if (seq !== loadSeq) return; // a newer load superseded this one
+
+    // Paint immediately with whatever user info is already cached…
+    rebuildAll();
     render();
     refreshPaypalPaidBtn();
+
+    // …then fill in nicknames / referral info in batches and repaint.
+    const loaded = [...rawActive.values(), ...rawHistory.values(), ...rawSearchHits.values()];
+    enrichPromise = enrichUsers(loaded).then(() => {
+      if (seq !== loadSeq) return;
+      rebuildAll();
+      render();
+      refreshPaypalPaidBtn();
+    });
+    await enrichPromise;
   }
 
-  function updateTabCounts() {
-    // Counts always reflect the full set for the current tab (unaffected by
-    // search) so the admin can see true totals at a glance.
-    const needsAttention = allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid').length;
-    document.getElementById('count-needsAttention').textContent = needsAttention;
-    document.getElementById('count-needsInfo').textContent = allRequests.filter(r => r.status === 'needs_info').length;
-    document.getElementById('count-flagged').textContent = allRequests.filter(r => r.flaggedForReview).length;
-    document.getElementById('count-paid').textContent = allRequests.filter(r => r.status === 'paid').length;
-    document.getElementById('count-rejected').textContent = allRequests.filter(r => r.status === 'rejected').length;
-    document.getElementById('count-failed').textContent = allRequests.filter(r => r.status === 'failed').length;
-    document.getElementById('count-all').textContent = allRequests.length;
-  }
-
-  window.setTab = (tab, btnEl) => {
+  window.setTab = async (tab, btnEl) => {
     currentTab = tab;
     document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
     btnEl.classList.add('active');
     render();
+    // History tabs (Paid / Rejected / Failed / All) load on demand, fresh
+    // each time the tab is opened, newest-first and capped.
+    if (HISTORY_TABS.includes(tab)) {
+      document.getElementById('tableCount').textContent = 'Loading…';
+      try {
+        await fetchHistory(tab);
+        rebuildAll();
+        render();
+        await enrichUsers([...rawHistory.values()]);
+        if (currentTab === tab) { rebuildAll(); render(); }
+      } catch (e) {
+        console.error('History load failed', e);
+        showToast('Could not load ' + tab + ' requests: ' + (e.message || e), 'error');
+      }
+    }
   };
 
   // Method tab — orthogonal to the status tab above. Switching status tabs
@@ -637,6 +738,25 @@
   // ── Search ─────────────────────────────────────────────────────────────
   window.onSearchInput = () => {
     searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+    render();
+  };
+
+  // Enter in the search box with an email address also searches ALL history
+  // server-side by PayPal email (exact match, as typed and lowercased) — the
+  // normal search only covers requests already loaded. Fast way to see every
+  // request sharing one PayPal address.
+  window.serverSearch = async () => {
+    const raw = document.getElementById('searchInput').value.trim();
+    if (!raw.includes('@')) return;
+    const col = collection(db, 'withdrawalRequests');
+    const variants = [...new Set([raw, raw.toLowerCase()])];
+    const snaps = await Promise.all(variants.map(v => getDocs(query(col, where('paypalEmail', '==', v)))));
+    snaps.forEach(sn => sn.docs.forEach(d => rawSearchHits.set(d.id, toRaw(d))));
+    rebuildAll();
+    await enrichUsers([...rawSearchHits.values()]);
+    rebuildAll();
+    const allBtn = document.querySelector('.period-tab[data-tab="all"]');
+    if (allBtn) { currentTab = 'all'; document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active')); allBtn.classList.add('active'); }
     render();
   };
 
@@ -1226,7 +1346,8 @@
     const t = String(v ?? '');
     return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
   }
-  window.downloadPaypalMassPayCsv = () => {
+  window.downloadPaypalMassPayCsv = async () => {
+    await enrichPromise; // referral codes load in the background
     const pendingPaypal = allRequests.filter(r => r.status === 'pending' && r.payoutMethod === 'paypal');
     const rows = [], skipped = [], batchItems = [];
     let uncheckedCount = 0;
