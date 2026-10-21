@@ -681,6 +681,14 @@
       maxlength="300"
       placeholder="Log in to collect resources, run daily activities, and check on your properties."
     ></textarea>
+    <label for="notifUrl">Tap link (optional, Android only, terramine.app pages)</label>
+    <input
+      id="notifUrl"
+      class="notif-input"
+      type="url"
+      maxlength="200"
+      placeholder="https://terramine.app/pioneer-pass.html"
+    />
 
     <div class="notif-preview">
       <div class="notif-preview-label">📱 Preview</div>
@@ -1691,6 +1699,7 @@
         const data = docSnap.data();
         if (data.title) document.getElementById('notifTitle').value = data.title;
         if (data.body)  document.getElementById('notifBody').value  = data.body;
+        document.getElementById('notifUrl').value = data.url || '';
         updateNotifPreview();
       }
     } catch (e) {
@@ -1716,7 +1725,13 @@
 
     const title = document.getElementById('notifTitle').value.trim();
     const body  = document.getElementById('notifBody').value.trim();
+    const url   = document.getElementById('notifUrl').value.trim();
 
+    if (url && !/^https:\/\/terramine\.app\//i.test(url)) {
+      errEl.textContent = '✗ Link must start with https://terramine.app/';
+      errEl.style.display = 'inline';
+      return;
+    }
     if (!title || !body) {
       errEl.textContent = '✗ Title and body cannot be empty';
       errEl.style.display = 'inline';
@@ -1728,7 +1743,7 @@
 
     try {
       const docRef = doc(db, 'config', 'dailyNotification');
-      await setDoc(docRef, { title, body, updatedAt: new Date().toISOString() });
+      await setDoc(docRef, { title, body, url, updatedAt: new Date().toISOString() });
       confirm.style.display = 'inline';
       updateNotifPreview();
       setTimeout(() => confirm.style.display = 'none', 3000);

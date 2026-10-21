@@ -491,6 +491,45 @@
       </div>
     </section>
 
+    <!-- Pioneer Pass (Oct 18, 2026). Sourced from pioneer_snapshots, written daily
+         by refreshPioneerStats (functions/src/pioneerPayPal.ts). Aggregates only. -->
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Subscriptions</span>
+          <h2>Pioneer Pass</h2>
+        </div>
+        <p class="section-desc">Paid Pioneer Pass memberships sold on the web through PayPal ($9.99/month or $99.99/year). Revenue figures are <strong>estimates from list prices</strong>, before PayPal fees, refunds and taxes.</p>
+      </div>
+      <div class="panel panel-row">
+        <div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-2)"></span>Monthly</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>Yearly</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="pioneerMembersChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="pioneerMembersTooltip"></div>
+          </div>
+          <div id="pioneerMembersEmpty" class="empty-state" style="display:none;"></div>
+          <div style="font-size:12px;color:var(--text-muted);margin:18px 0 6px;">New subscription sales by day (estimated USD)</div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="pioneerSalesChart" viewBox="0 0 900 140" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="pioneerSalesTooltip"></div>
+          </div>
+          <div id="pioneerSalesEmpty" class="empty-state" style="display:none;"></div>
+          <p id="pioneerNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+        </div>
+        <div>
+          <div class="side-stat"><div class="k">Active members</div><div class="v" id="pioneerActive">—</div><div class="delta" id="pioneerActiveDelta"></div></div>
+          <div class="side-stat"><div class="k">Est. monthly recurring revenue</div><div class="v" id="pioneerMrr">—</div></div>
+          <div class="side-stat"><div class="k">Est. annualized revenue</div><div class="v" id="pioneerArr">—</div></div>
+          <div class="side-stat"><div class="k">New sales (period)</div><div class="v" id="pioneerSales">—</div><div class="delta" id="pioneerSalesDelta"></div></div>
+          <div class="side-stat"><div class="k">Set to end (cancelled)</div><div class="v" id="pioneerEnding">—</div></div>
+        </div>
+      </div>
+    </section>
+
     <section class="section">
       <div class="section-head">
         <div>
@@ -580,6 +619,7 @@
   let geoSnapshot = null; // {date, totalProperties, unresolvedProperties, countries: {CODE: count}} — latest only, not range-filtered
   let installsSnapshots = []; // [{date, androidInstalls, ...}], sorted ascending by date — iOS not tracked yet, see refreshInstalls
   let adRevenueSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue}], sorted ascending by date
+  let pioneerSnapshots = []; // [{date, activeMembers, monthlyMembers, yearlyMembers, endingMembers, mrrUsd, arrUsd, newSubsToday, newSalesUsd}] ascending; member fields absent on backfilled days
   let metaAdSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue, androidRequests, iosRequests, androidFilled, iosFilled, androidImpressions, iosImpressions}], sorted ascending by date
   let unityAdSnapshots = []; // [{date, androidRevenue, iosRevenue, totalRevenue, androidRequests, androidStarts, androidViews, iosRequests, iosStarts, iosViews}], sorted ascending by date
   let currentRange = 30;
@@ -598,7 +638,7 @@
     authErrEl.style.display = 'none';
 
     try {
-      const [snap, retentionSnap, geoSnap, installsSnap, adRevenueSnap, unityAdSnap, metaAdSnap] = await Promise.all([
+      const [snap, retentionSnap, geoSnap, installsSnap, adRevenueSnap, unityAdSnap, metaAdSnap, pioneerSnap] = await Promise.all([
         getDocs(query(collection(db, 'marketing_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'retentionCohorts'), orderBy('cohortDate', 'desc'), limit(120))),
         getDocs(query(collection(db, 'geography_snapshots'), orderBy('date', 'desc'), limit(1))),
@@ -606,6 +646,7 @@
         getDocs(query(collection(db, 'ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'unity_ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
         getDocs(query(collection(db, 'meta_ad_revenue_snapshots'), orderBy('date', 'desc'), limit(90))),
+        getDocs(query(collection(db, 'pioneer_snapshots'), orderBy('date', 'desc'), limit(90))),
       ]);
       snapshots = snap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       retentionCohorts = retentionSnap.docs.map(d => d.data()).sort((a, b) => a.cohortDate.localeCompare(b.cohortDate));
@@ -613,6 +654,7 @@
       installsSnapshots = installsSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       adRevenueSnapshots = adRevenueSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       unityAdSnapshots = unityAdSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
+      pioneerSnapshots = pioneerSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       metaAdSnapshots = metaAdSnap.docs.map(d => d.data()).sort((a, b) => a.date.localeCompare(b.date));
       document.getElementById('asOf').textContent = snapshots.length
         ? `Data through ${snapshots[snapshots.length - 1].date}`
@@ -1414,6 +1456,43 @@
     applyDelta(document.getElementById('adRevAllDelta'), hasPrev ? computeDeltaPct(cur, prev) : null);
   }
 
+  function renderPioneer() {
+    const slice = dateRangeSlice(pioneerSnapshots, 'date', currentRange);
+    const noteEl = document.getElementById('pioneerNote');
+    const fmtUsd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // Member counts only exist from the first live daily snapshot onward.
+    const withMembers = slice.filter(s => typeof s.activeMembers === 'number');
+
+    stackedBarChart('pioneerMembersChart', 'pioneerMembersTooltip', 'pioneerMembersEmpty',
+      ['Monthly', 'Yearly'],
+      [withMembers.map(s => s.monthlyMembers || 0), withMembers.map(s => s.yearlyMembers || 0)],
+      withMembers.map(s => s.date), 900, 180,
+      [styleOf('--cat-2'), styleOf('--cat-1')]);
+    lineOrBarChart('bar', 'pioneerSalesChart', 'pioneerSalesTooltip', 'pioneerSalesEmpty',
+      'New sales (USD)', slice.map(s => s.newSalesUsd || 0), slice.map(s => s.date), 900, 140, styleOf('--cat-1'));
+
+    const latest = withMembers[withMembers.length - 1];
+    document.getElementById('pioneerActive').textContent = latest ? latest.activeMembers.toLocaleString() : '—';
+    document.getElementById('pioneerMrr').textContent = latest ? fmtUsd(latest.mrrUsd || 0) : '—';
+    document.getElementById('pioneerArr').textContent = latest ? fmtUsd(latest.arrUsd || 0) : '—';
+    document.getElementById('pioneerEnding').textContent = latest ? (latest.endingMembers || 0).toLocaleString() : '—';
+    const first = withMembers[0];
+    applyDelta(document.getElementById('pioneerActiveDelta'),
+      (first && latest && first !== latest) ? computeDeltaPct(latest.activeMembers, first.activeMembers) : null);
+
+    const sales = slice.reduce((sum, s) => sum + (s.newSalesUsd || 0), 0);
+    document.getElementById('pioneerSales').textContent = slice.length ? fmtUsd(sales) : '—';
+    const prevSlice = priorWindowSlice(pioneerSnapshots, 'date', currentRange);
+    const prevSales = prevSlice.reduce((sum, s) => sum + (s.newSalesUsd || 0), 0);
+    applyDelta(document.getElementById('pioneerSalesDelta'), prevSlice.length ? computeDeltaPct(sales, prevSales) : null);
+
+    if (!slice.length) {
+      noteEl.textContent = 'No Pioneer Pass history yet. This fills in once refreshPioneerStats has run (or after the backfill script).';
+      return;
+    }
+    noteEl.textContent = `PayPal (web) subscriptions only, estimated from list prices. Member counts and recurring revenue start the day tracking began${latest ? ` (latest: ${latest.date})` : ''}; earlier days show new sales only. "New sales" counts first purchases, not renewals.`;
+  }
+
   function renderAll() {
     updateActiveRangeLabel();
     renderStats();
@@ -1427,6 +1506,7 @@
     renderUnityAdStats();
     renderMetaAdStats();
     renderAllSourcesTotal();
+    renderPioneer();
     renderGeography();
     renderGeographyPlayers();
   }
