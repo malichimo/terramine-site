@@ -4,7 +4,7 @@
   <base href="/" />
   <script src="/js/console-guard.js?v=20261004-1"></script>
   <script src="/js/tm-prefs.js?v=20261005-7"></script>
-  <script src="/js/tm-pioneer.js?v=20261016-1"></script>
+  <script src="/js/tm-pioneer.js?v=20261021-1"></script>
   <script src="/js/tm-names.js?v=20261015-1"></script>
   <script>
   /* Apply saved portal theme before paint (tmPrefs cookie key "th") to avoid FOUC. */
@@ -1605,7 +1605,7 @@
   // these nicknames (the same header nickname: users.nickname || displayName || email local part),
   // compared case-insensitively after trimming and dropping a leading '@'. Pioneer Pass is forced on for them.
   const NEARBY_HOST = 'mars.baronstoolbox.com';
-  const NEARBY_TESTERS = ['nfoguides', 'foggytick', 'bigglare'];   // fallback only; TMPioneer is the source of truth (case-insensitive)
+  const NEARBY_TESTERS = ['nfoguides', 'foggytick', 'bigglare', 'spyral'];   // fallback only; TMPioneer is the source of truth (case-insensitive)
   let nearbyAllowed = false;
   function setNearbyAccess(ud, uid, nick) {
     const n = String(nick || '').trim().replace(/^@+/, '');

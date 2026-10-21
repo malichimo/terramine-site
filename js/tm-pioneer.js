@@ -1,12 +1,12 @@
 /* Oct 15, 2026: shared Pioneer Pass check.
  * Real membership = users/{uid}.isPioneerMember === true.
- * Test override: on mars.baronstoolbox.com ONLY, the nicknames nfoGuides, FoggyTick, Bigglare
+ * Test override: on mars.baronstoolbox.com ONLY, the nicknames nfoGuides, FoggyTick, Bigglare, SpyraL
  * (case-insensitive, after trim and dropping a leading '@') are treated as members.
  * The nickname is the one the portal header shows: users.nickname || auth displayName || email local part.
  * terramine.app (and any other host) never gets the override. */
 (function () {
   var HOST = 'mars.baronstoolbox.com';
-  var TESTERS = ['nfoguides', 'foggytick', 'bigglare'];   // lowercase; compared case-insensitively
+  var TESTERS = ['nfoguides', 'foggytick', 'bigglare', 'spyral'];   // lowercase; compared case-insensitively
   function nickOf(ud, user) {
     var n = (ud && ud.nickname) || (user && user.displayName) || (user && user.email && String(user.email).split('@')[0]) || '';
     return String(n).trim().replace(/^@+/, '');
