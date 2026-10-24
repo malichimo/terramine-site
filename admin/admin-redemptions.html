@@ -852,7 +852,7 @@
           <td>
             <div class="copy-cell">
               <span>${escHtml(r.paypalEmail || '—')}</span>
-              ${r.paypalEmail ? `<button class="copy-id-btn" title="Copy email" onclick="copyToClipboard('${escAttr(r.paypalEmail)}', this)">📋</button>` : ''}
+              ${r.paypalEmail ? `<button class="copy-id-btn" title="Copy email" onclick="copyToClipboard('${escJsAttr(r.paypalEmail)}', this)">📋</button>` : ''}
             </div>
             <div class="email-hint">${isTango ? 'Tango claim-link recipient' : 'PayPal account email'}</div>
           </td>
@@ -896,7 +896,7 @@
       <div class="ref-code-row">
         ${r.referralCode ? `<span class="ref-code">${escHtml(r.referralCode)}</span>` : ''}
         <span class="ref-count ${referralCountLevel(Math.max(count, signups || 0))}">${referralCountLabel(count)}</span>${signupBadge}
-        ${r.referralCode ? `<button class="ref-count-copy" title="Copy referral code for checkReferralFraud.ts" onclick="copyToClipboard('${escAttr(r.referralCode)}', this)">📋</button>` : ''}
+        ${r.referralCode ? `<button class="ref-count-copy" title="Copy referral code for checkReferralFraud.ts" onclick="copyToClipboard('${escJsAttr(r.referralCode)}', this)">📋</button>` : ''}
       </div>`;
   }
 
@@ -1011,7 +1011,7 @@
     // status like the fraud-check box above, same direct-Firestore-write
     // pattern (isAdmin() already grants update on this collection).
     const flagToggle = `
-      <button class="action-btn flag" onclick="toggleFlag('${r.id}','${escAttr(r.nickname)}', ${r.flaggedForReview ? 'true' : 'false'})">
+      <button class="action-btn flag" onclick="toggleFlag('${r.id}','${escJsAttr(r.nickname)}', ${r.flaggedForReview ? 'true' : 'false'})">
         ${r.flaggedForReview ? 'Unflag' : '🚩 Flag'}
       </button>`;
 
@@ -1023,23 +1023,23 @@
     if (r.status === 'pending') {
       actions = `
         <div>
-          <button class="action-btn paid" onclick="approveAndPay('${r.id}','${escAttr(r.nickname)}')">Paid</button>
-          <button class="action-btn info" onclick="openNeedsInfoModal('${r.id}','${escAttr(r.nickname)}')">Needs Info</button>
-          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
+          <button class="action-btn paid" onclick="approveAndPay('${r.id}','${escJsAttr(r.nickname)}')">Paid</button>
+          <button class="action-btn info" onclick="openNeedsInfoModal('${r.id}','${escJsAttr(r.nickname)}')">Needs Info</button>
+          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escJsAttr(r.nickname)}')">Reject</button>
         </div>`;
     } else if (r.status === 'approved_unpaid') {
       actions = `
         <div>
-          <button class="action-btn paid" onclick="markPaid('${r.id}','${escAttr(r.nickname)}')">Mark Paid</button>
-          <button class="action-btn info" onclick="openNeedsInfoModal('${r.id}','${escAttr(r.nickname)}')">Needs Info</button>
-          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
+          <button class="action-btn paid" onclick="markPaid('${r.id}','${escJsAttr(r.nickname)}')">Mark Paid</button>
+          <button class="action-btn info" onclick="openNeedsInfoModal('${r.id}','${escJsAttr(r.nickname)}')">Needs Info</button>
+          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escJsAttr(r.nickname)}')">Reject</button>
         </div>`;
       note += `<div class="processed-note">Reviewed — pay via ${r.payoutMethod === 'tango' ? 'Tango' : 'PayPal'}, then Mark Paid</div>`;
     } else if (r.status === 'needs_info') {
       actions = `
         <div>
-          <button class="action-btn reopen" onclick="reopenRequest('${r.id}','${escAttr(r.nickname)}')">Reopen</button>
-          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escAttr(r.nickname)}')">Reject</button>
+          <button class="action-btn reopen" onclick="reopenRequest('${r.id}','${escJsAttr(r.nickname)}')">Reopen</button>
+          <button class="action-btn reject" onclick="openRejectModal('${r.id}','${escJsAttr(r.nickname)}')">Reject</button>
         </div>`;
       const infoAtStr = r.infoRequestedAt ? new Date(r.infoRequestedAt).toLocaleString() : '';
       note += `<div class="info-note">Internal note: ${escHtml(r.infoRequestNote || '—')}${infoAtStr ? ' — ' + escHtml(infoAtStr) : ''}</div>`;
@@ -1504,6 +1504,19 @@
   }
   function escAttr(str) {
     return escHtml(str).replace(/'/g, '&#39;');
+  }
+
+  // For values placed inside a single-quoted JS string in an inline onclick="...".
+  // escAttr alone is not enough there: the browser decodes &#39; back to ' BEFORE
+  // the JS runs, so a nickname or email containing an apostrophe (Zunge's Wifey,
+  // ma'moon.ramirez@...) ended the string early and the button did nothing.
+  // Escape for the JS string first (backslash, quote, line breaks), then for HTML.
+  function escJsAttr(str) {
+    const js = String(str == null ? '' : str)
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r?\n/g, ' ');
+    return escHtml(js).replace(/"/g, '&quot;');
   }
 
   // Default tab on load
