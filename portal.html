@@ -481,7 +481,6 @@
                   <span>Earned TerraBucks Today</span>
                   <strong id="tb-today-known-total">—</strong>
                 </div>
-                <p class="tb-today-note" id="tb-today-note">Loading today&rsquo;s check-ins&hellip;</p>
               </div>
             </div>
             <!-- Oct 12, 2026: Mine Maintenance today (dailyActivities where userId == uid) -->
@@ -2273,10 +2272,6 @@
     renderCiBonusChips(pvDay.owners.size);
     tbTodayKnown.checkIns = 6 + pvRows.length * 14 + pvB;
     updateKnownTbTotal();
-    var note = $('tb-today-note');
-    if (note) {
-      note.textContent = 'Preview: check-in, mini-game and referral numbers are sample data.';
-    }
   }
 
   // Oct 4, 2026: the date-ranged query (field == uid AND timestamp >= today) was
@@ -2300,8 +2295,6 @@
       renderTbTodayPreview();
       return;
     }
-    var note = $('tb-today-note');
-    if (note) note.textContent = 'Loading today\u2019s check-ins\u2026';
 
     var startISO = todayStartISO();
     var uid = user.uid;
@@ -2366,23 +2359,8 @@
       console.info('tb-today checkIn sample keys:', keyList || '(none)');
     }
 
-    if (!note) return;
-    if (loadErr) {
-      note.textContent = 'Could not load today\u2019s check-ins: ' + (loadErr.message || loadErr);
-      return;
-    }
-    var bits = [];
-    bits.push('Visitor and your check-in counts are from checkIns for today (local midnight).');
-    bits.push('Visitor check-in TB is counted at 2 TB each.');
-    bits.push('Daily check-in bonus by unique mine owners you checked in with today: 3 owners +10, 5 +25, 10 +50 TB.');
-    bits.push('Referral TB is the tbAwarded on referral bonuses paid today (referralLogs completedAt).');
-    if (yours.length && !yoursTbKnown) {
-      bits.push('Your check-in TB amounts were not on those docs, so that total stays blank.');
-    } else if (yours.length && yoursTbKnown !== yours.length) {
-      bits.push('Only some of your check-ins had a TB reward field; that total may be incomplete.');
-    }
-    bits.push('Mini games are your gameResults for today (TB = rewardsEarned.tb).');
-    note.textContent = bits.join(' ');
+    // Oct 24, 2026: the explanatory footnote under the card was removed; errors go to the console.
+    if (loadErr && typeof console !== 'undefined') console.warn('tb-today: could not load today\u2019s check-ins:', loadErr.message || loadErr);
   }
 
 
