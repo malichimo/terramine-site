@@ -1644,9 +1644,47 @@
     ctx.drawImage(src, pad, headH + pad);
     return out;
   }
+  // Oct 24, 2026: avatars came out as blank squares in copies. html2canvas re-loads every
+  // <img> itself (crossOrigin=anonymous, page referrer sent), ignoring the referrerPolicy
+  // 'no-referrer' the avatars render with; Google avatar hosts refuse/time out that reload,
+  // so html2canvas drops the image. Fix: fetch each external image ourselves (CORS,
+  // no referrer) into a data: URL and swap it into html2canvas's clone; if the fetch is
+  // blocked, the clone shows the avatar's initials instead.
+  const shareImgCache = new Map();   // url -> dataURL | '' (failed)
+  function shareImgToDataUrl(url) {
+    if (shareImgCache.has(url)) return Promise.resolve(shareImgCache.get(url));
+    return fetch(url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+      .then(b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(b); }))
+      .then(d => { shareImgCache.set(url, d); return d; })
+      .catch(e => { console.debug('[share] avatar inline failed', url.split('?')[0], e && e.message); shareImgCache.set(url, ''); return ''; });
+  }
+  async function shareInlineImages(card) {
+    const map = new Map();
+    const urls = new Set();
+    card.querySelectorAll('[data-init] > img').forEach(im => {
+      const u = im.currentSrc || im.src || '';
+      if (/^https?:/i.test(u) && new URL(u, location.href).origin !== location.origin) urls.add(u);
+    });
+    await Promise.all([...urls].map(u => shareImgToDataUrl(u).then(d => map.set(u, d))));
+    return map;
+  }
+  function shareApplyInline(root, map) {
+    if (!root || !map.size) return;
+    root.querySelectorAll('[data-init] > img').forEach(im => {
+      const u = im.currentSrc || im.src || '';
+      if (!map.has(u)) return;
+      const d = map.get(u);
+      if (d) { im.removeAttribute('srcset'); im.src = d; return; }
+      const host = im.parentElement;
+      if (host && host.dataset && host.dataset.init) { host.textContent = host.dataset.init; }
+      else im.remove();
+    });
+  }
   async function captureDashCard(card) {
     try {
       const h2c = await loadHtml2Canvas();
+      const inlineMap = await shareInlineImages(card);
       // Dusk/Mine: cards are translucent rgba over the darkened page photo, which
       // html2canvas doesn't capture (so the card came out near-black), and its
       // box-shadow is painted over the card itself (dark body + light top strip,
@@ -1660,9 +1698,11 @@
       const canvas = await h2c(card, {
         backgroundColor: darkC ? null : '#ffffff',
         width: Math.ceil(rect.width), height: Math.ceil(rect.height),
-        onclone: darkC ? function (doc) {
+        onclone: function (doc) {
           const c = doc.getElementById(card.id);
           if (!c) return;
+          shareApplyInline(c, inlineMap);
+          if (!darkC) return;
           c.style.setProperty('background', solid, 'important');
           c.style.setProperty('box-shadow', 'none', 'important');
           c.style.setProperty('backdrop-filter', 'none', 'important');
@@ -1672,7 +1712,7 @@
           });
           const lab = c.querySelector(':scope > .stat-card-label');
           if (lab) { lab.style.setProperty('font-size', '16px', 'important'); lab.style.setProperty('letter-spacing', '2px', 'important'); }
-        } : null,
+        },
         scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1)),
         useCORS: true,
         logging: false,
@@ -2896,6 +2936,7 @@
     const av = document.createElement('div');
     av.className = cls;
     const init = initials(id.nick);
+    av.dataset.init = init;
     if (id.url) {
       const img = document.createElement('img');
       img.alt = '';
