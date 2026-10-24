@@ -1694,10 +1694,19 @@
       const thC = (document.documentElement.getAttribute('data-theme') || 'day').toLowerCase();
       const darkC = thC === 'dusk' || thC === 'mine';
       const solid = darkC ? (getComputedStyle(document.documentElement).getPropertyValue('--tm-card-solid').trim() || '#16263a') : '';
+      // Oct 24, 2026: copies clipped the right/bottom border + rounded corners. We passed
+      // width/height = ceil(rect) with the default crop origin (the card's fractional
+      // left/top), so at DPR scale the last px of the right/bottom border (and the corner
+      // curve) fell outside the crop. Now: x/y = -SHARE_PAD (html2canvas treats them as
+      // offsets from the card), width/height = ceil(rect) + 2*SHARE_PAD, transparent
+      // background, so the full border/radius sits inside a small transparent margin.
+      // (Verified headless at fractional positions, scale 1 and 2.)
       const rect = card.getBoundingClientRect();
+      const SHARE_PAD = 4;
       const canvas = await h2c(card, {
-        backgroundColor: darkC ? null : '#ffffff',
-        width: Math.ceil(rect.width), height: Math.ceil(rect.height),
+        backgroundColor: null,
+        x: -SHARE_PAD, y: -SHARE_PAD,
+        width: Math.ceil(rect.width) + 2 * SHARE_PAD, height: Math.ceil(rect.height) + 2 * SHARE_PAD,
         onclone: function (doc) {
           const c = doc.getElementById(card.id);
           if (!c) return;
