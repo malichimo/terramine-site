@@ -1026,3 +1026,11 @@ html[data-theme="day"] .dash-share-btn:hover,
 html:not([data-theme]) .dash-share-btn:hover,
 html[data-theme="day"] .stat-card.has-share > .dash-share-btn:hover,
 html:not([data-theme]) .stat-card.has-share > .dash-share-btn:hover { color: #ffffff; border-color: #ffffff; }
+
+/* Oct 24, 2026: dashboard inventory tiles in dark themes (slate blue instead of white) */
+html[data-theme="dusk"] .dash-inv-tile,
+html[data-theme="mine"] .dash-inv-tile {
+  background: #2a4566;
+  border-color: rgba(79, 195, 247, 0.35);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}

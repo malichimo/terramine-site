@@ -208,6 +208,38 @@
     google.maps.event.addListenerOnce(map, 'idle', function () { state.fitting = false; });
   }
 
+  // Oct 24, 2026: dark themes (Dusk 'dusk', Midnight 'mine') get a slate-blue map + darker orange outline.
+  var REACH_STYLE_DARK = {
+    strokeColor: '#E65100', strokeOpacity: 0.95, strokeWeight: 3,
+    fillColor: '#F57C00', fillOpacity: 0.28, clickable: false, zIndex: 50
+  };
+  var MAP_STYLE_DARK = [
+    { elementType: 'geometry', stylers: [{ color: '#1e3350' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#c8d8ea' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#0f1c2e' }] },
+    { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#4a6a8e' }] },
+    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1e3350' }] },
+    { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#223a5a' }] },
+    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#253f60' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#27445f' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#3a5578' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#2a4466' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4a6a90' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#2f4d72' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0d1b2a' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    { elementType: 'labels', stylers: [{ visibility: 'off' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ visibility: 'off' }] },
+    { featureType: 'poi.business', elementType: 'geometry', stylers: [{ visibility: 'off' }] }
+  ];
+  function isDark() { var t = document.documentElement.getAttribute('data-theme'); return t === 'dusk' || t === 'mine'; }
+  function applyTheme() {
+    var d = isDark();
+    if (state.map) state.map.setOptions({ styles: d ? MAP_STYLE_DARK : MAP_STYLE, backgroundColor: d ? '#1e3350' : '#e6e6e6' });
+    if (state.poly) state.poly.setOptions(d ? REACH_STYLE_DARK : REACH_STYLE);
+  }
+  try { new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) {}
+
   function ensureMap() {
     var el = $('dash-dominance-map');
     if (!el) throw new Error('Mine Dominance map element missing');
@@ -229,8 +261,8 @@
       gestureHandling: 'cooperative', // page keeps scrolling; ctrl/two-finger to zoom
       isFractionalZoomEnabled: true,  // lets fitBounds hit ~50% instead of snapping
       tilt: 0,
-      styles: MAP_STYLE,
-      backgroundColor: '#e6e6e6',
+      styles: isDark() ? MAP_STYLE_DARK : MAP_STYLE,
+      backgroundColor: isDark() ? '#1e3350' : '#e6e6e6',
       center: { lat: 39.5, lng: -98.35 },
       zoom: 4
     });
@@ -304,7 +336,7 @@
     if (token !== state.token) return { state: 'stale' };
     try {
       var map = ensureMap();
-      state.poly = new google.maps.Polygon(Object.assign({ paths: path, map: map }, REACH_STYLE));
+      state.poly = new google.maps.Polygon(Object.assign({ paths: path, map: map }, isDark() ? REACH_STYLE_DARK : REACH_STYLE));
       setMsg('');
       fitToPath();
     } catch (e) {
