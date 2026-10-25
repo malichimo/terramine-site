@@ -1409,11 +1409,10 @@
   // (TerraMine absorbs Tango's fee), and it does NOT change any status — use
   // "Mark last Tango CSV as Paid" after Tango accepts the order.
   // The recipient email is stored in paypalEmail for both methods.
-  // TODO(Scott): confirm these headers/columns against the template on Tango's
-  // bulk-upload page and edit TANGO_CSV_HEADER + the row builder below.
-  // Players don't give us a real name, so First Name = their TerraMine
-  // username and Last Name = their referral code (also the reconciliation key).
-  const TANGO_CSV_HEADER = 'First Name,Last Name,Email,Amount,Reference ID';
+  // Tango has no fixed template; the columns are mapped on upload (Oct 25).
+  // Only three columns: First Name = the player's referral code (our
+  // reconciliation key; players give us no real name), Email, Amount (net).
+  const TANGO_CSV_HEADER = 'First Name,Email,Amount';
   window.downloadTangoCsv = () => {
     const pendingTango = allRequests.filter(r => r.status === 'pending' && r.payoutMethod === 'tango');
     const rows = [], skipped = [], batchItems = [];
@@ -1438,7 +1437,7 @@
     const total = rows.reduce((a, x) => a + Math.round(x.net * 100), 0) / 100;
 
     const lines = [TANGO_CSV_HEADER].concat(rows.map(x =>
-      [x.name, x.code, x.email, x.net.toFixed(2), x.code].map(csvCell).join(',')
+      [x.code, x.email, x.net.toFixed(2)].map(csvCell).join(',')
     ));
     const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });
     const d = new Date();
