@@ -499,7 +499,7 @@
           <span class="section-tag">§ Subscriptions</span>
           <h2>Pioneer Pass</h2>
         </div>
-        <p class="section-desc">Paid Pioneer Pass memberships sold on the web through PayPal ($9.99/month or $99.99/year). Revenue figures are <strong>estimates from list prices</strong>, before PayPal fees, refunds and taxes.</p>
+        <p class="section-desc">Paid Pioneer Pass memberships sold on the web through PayPal and in the iOS app through Apple ($9.99/month or $99.99/year). Revenue figures are <strong>estimates from list prices</strong>, before PayPal and Apple fees, refunds and taxes.</p>
       </div>
       <div class="panel panel-row">
         <div>
@@ -522,6 +522,7 @@
         </div>
         <div>
           <div class="side-stat"><div class="k">Active members</div><div class="v" id="pioneerActive">—</div><div class="delta" id="pioneerActiveDelta"></div></div>
+          <div class="side-stat"><div class="k">Members by source</div><div class="v" id="pioneerBySource" style="font-size:1.1em;">—</div></div>
           <div class="side-stat"><div class="k">Est. monthly recurring revenue</div><div class="v" id="pioneerMrr">—</div></div>
           <div class="side-stat"><div class="k">Est. annualized revenue</div><div class="v" id="pioneerArr">—</div></div>
           <div class="side-stat"><div class="k">New sales (period)</div><div class="v" id="pioneerSales">—</div><div class="delta" id="pioneerSalesDelta"></div></div>
@@ -1473,6 +1474,10 @@
 
     const latest = withMembers[withMembers.length - 1];
     document.getElementById('pioneerActive').textContent = latest ? latest.activeMembers.toLocaleString() : '—';
+    // paypalMembers / appleMembers exist on snapshots written from Oct 25, 2026 on.
+    document.getElementById('pioneerBySource').textContent = (latest && typeof latest.appleMembers === 'number')
+      ? `PayPal ${(latest.paypalMembers || 0).toLocaleString()} · iOS ${latest.appleMembers.toLocaleString()}`
+      : (latest && typeof latest.paypalMembers === 'number' ? `PayPal ${latest.paypalMembers.toLocaleString()} · iOS 0` : '—');
     document.getElementById('pioneerMrr').textContent = latest ? fmtUsd(latest.mrrUsd || 0) : '—';
     document.getElementById('pioneerArr').textContent = latest ? fmtUsd(latest.arrUsd || 0) : '—';
     document.getElementById('pioneerEnding').textContent = latest ? (latest.endingMembers || 0).toLocaleString() : '—';
@@ -1490,7 +1495,7 @@
       noteEl.textContent = 'No Pioneer Pass history yet. This fills in once refreshPioneerStats has run (or after the backfill script).';
       return;
     }
-    noteEl.textContent = `PayPal (web) subscriptions only, estimated from list prices. Member counts and recurring revenue start the day tracking began${latest ? ` (latest: ${latest.date})` : ''}; earlier days show new sales only. "New sales" counts first purchases, not renewals.`;
+    noteEl.textContent = `PayPal (web) and iOS (Apple) subscriptions, estimated from list prices; iOS is included from Oct 25, 2026 and earlier days are PayPal only. Member counts and recurring revenue start the day tracking began${latest ? ` (latest: ${latest.date})` : ''}; earlier days show new sales only. "New sales" counts first purchases, not renewals.`;
   }
 
   function renderAll() {
