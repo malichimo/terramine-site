@@ -1,5 +1,5 @@
 /*
- * nfoGuides-only diagnostic (nfoguides branch / mars, Oct 10, 2026):
+ * nfoGuides-only diagnostic (nfoguides branch / mars.baronstoolbox.com only; Oct 10, re-enabled Oct 25, 2026):
  * clicking the nav profile (avatar + nickname → /account.html) adds +100 TB
  * to users/{uid}.tbBalance via FieldValue.increment(100), logs before/after,
  * updates #sb-tb, then continues to the link's normal navigation.
@@ -8,9 +8,9 @@
  * Load after the page's firebase.initializeApp().
  */
 (function () {
-  // DISABLED Oct 12, 2026: test click removed from all pages; inert even if loaded.
-  var NFO_TB_DIAG_ENABLED = false;
-  if (!NFO_TB_DIAG_ENABLED) return;
+  // Re-enabled Oct 25, 2026 (was disabled Oct 12). Mars host ONLY: inert on terramine.app
+  // or any other host even if this script is loaded there (e.g. after a main push).
+  if (location.hostname !== 'mars.baronstoolbox.com') return;
   var NFO_UID = '8HnXWZjRYQZrYPZi5NGdRsWRCvd2';
   var AMOUNT = 100;
   var TAG = '[nfo-tb-diag]';
