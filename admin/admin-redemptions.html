@@ -352,7 +352,9 @@
       <span>Redemption Requests</span>
       <div class="table-header-right">
         <button class="nav-btn" id="paypalCsvBtn" title="Download a PayPal mass-pay CSV of every PENDING PayPal request whose To Be Paid box is ticked (ignores the tab/search filters)" onclick="downloadPaypalMassPayCsv()">📥 PayPal CSV</button>
-        <button class="nav-btn" id="paypalPaidBtn" style="display:none;" title="Marks every request from your last downloaded PayPal CSV as Paid. Only use after PayPal accepted the file." onclick="markCsvBatchPaid()">✅ Mark last CSV as Paid</button>
+        <button class="nav-btn" id="paypalPaidBtn" style="display:none;" title="Marks every request from your last downloaded PayPal CSV as Paid. Only use after PayPal accepted the file." onclick="markCsvBatchPaid('paypal')">✅ Mark last CSV as Paid</button>
+        <button class="nav-btn" id="tangoCsvBtn" style="display:none;" title="Download a Tango bulk-send CSV of every PENDING Tango request whose To Be Paid box is ticked (ignores the tab/search filters)" onclick="downloadTangoCsv()">📥 Tango CSV</button>
+        <button class="nav-btn" id="tangoPaidBtn" style="display:none;" title="Marks every request from your last downloaded Tango CSV as Paid. Only use after Tango accepted the order." onclick="markCsvBatchPaid('tango')">✅ Mark last Tango CSV as Paid</button>
         <input type="text" id="searchInput" class="search-input" placeholder="Search amount, date, email, referral code, or method…" oninput="onSearchInput()" onkeydown="if(event.key==='Enter')serverSearch()">
         <span class="table-count" id="tableCount">— requests</span>
       </div>
@@ -733,6 +735,7 @@
     document.querySelectorAll('.method-tab').forEach(b => b.classList.remove('active'));
     btnEl.classList.add('active');
     render();
+    updateCsvButtons();
   };
 
   // ── Search ─────────────────────────────────────────────────────────────
@@ -1400,6 +1403,70 @@
     toastTimer = setTimeout(() => { t.className = 'toast'; }, 15000);
   };
 
+  // ── Tango bulk-send CSV ────────────────────────────────────────────────
+  // Added Oct 25, 2026. Same rules as the PayPal export: PENDING + Tango +
+  // "To Be Paid" ticked, ignores the tab/search filters, amount = NET payout
+  // (TerraMine absorbs Tango's fee), and it does NOT change any status — use
+  // "Mark last Tango CSV as Paid" after Tango accepts the order.
+  // The recipient email is stored in paypalEmail for both methods.
+  // TODO(Scott): confirm these headers/columns against the template on Tango's
+  // bulk-upload page and edit TANGO_CSV_HEADER + the row builder below.
+  // Players don't give us a real name, so First Name = their TerraMine
+  // username and Last Name = their referral code (also the reconciliation key).
+  const TANGO_CSV_HEADER = 'First Name,Last Name,Email,Amount,Reference ID';
+  window.downloadTangoCsv = () => {
+    const pendingTango = allRequests.filter(r => r.status === 'pending' && r.payoutMethod === 'tango');
+    const rows = [], skipped = [], batchItems = [];
+    let uncheckedCount = 0;
+    for (const r of pendingTango) {
+      if (!r.toBePaid) { uncheckedCount++; continue; }
+      const email = (r.paypalEmail || '').trim();
+      const code = (r.referralCode || '').trim();
+      const net = typeof r.netAmountUsd === 'number' ? r.netAmountUsd : r.amountUsd;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !code || typeof net !== 'number' || !(net > 0)) {
+        skipped.push(code || email || r.id);
+        continue;
+      }
+      rows.push({ email, code, net, name: (r.nickname || code) });
+      batchItems.push({ id: r.id, code, net });
+    }
+    if (!rows.length) { showToast('No pending Tango requests with To Be Paid ticked.', 'error'); return; }
+
+    const seen = new Map();
+    rows.forEach(x => seen.set(x.code, (seen.get(x.code) || 0) + 1));
+    const dupes = [...seen].filter(([, n]) => n > 1).map(([c]) => c);
+    const total = rows.reduce((a, x) => a + Math.round(x.net * 100), 0) / 100;
+
+    const lines = [TANGO_CSV_HEADER].concat(rows.map(x =>
+      [x.name, x.code, x.email, x.net.toFixed(2), x.code].map(csvCell).join(',')
+    ));
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });
+    const d = new Date();
+    const stamp = String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getFullYear()).slice(2);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tango_${stamp}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+    try {
+      localStorage.setItem(TANGO_BATCH_KEY, JSON.stringify({
+        createdAt: new Date().toISOString(),
+        items: batchItems,
+      }));
+    } catch (e) { /* storage blocked: the Mark-as-Paid button just won't appear */ }
+    refreshPaypalPaidBtn();
+
+    let msg = `Downloaded ${rows.length} Tango rewards, $${total.toFixed(2)} total. ${uncheckedCount} pending Tango left out (To Be Paid not ticked).`;
+    if (skipped.length) msg += ` ${skipped.length} skipped (bad email/code/amount): ${skipped.slice(0, 5).join(', ')}.`;
+    if (dupes.length) msg += ` Same Reference ID used twice: ${dupes.join(', ')}.`;
+    msg += ' Mark them Paid after Tango accepts the order.';
+    console.log(msg);
+    showToast(msg, skipped.length || dupes.length ? 'error' : '');
+    const t = document.getElementById('toast'); clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 15000);
+  };
+
   // ── Mark last PayPal CSV as Paid ───────────────────────────────────────
   // Added Oct 10, 2026. The CSV button remembers which requests went into the
   // file (this browser only). After PayPal accepts the upload, this does for
@@ -1408,27 +1475,44 @@
   // paid. Anything that fails stays in the batch so it can be retried; rows
   // that are no longer pending (already paid, rejected, etc.) are dropped.
   const PAYPAL_BATCH_KEY = 'paypalCsvBatch';
-  function loadPaypalBatch() {
-    try { const b = JSON.parse(localStorage.getItem(PAYPAL_BATCH_KEY) || 'null'); return b && Array.isArray(b.items) && b.items.length ? b : null; }
+  const TANGO_BATCH_KEY = 'tangoCsvBatch';   // Oct 25, 2026: same flow for Tango
+  const BATCH_KEYS = { paypal: PAYPAL_BATCH_KEY, tango: TANGO_BATCH_KEY };
+  function loadPaypalBatch(key = PAYPAL_BATCH_KEY) {
+    try { const b = JSON.parse(localStorage.getItem(key) || 'null'); return b && Array.isArray(b.items) && b.items.length ? b : null; }
     catch (e) { return null; }
   }
   function refreshPaypalPaidBtn() {
-    const btn = document.getElementById('paypalPaidBtn');
-    if (!btn) return;
-    const b = loadPaypalBatch();
-    btn.style.display = b ? '' : 'none';
-    if (b) btn.textContent = `✅ Mark last CSV as Paid (${b.items.length})`;
+    // Each "Mark last CSV as Paid" button shows whenever its own batch exists
+    // (regardless of the method tab), so a batch is never orphaned.
+    for (const m of ['paypal', 'tango']) {
+      const btn = document.getElementById(m + 'PaidBtn');
+      if (!btn) continue;
+      const b = loadPaypalBatch(BATCH_KEYS[m]);
+      btn.style.display = b ? '' : 'none';
+      if (b) btn.textContent = `✅ Mark last ${m === 'tango' ? 'Tango ' : ''}CSV as Paid (${b.items.length})`;
+    }
+    updateCsvButtons();
+  }
+  // Show the CSV download button that matches the method tab: PayPal on
+  // All/PayPal, Tango on All/Tango. (Before Oct 25 the PayPal button showed on
+  // the Tango tab and silently did nothing because it only exports PayPal.)
+  function updateCsvButtons() {
+    const pp = document.getElementById('paypalCsvBtn'), tg = document.getElementById('tangoCsvBtn');
+    if (pp) pp.style.display = currentMethod === 'tango' ? 'none' : '';
+    if (tg) tg.style.display = currentMethod === 'paypal' ? 'none' : '';
   }
   let batchPaying = false;
-  window.markCsvBatchPaid = async () => {
+  window.markCsvBatchPaid = async (method = 'paypal') => {
     if (batchPaying) return;
-    const b = loadPaypalBatch();
+    const key = BATCH_KEYS[method] || PAYPAL_BATCH_KEY;
+    const label = method === 'tango' ? 'Tango' : 'PayPal';
+    const b = loadPaypalBatch(key);
     if (!b) { showToast('No CSV batch remembered in this browser.', 'error'); return; }
     const total = b.items.reduce((a, x) => a + Math.round(x.net * 100), 0) / 100;
-    if (!confirm(`Mark ${b.items.length} requests ($${total.toFixed(2)} net) from the CSV downloaded ${new Date(b.createdAt).toLocaleString()} as PAID?\n\nOnly do this AFTER PayPal has accepted the upload. Each request is re-checked by the server first; any that fail stay in the batch so you can retry.`)) return;
+    if (!confirm(`Mark ${b.items.length} requests ($${total.toFixed(2)} net) from the CSV downloaded ${new Date(b.createdAt).toLocaleString()} as PAID?\n\nOnly do this AFTER ${label} has accepted the ${method === 'tango' ? 'order' : 'upload'}. Each request is re-checked by the server first; any that fail stay in the batch so you can retry.`)) return;
 
     batchPaying = true;
-    const btn = document.getElementById('paypalPaidBtn');
+    const btn = document.getElementById(method + 'PaidBtn');
     btn.disabled = true;
     const byId = new Map(allRequests.map(r => [r.id, r]));
     const remaining = [], failures = [];
@@ -1456,8 +1540,8 @@
     await Promise.all([worker(), worker(), worker()]);
 
     try {
-      if (remaining.length) localStorage.setItem(PAYPAL_BATCH_KEY, JSON.stringify({ createdAt: b.createdAt, items: remaining }));
-      else localStorage.removeItem(PAYPAL_BATCH_KEY);
+      if (remaining.length) localStorage.setItem(key, JSON.stringify({ createdAt: b.createdAt, items: remaining }));
+      else localStorage.removeItem(key);
     } catch (e) {}
     btn.disabled = false;
     batchPaying = false;
