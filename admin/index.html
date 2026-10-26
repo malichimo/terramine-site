@@ -1093,7 +1093,7 @@
         active7CountSnap,
         active30CountSnap,
         tbSnap, usdEarningsSnap, usdFromTBSnap, usdWithdrawnSnap, checkInsSnap,
-        propCountSnap,
+        propCountSnap, usdTradedSnap, usdPendingSnap,
       ] = await Promise.all([
         getCountFromServer(usersCol),
         getCountFromServer(query(usersCol, where('lastActiveAt', '>', day7ISO))),
@@ -1104,6 +1104,8 @@
         getAggregateFromServer(usersCol, { v: sum('usdWithdrawn') }),
         getAggregateFromServer(usersCol, { v: sum('totalCheckIns') }),
         getCountFromServer(propsCol),
+        getAggregateFromServer(usersCol, { v: sum('usdTradedForTB') }),
+        getAggregateFromServer(usersCol, { v: sum('usdWithdrawalsPending') }),
       ]);
 
       const total   = totalCountSnap.data().count;
@@ -1121,7 +1123,10 @@
       // usdWithdrawn at the moment a payout is PayPal-confirmed.
       const usdEarningsSum = usdEarningsSnap.data().v || 0;
       const currentLiability = usdEarningsSum;
-      const totalUSD = usdEarningsSum + (usdFromTBSnap.data().v || 0) + (usdWithdrawnSnap.data().v || 0);
+      // Oct 26, 2026: also counts USD traded for TB and escrowed (pending) withdrawals —
+      // both leave usdEarnings but are still lifetime earnings.
+      const totalUSD = usdEarningsSum + (usdFromTBSnap.data().v || 0) + (usdWithdrawnSnap.data().v || 0) +
+        (usdTradedSnap.data().v || 0) + (usdPendingSnap.data().v || 0);
       const totalCI  = checkInsSnap.data().v || 0;
       const propCount = propCountSnap.data().count;
 
