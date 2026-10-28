@@ -417,6 +417,40 @@
       </div>
     </section>
 
+    <!-- Oct 27, 2026 (Scott) -- "Estimated ad revenue by platform" above is
+         AdMob Network only, so its daily numbers run well below AdMob's own
+         console (whose overview includes mediated Meta/Unity earnings).
+         This section sums AdMob + Unity + Meta per day and per platform so
+         the report can be reconciled to the AdMob console totals. -->
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">&sect; Ad Revenue</span>
+          <h2>All ad sources by platform</h2>
+        </div>
+        <p class="section-desc">AdMob Network + Unity Ads + Meta Audience Network added together per day and platform. This is the figure to compare against the totals on AdMob's app overview, which include mediated partner earnings. Reported ~1 day behind "today".</p>
+      </div>
+      <div class="panel panel-row">
+        <div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-2)"></span>Android</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>iOS</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="allSourcesChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="allSourcesTooltip"></div>
+          </div>
+          <div id="allSourcesEmpty" class="empty-state" style="display:none;"></div>
+          <p id="allSourcesNote" style="font-size:12px;color:var(--text-muted);margin-top:14px;"></p>
+        </div>
+        <div>
+          <div class="side-stat"><div class="k">Android, all sources (period)</div><div class="v" id="allSrcAndroid">&mdash;</div><div class="delta" id="allSrcAndroidDelta"></div></div>
+          <div class="side-stat"><div class="k">iOS, all sources (period)</div><div class="v" id="allSrcIos">&mdash;</div><div class="delta" id="allSrcIosDelta"></div></div>
+          <div class="side-stat"><div class="k">Total, all sources (period)</div><div class="v" id="allSrcTotal">&mdash;</div><div class="delta" id="allSrcTotalDelta"></div></div>
+        </div>
+      </div>
+    </section>
+
     <!-- Sept 20, 2026 (Scott); corrected Oct 8, 2026 -- Unity Ads bids inside
          the AdMob mediation but is paid by Unity directly. AdMob's network
          report (what the section above uses) covers the AdMob Network only,
@@ -1457,6 +1491,48 @@
     applyDelta(document.getElementById('adRevAllDelta'), hasPrev ? computeDeltaPct(cur, prev) : null);
   }
 
+  // Oct 27, 2026 -- per-day, per-platform sum of AdMob + Unity + Meta.
+  function mergeSourcesByDate(slices) {
+    const byDate = {};
+    slices.forEach(sl => sl.forEach(r => {
+      const d = byDate[r.date] || (byDate[r.date] = { date: r.date, android: 0, ios: 0 });
+      d.android += r.androidRevenue || 0;
+      d.ios += r.iosRevenue || 0;
+    }));
+    return Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function renderAllSourcesChart() {
+    const feeds = [adRevenueSnapshots, unityAdSnapshots, metaAdSnapshots];
+    const days = mergeSourcesByDate(feeds.map(f => dateRangeSlice(f, 'date', currentRange)));
+    const prev = mergeSourcesByDate(feeds.map(f => priorWindowSlice(f, 'date', currentRange)));
+    const noteEl = document.getElementById('allSourcesNote');
+
+    stackedBarChart('allSourcesChart', 'allSourcesTooltip', 'allSourcesEmpty',
+      ['Android', 'iOS'],
+      [days.map(d => d.android), days.map(d => d.ios)],
+      days.map(d => d.date), 900, 180,
+      [styleOf('--cat-2'), styleOf('--cat-1')]);
+
+    const fmtUsd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const tA = days.reduce((t, d) => t + d.android, 0);
+    const tI = days.reduce((t, d) => t + d.ios, 0);
+    const pA = prev.reduce((t, d) => t + d.android, 0);
+    const pI = prev.reduce((t, d) => t + d.ios, 0);
+    document.getElementById('allSrcAndroid').textContent = days.length ? fmtUsd(tA) : '\u2014';
+    document.getElementById('allSrcIos').textContent = days.length ? fmtUsd(tI) : '\u2014';
+    document.getElementById('allSrcTotal').textContent = days.length ? fmtUsd(tA + tI) : '\u2014';
+    // Same rule as the "All ad sources" stat: compare only if AdMob has a prior window.
+    const hasPrev = priorWindowSlice(adRevenueSnapshots, 'date', currentRange).length > 0;
+    applyDelta(document.getElementById('allSrcAndroidDelta'), hasPrev ? computeDeltaPct(tA, pA) : null);
+    applyDelta(document.getElementById('allSrcIosDelta'), hasPrev ? computeDeltaPct(tI, pI) : null);
+    applyDelta(document.getElementById('allSrcTotalDelta'), hasPrev ? computeDeltaPct(tA + tI, pA + pI) : null);
+
+    if (!days.length) { noteEl.textContent = ''; return; }
+    const latest = days[days.length - 1];
+    noteEl.textContent = `AdMob Network + Unity + Meta, summed per day (most recent day: ${latest.date}). Unity/Meta history starts later than AdMob's, so older days may be AdMob-only. Estimates only \u2014 AdMob's own dashboard is authoritative.`;
+  }
+
   function renderPioneer() {
     const slice = dateRangeSlice(pioneerSnapshots, 'date', currentRange);
     const noteEl = document.getElementById('pioneerNote');
@@ -1511,6 +1587,7 @@
     renderUnityAdStats();
     renderMetaAdStats();
     renderAllSourcesTotal();
+    renderAllSourcesChart();
     renderPioneer();
     renderGeography();
     renderGeographyPlayers();
@@ -1590,7 +1667,7 @@
       : `Showing: ${start} – ${end}`;
   }
 
-  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); renderUnityAdStats(); renderMetaAdStats(); });
+  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); renderUnityAdStats(); renderMetaAdStats(); renderAllSourcesChart(); });
 </script>
 
 </body>
