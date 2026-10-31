@@ -83,6 +83,13 @@
   .toast.success { border-color:var(--green); color:var(--green); }
   .toast.error { border-color:var(--red); color:var(--red); }
 
+  .sales-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; padding:16px 20px; }
+  .stat { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .stat .k { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); }
+  .stat .v { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; color:var(--gold-light); margin-top:4px; }
+  .stat .s { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .sales-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .sales-bar input[type=date] { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; color-scheme:dark; }
   @media (max-width:700px) {
     .main { padding:16px; }
     .header { padding:14px 16px; }
@@ -115,6 +122,21 @@
 <div class="main">
   <div class="info-banner">
     <strong>Changes go live the moment you save</strong> (no app update or deploy). Players see new prices the next time they open the store. A blank or "default" field uses the built-in price shown next to it. Prices are whole TB. Only the changes that differ from the defaults are stored in <code>config/terraTownStore</code>.
+  </div>
+
+  <div class="card">
+    <div class="card-head">Store sales
+      <span class="sales-bar">
+        <input type="date" id="salesDate">
+        <button class="btn" onclick="loadSales()">Refresh</button>
+      </span>
+    </div>
+    <div class="sales-grid" id="salesTotals"><div class="default">Loading…</div></div>
+    <table id="salesTable" style="display:none;">
+      <thead><tr><th>Item</th><th>Purchases</th><th>Units</th><th>TB spent</th></tr></thead>
+      <tbody id="salesBody"></tbody>
+    </table>
+    <div class="default" style="padding:12px 20px;">Days run on New York time (when the store's daily limits reset). Counts come from the purchase log, so refreshing is cheap.</div>
   </div>
 
   <div class="card">
@@ -172,6 +194,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
@@ -184,6 +207,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
+  const adminTerraTownStats = httpsCallable(getFunctions(app), 'adminTerraTownStats');
   const CONFIG_REF = () => doc(db, 'config', 'terraTownStore');
 
   // ── Catalog: MUST mirror buildCatalog() in functions/src/terraTownStore.ts ──
@@ -235,7 +259,10 @@
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('logoutBtn').style.display = 'inline-block';
       document.getElementById('adminEmail').textContent = user.email;
+      const sd = document.getElementById('salesDate');
+      if (!sd.value) sd.value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       load();
+      loadSales();
     } else {
       document.getElementById('logoutBtn').style.display = 'none';
       document.getElementById('adminEmail').textContent = '';
@@ -436,6 +463,34 @@
       toast('Save failed — check console', 'error');
     } finally {
       btn.disabled = false; btn.textContent = 'Save to live store';
+    }
+  };
+
+  const SHELF_TITLES = { groceries: '🥕 Groceries', hardware: '🔧 Hardware', souvenirs: '🎃 Souvenirs' };
+  const fmt = n => Number(n || 0).toLocaleString();
+  window.loadSales = async () => {
+    const totals = document.getElementById('salesTotals');
+    const table = document.getElementById('salesTable');
+    const date = document.getElementById('salesDate').value;
+    totals.innerHTML = '<div class="default">Loading…</div>';
+    try {
+      const res = (await adminTerraTownStats({ date })).data;
+      const stat = (k, v, s) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`;
+      totals.innerHTML =
+        stat('All items', fmt(res.total.tb) + ' TB', `${fmt(res.total.purchases)} purchases · ${fmt(res.total.units)} units`) +
+        Object.entries(SHELF_TITLES).map(([k, t]) => {
+          const sh = res.shelves[k] || { purchases: 0, units: 0, tb: 0 };
+          return stat(t, fmt(sh.tb) + ' TB', `${fmt(sh.purchases)} purchases · ${fmt(sh.units)} units`);
+        }).join('') +
+        stat('🏪 Gate unlocks', fmt(res.unlocks.count), fmt(res.unlocks.tb) + ' TB');
+      const body = document.getElementById('salesBody');
+      const rows = (res.items || []).slice().sort((a, b) => b.tb - a.tb);
+      body.innerHTML = rows.map(r => `<tr><td><div class="item-name">${r.name}</div><div class="item-id">${r.id}</div></td><td>${fmt(r.purchases)}</td><td>${fmt(r.units)}</td><td>${fmt(r.tb)}</td></tr>`).join('');
+      table.style.display = rows.length ? '' : 'none';
+    } catch (e) {
+      console.error('Sales load failed:', e);
+      totals.innerHTML = '<div class="default">Could not load sales (the adminTerraTownStats function may not be deployed yet).</div>';
+      table.style.display = 'none';
     }
   };
 
