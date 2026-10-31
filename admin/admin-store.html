@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine General Store Prices</title>
+<link rel="icon" type="image/png" href="/logo.png?v=2" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07; --surface: #1a1208; --surface2: #241a0d;
+    --gold: #c8922a; --gold-light: #f0b84a; --amber: #e07b20;
+    --text: #f0e6d0; --text-muted: #8a7560;
+    --green: #4caf6e; --red: #e05050; --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; flex-wrap:wrap; gap:12px; }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { font-size:28px; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); letter-spacing:-0.5px; }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .admin-email { font-size:11px; color:var(--text-muted); }
+  .nav-btn { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; text-decoration:none; cursor:pointer; display:inline-block; }
+  .nav-btn:hover { color:var(--text); border-color:var(--gold); }
+  .logout-btn { background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; }
+  .logout-btn:hover { color:var(--red); border-color:var(--red); }
+
+  .main { padding:32px; max-width:1100px; margin:0 auto; }
+  .info-banner { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--gold); border-radius:8px; padding:14px 18px; font-size:12px; line-height:1.6; color:var(--text-muted); margin-bottom:20px; }
+  .info-banner strong { color:var(--gold-light); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:20px; overflow:hidden; }
+  .card-head { padding:14px 20px; border-bottom:1px solid var(--border); font-family:'Syne',sans-serif; font-weight:700; font-size:15px; color:var(--gold-light); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .card-head small { font-family:'DM Mono',monospace; font-weight:400; font-size:11px; color:var(--text-muted); }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); font-weight:500; padding:10px 20px; border-bottom:1px solid var(--border); }
+  td { padding:10px 20px; font-size:13px; border-bottom:1px solid rgba(200,146,42,0.07); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr.changed td { background:rgba(240,184,74,0.07); }
+  .item-name { color:var(--text); }
+  .item-id { font-size:10px; color:var(--text-muted); margin-top:2px; }
+  .default { font-size:11px; color:var(--text-muted); }
+  input.num { width:90px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; outline:none; }
+  input.num:focus { border-color:var(--gold); }
+  input.num.bad { border-color:var(--red); }
+  .toggle { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); cursor:pointer; user-select:none; }
+  .toggle input { accent-color:var(--gold); width:16px; height:16px; }
+  .warn { color:var(--amber); font-size:11px; margin-top:4px; }
+  .reset-btn { background:transparent; border:none; color:var(--text-muted); font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; text-decoration:underline; }
+  .reset-btn:hover { color:var(--gold-light); }
+
+  .actionbar { position:sticky; bottom:0; background:var(--surface); border-top:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; z-index:90; }
+  .actionbar .status { font-size:12px; color:var(--text-muted); }
+  .btn { padding:11px 20px; border-radius:8px; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); }
+  .btn:hover { color:var(--text); border-color:var(--gold); }
+  .btn.primary { background:var(--gold); border-color:var(--gold); color:var(--bg); font-weight:500; }
+  .btn.primary:hover { opacity:0.9; color:var(--bg); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:800; display:none; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.open { display:flex; }
+  .modal-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px; width:520px; max-width:100%; max-height:85vh; overflow:auto; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--gold-light); margin-bottom:12px; }
+  .diff { font-size:12px; line-height:1.9; margin-bottom:18px; }
+  .diff .from { color:var(--text-muted); text-decoration:line-through; }
+  .diff .to { color:var(--green); }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+  #loginOverlay { position:fixed; inset:0; background:var(--bg); z-index:999; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; max-width:100%; text-align:center; }
+  .login-icon { font-size:36px; margin-bottom:16px; }
+  .login-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); margin-bottom:4px; }
+  .login-sub { font-size:11px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase; margin-bottom:32px; }
+  .login-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; margin-bottom:12px; outline:none; }
+  .login-btn { width:100%; background:var(--gold); color:var(--bg); border:none; border-radius:8px; padding:14px; font-family:'DM Mono',monospace; font-size:13px; font-weight:500; cursor:pointer; }
+  #loginError { color:var(--red); font-size:12px; margin-top:12px; display:none; }
+
+  .toast { position:fixed; bottom:84px; right:28px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px; font-size:13px; color:var(--text); z-index:900; display:none; }
+  .toast.show { display:block; }
+  .toast.success { border-color:var(--green); color:var(--green); }
+  .toast.error { border-color:var(--red); color:var(--red); }
+
+  @media (max-width:700px) {
+    .main { padding:16px; }
+    .header { padding:14px 16px; }
+    th, td { padding:10px 12px; }
+    .actionbar { padding:12px 16px; }
+    .col-hide { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">🏪</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">General Store Prices</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/" class="nav-btn">⛏️ Main</a>
+    <a href="/admin/admin-users.html" class="nav-btn">👥 Users</a>
+    <a href="/admin/admin-finance.html" class="nav-btn">💰 Finance</a>
+    <a href="/admin/admin-redemptions.html" class="nav-btn">💸 Redemptions</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="info-banner">
+    <strong>Changes go live the moment you save</strong> (no app update or deploy). Players see new prices the next time they open the store. A blank or "default" field uses the built-in price shown next to it. Prices are whole TB. Only the changes that differ from the defaults are stored in <code>config/terraTownStore</code>.
+  </div>
+
+  <div class="card">
+    <div class="card-head">Building unlock <small>one-time, per account</small></div>
+    <table>
+      <thead><tr><th>Item</th><th>Price (TB)</th><th class="col-hide">Default</th></tr></thead>
+      <tbody>
+        <tr id="row-unlock">
+          <td><div class="item-name">General Store gate</div><div class="item-id">unlockPrice</div></td>
+          <td><input class="num" id="in-unlock" type="number" min="0" step="1" inputmode="numeric"></td>
+          <td class="col-hide default">1000</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="shelves"></div>
+</div>
+
+<div class="actionbar">
+  <div class="status" id="statusText">Loading…</div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn" id="discardBtn" onclick="discardChanges()" disabled>Discard</button>
+    <button class="btn primary" id="saveBtn" onclick="openConfirm()" disabled>Review &amp; Save</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-card">
+    <div class="modal-title">Confirm store changes</div>
+    <div class="diff" id="diffList"></div>
+    <div id="confirmWarnings" class="warn" style="margin-bottom:14px;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeConfirm()">Cancel</button>
+      <button class="btn primary" id="confirmSaveBtn" onclick="doSave()">Save to live store</button>
+    </div>
+  </div>
+</div>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-icon">🏪</div>
+    <div class="login-title">General Store Prices</div>
+    <div class="login-sub">Admin access required</div>
+    <input id="loginEmail" type="email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    <input id="loginPass" type="password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const CONFIG_REF = () => doc(db, 'config', 'terraTownStore');
+
+  // ── Catalog: MUST mirror buildCatalog() in functions/src/terraTownStore.ts ──
+  // (ids, defaults, which items have a built-in daily limit). If an item is
+  // added or a default changes there, update this list too.
+  const UNLOCK_DEFAULT = 1000;
+  const MINES = ['rock', 'coal', 'gold', 'diamond'];
+  const TIERS = ['common', 'uncommon', 'rare', 'epic'];
+  const MAT_PRICE = { common: 1, uncommon: 10, rare: 50, epic: 250 };
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const SHELVES = [
+    { key: 'groceries', title: '🥕 Groceries', sub: 'mine materials', items: [] },
+    { key: 'hardware',  title: '🔧 Hardware',  sub: 'Ad Skips and tools', items: [] },
+    { key: 'souvenirs', title: '🎃 Souvenirs', sub: 'goggles, pumpkins', items: [] },
+  ];
+  for (const m of MINES) for (const t of TIERS) {
+    SHELVES[0].items.push({ id: `mat_${m}_${t}`, name: `${cap(m)} (${t})`, price: MAT_PRICE[t], dailyMax: null });
+  }
+  [[1, 100, 5], [5, 450, 2], [10, 850, 1]].forEach(([n, p, d]) =>
+    SHELVES[1].items.push({ id: `ad_skip_${n}`, name: `Ad Skip ×${n}`, price: p, dailyMax: d }));
+  SHELVES[2].items.push(
+    { id: 'goggles_1min', name: 'Night Vision Goggles (1 min)', price: 100, dailyMax: null },
+    { id: 'goggles_3min', name: 'Night Vision Goggles (3 min)', price: 250, dailyMax: null },
+    { id: 'goggles_5min', name: 'Night Vision Goggles (5 min)', price: 400, dailyMax: null },
+    { id: 'pumpkin', name: 'Jack-O-Lantern pumpkin', price: 4, dailyMax: 5 },
+  );
+  const ALL = SHELVES.flatMap(s => s.items);
+  const PUMPKIN_MIN_PRICE = 4; // best bank trade-in is 4 TB per pumpkin; below this, buying nets TB
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let saved = null;      // what is stored right now: { unlock, items:{id:{price,enabled,dailyMax}} } (effective values)
+  let extraFields = {};  // any other fields already on the doc, preserved on save
+
+  function effective(it, ov) {
+    ov = ov || {};
+    const p = Number(ov.price);
+    const d = Number(ov.dailyMax);
+    return {
+      price: Number.isFinite(p) && p >= 0 ? Math.floor(p) : it.price,
+      enabled: typeof ov.enabled === 'boolean' ? ov.enabled : true,
+      dailyMax: it.dailyMax === null && !(Number.isFinite(d) && d >= 0) ? null
+        : (Number.isFinite(d) && d >= 0 ? Math.floor(d) : it.dailyMax),
+    };
+  }
+
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      load();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+    }
+  });
+  window.doLogout = async () => { await signOut(auth); location.reload(); };
+  window.doLogin = async () => {
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value.trim(), document.getElementById('loginPass').value);
+    } catch (e) {
+      errEl.textContent = 'Sign-in failed. Check email and password.';
+      errEl.style.display = 'block';
+    }
+  };
+
+  // ── Load + render ────────────────────────────────────────────────────────
+  async function load() {
+    setStatus('Loading…');
+    try {
+      const snap = await getDoc(CONFIG_REF());
+      const d = snap.exists() ? snap.data() : {};
+      const { unlockPrice, items, updatedAt, updatedBy, ...rest } = d;
+      extraFields = rest;
+      const u = Number(unlockPrice);
+      saved = {
+        unlock: Number.isFinite(u) && u >= 0 ? Math.floor(u) : UNLOCK_DEFAULT,
+        items: {},
+        updatedBy: updatedBy || null,
+        updatedAt: updatedAt && updatedAt.toDate ? updatedAt.toDate() : null,
+      };
+      for (const it of ALL) saved.items[it.id] = effective(it, items && items[it.id]);
+      render();
+    } catch (e) {
+      console.error(e);
+      setStatus('Could not load (are you signed in as the admin?)');
+      toast('Load failed — check console', 'error');
+    }
+  }
+
+  function render() {
+    document.getElementById('in-unlock').value = saved.unlock;
+    document.getElementById('in-unlock').oninput = refresh;
+    const host = document.getElementById('shelves');
+    host.innerHTML = '';
+    for (const sh of SHELVES) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      let rows = '';
+      for (const it of sh.items) {
+        const cur = saved.items[it.id];
+        rows += `<tr id="row-${it.id}">
+          <td><div class="item-name">${it.name}</div><div class="item-id">${it.id}</div><div class="warn" id="w-${it.id}"></div></td>
+          <td><input class="num" id="p-${it.id}" type="number" min="0" step="1" inputmode="numeric" value="${cur.price}"> <div class="default">default ${it.price}</div></td>
+          <td>${it.dailyMax !== null || cur.dailyMax !== null
+            ? `<input class="num" id="d-${it.id}" type="number" min="0" step="1" inputmode="numeric" value="${cur.dailyMax ?? ''}" placeholder="none"> <div class="default">${it.dailyMax !== null ? 'default ' + it.dailyMax + '/day' : 'no daily limit'}</div>`
+            : `<span class="default">—</span>`}</td>
+          <td><label class="toggle"><input type="checkbox" id="e-${it.id}" ${cur.enabled ? 'checked' : ''}> On sale</label></td>
+          <td class="col-hide"><button class="reset-btn" onclick="resetItem('${it.id}')">reset to default</button></td>
+        </tr>`;
+      }
+      card.innerHTML = `<div class="card-head">${sh.title} <small>${sh.sub}</small></div>
+        <table><thead><tr><th>Item</th><th>Price (TB)</th><th>Daily limit / player</th><th>Status</th><th class="col-hide"></th></tr></thead><tbody>${rows}</tbody></table>`;
+      host.appendChild(card);
+    }
+    host.querySelectorAll('input').forEach(i => { i.oninput = refresh; i.onchange = refresh; });
+    refresh();
+  }
+
+  // Current form values.
+  function readForm() {
+    const out = { unlock: null, items: {}, errors: [] };
+    const u = document.getElementById('in-unlock');
+    out.unlock = parseWhole(u.value);
+    u.classList.toggle('bad', out.unlock === null);
+    if (out.unlock === null) out.errors.push('Unlock price must be a whole number 0 or more.');
+    for (const it of ALL) {
+      const pEl = document.getElementById('p-' + it.id);
+      const dEl = document.getElementById('d-' + it.id);
+      const price = parseWhole(pEl.value);
+      pEl.classList.toggle('bad', price === null);
+      if (price === null) out.errors.push(`${it.name}: price must be a whole number 0 or more.`);
+      let dailyMax = it.dailyMax;
+      if (dEl) {
+        if (dEl.value.trim() === '') dailyMax = it.dailyMax; // blank = default
+        else {
+          const dv = parseWhole(dEl.value);
+          dEl.classList.toggle('bad', dv === null);
+          if (dv === null) out.errors.push(`${it.name}: daily limit must be a whole number 0 or more.`);
+          else dailyMax = dv;
+        }
+      }
+      out.items[it.id] = { price: price === null ? it.price : price, enabled: document.getElementById('e-' + it.id).checked, dailyMax };
+    }
+    return out;
+  }
+  function parseWhole(v) {
+    if (String(v).trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 && Math.floor(n) === n ? n : null;
+  }
+
+  function diffs(form) {
+    const list = [];
+    if (form.unlock !== null && form.unlock !== saved.unlock) list.push({ label: 'General Store gate', from: saved.unlock + ' TB', to: form.unlock + ' TB' });
+    for (const it of ALL) {
+      const a = saved.items[it.id], b = form.items[it.id];
+      if (a.price !== b.price) list.push({ label: it.name + ' price', from: a.price + ' TB', to: b.price + ' TB' });
+      if (a.enabled !== b.enabled) list.push({ label: it.name + ' status', from: a.enabled ? 'on sale' : 'off sale', to: b.enabled ? 'on sale' : 'off sale' });
+      if (a.dailyMax !== b.dailyMax) list.push({ label: it.name + ' daily limit', from: a.dailyMax === null ? 'none' : String(a.dailyMax), to: b.dailyMax === null ? 'none' : String(b.dailyMax) });
+    }
+    return list;
+  }
+
+  function warnings(form) {
+    const w = [];
+    const p = form.items.pumpkin;
+    if (p && p.price < PUMPKIN_MIN_PRICE) w.push(`Pumpkins at ${p.price} TB sell for less than the bank's best trade-in (${PUMPKIN_MIN_PRICE} TB each), so players could buy and trade in for a TB profit.`);
+    for (const it of ALL) {
+      const f = form.items[it.id];
+      if (f.price === 0 && f.enabled) w.push(`${it.name} is set to 0 TB (free).`);
+    }
+    return w;
+  }
+
+  function refresh() {
+    if (!saved) return;
+    const form = readForm();
+    const d = diffs(form);
+    const changedIds = new Set();
+    for (const it of ALL) {
+      const a = saved.items[it.id], b = form.items[it.id];
+      const ch = a.price !== b.price || a.enabled !== b.enabled || a.dailyMax !== b.dailyMax;
+      document.getElementById('row-' + it.id).classList.toggle('changed', ch);
+      if (ch) changedIds.add(it.id);
+      const pw = it.id === 'pumpkin' && b.price < PUMPKIN_MIN_PRICE ? `Below ${PUMPKIN_MIN_PRICE} TB lets players profit via the bank.` : '';
+      document.getElementById('w-' + it.id).textContent = pw;
+    }
+    document.getElementById('row-unlock').classList.toggle('changed', form.unlock !== null && form.unlock !== saved.unlock);
+    const n = d.length;
+    const who = saved.updatedBy ? ` Last saved by ${saved.updatedBy}${saved.updatedAt ? ' on ' + saved.updatedAt.toLocaleString() : ''}.` : '';
+    setStatus((n ? `${n} unsaved change${n === 1 ? '' : 's'}.` : 'No changes.') + who);
+    document.getElementById('saveBtn').disabled = n === 0 || form.errors.length > 0;
+    document.getElementById('discardBtn').disabled = n === 0;
+  }
+
+  window.resetItem = (id) => {
+    const it = ALL.find(x => x.id === id);
+    document.getElementById('p-' + id).value = it.price;
+    const dEl = document.getElementById('d-' + id);
+    if (dEl) dEl.value = it.dailyMax ?? '';
+    document.getElementById('e-' + id).checked = true;
+    refresh();
+  };
+  window.discardChanges = () => render();
+
+  window.openConfirm = () => {
+    const form = readForm();
+    if (form.errors.length) { toast(form.errors[0], 'error'); return; }
+    const d = diffs(form);
+    document.getElementById('diffList').innerHTML = d.map(x =>
+      `<div>${x.label}: <span class="from">${x.from}</span> → <span class="to">${x.to}</span></div>`).join('');
+    document.getElementById('confirmWarnings').innerHTML = warnings(form).map(t => '⚠️ ' + t).join('<br>');
+    document.getElementById('confirmModal').classList.add('open');
+  };
+  window.closeConfirm = () => document.getElementById('confirmModal').classList.remove('open');
+
+  window.doSave = async () => {
+    const form = readForm();
+    if (form.errors.length) { toast(form.errors[0], 'error'); return; }
+    const btn = document.getElementById('confirmSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      // Store only values that differ from the built-in defaults.
+      const items = {};
+      for (const it of ALL) {
+        const f = form.items[it.id];
+        const o = {};
+        if (f.price !== it.price) o.price = f.price;
+        if (f.enabled === false) o.enabled = false;
+        if (f.dailyMax !== it.dailyMax && f.dailyMax !== null) o.dailyMax = f.dailyMax;
+        if (Object.keys(o).length) items[it.id] = o;
+      }
+      const payload = {
+        ...extraFields,
+        unlockPrice: form.unlock,
+        items,
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser ? auth.currentUser.email : null,
+      };
+      await setDoc(CONFIG_REF(), payload); // replaces the doc; unknown fields were carried over above
+      closeConfirm();
+      toast('Saved. The store uses the new prices now.', 'success');
+      await load();
+    } catch (e) {
+      console.error('Save failed:', e);
+      toast('Save failed — check console', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save to live store';
+    }
+  };
+
+  function setStatus(t) { document.getElementById('statusText').textContent = t; }
+  function toast(msg, kind) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast show ' + (kind || '');
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.className = 'toast', 4000);
+  }
+</script>
+</body>
+</html>
