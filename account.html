@@ -695,6 +695,47 @@
           </div>
         </div>
 
+        <!-- Merge an alt account (Nov 1, 2026) -->
+        <div class="app-card" id="merge-card">
+          <div class="app-card-header">
+            <span class="app-card-title">🔀 Merge an Alt Account</span>
+          </div>
+          <div class="app-card-body">
+            <div id="merge-form">
+              <div class="field-hint" style="font-size:13px; margin-top:0; line-height:1.55;">
+                Got a second account? Move its mines onto this one. You are signed in to the account you are <strong>keeping</strong>.
+                <ul style="margin:8px 0 0 18px; padding:0;">
+                  <li>All mines on the other account move to this account.</li>
+                  <li><strong>TB and earnings do not transfer.</strong> They are lost with the other account.</li>
+                  <li>Mine resources, check-in totals, a Pioneer Pass and anything else on the other account stay behind too. If it has a Pioneer Pass subscription, cancel it first so you are not billed.</li>
+                  <li>You can merge <strong>once</strong>. Neither account can be part of another merge, and it cannot be undone.</li>
+                </ul>
+              </div>
+              <div class="field-group" style="margin-top:14px;">
+                <label class="field-label">Other account's referral code</label>
+                <input class="field-input" type="text" id="merge-code" placeholder="TM-ABC12" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+                <div class="field-hint">Its regular or vanity code, found on that account's Account page.</div>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Other account's current TB balance</label>
+                <input class="field-input" type="text" inputmode="numeric" id="merge-tb" placeholder="e.g. 1250" autocomplete="off" />
+                <div class="field-hint">The exact number shown on that account. This proves the account is yours.</div>
+              </div>
+              <div class="field-group">
+                <label style="display:flex; gap:8px; align-items:flex-start; font-size:13px; cursor:pointer;">
+                  <input type="checkbox" id="merge-ack" style="margin-top:3px;" />
+                  <span>I understand the other account's TB and earnings will be lost, and that this merge is final.</span>
+                </label>
+              </div>
+              <div class="save-row">
+                <button class="btn-save" id="merge-btn" onclick="mergeAltAccount()">Merge account</button>
+                <span class="save-status" id="merge-status"></span>
+              </div>
+            </div>
+            <div id="merge-note" style="display:none; font-size:14px; line-height:1.55;"></div>
+          </div>
+        </div>
+
         <!-- Password card — only shown for email/password accounts -->
         <div class="app-card" id="password-card" style="display:none;">
           <div class="app-card-header pw-card-header">
@@ -876,6 +917,9 @@
 
     // Vanity referral code (same users/{uid} read)
     renderVanityCode(ud);
+
+    // Alt-account merge card (same users/{uid} read)
+    renderMergeCard(ud);
   }
 
   /** Firestore Timestamp | {seconds} | ISO string | millis/seconds number -> Date or null */
@@ -1296,6 +1340,73 @@
       status.className = 'save-status error';
       status.textContent = e.message || 'Could not set your code. Please try again.';
     }
+  };
+
+  // ── Merge an alt account ─────────────────────────────────────────
+  // Server (mergeAltAccount) enforces every rule (signed-in keeper, one merge per
+  // account, proof by referral code + TB balance, properties move, TB/earnings
+  // forfeited). This UI only collects the proof and explains the consequences.
+  function renderMergeCard(ud) {
+    const form = $('merge-form'), note = $('merge-note');
+    if (!form || !note) return;
+    const st = ud && ud.altMergeStatus;
+    if (ud && ud.mergedInto) {
+      form.style.display = 'none'; note.style.display = 'block';
+      note.textContent = 'This account was merged into another account and is no longer in use.';
+    } else if (st === 'complete') {
+      form.style.display = 'none'; note.style.display = 'block';
+      note.textContent = 'You have already merged an alt account into this one. Each account can merge only once.';
+    } else if (st === 'processing') {
+      form.style.display = 'none'; note.style.display = 'block';
+      note.innerHTML = 'A merge is partly finished. <button class="btn-save" id="merge-resume-btn" style="margin-left:6px;">Finish merge</button> <span class="save-status" id="merge-resume-status"></span>';
+      $('merge-resume-btn').onclick = () => runMerge({}, $('merge-resume-btn'), $('merge-resume-status'));
+    } else {
+      form.style.display = 'block'; note.style.display = 'none';
+    }
+  }
+
+  async function runMerge(payload, btn, status) {
+    btn.disabled = true;
+    status.className = 'save-status';
+    status.textContent = 'Merging… this can take a minute for large accounts. Please keep this page open.';
+    try {
+      let r = await fns.httpsCallable('mergeAltAccount', { timeout: 540000 })(payload);
+      let d = r.data || {};
+      // Large accounts finish in more than one pass: keep going until complete.
+      let guard = 0;
+      while (d.success && !d.complete && guard++ < 20) {
+        status.textContent = 'Still moving mines… (' + Number(d.propertiesMoved || 0).toLocaleString('en-US') + ' so far)';
+        r = await fns.httpsCallable('mergeAltAccount', { timeout: 540000 })({});
+        d = r.data || {};
+      }
+      if (d.complete) {
+        const n = Number(d.propertiesMoved || 0);
+        $('merge-form').style.display = 'none';
+        const note = $('merge-note'); note.style.display = 'block';
+        note.textContent = 'Merge complete. ' + n.toLocaleString('en-US') + ' mine' + (n === 1 ? '' : 's') + ' moved to this account. Reopen the app to see them.';
+        showToast('Merge complete: ' + n.toLocaleString('en-US') + ' mines moved', 'success');
+      } else {
+        btn.disabled = false;
+        status.className = 'save-status error';
+        status.textContent = 'The merge did not finish. Press the button again to continue.';
+      }
+    } catch (e) {
+      btn.disabled = false;
+      status.className = 'save-status error';
+      status.textContent = e.message || 'Could not merge. Please try again.';
+    }
+  }
+
+  window.mergeAltAccount = async function () {
+    const status = $('merge-status');
+    status.className = 'save-status'; status.textContent = '';
+    const code = ($('merge-code').value || '').trim();
+    const tbRaw = ($('merge-tb').value || '').replace(/[,\s]/g, '');
+    if (!code) { status.className = 'save-status error'; status.textContent = "Enter the other account's referral code."; return; }
+    if (!/^\d+$/.test(tbRaw)) { status.className = 'save-status error'; status.textContent = "Enter the other account's TB balance as a whole number."; return; }
+    if (!$('merge-ack').checked) { status.className = 'save-status error'; status.textContent = 'Tick the box to confirm you understand.'; return; }
+    if (!confirm('Merge the other account into THIS account?\n\n• Its mines move here.\n• Its TB and earnings are lost.\n• This is final and you cannot merge again.')) return;
+    await runMerge({ altReferralCode: code, altTbBalance: Number(tbRaw) }, $('merge-btn'), status);
   };
 
   let linkTimer = null;
