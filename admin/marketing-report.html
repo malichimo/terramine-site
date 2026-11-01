@@ -566,6 +566,13 @@
       <div class="panel" style="margin-top:16px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Partner commission (Aaron / CROWDS)</div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Pioneer Passes sold in the selected period, split by plan and by where they were bought. Aaron earns <strong>$2 per monthly</strong> and <strong>$20 per annual</strong> purchase. Counts are <strong>first purchases only</strong> (renewals are not counted), PayPal web plus Apple in-app, with internal Apple sandbox tests excluded. Days are UTC days.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:12px;">
+          <span id="commMonthBtns" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+          <span style="color:var(--text-muted);">or</span>
+          <input type="date" id="commFrom" style="padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:inherit;font:inherit;">
+          <span style="color:var(--text-muted);">to</span>
+          <input type="date" id="commTo" style="padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:inherit;font:inherit;">
+        </div>
         <div style="overflow-x:auto;">
           <table id="pioneerCommTable" style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead><tr style="text-align:left;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">
@@ -1598,8 +1605,38 @@
     ['Apple (iOS)',  'Monthly', 'newAppleMonthly',  'monthly'],
     ['Apple (iOS)',  'Annual',  'newAppleYearly',   'yearly'],
   ];
+  // Own date range (independent of the page-wide range), so one calendar month can be paid exactly.
+  let commRange = null; // {start, end} 'YYYY-MM-DD' (UTC days, inclusive)
+  const monthEnd = (y, m) => new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
+  const monthStart = (y, m) => new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+  function initCommissionControls() {
+    const now = new Date(), y = now.getUTCFullYear(), m = now.getUTCMonth();
+    commRange = { start: monthStart(y, m), end: now.toISOString().slice(0, 10) };
+    const wrap = document.getElementById('commMonthBtns');
+    const months = [];
+    for (let i = 0; i < 4; i++) { const d = new Date(Date.UTC(y, m - i, 1)); months.push([d.getUTCFullYear(), d.getUTCMonth()]); }
+    wrap.innerHTML = '';
+    months.forEach(([yy, mm], i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = new Date(Date.UTC(yy, mm, 1)).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) + (i === 0 ? ' (so far)' : '');
+      b.style.cssText = 'padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:inherit;cursor:pointer;font-size:12px;';
+      b.onclick = () => { commRange = { start: monthStart(yy, mm), end: i === 0 ? now.toISOString().slice(0, 10) : monthEnd(yy, mm) }; renderPioneerCommission(); };
+      wrap.appendChild(b);
+    });
+    const onDate = () => {
+      const f = document.getElementById('commFrom').value, t = document.getElementById('commTo').value;
+      if (f && t && f <= t) { commRange = { start: f, end: t }; renderPioneerCommission(); }
+    };
+    document.getElementById('commFrom').onchange = onDate;
+    document.getElementById('commTo').onchange = onDate;
+  }
+
   function renderPioneerCommission() {
-    const slice = dateRangeSlice(pioneerSnapshots, 'date', currentRange);
+    if (!commRange) initCommissionControls();
+    document.getElementById('commFrom').value = commRange.start;
+    document.getElementById('commTo').value = commRange.end;
+    const slice = pioneerSnapshots.filter(s => s.date >= commRange.start && s.date <= commRange.end);
     const usd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     let totalN = 0, totalOwed = 0;
     const body = COMM_ROWS.map(([src, planName, field, plan]) => {
@@ -1615,7 +1652,7 @@
       `<tr style="font-weight:600;"><td style="padding:8px;" colspan="2">All annual</td><td style="padding:8px;text-align:right;">${yN.toLocaleString()}</td><td style="padding:8px;text-align:right;">${usd(COMMISSION.yearly)}</td><td style="padding:8px;text-align:right;">${usd(yN * COMMISSION.yearly)}</td></tr>` +
       `<tr style="border-top:2px solid var(--border);font-weight:700;"><td style="padding:8px;" colspan="2">Total owed</td><td style="padding:8px;text-align:right;">${totalN.toLocaleString()}</td><td></td><td style="padding:8px;text-align:right;">${usd(totalOwed)}</td></tr>`;
     const first = slice.length ? slice[0].date : null, last = slice.length ? slice[slice.length - 1].date : null;
-    document.getElementById('pioneerCommNote').textContent = slice.length ? `Period: ${first} to ${last}` : 'No snapshot days in this period.';
+    document.getElementById('pioneerCommNote').textContent = `Period: ${commRange.start} to ${commRange.end} (inclusive, UTC days)` + (slice.length ? '' : ' · no snapshot days in this period');
     document.getElementById('pioneerCommCsv').onclick = () => {
       const lines = ['date,paypal_monthly,paypal_annual,apple_monthly,apple_annual,monthly_total,annual_total,owed_usd'];
       slice.slice().sort((a, b) => a.date < b.date ? -1 : 1).forEach(s => {
@@ -1624,7 +1661,7 @@
       });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
-      a.download = `pioneer-partner-commission_${first || 'none'}_to_${last || 'none'}.csv`;
+      a.download = `pioneer-partner-commission_${commRange.start}_to_${commRange.end}.csv`;
       a.click(); URL.revokeObjectURL(a.href);
     };
   }
