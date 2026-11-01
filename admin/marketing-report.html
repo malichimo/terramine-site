@@ -563,6 +563,22 @@
           <div class="side-stat"><div class="k">Set to end (cancelled)</div><div class="v" id="pioneerEnding">—</div></div>
         </div>
       </div>
+      <div class="panel" style="margin-top:16px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Partner commission (Aaron / CROWDS)</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Pioneer Passes sold in the selected period, split by plan and by where they were bought. Aaron earns <strong>$2 per monthly</strong> and <strong>$20 per annual</strong> purchase. Counts are <strong>first purchases only</strong> (renewals are not counted), PayPal web plus Apple in-app, with internal Apple sandbox tests excluded. Days are UTC days.</p>
+        <div style="overflow-x:auto;">
+          <table id="pioneerCommTable" style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="text-align:left;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">
+              <th style="padding:6px 8px;">Source</th><th style="padding:6px 8px;">Plan</th><th style="padding:6px 8px;text-align:right;">Purchases</th><th style="padding:6px 8px;text-align:right;">Rate</th><th style="padding:6px 8px;text-align:right;">Owed</th>
+            </tr></thead>
+            <tbody id="pioneerCommBody"><tr><td colspan="5" style="padding:8px;color:var(--text-muted);">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+          <button type="button" id="pioneerCommCsv" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:inherit;cursor:pointer;font-size:12px;">⬇ Download daily CSV</button>
+          <span id="pioneerCommNote" style="font-size:12px;color:var(--text-muted);"></span>
+        </div>
+      </div>
     </section>
 
     <section class="section">
@@ -1574,6 +1590,45 @@
     noteEl.textContent = `PayPal (web) and iOS (Apple) subscriptions, estimated from list prices; iOS is included from Oct 25, 2026 and earlier days are PayPal only. Member counts and recurring revenue start the day tracking began${latest ? ` (latest: ${latest.date})` : ''}; earlier days show new sales only. "New sales" counts first purchases, not renewals.`;
   }
 
+  // ── Partner commission (Aaron): $2 per monthly, $20 per annual purchase ──
+  const COMMISSION = { monthly: 2, yearly: 20 };
+  const COMM_ROWS = [
+    ['PayPal (web)', 'Monthly', 'newPaypalMonthly', 'monthly'],
+    ['PayPal (web)', 'Annual',  'newPaypalYearly',  'yearly'],
+    ['Apple (iOS)',  'Monthly', 'newAppleMonthly',  'monthly'],
+    ['Apple (iOS)',  'Annual',  'newAppleYearly',   'yearly'],
+  ];
+  function renderPioneerCommission() {
+    const slice = dateRangeSlice(pioneerSnapshots, 'date', currentRange);
+    const usd = v => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    let totalN = 0, totalOwed = 0;
+    const body = COMM_ROWS.map(([src, planName, field, plan]) => {
+      const n = slice.reduce((a, s) => a + (s[field] || 0), 0);
+      const owed = n * COMMISSION[plan];
+      totalN += n; totalOwed += owed;
+      return `<tr style="border-top:1px solid var(--border);"><td style="padding:8px;">${src}</td><td style="padding:8px;">${planName}</td><td style="padding:8px;text-align:right;">${n.toLocaleString()}</td><td style="padding:8px;text-align:right;">${usd(COMMISSION[plan])}</td><td style="padding:8px;text-align:right;">${usd(owed)}</td></tr>`;
+    }).join('');
+    const sumBy = plan => COMM_ROWS.filter(r => r[3] === plan).reduce((a, r) => a + slice.reduce((x, s) => x + (s[r[2]] || 0), 0), 0);
+    const mN = sumBy('monthly'), yN = sumBy('yearly');
+    document.getElementById('pioneerCommBody').innerHTML = body +
+      `<tr style="border-top:1px solid var(--border);font-weight:600;"><td style="padding:8px;" colspan="2">All monthly</td><td style="padding:8px;text-align:right;">${mN.toLocaleString()}</td><td style="padding:8px;text-align:right;">${usd(COMMISSION.monthly)}</td><td style="padding:8px;text-align:right;">${usd(mN * COMMISSION.monthly)}</td></tr>` +
+      `<tr style="font-weight:600;"><td style="padding:8px;" colspan="2">All annual</td><td style="padding:8px;text-align:right;">${yN.toLocaleString()}</td><td style="padding:8px;text-align:right;">${usd(COMMISSION.yearly)}</td><td style="padding:8px;text-align:right;">${usd(yN * COMMISSION.yearly)}</td></tr>` +
+      `<tr style="border-top:2px solid var(--border);font-weight:700;"><td style="padding:8px;" colspan="2">Total owed</td><td style="padding:8px;text-align:right;">${totalN.toLocaleString()}</td><td></td><td style="padding:8px;text-align:right;">${usd(totalOwed)}</td></tr>`;
+    const first = slice.length ? slice[0].date : null, last = slice.length ? slice[slice.length - 1].date : null;
+    document.getElementById('pioneerCommNote').textContent = slice.length ? `Period: ${first} to ${last}` : 'No snapshot days in this period.';
+    document.getElementById('pioneerCommCsv').onclick = () => {
+      const lines = ['date,paypal_monthly,paypal_annual,apple_monthly,apple_annual,monthly_total,annual_total,owed_usd'];
+      slice.slice().sort((a, b) => a.date < b.date ? -1 : 1).forEach(s => {
+        const m = (s.newPaypalMonthly || 0) + (s.newAppleMonthly || 0), y = (s.newPaypalYearly || 0) + (s.newAppleYearly || 0);
+        lines.push([s.date, s.newPaypalMonthly || 0, s.newPaypalYearly || 0, s.newAppleMonthly || 0, s.newAppleYearly || 0, m, y, (m * COMMISSION.monthly + y * COMMISSION.yearly).toFixed(2)].join(','));
+      });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+      a.download = `pioneer-partner-commission_${first || 'none'}_to_${last || 'none'}.csv`;
+      a.click(); URL.revokeObjectURL(a.href);
+    };
+  }
+
   function renderAll() {
     updateActiveRangeLabel();
     renderStats();
@@ -1589,6 +1644,7 @@
     renderAllSourcesTotal();
     renderAllSourcesChart();
     renderPioneer();
+    renderPioneerCommission();
     renderGeography();
     renderGeographyPlayers();
   }
