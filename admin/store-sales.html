@@ -252,7 +252,9 @@
     } catch (e) {
       console.error('Sales report failed:', e);
       const msg = String(e && e.message || e);
-      totals.innerHTML = '<div class="muted">Could not load the report: ' + msg.replace(/</g, '&lt;') + '<br>(If it says the function is not found, adminTerraTownSalesReport has not been deployed yet.)</div>';
+      const safe = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const linked = safe.replace(/(https:\/\/console\.firebase\.google\.com\/[^\s]+)/, '<br><a href="$1" target="_blank" rel="noopener" style="color:var(--gold-light);font-size:14px;">Click here to create the missing index</a> (wait for it to finish building, then Run report again)<br>');
+      totals.innerHTML = '<div class="muted" style="word-break:break-word;">Could not load the report: ' + linked + '</div>';
     }
   };
 
