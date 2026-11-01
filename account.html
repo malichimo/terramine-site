@@ -701,9 +701,17 @@
             <span class="app-card-title">🔀 Merge an Alt Account</span>
           </div>
           <div class="app-card-body">
+            <div id="merge-protect" style="border:2px solid var(--brown-mid); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+              <div style="font-weight:700; font-size:14px;" id="merge-protect-title">🔒 This account is protected</div>
+              <div class="field-hint" style="font-size:13px; line-height:1.5; margin-top:6px;" id="merge-protect-text">Nobody can merge this account into another one. To merge THIS account away, unlock it here first. The unlock lasts 24 hours.</div>
+              <div class="save-row" style="margin-top:10px;">
+                <button class="btn-save" id="merge-protect-btn" onclick="toggleMergeProtection()">Allow this account to be merged (24 hours)</button>
+                <span class="save-status" id="merge-protect-status"></span>
+              </div>
+            </div>
             <div id="merge-form">
               <div class="field-hint" style="font-size:13px; margin-top:0; line-height:1.55;">
-                Got a second account? Move its mines onto this one. You are signed in to the account you are <strong>keeping</strong>.
+                Got a second account? Move its mines onto this one. You are signed in to the account you are <strong>keeping</strong>. Before you start, sign in to the <strong>other</strong> account and unlock merging there (every account is protected by default).
                 <ul style="margin:8px 0 0 18px; padding:0;">
                   <li>All mines on the other account move to this account.</li>
                   <li><strong>TB and earnings do not transfer.</strong> They are lost with the other account.</li>
@@ -1347,7 +1355,48 @@
   // Server (mergeAltAccount) enforces every rule (signed-in keeper, one merge per
   // account, proof by referral code + TB balance, properties move, TB/earnings
   // forfeited). This UI only collects the proof and explains the consequences.
+  let mergeUser = {};
+  function renderMergeProtection(ud) {
+    const box = $('merge-protect');
+    if (!box) return;
+    if (ud && ud.mergedInto) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    const until = ud && ud.mergeAllowedUntil ? Date.parse(ud.mergeAllowedUntil) : NaN;
+    const open = Number.isFinite(until) && until > Date.now();
+    if (open) {
+      $('merge-protect-title').textContent = '🔓 Merging is unlocked on this account';
+      $('merge-protect-text').textContent = 'Someone with this account\'s referral code and TB balance can merge it into another account until ' + new Date(until).toLocaleString() + '. Lock it again if you are not merging right now.';
+      $('merge-protect-btn').textContent = 'Lock this account again';
+    } else {
+      $('merge-protect-title').textContent = '🔒 This account is protected';
+      $('merge-protect-text').textContent = 'Nobody can merge this account into another one. To merge THIS account away, unlock it here first. The unlock lasts 24 hours.';
+      $('merge-protect-btn').textContent = 'Allow this account to be merged (24 hours)';
+    }
+    $('merge-protect-btn').disabled = false;
+  }
+
+  window.toggleMergeProtection = async function () {
+    const btn = $('merge-protect-btn'), status = $('merge-protect-status');
+    const until = mergeUser && mergeUser.mergeAllowedUntil ? Date.parse(mergeUser.mergeAllowedUntil) : NaN;
+    const currentlyOpen = Number.isFinite(until) && until > Date.now();
+    if (!currentlyOpen && !confirm('Unlock merging on THIS account for 24 hours?\n\nThis is only for when you want to merge this account INTO your main account. Anyone who knows this account\'s referral code and exact TB balance could merge it away while it is unlocked.')) return;
+    btn.disabled = true; status.className = 'save-status'; status.textContent = 'Saving…';
+    try {
+      const r = await fns.httpsCallable('setMergeAllowed')({ allowed: !currentlyOpen });
+      mergeUser.mergeAllowedUntil = (r.data || {}).mergeAllowedUntil || null;
+      status.textContent = '';
+      renderMergeProtection(mergeUser);
+      showToast(currentlyOpen ? 'Merge protection is back on' : 'Merging unlocked for 24 hours', 'success');
+    } catch (e) {
+      btn.disabled = false;
+      status.className = 'save-status error';
+      status.textContent = e.message || 'Could not change this. Please try again.';
+    }
+  };
+
   function renderMergeCard(ud) {
+    mergeUser = ud || {};
+    renderMergeProtection(ud);
     const form = $('merge-form'), note = $('merge-note');
     if (!form || !note) return;
     const st = ud && ud.altMergeStatus;
