@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine General Store Sales</title>
+<link rel="icon" type="image/png" href="/logo.png?v=2" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07; --surface: #1a1208; --surface2: #241a0d;
+    --gold: #c8922a; --gold-light: #f0b84a; --amber: #e07b20;
+    --text: #f0e6d0; --text-muted: #8a7560;
+    --green: #4caf6e; --red: #e05050; --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; flex-wrap:wrap; gap:12px; }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { font-size:28px; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); letter-spacing:-0.5px; }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .admin-email { font-size:11px; color:var(--text-muted); }
+  .nav-btn { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; text-decoration:none; cursor:pointer; display:inline-block; }
+  .nav-btn:hover { color:var(--text); border-color:var(--gold); }
+  .logout-btn { background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; }
+  .logout-btn:hover { color:var(--red); border-color:var(--red); }
+
+  .main { padding:32px; max-width:1100px; margin:0 auto; }
+  .info-banner { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--gold); border-radius:8px; padding:14px 18px; font-size:12px; line-height:1.6; color:var(--text-muted); margin-bottom:20px; }
+  .info-banner strong { color:var(--gold-light); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:20px; overflow:hidden; }
+  .card-head { padding:14px 20px; border-bottom:1px solid var(--border); font-family:'Syne',sans-serif; font-weight:700; font-size:15px; color:var(--gold-light); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .card-head small { font-family:'DM Mono',monospace; font-weight:400; font-size:11px; color:var(--text-muted); }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); font-weight:500; padding:10px 20px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  th.sortable { cursor:pointer; user-select:none; }
+  th.sortable:hover { color:var(--gold-light); }
+  td { padding:10px 20px; font-size:13px; border-bottom:1px solid rgba(200,146,42,0.07); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr.zero td { color:var(--text-muted); }
+  td.num, th.num { text-align:right; }
+  .item-name { color:var(--text); }
+  tr.zero .item-name { color:var(--text-muted); }
+  .item-id { font-size:10px; color:var(--text-muted); margin-top:2px; }
+  .muted { font-size:11px; color:var(--text-muted); }
+
+  .controls { padding:14px 20px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .controls input[type=date] { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; color-scheme:dark; }
+  .btn { padding:9px 14px; border-radius:8px; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); }
+  .btn:hover { color:var(--text); border-color:var(--gold); }
+  .btn.active { border-color:var(--gold); color:var(--gold-light); }
+  .btn.primary { background:var(--gold); border-color:var(--gold); color:var(--bg); font-weight:500; }
+  .btn.primary:hover { opacity:0.9; color:var(--bg); }
+  .toggle { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); cursor:pointer; user-select:none; }
+  .toggle input { accent-color:var(--gold); width:16px; height:16px; }
+
+  .sales-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; padding:16px 20px; }
+  .stat { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .stat .k { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); }
+  .stat .v { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; color:var(--gold-light); margin-top:4px; }
+  .stat .s { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .bar { height:8px; border-radius:4px; background:var(--gold); min-width:2px; }
+  .bar-cell { width:35%; }
+
+  #loginOverlay { position:fixed; inset:0; background:var(--bg); z-index:999; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; max-width:100%; text-align:center; }
+  .login-icon { font-size:36px; margin-bottom:16px; }
+  .login-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); margin-bottom:4px; }
+  .login-sub { font-size:11px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase; margin-bottom:32px; }
+  .login-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; margin-bottom:12px; outline:none; }
+  .login-btn { width:100%; background:var(--gold); color:var(--bg); border:none; border-radius:8px; padding:14px; font-family:'DM Mono',monospace; font-size:13px; font-weight:500; cursor:pointer; }
+  #loginError { color:var(--red); font-size:12px; margin-top:12px; display:none; }
+
+  @media (max-width:700px) {
+    .main { padding:16px; }
+    .header { padding:14px 16px; }
+    th, td { padding:10px 10px; }
+    .col-hide { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">📊</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">General Store Sales</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/admin-store.html" class="nav-btn">🏪 Store Prices</a>
+    <a href="/admin/" class="nav-btn">⛏️ Main</a>
+    <a href="/admin/admin-finance.html" class="nav-btn">💰 Finance</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="info-banner">
+    <strong>How much of each item sold.</strong> Pick a range (New York days, the same days the store's daily limits use). Counts come from the purchase log, so running a report is cheap. "Units" is how many items were bought (a Buy 10 counts as 10 units, 1 purchase). The seasonal slot is split by season so Jack-O-Lanterns and Turkeys show as separate rows.
+  </div>
+
+  <div class="card">
+    <div class="card-head">Range</div>
+    <div class="controls">
+      <button class="btn" data-preset="today" onclick="preset('today')">Today</button>
+      <button class="btn" data-preset="yesterday" onclick="preset('yesterday')">Yesterday</button>
+      <button class="btn" data-preset="7" onclick="preset('7')">Last 7 days</button>
+      <button class="btn" data-preset="30" onclick="preset('30')">Last 30 days</button>
+      <button class="btn" data-preset="launch" onclick="preset('launch')">Since launch</button>
+      <span class="muted">or</span>
+      <input type="date" id="fromDate"> <span class="muted">to</span> <input type="date" id="toDate">
+      <button class="btn primary" onclick="runReport()">Run report</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span id="rangeLabel">Summary</span></div>
+    <div class="sales-grid" id="totals"><div class="muted">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">By item
+      <span style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label class="toggle"><input type="checkbox" id="showZero" onchange="renderItems()"> show items with no sales</label>
+        <button class="btn" onclick="downloadCsv()">⬇ CSV</button>
+      </span>
+    </div>
+    <table>
+      <thead><tr>
+        <th class="sortable" onclick="sortBy('name')">Item</th>
+        <th class="col-hide">Shelf</th>
+        <th class="num sortable" onclick="sortBy('units')">Units sold</th>
+        <th class="num sortable col-hide" onclick="sortBy('purchases')">Purchases</th>
+        <th class="num sortable" onclick="sortBy('tb')">TB spent</th>
+        <th class="num sortable col-hide" onclick="sortBy('pct')">% of TB</th>
+        <th class="num sortable col-hide" onclick="sortBy('perDay')">Units / day</th>
+      </tr></thead>
+      <tbody id="itemBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head">By day <small>TB spent per New York day</small></div>
+    <table>
+      <thead><tr><th>Date</th><th class="num">Purchases</th><th class="num col-hide">Units</th><th class="num">TB spent</th><th class="num col-hide">Gate unlocks</th><th class="bar-cell col-hide"></th></tr></thead>
+      <tbody id="dayBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-icon">📊</div>
+    <div class="login-title">General Store Sales</div>
+    <div class="login-sub">Admin access required</div>
+    <input id="loginEmail" type="email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    <input id="loginPass" type="password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const salesReport = httpsCallable(getFunctions(app), 'adminTerraTownSalesReport');
+
+  const LAUNCH_DATE = '2026-10-31';
+  // The store's seasonal slot (item id "pumpkin") sells whatever the active
+  // seasonal event is. Rows are split by the day of purchase. When a new event
+  // starts, add a line here with its first day (New York date) and name.
+  const SEASONS = [
+    { from: '0000-00-00', name: 'Jack-O-Lantern (seasonal)' },
+    { from: '2026-11-01', name: 'Turkey (seasonal)' },
+  ];
+  const seasonName = date => SEASONS.filter(s => s.from <= date).pop().name;
+  const SHELF_TITLES = { groceries: '🥕 Groceries', hardware: '🔧 Hardware', souvenirs: '🎁 Souvenirs' };
+  const fmt = n => Number(n || 0).toLocaleString();
+  const etToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+
+  let report = null;     // last server response
+  let rows = [];         // computed item rows
+  let sortKey = 'tb', sortDir = -1;
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      preset('launch');
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+    }
+  });
+  window.doLogout = async () => { await signOut(auth); location.reload(); };
+  window.doLogin = async () => {
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value.trim(), document.getElementById('loginPass').value);
+    } catch (e) {
+      errEl.textContent = 'Sign-in failed. Check email and password.';
+      errEl.style.display = 'block';
+    }
+  };
+
+  window.preset = (p) => {
+    const today = etToday();
+    let from = today, to = today;
+    if (p === 'yesterday') from = to = addDays(today, -1);
+    else if (p === '7') from = addDays(today, -6);
+    else if (p === '30') from = addDays(today, -29);
+    else if (p === 'launch') from = LAUNCH_DATE;
+    if (from < LAUNCH_DATE) from = LAUNCH_DATE;
+    document.getElementById('fromDate').value = from;
+    document.getElementById('toDate').value = to;
+    document.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('active', b.dataset.preset === p));
+    runReport();
+  };
+
+  window.runReport = async () => {
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    const totals = document.getElementById('totals');
+    totals.innerHTML = '<div class="muted">Loading…</div>';
+    try {
+      report = (await salesReport({ from, to })).data;
+      compute();
+      render();
+    } catch (e) {
+      console.error('Sales report failed:', e);
+      const msg = String(e && e.message || e);
+      totals.innerHTML = '<div class="muted">Could not load the report: ' + msg.replace(/</g, '&lt;') + '<br>(If it says the function is not found, adminTerraTownSalesReport has not been deployed yet.)</div>';
+    }
+  };
+
+  // ── Turn the day-by-day response into item rows ──────────────────────────
+  function compute() {
+    const meta = {};
+    report.catalog.forEach(c => { meta[c.id] = c; });
+    const agg = {};   // key -> row
+    const ensure = (key, name, shelf, id) => (agg[key] = agg[key] || { key, id, name, shelf, units: 0, purchases: 0, tb: 0 });
+    // Every catalog item gets a row (so zero sellers show up), seasonal slot split by season.
+    report.catalog.forEach(c => { if (c.id !== 'pumpkin') ensure(c.id, c.name, c.shelf, c.id); });
+    report.days.forEach(d => d.items.forEach(it => {
+      const c = meta[it.id]; if (!c) return;
+      const key = it.id === 'pumpkin' ? 'pumpkin:' + seasonName(d.date) : it.id;
+      const name = it.id === 'pumpkin' ? seasonName(d.date) : c.name;
+      const r = ensure(key, name, c.shelf, it.id);
+      r.units += it.units; r.purchases += it.purchases; r.tb += it.tb;
+    }));
+    // Make sure the seasonal rows that apply to this range appear even with zero sales.
+    SEASONS.forEach(s => {
+      const last = addDays(s.from === '0000-00-00' ? report.from : s.from, 0);
+      const next = SEASONS[SEASONS.indexOf(s) + 1];
+      const startsBeforeEnd = s.from <= report.to;
+      const endsAfterStart = !next || next.from > report.from;
+      if (startsBeforeEnd && endsAfterStart) ensure('pumpkin:' + s.name, s.name, 'souvenirs', 'pumpkin');
+    });
+    const days = Math.max(1, report.days.length);
+    const totalTb = report.days.reduce((a, d) => a + d.tb, 0);
+    rows = Object.values(agg).map(r => ({ ...r, pct: totalTb ? r.tb / totalTb * 100 : 0, perDay: r.units / days }));
+  }
+
+  window.sortBy = (k) => {
+    if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === 'name') ? 1 : -1; }
+    renderItems();
+  };
+
+  function render() {
+    const days = report.days;
+    const sum = (f) => days.reduce((a, d) => a + f(d), 0);
+    const shelfTotals = { groceries: { tb: 0, units: 0, purchases: 0 }, hardware: { tb: 0, units: 0, purchases: 0 }, souvenirs: { tb: 0, units: 0, purchases: 0 } };
+    rows.forEach(r => { const s = shelfTotals[r.shelf]; if (s) { s.tb += r.tb; s.units += r.units; s.purchases += r.purchases; } });
+    const stat = (k, v, s) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`;
+    const unlocks = { count: sum(d => d.unlocks.count), tb: sum(d => d.unlocks.tb) };
+    const itemTb = sum(d => d.tb);
+    document.getElementById('rangeLabel').textContent = report.from === report.to ? `Summary for ${report.from}` : `Summary, ${report.from} to ${report.to}`;
+    document.getElementById('totals').innerHTML =
+      stat('Items sold', fmt(itemTb) + ' TB', `${fmt(sum(d => d.purchases))} purchases · ${fmt(sum(d => d.units))} units`) +
+      Object.entries(SHELF_TITLES).map(([k, t]) => stat(t, fmt(shelfTotals[k].tb) + ' TB', `${fmt(shelfTotals[k].purchases)} purchases · ${fmt(shelfTotals[k].units)} units`)).join('') +
+      stat('🏪 Gate unlocks', fmt(unlocks.count), fmt(unlocks.tb) + ' TB') +
+      stat('All store TB', fmt(itemTb + unlocks.tb) + ' TB', 'items + gate');
+    renderItems();
+    renderDays();
+  }
+
+  window.renderItems = () => {
+    const showZero = document.getElementById('showZero').checked;
+    const list = rows.filter(r => showZero || r.purchases > 0).slice().sort((a, b) => {
+      const av = a[sortKey], bv = b[sortKey];
+      const c = typeof av === 'string' ? av.localeCompare(bv) : av - bv;
+      return (c || a.name.localeCompare(b.name)) * sortDir;
+    });
+    const body = document.getElementById('itemBody');
+    body.innerHTML = list.length ? list.map(r => `<tr class="${r.purchases ? '' : 'zero'}">
+      <td><div class="item-name">${r.name}</div><div class="item-id">${r.id}</div></td>
+      <td class="col-hide">${SHELF_TITLES[r.shelf] || r.shelf}</td>
+      <td class="num">${fmt(r.units)}</td>
+      <td class="num col-hide">${fmt(r.purchases)}</td>
+      <td class="num">${fmt(r.tb)}</td>
+      <td class="num col-hide">${r.pct.toFixed(1)}%</td>
+      <td class="num col-hide">${r.perDay.toFixed(1)}</td></tr>`).join('')
+      : '<tr><td colspan="7" class="muted">No purchases in this range.</td></tr>';
+  };
+
+  function renderDays() {
+    const max = Math.max(1, ...report.days.map(d => d.tb + d.unlocks.tb));
+    document.getElementById('dayBody').innerHTML = report.days.slice().reverse().map(d => `<tr>
+      <td>${d.date}</td>
+      <td class="num">${fmt(d.purchases)}</td>
+      <td class="num col-hide">${fmt(d.units)}</td>
+      <td class="num">${fmt(d.tb)}</td>
+      <td class="num col-hide">${fmt(d.unlocks.count)}</td>
+      <td class="bar-cell col-hide"><div class="bar" style="width:${((d.tb + d.unlocks.tb) / max * 100).toFixed(1)}%"></div></td></tr>`).join('');
+  }
+
+  window.downloadCsv = () => {
+    if (!report) return;
+    const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+    const lines = [['item', 'item_id', 'shelf', 'units_sold', 'purchases', 'tb_spent', 'pct_of_item_tb', 'units_per_day'].join(',')];
+    rows.slice().sort((a, b) => b.tb - a.tb).forEach(r => lines.push([esc(r.name), esc(r.id), esc(r.shelf), r.units, r.purchases, r.tb, r.pct.toFixed(2), r.perDay.toFixed(2)].join(',')));
+    lines.push('', ['date', 'purchases', 'units', 'tb_spent', 'gate_unlocks', 'gate_tb'].join(','));
+    report.days.forEach(d => lines.push([d.date, d.purchases, d.units, d.tb, d.unlocks.count, d.unlocks.tb].join(',')));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+    a.download = `store-sales_${report.from}_to_${report.to}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+</script>
+</body>
+</html>
