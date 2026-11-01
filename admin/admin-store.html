@@ -221,7 +221,7 @@
   const SHELVES = [
     { key: 'groceries', title: '🥕 Groceries', sub: 'mine materials', items: [] },
     { key: 'hardware',  title: '🔧 Hardware',  sub: 'Ad Skips and tools', items: [] },
-    { key: 'souvenirs', title: '🎃 Souvenirs', sub: 'goggles, pumpkins', items: [] },
+    { key: 'souvenirs', title: '🎁 Souvenirs', sub: 'goggles, seasonal item', items: [] },
   ];
   for (const m of MINES) for (const t of TIERS) {
     SHELVES[0].items.push({ id: `mat_${m}_${t}`, name: `${cap(m)} (${t})`, price: MAT_PRICE[t], dailyMax: null });
@@ -232,7 +232,7 @@
     { id: 'goggles_1min', name: 'Night Vision Goggles (1 min)', price: 100, dailyMax: null },
     { id: 'goggles_3min', name: 'Night Vision Goggles (3 min)', price: 250, dailyMax: null },
     { id: 'goggles_5min', name: 'Night Vision Goggles (5 min)', price: 400, dailyMax: null },
-    { id: 'pumpkin', name: 'Jack-O-Lantern pumpkin', price: 4, dailyMax: 5 },
+    { id: 'pumpkin', name: 'Seasonal item (Jack-O-Lantern until Nov 1, then Turkey)', price: 4, dailyMax: 5 },
   );
   const ALL = SHELVES.flatMap(s => s.items);
   const PUMPKIN_MIN_PRICE = 4; // best bank trade-in is 4 TB per pumpkin; below this, buying nets TB
@@ -381,7 +381,7 @@
   function warnings(form) {
     const w = [];
     const p = form.items.pumpkin;
-    if (p && p.price < PUMPKIN_MIN_PRICE) w.push(`Pumpkins at ${p.price} TB sell for less than the bank's best trade-in (${PUMPKIN_MIN_PRICE} TB each), so players could buy and trade in for a TB profit.`);
+    if (p && p.price < PUMPKIN_MIN_PRICE) w.push(`The seasonal item at ${p.price} TB sells for less than the trade-in (${PUMPKIN_MIN_PRICE} TB each), so players could buy and trade in for a TB profit.`);
     for (const it of ALL) {
       const f = form.items[it.id];
       if (f.price === 0 && f.enabled) w.push(`${it.name} is set to 0 TB (free).`);
@@ -466,7 +466,7 @@
     }
   };
 
-  const SHELF_TITLES = { groceries: '🥕 Groceries', hardware: '🔧 Hardware', souvenirs: '🎃 Souvenirs' };
+  const SHELF_TITLES = { groceries: '🥕 Groceries', hardware: '🔧 Hardware', souvenirs: '🎁 Souvenirs' };
   const fmt = n => Number(n || 0).toLocaleString();
   window.loadSales = async () => {
     const totals = document.getElementById('salesTotals');
