@@ -707,7 +707,8 @@
                 <ul style="margin:8px 0 0 18px; padding:0;">
                   <li>All mines on the other account move to this account.</li>
                   <li><strong>TB and earnings do not transfer.</strong> They are lost with the other account.</li>
-                  <li>Mine resources, check-in totals, a Pioneer Pass and anything else on the other account stay behind too. If it has a Pioneer Pass subscription, cancel it first so you are not billed.</li>
+                  <li>Your mine materials move over too.</li>
+                  <li>Check-in totals, Ad Skips, collectibles (like pumpkins and turkeys), Night Vision Goggles, a Pioneer Pass and anything else stay behind. If the other account has a Pioneer Pass subscription, cancel it first so you are not billed.</li>
                   <li>You can merge <strong>once</strong>. Neither account can be part of another merge, and it cannot be undone.</li>
                 </ul>
               </div>
@@ -1383,7 +1384,7 @@
         const n = Number(d.propertiesMoved || 0);
         $('merge-form').style.display = 'none';
         const note = $('merge-note'); note.style.display = 'block';
-        note.textContent = 'Merge complete. ' + n.toLocaleString('en-US') + ' mine' + (n === 1 ? '' : 's') + ' moved to this account. Reopen the app to see them.';
+        note.textContent = 'Merge complete. ' + n.toLocaleString('en-US') + ' mine' + (n === 1 ? '' : 's') + ' plus your mine materials moved to this account. Reopen the app to see them.';
         showToast('Merge complete: ' + n.toLocaleString('en-US') + ' mines moved', 'success');
       } else {
         btn.disabled = false;
@@ -1405,7 +1406,7 @@
     if (!code) { status.className = 'save-status error'; status.textContent = "Enter the other account's referral code."; return; }
     if (!/^\d+$/.test(tbRaw)) { status.className = 'save-status error'; status.textContent = "Enter the other account's TB balance as a whole number."; return; }
     if (!$('merge-ack').checked) { status.className = 'save-status error'; status.textContent = 'Tick the box to confirm you understand.'; return; }
-    if (!confirm('Merge the other account into THIS account?\n\n• Its mines move here.\n• Its TB and earnings are lost.\n• This is final and you cannot merge again.')) return;
+    if (!confirm('Merge the other account into THIS account?\n\n• Its mines and mine materials move here.\n• Its TB and earnings are lost.\n• This is final and you cannot merge again.')) return;
     await runMerge({ altReferralCode: code, altTbBalance: Number(tbRaw) }, $('merge-btn'), status);
   };
 
