@@ -759,10 +759,18 @@
   <!-- Date range filter -->
   <div class="date-filter-row">
     <span class="date-filter-label">From</span>
-    <input type="date" id="dateStartInput" class="date-input">
+    <input type="datetime-local" id="dateStartInput" class="date-input">
     <span class="date-filter-label">To</span>
-    <input type="date" id="dateEndInput" class="date-input">
+    <input type="datetime-local" id="dateEndInput" class="date-input">
     <button class="apply-date-btn" onclick="applyDateFilter()">Apply Range</button>
+    <!-- Nov 3, 2026: jump straight to "the last N hours" instead of paging
+         through everything newer. Sets From = now - N hours, To = blank. -->
+    <span class="date-filter-label">or last</span>
+    <button class="apply-date-btn" onclick="applyLastHours(1)">1h</button>
+    <button class="apply-date-btn" onclick="applyLastHours(3)">3h</button>
+    <button class="apply-date-btn" onclick="applyLastHours(6)">6h</button>
+    <button class="apply-date-btn" onclick="applyLastHours(12)">12h</button>
+    <button class="apply-date-btn" onclick="applyLastHours(24)">24h</button>
     <button class="clear-date-btn" id="clearDateFilterBtn" onclick="clearDateFilter()" style="display:none;">✕ Clear Range</button>
     <span class="date-filter-label" id="dateFilterStatus"></span>
   </div>
@@ -1146,11 +1154,15 @@
       showToast('Pick a start date, end date, or both', 'error');
       return;
     }
-    // Interpreted in the browser's local time (start of day / end of day),
-    // then converted to ISO/UTC to match how timestamp strings are stored
-    // (submitCheckIn writes new Date().toISOString() server-side).
-    activeDateStart = startVal ? new Date(startVal + 'T00:00:00').toISOString() : null;
-    activeDateEnd = endVal ? new Date(endVal + 'T23:59:59.999').toISOString() : null;
+    // Interpreted in the browser's local time, then converted to ISO/UTC to
+    // match how timestamp strings are stored (submitCheckIn writes
+    // new Date().toISOString() server-side). Nov 3, 2026: the inputs are now
+    // datetime-local ("YYYY-MM-DDTHH:MM"), so ranges can be hour-precise;
+    // a bare date (old behavior) still means start/end of that day.
+    const startLocal = startVal ? (startVal.length > 10 ? startVal + ':00' : startVal + 'T00:00:00') : null;
+    const endLocal = endVal ? (endVal.length > 10 ? endVal + ':59.999' : endVal + 'T23:59:59.999') : null;
+    activeDateStart = startLocal ? new Date(startLocal).toISOString() : null;
+    activeDateEnd = endLocal ? new Date(endLocal).toISOString() : null;
 
     lastDoc = null;
     sessionLoaded = 0;
@@ -1160,9 +1172,21 @@
     setLoadMoreVisible(false);
     document.getElementById('clearDateFilterBtn').style.display = 'inline-block';
     document.getElementById('dateFilterStatus').textContent =
-      startVal && endVal ? `Filtering ${startVal} → ${endVal}` :
-      startVal ? `Filtering from ${startVal}` : `Filtering through ${endVal}`;
+      startVal && endVal ? `Filtering ${startVal.replace('T', ' ')} → ${endVal.replace('T', ' ')}` :
+      startVal ? `Filtering from ${startVal.replace('T', ' ')}` : `Filtering through ${endVal.replace('T', ' ')}`;
     loadPhotos(false);
+  };
+
+  // "Last N hours" quick filter: fills From with now - N hours (local time),
+  // clears To, and applies. The query is the same timestamp >= range as the
+  // date filter, so it only reads photos inside the window.
+  window.applyLastHours = function(hours) {
+    const d = new Date(Date.now() - hours * 3600 * 1000);
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('dateStartInput').value =
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    document.getElementById('dateEndInput').value = '';
+    window.applyDateFilter();
   };
 
   window.clearDateFilter = function() {
