@@ -236,6 +236,18 @@
   .flag-note { font-size:10px; color:var(--purple); margin-top:4px; max-width:220px; white-space:normal; }
   .info-note { font-size:10px; color:var(--teal); margin-top:4px; max-width:220px; white-space:normal; }
 
+  /* Screening verdict block (Nov 4, 2026) */
+  .screen-block { margin-top:6px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; max-width:270px; font-size:10px; white-space:normal; }
+  .screen-block.review { border-color:rgba(224,80,80,0.5); }
+  .screen-block.clear { border-color:rgba(76,175,110,0.4); }
+  .screen-reasons { margin:4px 0 0 14px; padding:0; }
+  .screen-reasons li { margin-top:2px; }
+  .screen-reasons li.hard { color:var(--red); }
+  .screen-reasons li.soft { color:var(--amber); }
+  .screen-meta { color:var(--text-muted); margin-top:3px; }
+  .screen-banner { font-size:11px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 12px; margin:0 0 12px 0; }
+  .screen-banner b { color:var(--gold-light); font-weight:500; }
+
   .action-btn {
     background:var(--surface2);
     border:1px solid var(--border);
@@ -333,6 +345,8 @@
 
   <div class="period-tabs" id="statusTabs">
     <button class="period-tab" data-tab="needsAttention" onclick="setTab('needsAttention', this)">Needs Attention <span class="count" id="count-needsAttention">0</span></button>
+    <button class="period-tab" data-tab="screenReview" onclick="setTab('screenReview', this)" title="Pending requests the screen flagged for a person to look at">🔍 Screening Review <span class="count" id="count-screenReview">0</span></button>
+    <button class="period-tab" data-tab="screenClear" onclick="setTab('screenClear', this)" title="Pending requests the screen cleared (these would auto-pay once the payment step is on)">✅ Screen Clear <span class="count" id="count-screenClear">0</span></button>
     <button class="period-tab" data-tab="needsInfo" onclick="setTab('needsInfo', this)">💬 Needs Info <span class="count" id="count-needsInfo">0</span></button>
     <button class="period-tab" data-tab="flagged" onclick="setTab('flagged', this)">🚩 Flagged <span class="count" id="count-flagged">0</span></button>
     <button class="period-tab" data-tab="paid" onclick="setTab('paid', this)">Paid <span class="count" id="count-paid">0</span></button>
@@ -340,6 +354,8 @@
     <button class="period-tab" data-tab="failed" onclick="setTab('failed', this)">Failed <span class="count" id="count-failed">0</span></button>
     <button class="period-tab" data-tab="all" onclick="setTab('all', this)">All <span class="count" id="count-all">0</span></button>
   </div>
+
+  <div class="screen-banner" id="screenBanner" style="display:none;"></div>
 
   <div class="method-tabs" id="methodTabs">
     <button class="method-tab active" data-method="all" onclick="setMethodTab('all', this)">All Methods <span class="count" id="mcount-all">0</span></button>
@@ -501,6 +517,133 @@
   const FRAUD_CHECK_VALID_DAYS = 30;
 
   // ── Auth ───────────────────────────────────────────────────────────────
+  // ── Screening (Nov 4, 2026) ────────────────────────────────────────
+  // Verdicts are written by the screenWithdrawalOnCreate / sweepUnscreenedWithdrawals
+  // Cloud Functions (functions/src/redemptionScreening.ts) to withdrawalScreenings/{requestId}
+  // and are admin-read only. VERDICTS ONLY: nothing here (or there) pays or rejects anything;
+  // the buttons below are the same manual actions as before. Reviewer decisions are recorded
+  // back on the screening doc so shadow-mode verdicts can be compared with what Scott/Hillary
+  // actually did. If the rules for the new collections are not deployed yet (or nothing has
+  // been screened), every read here fails quietly and the page behaves exactly as before.
+  const screenings = new Map();       // requestId -> withdrawalScreenings doc data
+  let screeningReadable = null;       // null = not tried, true/false after the first read
+  let autopayConfig = null;           // adminConfig/redemptionAutopay data, or null
+
+  const REASON_LABELS = {
+    account_missing: 'Account no longer exists',
+    banned: 'Account is banned',
+    on_hold: 'Account is on hold',
+    withdrawals_blocked: 'Redemptions blocked on account',
+    phone_not_verified: 'Phone not verified',
+    email_not_verified: 'Email not verified',
+    over_auto_limit: 'Above the auto-pay limit',
+    first_redemption: 'First paid redemption for this account',
+    account_age_unknown: 'Account age could not be read',
+    new_account: 'New account',
+    referral_zero_nicknames: 'Referred accounts never set nicknames',
+    referral_fake_domains: 'Referred accounts use fake email domains',
+    referral_sequential_template: 'Referred accounts follow a numbered email template',
+    referral_volume: 'High referral volume',
+    payout_email_shared: 'Payout email shared with other accounts',
+    tier_mismatch: 'Phone country and location disagree',
+    prior_rejection: 'Earlier request was rejected',
+  };
+
+  async function fetchScreeningsFor(requests) {
+    const ids = [...new Set(requests.filter(r => ['pending', 'approved_unpaid', 'needs_info'].includes(r.status)).map(r => r.id))];
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += 30) chunks.push(ids.slice(i, i + 30));
+    await Promise.all(chunks.map(async (chunk) => {
+      const snap = await getDocs(query(collection(db, 'withdrawalScreenings'), where(documentId(), 'in', chunk)));
+      snap.forEach(sn => screenings.set(sn.id, sn.data()));
+    }));
+  }
+
+  async function loadScreeningData() {
+    try {
+      await fetchScreeningsFor([...rawActive.values()]);
+      screeningReadable = true;
+    } catch (e) {
+      screeningReadable = false;
+      console.warn('Screening data not readable (rules not deployed yet, or no access):', e?.code || e);
+    }
+    try {
+      const cs = await getDoc(doc(db, 'adminConfig', 'redemptionAutopay'));
+      autopayConfig = cs.exists() ? cs.data() : null;
+    } catch (e) {
+      autopayConfig = null;
+    }
+    renderScreenBanner();
+    rebuildAll();
+    render();
+  }
+
+  function renderScreenBanner() {
+    const el = document.getElementById('screenBanner');
+    if (screeningReadable === false) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    if (!autopayConfig) {
+      el.innerHTML = '<b>Screening:</b> not configured yet — the screening function is inactive. Verdicts will appear here once it is switched on.';
+      return;
+    }
+    const mode = !autopayConfig.enabled ? 'OFF' : (autopayConfig.applyToRequests ? 'ACTIVE (stamping requests)' : 'SHADOW (verdicts only, nothing is changed on requests)');
+    el.innerHTML = `<b>Screening:</b> ${mode} · auto-pay up to <b>$${autopayConfig.autoPayMaxUsd ?? 49}</b> · hold <b>${autopayConfig.holdHours ?? 24}h</b> · ` +
+      `first redemption always reviewed: <b>${autopayConfig.firstRedemptionAlwaysReview === false ? 'no' : 'yes'}</b> · payments are still made by hand on this page`;
+  }
+
+  function updateScreenCounts() {
+    const rv = allRequests.filter(r => r.status === 'pending' && r.screening && r.screening.verdict === 'review' && !r.screening.reviewDecision).length;
+    const cl = allRequests.filter(r => r.status === 'pending' && r.screening && r.screening.verdict === 'clear').length;
+    document.getElementById('count-screenReview').textContent = rv;
+    document.getElementById('count-screenClear').textContent = cl;
+  }
+
+  function renderScreeningBlock(r) {
+    const sc = r.screening;
+    if (!sc) return '';
+    const isReview = sc.verdict === 'review';
+    const reasons = (sc.reasons || []).map(x =>
+      `<li class="${x.severity === 'hard' ? 'hard' : 'soft'}" title="${escAttr(x.detail || '')}">${escHtml(REASON_LABELS[x.code] || x.code)}${x.detail ? ` — <span class="td-muted">${escHtml(x.detail)}</span>` : ''}</li>`).join('');
+    const when = sc.screenedAt ? new Date(sc.screenedAt).toLocaleString() : '';
+    const payable = r.payableAfter ? `Auto-pay eligible after ${new Date(r.payableAfter).toLocaleString()}` : '';
+    const decision = sc.reviewDecision
+      ? `<div class="screen-meta">Reviewed: <b>${escHtml(sc.reviewDecision)}</b> by ${escHtml(sc.reviewedBy || '—')}${sc.reviewedAt ? ' — ' + escHtml(new Date(sc.reviewedAt).toLocaleString()) : ''}</div>` : '';
+    const settleBtn = isReview && r.status === 'pending'
+      ? `<div style="margin-top:4px;"><button class="action-btn" title="Case already resolved (e.g. banned then unbanned). Future screens will skip the referral-pattern reasons for this account." onclick="markSettled('${r.id}','${escAttr(r.userId)}','${escAttr(r.nickname)}')">Mark account settled</button></div>` : '';
+    return `<div class="screen-block ${isReview ? 'review' : 'clear'}">
+      <span class="badge ${isReview ? 'badge-red' : 'badge-green'}">${isReview ? '🔍 SCREEN: REVIEW' : '✅ SCREEN: CLEAR'}</span>${sc.shadow ? ' <span class="badge badge-muted">shadow</span>' : ''}
+      ${reasons ? `<ul class="screen-reasons">${reasons}</ul>` : ''}
+      <div class="screen-meta">${escHtml(when)}${payable ? ' · ' + escHtml(payable) : ''}</div>
+      ${decision}${settleBtn}
+    </div>`;
+  }
+
+  // Records what the reviewer actually did on the screening doc (comparison data for
+  // tuning the rules). Best effort: never blocks or fails the real action.
+  async function recordReviewDecision(requestId, decision) {
+    if (!screenings.has(requestId)) return;
+    try {
+      const patch = { reviewedBy: auth.currentUser?.email || null, reviewedAt: new Date().toISOString(), reviewDecision: decision };
+      await updateDoc(doc(db, 'withdrawalScreenings', requestId), patch);
+      screenings.set(requestId, { ...screenings.get(requestId), ...patch });
+    } catch (e) {
+      console.warn('Could not record review decision (non-fatal):', e?.code || e);
+    }
+  }
+
+  window.markSettled = async (requestId, userId, nickname) => {
+    if (!userId) return;
+    if (!confirm(`Mark ${nickname}'s account as SETTLED?\n\nUse this when the fraud case is already resolved (for example banned then unbanned, or the clawback was repaid). Future screens will no longer flag this account for referral patterns. Other checks (ban, hold, verification, amount, new account) still apply.`)) return;
+    try {
+      await updateDoc(doc(db, 'users', userId), { fraudSettledAt: new Date().toISOString(), fraudSettledBy: auth.currentUser?.email || null });
+      showToast(`${nickname} marked as settled`, 'success');
+    } catch (e) {
+      console.error(e);
+      showToast(e?.message || 'Failed to mark settled', 'error');
+    }
+  };
+
+  // ── Sign-in state ──
   onAuthStateChanged(auth, (user) => {
     if (user) {
       document.getElementById('loginOverlay').style.display = 'none';
@@ -620,6 +763,7 @@
       // uses when the field is omitted, so a pre-Tango request is treated
       // as PayPal here too, not as an "unknown" third bucket.
       payoutMethod: r.payoutMethod || 'paypal',
+      screening: screenings.get(r.id) || null,
     };
   }
 
@@ -692,6 +836,7 @@
     rebuildAll();
     render();
     refreshPaypalPaidBtn();
+    loadScreeningData(); // fire and forget — verdicts paint in when they arrive
 
     // …then fill in nicknames / referral info in batches and repaint.
     const loaded = [...rawActive.values(), ...rawHistory.values(), ...rawSearchHits.values()];
@@ -791,6 +936,8 @@
   function filteredForTab() {
     if (currentTab === 'all') return allRequests;
     if (currentTab === 'needsAttention') return allRequests.filter(r => r.status === 'pending' || r.status === 'approved_unpaid');
+    if (currentTab === 'screenReview') return allRequests.filter(r => r.status === 'pending' && r.screening && r.screening.verdict === 'review' && !r.screening.reviewDecision);
+    if (currentTab === 'screenClear') return allRequests.filter(r => r.status === 'pending' && r.screening && r.screening.verdict === 'clear');
     if (currentTab === 'needsInfo') return allRequests.filter(r => r.status === 'needs_info');
     if (currentTab === 'flagged') return allRequests.filter(r => r.flaggedForReview);
     return allRequests.filter(r => r.status === currentTab);
@@ -815,6 +962,7 @@
   function render() {
     const statusFiltered = filteredForTab();
     updateMethodCounts(statusFiltered);
+    updateScreenCounts();
     const filtered = applySearch(filteredForMethod(statusFiltered));
     const sorted = [...filtered].sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey];
@@ -1052,7 +1200,7 @@
       note += `<div class="processed-note">${escHtml(r.rejectionReason)}</div>`;
     }
 
-    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${fraudCheck}${tbpCheck}<div>${flagToggle}</div>${actions}${note}`;
+    return `${badge}${flagBadge ? ' ' + flagBadge : ''}${renderScreeningBlock(r)}${fraudCheck}${tbpCheck}<div>${flagToggle}</div>${actions}${note}`;
   }
 
   // Payout-method badge — added Sept 11, 2026, alongside the method tabs, so
@@ -1098,6 +1246,7 @@
 
     try {
       await adminUpdateWithdrawalStatus({ requestId, newStatus: 'paid' });
+      await recordReviewDecision(requestId, 'paid');
       showToast(`Marked ${nickname}'s redemption as paid`, 'success');
     } catch (e) {
       console.error(e);
@@ -1115,6 +1264,7 @@
     if (!confirm(`Mark ${nickname}'s redemption as PAID?\n\nOnly do this after you've actually sent the ${methodLabel} payout.`)) return;
     try {
       await adminUpdateWithdrawalStatus({ requestId, newStatus: 'paid' });
+      await recordReviewDecision(requestId, 'paid');
       showToast(`Marked ${nickname}'s redemption as paid`, 'success');
       await loadAll();
     } catch (e) {
@@ -1145,6 +1295,7 @@
     }
     try {
       await adminUpdateWithdrawalStatus({ requestId: pendingRejectId, newStatus: 'rejected', reason });
+      await recordReviewDecision(pendingRejectId, 'rejected');
       closeRejectModal();
       showToast('Request rejected and refunded', 'success');
       await loadAll();
@@ -1180,6 +1331,7 @@
     }
     try {
       await adminUpdateWithdrawalStatus({ requestId: pendingNeedsInfoId, newStatus: 'needs_info', reason });
+      await recordReviewDecision(pendingNeedsInfoId, 'needs_info');
       closeNeedsInfoModal();
       showToast('Marked as needing more info', 'success');
       await loadAll();
@@ -1270,6 +1422,11 @@
     const nowIso = new Date().toISOString();
     const byEmail = auth.currentUser?.email || null;
     const req = allRequests.find(r => r.id === requestId);
+    const sc = req?.screening;
+    if (checked && sc && sc.verdict === 'review' && !sc.reviewDecision) {
+      const why = (sc.reasons || []).map(x => '• ' + (REASON_LABELS[x.code] || x.code)).join('\n');
+      if (!confirm(`Screening flagged this request for review:\n\n${why}\n\nAdd it to the payment CSV anyway?`)) { render(); return; }
+    }
     try {
       await updateDoc(doc(db, 'withdrawalRequests', requestId), {
         toBePaid: checked,
