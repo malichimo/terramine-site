@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Saloon Settings</title>
+<link rel="icon" type="image/png" href="/logo.png?v=2" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07; --surface: #1a1208; --surface2: #241a0d;
+    --gold: #c8922a; --gold-light: #f0b84a; --amber: #e07b20;
+    --text: #f0e6d0; --text-muted: #8a7560;
+    --green: #4caf6e; --red: #e05050; --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; flex-wrap:wrap; gap:12px; }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { font-size:28px; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); letter-spacing:-0.5px; }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .admin-email { font-size:11px; color:var(--text-muted); }
+  .nav-btn { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; text-decoration:none; cursor:pointer; display:inline-block; }
+  .nav-btn:hover { color:var(--text); border-color:var(--gold); }
+  .logout-btn { background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; }
+  .logout-btn:hover { color:var(--red); border-color:var(--red); }
+
+  .main { padding:32px; max-width:1100px; margin:0 auto; }
+  .info-banner { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--gold); border-radius:8px; padding:14px 18px; font-size:12px; line-height:1.6; color:var(--text-muted); margin-bottom:20px; }
+  .info-banner strong { color:var(--gold-light); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:20px; overflow:hidden; }
+  .card-head { padding:14px 20px; border-bottom:1px solid var(--border); font-family:'Syne',sans-serif; font-weight:700; font-size:15px; color:var(--gold-light); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .card-head small { font-family:'DM Mono',monospace; font-weight:400; font-size:11px; color:var(--text-muted); }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); font-weight:500; padding:10px 20px; border-bottom:1px solid var(--border); }
+  td { padding:10px 20px; font-size:13px; border-bottom:1px solid rgba(200,146,42,0.07); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr.changed td { background:rgba(240,184,74,0.07); }
+  .item-name { color:var(--text); }
+  .item-id { font-size:10px; color:var(--text-muted); margin-top:2px; }
+  .default { font-size:11px; color:var(--text-muted); }
+  .note { font-size:11px; line-height:1.6; color:var(--text-muted); padding:12px 20px; }
+  input.num, select.pick { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; outline:none; }
+  input.num { width:90px; }
+  select.pick { min-width:240px; max-width:100%; }
+  textarea.uids { width:100%; min-height:84px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; line-height:1.6; outline:none; resize:vertical; }
+  input.num:focus, select.pick:focus, textarea.uids:focus { border-color:var(--gold); }
+  input.num.bad, textarea.uids.bad { border-color:var(--red); }
+  .toggle { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); cursor:pointer; user-select:none; }
+  .toggle input { accent-color:var(--gold); width:16px; height:16px; }
+  .warn { color:var(--amber); font-size:11px; margin-top:4px; }
+  .odds-total { font-size:12px; font-weight:500; }
+  .odds-total.good { color:var(--green); }
+  .odds-total.bad { color:var(--red); }
+  .reset-btn { background:transparent; border:none; color:var(--text-muted); font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; text-decoration:underline; }
+  .reset-btn:hover { color:var(--gold-light); }
+
+  .actionbar { position:sticky; bottom:0; background:var(--surface); border-top:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; z-index:90; }
+  .actionbar .status { font-size:12px; color:var(--text-muted); }
+  .btn { padding:11px 20px; border-radius:8px; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); }
+  .btn:hover { color:var(--text); border-color:var(--gold); }
+  .btn.primary { background:var(--gold); border-color:var(--gold); color:var(--bg); font-weight:500; }
+  .btn.primary:hover { opacity:0.9; color:var(--bg); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:800; display:none; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.open { display:flex; }
+  .modal-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px; width:520px; max-width:100%; max-height:85vh; overflow:auto; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--gold-light); margin-bottom:12px; }
+  .diff { font-size:12px; line-height:1.9; margin-bottom:18px; word-break:break-word; }
+  .diff .from { color:var(--text-muted); text-decoration:line-through; }
+  .diff .to { color:var(--green); }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+  #loginOverlay { position:fixed; inset:0; background:var(--bg); z-index:999; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; max-width:100%; text-align:center; }
+  .login-icon { font-size:36px; margin-bottom:16px; }
+  .login-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); margin-bottom:4px; }
+  .login-sub { font-size:11px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase; margin-bottom:32px; }
+  .login-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; margin-bottom:12px; outline:none; }
+  .login-btn { width:100%; background:var(--gold); color:var(--bg); border:none; border-radius:8px; padding:14px; font-family:'DM Mono',monospace; font-size:13px; font-weight:500; cursor:pointer; }
+  #loginError { color:var(--red); font-size:12px; margin-top:12px; display:none; }
+
+  .toast { position:fixed; bottom:84px; right:28px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px; font-size:13px; color:var(--text); z-index:900; display:none; }
+  .toast.show { display:block; }
+  .toast.success { border-color:var(--green); color:var(--green); }
+  .toast.error { border-color:var(--red); color:var(--red); }
+  @media (max-width:700px) {
+    .main { padding:16px; }
+    .header { padding:14px 16px; }
+    th, td { padding:10px 12px; }
+    .actionbar { padding:12px 16px; }
+    select.pick { min-width:0; width:100%; }
+    input.num { width:70px; }
+    #wheelCard { overflow-x:auto; }
+    #wheelCard th, #wheelCard td { padding:8px 6px; }
+    #wheelCard th:first-child, #wheelCard td:first-child { padding-left:12px; }
+    #wheelCard select.pick { width:128px; padding:8px 4px; font-size:12px; }
+    #wheelCard input.num { width:58px; padding:8px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">🤠</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Saloon Settings</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/" class="nav-btn">⛏️ Main</a>
+    <a href="/admin/admin-store.html" class="nav-btn">🏪 Store Prices</a>
+    <a href="/admin/admin-users.html" class="nav-btn">👥 Users</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="info-banner">
+    <strong>Changes go live the moment you save</strong> (no app update or deploy). Everything here is stored in <code>config/saloon</code>. Bids, the tip, Roulette and the wheel are used once those parts of the Saloon are built.
+  </div>
+
+  <div class="card">
+    <div class="card-head">Saloon switch <small>18+ players only</small></div>
+    <table>
+      <tbody>
+        <tr id="row-enabled">
+          <td><div class="item-name">Open to all players</div><div class="item-id">enabled</div></td>
+          <td><label class="toggle"><input type="checkbox" id="in-enabled"> Open</label></td>
+        </tr>
+        <tr id="row-testers">
+          <td style="width:36%;"><div class="item-name">Testers</div><div class="item-id">testerUids</div><div class="default" style="margin-top:6px;">These players can get in while the Saloon is closed. One user ID per line.</div></td>
+          <td><textarea class="uids" id="in-testers" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head">Bids <small>one limit for all games</small></div>
+    <table>
+      <thead><tr><th>Setting</th><th>TB</th><th>Applies to</th></tr></thead>
+      <tbody>
+        <tr id="row-minBid">
+          <td><div class="item-name">Minimum bid</div><div class="item-id">minBid</div></td>
+          <td><input class="num" id="in-minBid" type="number" min="1" step="1" inputmode="numeric"></td>
+          <td class="default">Roulette: each spin. Blackjack: the starting bet.</td>
+        </tr>
+        <tr id="row-maxBid">
+          <td><div class="item-name">Maximum bid</div><div class="item-id">maxBid</div></td>
+          <td><input class="num" id="in-maxBid" type="number" min="1" step="1" inputmode="numeric"></td>
+          <td class="default">Roulette: each spin. Blackjack: the starting bet.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head">Bartender &amp; Roulette</div>
+    <table>
+      <tbody>
+        <tr id="row-tip">
+          <td style="width:36%;"><div class="item-name">Tip for advice (TB)</div><div class="item-id">bartenderTip</div></td>
+          <td><input class="num" id="in-tip" type="number" min="0" step="1" inputmode="numeric"></td>
+        </tr>
+        <tr id="row-zeros">
+          <td><div class="item-name">Roulette wheel</div><div class="item-id">rouletteZeros</div></td>
+          <td>
+            <select class="pick" id="in-zeros">
+              <option value="single">Single zero (37 pockets)</option>
+              <option value="double">Double zero (38 pockets)</option>
+            </select>
+            <div class="default" style="margin-top:6px;">Payouts are the same. On a 100 TB bet, players lose about 2.70 TB on average with single zero and 5.26 TB with double zero.</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" id="wheelCard">
+    <div class="card-head">Daily Spin wheel <button class="reset-btn" onclick="resetWheel()">reset wheel to defaults</button></div>
+    <table>
+      <thead><tr><th>#</th><th>Prize</th><th>Amount</th><th>Odds (%)</th></tr></thead>
+      <tbody id="wheelBody"></tbody>
+    </table>
+    <div class="note">
+      <span class="odds-total" id="oddsTotal"></span>
+      <div class="warn" id="oddsWarn"></div>
+      <div style="margin-top:6px;">Segments run clockwise around the wheel, starting from the top. The default prizes are a starting point, so please set your own before launch.</div>
+    </div>
+  </div>
+</div>
+
+<div class="actionbar">
+  <div class="status" id="statusText">Loading…</div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn" id="discardBtn" onclick="discardChanges()" disabled>Discard</button>
+    <button class="btn primary" id="saveBtn" onclick="openConfirm()" disabled>Review &amp; Save</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-card">
+    <div class="modal-title">Confirm Saloon changes</div>
+    <div class="diff" id="diffList"></div>
+    <div id="confirmWarnings" class="warn" style="margin-bottom:14px;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeConfirm()">Cancel</button>
+      <button class="btn primary" id="confirmSaveBtn" onclick="doSave()">Save to live Saloon</button>
+    </div>
+  </div>
+</div>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-icon">🤠</div>
+    <div class="login-title">Saloon Settings</div>
+    <div class="login-sub">Admin access required</div>
+    <input id="loginEmail" type="email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    <input id="loginPass" type="password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const CONFIG_REF = () => doc(db, 'config', 'saloon');
+
+  // ── Prizes the wheel can give. Material ids MUST match buildCatalog() in
+  // functions/src/terraTownStore.ts. ───────────────────────────────────────
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const PRIZES = [{ id: 'tb', name: 'TB' }];
+  for (const m of ['rock', 'coal', 'gold', 'diamond']) for (const t of ['common', 'uncommon', 'rare', 'epic']) {
+    PRIZES.push({ id: `mat_${m}_${t}`, name: `${cap(m)} (${t})` });
+  }
+  PRIZES.push(
+    { id: 'ad_skip', name: 'Ad Skips' },
+    { id: 'goggles_1min', name: 'Night Vision Goggles (1 min)' },
+    { id: 'goggles_3min', name: 'Night Vision Goggles (3 min)' },
+    { id: 'goggles_5min', name: 'Night Vision Goggles (5 min)' },
+  );
+  const prizeName = id => (PRIZES.find(p => p.id === id) || { name: id }).name;
+  const prizeLabel = s => s.item === 'tb' ? `${s.amount} TB` : `${prizeName(s.item)} ×${s.amount}`;
+
+  // ── Defaults, used until config/saloon has been saved ───────────────────
+  const SEGMENTS = 8;
+  const DEFAULTS = {
+    enabled: false,
+    testers: [],
+    minBid: 1,
+    maxBid: 100,
+    tip: 5,
+    zeros: 'single',
+    segments: [
+      { item: 'tb', amount: 5, odds: 30 },
+      { item: 'mat_rock_common', amount: 5, odds: 24 },
+      { item: 'tb', amount: 10, odds: 15 },
+      { item: 'mat_coal_uncommon', amount: 1, odds: 14 },
+      { item: 'tb', amount: 25, odds: 6 },
+      { item: 'ad_skip', amount: 1, odds: 6 },
+      { item: 'mat_gold_rare', amount: 1, odds: 4 },
+      { item: 'tb', amount: 100, odds: 1 },
+    ],
+  };
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let saved = null;      // what is stored right now (effective values)
+  let extraFields = {};  // any other fields already on the doc, preserved on save
+
+  const wholeOr = (v, min, fallback) => (Number.isInteger(v) && v >= min ? v : fallback);
+  function validSegments(list) {
+    return Array.isArray(list) && list.length === SEGMENTS && list.every(s =>
+      s && PRIZES.some(p => p.id === s.item) && Number.isInteger(s.amount) && s.amount >= 1
+        && typeof s.odds === 'number' && s.odds >= 0);
+  }
+  function effective(d) {
+    return {
+      enabled: d.enabled === true,
+      testers: Array.isArray(d.testerUids) ? d.testerUids.map(String) : DEFAULTS.testers,
+      minBid: wholeOr(d.minBid, 1, DEFAULTS.minBid),
+      maxBid: wholeOr(d.maxBid, 1, DEFAULTS.maxBid),
+      tip: wholeOr(d.bartenderTip, 0, DEFAULTS.tip),
+      zeros: d.rouletteZeros === 'double' ? 'double' : DEFAULTS.zeros,
+      segments: (validSegments(d.spinSegments) ? d.spinSegments : DEFAULTS.segments)
+        .map(s => ({ item: s.item, amount: s.amount, odds: s.odds })),
+    };
+  }
+
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      document.getElementById('adminEmail').textContent = user.email;
+      load();
+    } else {
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('adminEmail').textContent = '';
+    }
+  });
+  window.doLogout = async () => { await signOut(auth); location.reload(); };
+  window.doLogin = async () => {
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value.trim(), document.getElementById('loginPass').value);
+    } catch (e) {
+      errEl.textContent = 'Sign-in failed. Check email and password.';
+      errEl.style.display = 'block';
+    }
+  };
+
+  // ── Load + render ────────────────────────────────────────────────────────
+  async function load() {
+    setStatus('Loading…');
+    try {
+      const snap = await getDoc(CONFIG_REF());
+      const d = snap.exists() ? snap.data() : {};
+      const { enabled, testerUids, minBid, maxBid, bartenderTip, rouletteZeros, spinSegments, updatedAt, updatedBy, ...rest } = d;
+      extraFields = rest;
+      saved = effective(d);
+      saved.updatedBy = updatedBy || null;
+      saved.updatedAt = updatedAt && updatedAt.toDate ? updatedAt.toDate() : null;
+      render();
+    } catch (e) {
+      console.error(e);
+      setStatus('Could not load (are you signed in as the admin?)');
+      toast('Load failed — check console', 'error');
+    }
+  }
+
+  function wheelRows(segments) {
+    const options = PRIZES.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    return segments.map((s, i) => `<tr id="row-seg${i}">
+      <td>${i + 1}</td>
+      <td><select class="pick" id="seg-item-${i}">${options}</select></td>
+      <td><input class="num" id="seg-amount-${i}" type="number" min="1" step="1" inputmode="numeric" value="${s.amount}"></td>
+      <td><input class="num" id="seg-odds-${i}" type="number" min="0" step="any" inputmode="decimal" value="${s.odds}"></td>
+    </tr>`).join('');
+  }
+
+  function renderWheel(segments) {
+    const body = document.getElementById('wheelBody');
+    body.innerHTML = wheelRows(segments);
+    segments.forEach((s, i) => { document.getElementById(`seg-item-${i}`).value = s.item; });
+    body.querySelectorAll('input,select').forEach(el => { el.oninput = refresh; el.onchange = refresh; });
+  }
+
+  function render() {
+    document.getElementById('in-enabled').checked = saved.enabled;
+    document.getElementById('in-testers').value = saved.testers.join('\n');
+    document.getElementById('in-minBid').value = saved.minBid;
+    document.getElementById('in-maxBid').value = saved.maxBid;
+    document.getElementById('in-tip').value = saved.tip;
+    document.getElementById('in-zeros').value = saved.zeros;
+    for (const id of ['in-enabled', 'in-testers', 'in-minBid', 'in-maxBid', 'in-tip', 'in-zeros']) {
+      const el = document.getElementById(id);
+      el.oninput = refresh; el.onchange = refresh;
+    }
+    renderWheel(saved.segments);
+    refresh();
+  }
+
+  function parseWhole(v) {
+    if (String(v).trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 && Math.floor(n) === n ? n : null;
+  }
+  function parseOdds(v) {
+    if (String(v).trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null;
+  }
+  const oddsTotal = list => Math.round(list.reduce((sum, s) => sum + (s.odds || 0), 0) * 100) / 100;
+
+  // Current form values.
+  function readForm() {
+    const out = { errors: [] };
+    const mark = (id, bad, msg) => {
+      document.getElementById(id).classList.toggle('bad', bad);
+      if (bad) out.errors.push(msg);
+    };
+    out.enabled = document.getElementById('in-enabled').checked;
+    out.testers = [...new Set(document.getElementById('in-testers').value.split('\n').map(s => s.trim()).filter(Boolean))];
+    mark('in-testers', out.testers.some(u => !/^[A-Za-z0-9_-]+$/.test(u)), 'Testers: each line must be one user ID.');
+    out.minBid = parseWhole(document.getElementById('in-minBid').value);
+    mark('in-minBid', out.minBid === null || out.minBid < 1, 'Minimum bid must be a whole number, 1 or more.');
+    out.maxBid = parseWhole(document.getElementById('in-maxBid').value);
+    mark('in-maxBid', out.maxBid === null || out.maxBid < 1 || (out.minBid !== null && out.maxBid < out.minBid),
+      'Maximum bid must be a whole number, and not below the minimum bid.');
+    out.tip = parseWhole(document.getElementById('in-tip').value);
+    mark('in-tip', out.tip === null, 'Tip must be a whole number, 0 or more.');
+    out.zeros = document.getElementById('in-zeros').value;
+    out.segments = [];
+    for (let i = 0; i < SEGMENTS; i++) {
+      const amount = parseWhole(document.getElementById(`seg-amount-${i}`).value);
+      const odds = parseOdds(document.getElementById(`seg-odds-${i}`).value);
+      mark(`seg-amount-${i}`, amount === null || amount < 1, `Segment ${i + 1}: amount must be a whole number, 1 or more.`);
+      mark(`seg-odds-${i}`, odds === null, `Segment ${i + 1}: odds must be a number from 0 to 100.`);
+      out.segments.push({ item: document.getElementById(`seg-item-${i}`).value, amount, odds });
+    }
+    if (oddsTotal(out.segments) === 0) out.errors.push('At least one wheel segment needs odds above 0.');
+    return out;
+  }
+
+  function diffs(form) {
+    const list = [];
+    const add = (label, from, to) => { if (from !== to) list.push({ label, from, to }); };
+    add('Saloon switch', saved.enabled ? 'open' : 'closed', form.enabled ? 'open' : 'closed');
+    add('Testers', saved.testers.join(', ') || 'none', form.testers.join(', ') || 'none');
+    add('Minimum bid', saved.minBid + ' TB', form.minBid + ' TB');
+    add('Maximum bid', saved.maxBid + ' TB', form.maxBid + ' TB');
+    add('Tip for advice', saved.tip + ' TB', form.tip + ' TB');
+    add('Roulette wheel', saved.zeros + ' zero', form.zeros + ' zero');
+    form.segments.forEach((s, i) => {
+      const a = saved.segments[i];
+      add(`Wheel segment ${i + 1}`, `${prizeLabel(a)}, ${a.odds}%`, `${prizeLabel(s)}, ${s.odds}%`);
+    });
+    return list;
+  }
+
+  const oddsWarning = total => `The wheel odds add up to ${total}%, not 100%. They'd work as shares, so the real odds would differ from what's shown here.`;
+
+  function warnings(form) {
+    const w = [];
+    if (form.enabled && !saved.enabled) w.push('This opens the Saloon to every player aged 18 or over.');
+    if (!form.enabled && saved.enabled) w.push('This closes the Saloon to everyone except testers.');
+    const total = oddsTotal(form.segments);
+    if (total !== 100) w.push(oddsWarning(total));
+    if (form.tip === 0) w.push('The bartender tip is set to 0 TB (free).');
+    return w;
+  }
+
+  function refresh() {
+    if (!saved) return;
+    const form = readForm();
+    const total = oddsTotal(form.segments);
+    const totalEl = document.getElementById('oddsTotal');
+    totalEl.textContent = `Total: ${total}%`;
+    totalEl.className = 'odds-total ' + (total === 100 ? 'good' : 'bad');
+    document.getElementById('oddsWarn').textContent = total === 100 ? '' : '⚠️ ' + oddsWarning(total);
+
+    const changed = {
+      enabled: saved.enabled !== form.enabled,
+      testers: saved.testers.join() !== form.testers.join(),
+      minBid: saved.minBid !== form.minBid,
+      maxBid: saved.maxBid !== form.maxBid,
+      tip: saved.tip !== form.tip,
+      zeros: saved.zeros !== form.zeros,
+    };
+    for (const k of Object.keys(changed)) document.getElementById('row-' + k).classList.toggle('changed', changed[k]);
+    form.segments.forEach((s, i) => {
+      const a = saved.segments[i];
+      document.getElementById('row-seg' + i).classList.toggle('changed', a.item !== s.item || a.amount !== s.amount || a.odds !== s.odds);
+    });
+
+    const n = diffs(form).length;
+    const who = saved.updatedBy ? ` Last saved by ${saved.updatedBy}${saved.updatedAt ? ' on ' + saved.updatedAt.toLocaleString() : ''}.` : '';
+    setStatus((form.errors[0] ? form.errors[0] + ' ' : '') + (n ? `${n} unsaved change${n === 1 ? '' : 's'}.` : 'No changes.') + who);
+    document.getElementById('saveBtn').disabled = n === 0 || form.errors.length > 0;
+    document.getElementById('discardBtn').disabled = n === 0;
+  }
+
+  window.resetWheel = () => { renderWheel(DEFAULTS.segments); refresh(); };
+  window.discardChanges = () => render();
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  window.openConfirm = () => {
+    const form = readForm();
+    if (form.errors.length) { toast(form.errors[0], 'error'); return; }
+    document.getElementById('diffList').innerHTML = diffs(form).map(x =>
+      `<div>${esc(x.label)}: <span class="from">${esc(x.from)}</span> → <span class="to">${esc(x.to)}</span></div>`).join('');
+    document.getElementById('confirmWarnings').innerHTML = warnings(form).map(t => '⚠️ ' + esc(t)).join('<br>');
+    document.getElementById('confirmModal').classList.add('open');
+  };
+  window.closeConfirm = () => document.getElementById('confirmModal').classList.remove('open');
+
+  window.doSave = async () => {
+    const form = readForm();
+    if (form.errors.length) { toast(form.errors[0], 'error'); return; }
+    const btn = document.getElementById('confirmSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const payload = {
+        ...extraFields,
+        enabled: form.enabled,
+        testerUids: form.testers,
+        minBid: form.minBid,
+        maxBid: form.maxBid,
+        bartenderTip: form.tip,
+        rouletteZeros: form.zeros,
+        spinSegments: form.segments,
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser ? auth.currentUser.email : null,
+      };
+      await setDoc(CONFIG_REF(), payload); // replaces the doc; unknown fields were carried over above
+      closeConfirm();
+      toast('Saved. The Saloon uses these settings now.', 'success');
+      await load();
+    } catch (e) {
+      console.error('Save failed:', e);
+      toast('Save failed — check console', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save to live Saloon';
+    }
+  };
+
+  function setStatus(t) { document.getElementById('statusText').textContent = t; }
+  function toast(msg, kind) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast show ' + (kind || '');
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.className = 'toast', 4000);
+  }
+</script>
+</body>
+</html>
