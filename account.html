@@ -1469,7 +1469,7 @@
     const code = ($('merge-code').value || '').trim();
     const tbRaw = ($('merge-tb').value || '').replace(/[,\s]/g, '');
     if (!code) { status.className = 'save-status error'; status.textContent = "Enter the other account's referral code."; return; }
-    if (!/^\d+$/.test(tbRaw)) { status.className = 'save-status error'; status.textContent = "Enter the other account's TB balance as a whole number."; return; }
+    if (!/^-?\d+$/.test(tbRaw)) { status.className = 'save-status error'; status.textContent = "Enter the other account's TB balance as a whole number."; return; }
     if (!$('merge-ack').checked) { status.className = 'save-status error'; status.textContent = 'Tick the box to confirm you understand.'; return; }
     if (!confirm('Merge the other account into THIS account?\n\n• Its mines and mine materials move here.\n• Its TB and earnings are lost.\n• This is final and you cannot merge again.')) return;
     await runMerge({ altReferralCode: code, altTbBalance: Number(tbRaw) }, $('merge-btn'), status);
