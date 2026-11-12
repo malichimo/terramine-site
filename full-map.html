@@ -40,6 +40,7 @@
     html.tm-expect-auth body.auth-pending #portal { visibility: visible; }
     html.tm-expect-auth body.auth-pending #login-screen { visibility: hidden; display: none !important; }
       .mine-map-nearby-btn { display:inline-flex; align-items:center; gap:5px; }
+    .mine-map-nearby-btn[hidden] { display:none !important; }
     .mine-map-nearby-btn span { color:inherit !important; opacity:1 !important; }
     .mine-map-nearby-btn .nearby-pp { height:24px; width:auto; display:block; margin:-5px 0; }
     .mine-map-nearby-btn.is-locked { filter:grayscale(1); opacity:.5; cursor:not-allowed; }
