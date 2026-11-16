@@ -141,7 +141,7 @@
 
 <div class="main">
   <div class="info-banner">
-    <strong>House result</strong> = TB players wagered or tipped minus TB paid back, on finished rounds only. A positive number means the Saloon took TB out of the economy; negative means it paid out more than it took. Days are America/New_York days. Daily Spin TB prizes count as paid out; item prizes (materials, Ad Skips, goggles) are not TB and are not counted.
+    <strong>House result</strong> = TB players wagered or tipped minus TB paid back, on finished rounds only. A positive number means the Saloon took TB out of the economy; negative means it paid out more than it took. Days are America/New_York days. The Daily Spin is a free reward and is left out of every total (its TB prizes are shown in its own row for reference).
   </div>
 
   <div class="toolbar">
@@ -309,12 +309,13 @@
     const games = [...d.games].sort((a, b) => (order.indexOf(a.game) + 99) % 99 - (order.indexOf(b.game) + 99) % 99);
     $('gamesBody').innerHTML = games.length ? games.map(g => {
       const net = g.spent - g.paid;
+      if (g.counted === false) return `<tr style="opacity:.55"><td>${esc(GAME_NAMES[g.game] || g.game)}<span class="tag">not counted</span></td><td class="n">${fmt(g.players)}</td><td class="n">${fmt(g.rounds)}</td><td class="n">–</td><td class="n">${fmt(g.paid)}</td><td class="n">–</td><td class="n">–</td></tr>`;
       return `<tr><td>${esc(GAME_NAMES[g.game] || g.game)}</td><td class="n">${fmt(g.players)}</td><td class="n">${fmt(g.rounds)}${g.open ? `<span class="tag">${fmt(g.open)} open</span>` : ''}</td>
         <td class="n">${fmt(g.spent)}</td><td class="n">${fmt(g.paid)}</td><td class="n ${cls(net)}">${sgn(net)}</td>
         <td class="n">${g.spent > 0 ? (net / g.spent * 100).toFixed(1) + '%' : '–'}</td></tr>`;
     }).join('') : '<tr><td colspan="7" class="default">No Saloon rounds in this range.</td></tr>';
     const openBet = games.reduce((a, g) => a + (g.openSpent || 0), 0);
-    $('gamesFoot').textContent = 'Daily Spin has no wager, so its row is pure cost (TB prizes paid). Roulette edge is about 2.7% on a single-zero wheel. ' +
+    $('gamesFoot').textContent = 'The Daily Spin row is for reference only and is not in the totals. Roulette edge is about 2.7% on a single-zero wheel. ' +
       (openBet ? `${fmt(openBet)} TB is bet on hands still in play and is not counted until they finish.` : '');
 
     $('daysBody').innerHTML = d.days.length ? d.days.map(x => {
