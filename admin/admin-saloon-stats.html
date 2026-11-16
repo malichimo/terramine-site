@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraMine Saloon Stats</title>
+<link rel="icon" type="image/png" href="/logo.png?v=2" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0a07; --surface: #1a1208; --surface2: #241a0d;
+    --gold: #c8922a; --gold-light: #f0b84a; --amber: #e07b20;
+    --text: #f0e6d0; --text-muted: #8a7560;
+    --green: #4caf6e; --red: #e05050; --blue: #4a9fd4;
+    --border: rgba(200,146,42,0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--text); min-height:100vh; }
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:20px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; flex-wrap:wrap; gap:12px; }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { font-size:28px; }
+  .logo-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); letter-spacing:-0.5px; }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .admin-email { font-size:11px; color:var(--text-muted); }
+  .nav-btn { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; text-decoration:none; cursor:pointer; display:inline-block; }
+  .nav-btn:hover { color:var(--text); border-color:var(--gold); }
+  .logout-btn { background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; }
+  .logout-btn:hover { color:var(--red); border-color:var(--red); }
+
+  .main { padding:32px; max-width:1100px; margin:0 auto; }
+  .info-banner { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--gold); border-radius:8px; padding:14px 18px; font-size:12px; line-height:1.6; color:var(--text-muted); margin-bottom:20px; }
+  .info-banner strong { color:var(--gold-light); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:20px; overflow:hidden; }
+  .card-head { padding:14px 20px; border-bottom:1px solid var(--border); font-family:'Syne',sans-serif; font-weight:700; font-size:15px; color:var(--gold-light); display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .card-head small { font-family:'DM Mono',monospace; font-weight:400; font-size:11px; color:var(--text-muted); }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); font-weight:500; padding:10px 20px; border-bottom:1px solid var(--border); }
+  td { padding:10px 20px; font-size:13px; border-bottom:1px solid rgba(200,146,42,0.07); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr.changed td { background:rgba(240,184,74,0.07); }
+  .item-name { color:var(--text); }
+  .item-id { font-size:10px; color:var(--text-muted); margin-top:2px; }
+  .default { font-size:11px; color:var(--text-muted); }
+  .note { font-size:11px; line-height:1.6; color:var(--text-muted); padding:12px 20px; }
+  input.num, select.pick { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; outline:none; }
+  input.num { width:90px; }
+  select.pick { min-width:240px; max-width:100%; }
+  textarea.uids { width:100%; min-height:84px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; line-height:1.6; outline:none; resize:vertical; }
+  input.num:focus, select.pick:focus, textarea.uids:focus { border-color:var(--gold); }
+  input.num.bad, textarea.uids.bad { border-color:var(--red); }
+  .toggle { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); cursor:pointer; user-select:none; }
+  .toggle input { accent-color:var(--gold); width:16px; height:16px; }
+  .warn { color:var(--amber); font-size:11px; margin-top:4px; }
+  .odds-total { font-size:12px; font-weight:500; }
+  .odds-total.good { color:var(--green); }
+  .odds-total.bad { color:var(--red); }
+  .reset-btn { background:transparent; border:none; color:var(--text-muted); font-family:'DM Mono',monospace; font-size:11px; cursor:pointer; text-decoration:underline; }
+  .reset-btn:hover { color:var(--gold-light); }
+
+  .actionbar { position:sticky; bottom:0; background:var(--surface); border-top:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; z-index:90; }
+  .actionbar .status { font-size:12px; color:var(--text-muted); }
+  .btn { padding:11px 20px; border-radius:8px; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); }
+  .btn:hover { color:var(--text); border-color:var(--gold); }
+  .btn.primary { background:var(--gold); border-color:var(--gold); color:var(--bg); font-weight:500; }
+  .btn.primary:hover { opacity:0.9; color:var(--bg); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:800; display:none; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.open { display:flex; }
+  .modal-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px; width:520px; max-width:100%; max-height:85vh; overflow:auto; }
+  .modal-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--gold-light); margin-bottom:12px; }
+  .diff { font-size:12px; line-height:1.9; margin-bottom:18px; word-break:break-word; }
+  .diff .from { color:var(--text-muted); text-decoration:line-through; }
+  .diff .to { color:var(--green); }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+  #loginOverlay { position:fixed; inset:0; background:var(--bg); z-index:999; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:360px; max-width:100%; text-align:center; }
+  .login-icon { font-size:36px; margin-bottom:16px; }
+  .login-title { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--gold-light); margin-bottom:4px; }
+  .login-sub { font-size:11px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase; margin-bottom:32px; }
+  .login-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Mono',monospace; font-size:13px; margin-bottom:12px; outline:none; }
+  .login-btn { width:100%; background:var(--gold); color:var(--bg); border:none; border-radius:8px; padding:14px; font-family:'DM Mono',monospace; font-size:13px; font-weight:500; cursor:pointer; }
+  #loginError { color:var(--red); font-size:12px; margin-top:12px; display:none; }
+
+  .toast { position:fixed; bottom:84px; right:28px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px; font-size:13px; color:var(--text); z-index:900; display:none; }
+  .toast.show { display:block; }
+  .toast.success { border-color:var(--green); color:var(--green); }
+  .toast.error { border-color:var(--red); color:var(--red); }
+  @media (max-width:700px) {
+    .main { padding:16px; }
+    .header { padding:14px 16px; }
+    th, td { padding:10px 12px; }
+    .actionbar { padding:12px 16px; }
+    select.pick { min-width:0; width:100%; }
+    input.num { width:70px; }
+    #wheelCard { overflow-x:auto; }
+    #wheelCard th, #wheelCard td { padding:8px 6px; }
+    #wheelCard th:first-child, #wheelCard td:first-child { padding-left:12px; }
+    #wheelCard select.pick { width:128px; padding:8px 4px; font-size:12px; }
+    #wheelCard input.num { width:58px; padding:8px 6px; }
+  }
+
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
+  .toolbar input[type=date] { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; color-scheme:dark; }
+  .btn.on { border-color:var(--gold); color:var(--gold-light); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:20px; }
+  .tile { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+  .tile .k { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); }
+  .tile .v { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:var(--gold-light); margin-top:6px; }
+  .tile .s { font-size:11px; color:var(--text-muted); margin-top:4px; }
+  .pos { color:var(--green) !important; } .neg { color:var(--red) !important; }
+  td.n, th.n { text-align:right; }
+  .scroll { overflow-x:auto; }
+  .tag { display:inline-block; font-size:10px; color:var(--text-muted); margin-left:6px; }
+  #status { font-size:12px; color:var(--text-muted); margin-bottom:12px; min-height:16px; }
+  #status.err { color:var(--red); }
+  @media (max-width:700px) { .tile .v { font-size:19px; } th, td { padding:8px 8px; font-size:12px; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-icon">🎲</span>
+    <div>
+      <div class="logo-text">TerraMine</div>
+      <div class="logo-sub">Saloon Stats</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="admin-email" id="adminEmail"></span>
+    <a href="/admin/" class="nav-btn">⛏️ Main</a>
+    <a href="/admin/admin-saloon.html" class="nav-btn">🤠 Saloon Settings</a>
+    <a href="/admin/admin-store.html" class="nav-btn">🏪 Store Prices</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="info-banner">
+    <strong>House result</strong> = TB players wagered or tipped minus TB paid back, on finished rounds only. A positive number means the Saloon took TB out of the economy; negative means it paid out more than it took. Days are America/New_York days. Daily Spin TB prizes count as paid out; item prizes (materials, Ad Skips, goggles) are not TB and are not counted.
+  </div>
+
+  <div class="toolbar">
+    <button class="btn" data-r="today">Today</button>
+    <button class="btn" data-r="yesterday">Yesterday</button>
+    <button class="btn" data-r="7">Last 7 days</button>
+    <button class="btn" data-r="30">Last 30 days</button>
+    <input type="date" id="fromDate"> <span style="color:var(--text-muted)">to</span> <input type="date" id="toDate">
+    <button class="btn primary" onclick="loadCustom()">Load</button>
+  </div>
+  <div id="status"></div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <div class="card-head">By game <small id="gamesNote"></small></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Game</th><th class="n">Players</th><th class="n">Rounds</th><th class="n">Wagered (TB)</th><th class="n">Paid out (TB)</th><th class="n">House result (TB)</th><th class="n">House edge</th></tr></thead>
+      <tbody id="gamesBody"></tbody>
+    </table></div>
+    <div class="note" id="gamesFoot"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">By day</div>
+    <div class="scroll"><table>
+      <thead><tr><th>Date</th><th class="n">Rounds</th><th class="n">Wagered (TB)</th><th class="n">Paid out (TB)</th><th class="n">House result (TB)</th></tr></thead>
+      <tbody id="daysBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">Top spenders <small>most TB wagered in this range</small></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Player</th><th class="n">Rounds</th><th class="n">Wagered (TB)</th><th class="n">Paid back (TB)</th><th class="n">Player net (TB)</th></tr></thead>
+      <tbody id="spendBody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">Biggest winners <small>players furthest ahead of the Saloon; worth a look for exploits</small></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Player</th><th class="n">Rounds</th><th class="n">Wagered (TB)</th><th class="n">Paid back (TB)</th><th class="n">Player net (TB)</th></tr></thead>
+      <tbody id="winBody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-icon">🎲</div>
+    <div class="login-title">Saloon Stats</div>
+    <div class="login-sub">Admin access required</div>
+    <input id="loginEmail" type="email" class="login-input" placeholder="Email" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    <input id="loginPass" type="password" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+  import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-functions.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9jTXIb-HR9qvYueh8cBIs5EFenNPkX4Y",
+    authDomain: "terramine-5cda5.firebaseapp.com",
+    projectId: "terramine-5cda5",
+    storageBucket: "terramine-5cda5.firebasestorage.app",
+    messagingSenderId: "183143680304",
+    appId: "1:183143680304:web:16bcd69f0c33d690e8e0f5"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const adminSaloonStats = httpsCallable(getFunctions(app), 'adminSaloonStats', { timeout: 120000 });
+
+  // TB value range (project doc TB_Value_Min_Max_Pricing_Basis, Nov 1, 2026):
+  // minimum ~ $0.000215 per TB (no boost, no ads), maximum ~ $0.00430 per TB.
+  const USD_MIN = 0.000215, USD_MAX = 0.00430;
+  const GAME_NAMES = { roulette: '🎡 Roulette', blackjack: '🃏 Blackjack', spin: '🎯 Daily Spin', bartender: '🍺 Bartender tips' };
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  const fmt = n => Math.round(Number(n) || 0).toLocaleString();
+  const sgn = n => (n > 0 ? '+' : '') + fmt(n);
+  const cls = n => n > 0 ? 'pos' : n < 0 ? 'neg' : '';
+  const usd = n => '$' + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const todayET = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const shift = (d, days) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + days); return t.toISOString().slice(0, 10); };
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      $('loginOverlay').style.display = 'none';
+      $('logoutBtn').style.display = 'inline-block';
+      $('adminEmail').textContent = user.email;
+      if (!$('toDate').value) setRange('today');
+    } else {
+      $('logoutBtn').style.display = 'none';
+      $('adminEmail').textContent = '';
+    }
+  });
+  window.doLogout = async () => { await signOut(auth); location.reload(); };
+  window.doLogin = async () => {
+    const errEl = $('loginError');
+    errEl.style.display = 'none';
+    try {
+      await signInWithEmailAndPassword(auth, $('loginEmail').value.trim(), $('loginPass').value);
+    } catch (e) {
+      errEl.textContent = 'Sign-in failed. Check email and password.';
+      errEl.style.display = 'block';
+    }
+  };
+
+  function setRange(r) {
+    const t = todayET();
+    let from = t, to = t;
+    if (r === 'yesterday') from = to = shift(t, -1);
+    else if (r === '7') from = shift(t, -6);
+    else if (r === '30') from = shift(t, -29);
+    $('fromDate').value = from; $('toDate').value = to;
+    document.querySelectorAll('.toolbar .btn[data-r]').forEach(b => b.classList.toggle('on', b.dataset.r === r));
+    load(from, to);
+  }
+  document.querySelectorAll('.toolbar .btn[data-r]').forEach(b => b.addEventListener('click', () => setRange(b.dataset.r)));
+  window.loadCustom = () => {
+    document.querySelectorAll('.toolbar .btn[data-r]').forEach(b => b.classList.remove('on'));
+    load($('fromDate').value, $('toDate').value);
+  };
+
+  const playerCell = r => `${esc(r.nickname || '(no nickname)')}<span class="tag">${esc(r.code || r.uid.slice(0, 8))}</span>`;
+  const playerRows = rows => rows.length ? rows.map(r => `<tr>
+      <td>${playerCell(r)}</td><td class="n">${fmt(r.rounds)}</td><td class="n">${fmt(r.spent)}</td>
+      <td class="n">${fmt(r.paid)}</td><td class="n ${cls(r.net)}">${sgn(r.net)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="default">None in this range.</td></tr>';
+
+  async function load(from, to) {
+    const st = $('status');
+    st.className = ''; st.textContent = 'Loading…';
+    try {
+      const { data } = await adminSaloonStats({ from, to });
+      render(data);
+      st.textContent = `${data.from === data.to ? data.from : data.from + ' to ' + data.to} · ${fmt(data.roundsRead)} rounds read` +
+        (data.truncated ? ' · ⚠️ range too large, showing the first 150,000 rounds only (pick fewer days)' : '');
+      if (data.truncated) st.className = 'err';
+    } catch (e) {
+      st.className = 'err';
+      st.textContent = e && e.message ? e.message : 'Could not load stats.';
+    }
+  }
+
+  function render(d) {
+    const t = d.total;
+    const house = t.spent - t.paid;
+    const edge = t.spent > 0 ? (house / t.spent * 100) : 0;
+    $('tiles').innerHTML = `
+      <div class="tile"><div class="k">Players</div><div class="v">${fmt(t.players)}</div><div class="s">played at least one round</div></div>
+      <div class="tile"><div class="k">Rounds played</div><div class="v">${fmt(t.rounds)}</div><div class="s">${fmt(t.settled)} finished${t.open ? ' · ' + fmt(t.open) + ' in play' : ''}</div></div>
+      <div class="tile"><div class="k">Wagered / spent</div><div class="v">${fmt(t.spent)} TB</div><div class="s">≈ ${usd(t.spent * USD_MIN)} to ${usd(t.spent * USD_MAX)}</div></div>
+      <div class="tile"><div class="k">Paid out</div><div class="v">${fmt(t.paid)} TB</div><div class="s">≈ ${usd(t.paid * USD_MIN)} to ${usd(t.paid * USD_MAX)}</div></div>
+      <div class="tile"><div class="k">House result</div><div class="v ${cls(house)}">${sgn(house)} TB</div>
+        <div class="s">${house >= 0 ? 'profit' : 'loss'} ≈ ${usd(house * USD_MIN)} to ${usd(house * USD_MAX)} · edge ${edge.toFixed(1)}%</div></div>`;
+
+    const order = ['roulette', 'blackjack', 'spin', 'bartender'];
+    const games = [...d.games].sort((a, b) => (order.indexOf(a.game) + 99) % 99 - (order.indexOf(b.game) + 99) % 99);
+    $('gamesBody').innerHTML = games.length ? games.map(g => {
+      const net = g.spent - g.paid;
+      return `<tr><td>${esc(GAME_NAMES[g.game] || g.game)}</td><td class="n">${fmt(g.players)}</td><td class="n">${fmt(g.rounds)}${g.open ? `<span class="tag">${fmt(g.open)} open</span>` : ''}</td>
+        <td class="n">${fmt(g.spent)}</td><td class="n">${fmt(g.paid)}</td><td class="n ${cls(net)}">${sgn(net)}</td>
+        <td class="n">${g.spent > 0 ? (net / g.spent * 100).toFixed(1) + '%' : '–'}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="default">No Saloon rounds in this range.</td></tr>';
+    const openBet = games.reduce((a, g) => a + (g.openSpent || 0), 0);
+    $('gamesFoot').textContent = 'Daily Spin has no wager, so its row is pure cost (TB prizes paid). Roulette edge is about 2.7% on a single-zero wheel. ' +
+      (openBet ? `${fmt(openBet)} TB is bet on hands still in play and is not counted until they finish.` : '');
+
+    $('daysBody').innerHTML = d.days.length ? d.days.map(x => {
+      const net = x.spent - x.paid;
+      return `<tr><td>${esc(x.date)}</td><td class="n">${fmt(x.rounds)}</td><td class="n">${fmt(x.spent)}</td><td class="n">${fmt(x.paid)}</td><td class="n ${cls(net)}">${sgn(net)}</td></tr>`;
+    }).join('') : '<tr><td colspan="5" class="default">No Saloon rounds in this range.</td></tr>';
+
+    $('spendBody').innerHTML = playerRows(d.topSpenders);
+    $('winBody').innerHTML = playerRows(d.topWinners);
+  }
+</script>
+</body>
+</html>
