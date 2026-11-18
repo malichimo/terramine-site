@@ -783,6 +783,79 @@
     }
   }
 
+  // ── Author profile (Nov 18, 2026) ───────────────────────────────────
+  // Who wrote the reported check-in: identity, ban state, and how many of
+  // their check-ins already carry a policy-violation notice or reports.
+  // Cached per userId; one users/{uid} read + one bounded checkIns query.
+  const authorCache = new Map();
+  async function fetchAuthor(userId) {
+    if (!userId) return null;
+    if (authorCache.has(userId)) return authorCache.get(userId);
+    const info = { userId, found: false };
+    try {
+      const snap = await getDoc(doc(db, 'users', userId));
+      if (snap.exists()) {
+        const u = snap.data();
+        info.found = true;
+        info.nickname = u.nickname || null;
+        info.referralCode = u.referralCode || null;
+        info.email = u.email || null;
+        info.emailVerified = u.emailVerified === true;
+        info.isBanned = u.isBanned === true;
+        info.bannedReason = u.bannedReason || null;
+        info.tbBalance = u.tbBalance;
+        info.usdEarnings = u.usdEarnings;
+        info.createdAt = u.createdAt || null;
+      }
+    } catch (e) { console.warn('fetchAuthor user read failed', userId, e); }
+    try {
+      const cs = await getDocs(query(collection(db, 'checkIns'), where('userId', '==', userId), limit(300)));
+      let notices = 0, reported = 0, hidden = 0;
+      cs.forEach(d => {
+        const c = d.data();
+        if (c.moderationNotice) notices++;
+        if ((c.reportCount || 0) > 0) reported++;
+        if (c.isHidden) hidden++;
+      });
+      info.checkInsScanned = cs.size;
+      info.noticeCount = notices;
+      info.reportedCheckIns = reported;
+      info.hiddenCheckIns = hidden;
+    } catch (e) { console.warn('fetchAuthor check-in scan failed', userId, e); }
+    authorCache.set(userId, info);
+    return info;
+  }
+
+  function renderAuthorBlock(a) {
+    if (!a) return '';
+    if (!a.found) {
+      return `<div class="report-meta"><span class="k">Author:</span> account not found (UID ${escHtml(a.userId)})</div>`;
+    }
+    const joined = a.createdAt ? new Date(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '—';
+    const money = (n) => (typeof n === 'number' ? n.toLocaleString('en-US', {maximumFractionDigits: 2}) : '—');
+    const banLine = a.isBanned
+      ? `<span style="color:var(--red);font-weight:600;">BANNED</span>${a.bannedReason ? ' — ' + escHtml(a.bannedReason) : ''}`
+      : '<span style="color:var(--text-muted);">Active</span>';
+    const warned = a.noticeCount > 0
+      ? `<span style="color:var(--red);font-weight:600;">${a.noticeCount} notice(s) already sent</span>`
+      : 'no prior notices';
+    return `
+        <div class="report-content-box author-box" style="margin-top:8px;">
+          <div class="report-content-text">
+            <div class="label">Author — ${escHtml(a.nickname || '—')}${a.referralCode ? ' · ' + escHtml(a.referralCode) : ''}</div>
+            <div class="report-meta" style="margin-top:4px;line-height:1.7;">
+              <span class="k">UID:</span> ${escHtml(a.userId)}
+              &nbsp;·&nbsp; <span class="k">Status:</span> ${banLine}<br>
+              <span class="k">Email:</span> ${escHtml(a.email || '—')}${a.emailVerified ? ' (verified)' : ' (unverified)'}
+              &nbsp;·&nbsp; <span class="k">Joined:</span> ${escHtml(joined)}
+              &nbsp;·&nbsp; <span class="k">TB:</span> ${money(a.tbBalance)}
+              &nbsp;·&nbsp; <span class="k">USD:</span> $${money(a.usdEarnings)}<br>
+              <span class="k">History:</span> ${warned} &nbsp;·&nbsp; ${a.reportedCheckIns || 0} reported / ${a.hiddenCheckIns || 0} hidden of ${a.checkInsScanned || 0} check-ins${a.checkInsScanned >= 300 ? '+' : ''}
+            </div>
+          </div>
+        </div>`;
+  }
+
   window.setReportFilter = function(type) {
     activeReportFilter = type;
     document.querySelectorAll('[data-rfilter]').forEach(p => {
@@ -831,6 +904,7 @@
         ]);
         r._checkIn = checkIn;
         r._reporterNickname = reporterNickname;
+        r._author = checkIn ? await fetchAuthor(checkIn.userId) : null;
       }));
 
       allReports = allReports.concat(newItems);
@@ -877,7 +951,7 @@
             ? `<img class="report-content-thumb" src="${escHtml(ci.photoURL)}" data-url="${escHtml(ci.photoURL)}" alt="Reported photo — click to expand" onclick="openLightbox(this.dataset.url)" onerror="this.style.display='none'">`
             : ''}
           <div class="report-content-text">
-            <div class="label">Reported check-in — by ${escHtml(authorNick)}${ci.isHidden ? ' · <span style="color:var(--red)">hidden</span>' : ''}${ci.reportCount ? ` · ${ci.reportCount} report(s) total` : ''}</div>
+            <div class="label">Reported check-in — by ${escHtml(authorNick)}${ci.userId ? ' · UID <span style="user-select:all;">' + escHtml(ci.userId) + '</span>' : ''}${ci.isHidden ? ' · <span style="color:var(--red)">hidden</span>' : ''}${ci.reportCount ? ` · ${ci.reportCount} report(s) total` : ''}</div>
             ${msg ? `<div class="report-content-message">${escHtml(msg)}</div>` : '<div class="report-content-message" style="color:var(--text-muted);font-style:italic;">No message</div>'}
           </div>
         </div>`;
@@ -901,6 +975,7 @@
           ${r.reviewedAt ? ` &nbsp;·&nbsp; <span class="k">Reviewed:</span> ${new Date(r.reviewedAt).toLocaleDateString('en-US', {month:'short',day:'numeric'})}${r.reviewedBy ? ' by ' + escHtml(r.reviewedBy) : ''}` : ''}
         </div>
         ${contentBlock}
+        ${canModerateContent ? renderAuthorBlock(r._author) : ''}
         ${r.adminReply ? `
           <div class="report-reply-existing">
             <div class="report-reply-label">↩ Your reply to the reporter${r.repliedAt ? ' · ' + new Date(r.repliedAt).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : ''}${r.repliedBy ? ' · ' + escHtml(r.repliedBy) : ''}</div>
