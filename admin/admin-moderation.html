@@ -951,7 +951,7 @@
             ? `<img class="report-content-thumb" src="${escHtml(ci.photoURL)}" data-url="${escHtml(ci.photoURL)}" alt="Reported photo — click to expand" onclick="openLightbox(this.dataset.url)" onerror="this.style.display='none'">`
             : ''}
           <div class="report-content-text">
-            <div class="label">Reported check-in — by ${escHtml(authorNick)}${ci.isHidden ? ' · <span style="color:var(--red)">hidden</span>' : ''}${ci.reportCount ? ` · ${ci.reportCount} report(s) total` : ''}</div>
+            <div class="label">Reported check-in — by ${escHtml(authorNick)}${ci.userId ? ' · UID <span style="user-select:all;">' + escHtml(ci.userId) + '</span>' : ''}${ci.isHidden ? ' · <span style="color:var(--red)">hidden</span>' : ''}${ci.reportCount ? ` · ${ci.reportCount} report(s) total` : ''}</div>
             ${msg ? `<div class="report-content-message">${escHtml(msg)}</div>` : '<div class="report-content-message" style="color:var(--text-muted);font-style:italic;">No message</div>'}
           </div>
         </div>`;
