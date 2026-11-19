@@ -358,6 +358,36 @@
       </div>
     </section>
 
+    <section class="section" id="saloonSection">
+      <div class="section-head">
+        <div>
+          <span class="section-tag">§ Saloon</span>
+          <h2>TerraTown Saloon activity</h2>
+        </div>
+        <p class="section-desc">Rounds played at the Saloon tables and bar, the players behind them, and the TB wagered and paid back. The free Daily Spin is not included.</p>
+      </div>
+      <div class="panel panel-row">
+        <div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>Roulette</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-3)"></span>Blackjack</span>
+            <span class="legend-item"><span class="legend-swatch" style="background:var(--cat-2)"></span>Bartender tips</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="saloonChart" viewBox="0 0 900 180" preserveAspectRatio="none"></svg>
+            <div class="tooltip" id="saloonTooltip"></div>
+          </div>
+          <div id="saloonEmpty" class="empty-state" style="display:none;"></div>
+        </div>
+        <div>
+          <div class="side-stat"><div class="k">Avg. rounds / day</div><div class="v" id="avgSaloonRounds">—</div><div class="delta" id="avgSaloonRoundsDelta"></div></div>
+          <div class="side-stat"><div class="k">Avg. players / day</div><div class="v" id="avgSaloonPlayers">—</div><div class="delta" id="avgSaloonPlayersDelta"></div></div>
+          <div class="side-stat"><div class="k">Avg. TB wagered / day</div><div class="v" id="avgSaloonWagered">—</div><div class="delta" id="avgSaloonWageredDelta"></div></div>
+          <div class="side-stat"><div class="k">Avg. TB paid back / day</div><div class="v" id="avgSaloonPaid">—</div><div class="delta" id="avgSaloonPaidDelta"></div></div>
+        </div>
+      </div>
+    </section>
+
     <section class="section">
       <div class="section-head">
         <div>
@@ -1149,6 +1179,41 @@
       [styleOf('--cat-1'), styleOf('--cat-3'), styleOf('--cat-2')]);
   }
 
+  function renderSaloon() {
+    const slice = rangeSlice(currentRange);
+    // Saloon fields exist only on days the Saloon job has written (the Saloon launched Nov 2026).
+    const withSaloon = slice.filter(s => s.saloonRounds !== undefined);
+    const prevSaloon = priorWindowSlice(snapshots, 'date', currentRange).filter(s => s.saloonRounds !== undefined);
+
+    function setSaloonAvg(valueId, deltaId, field) {
+      const valueEl = document.getElementById(valueId);
+      const deltaEl = document.getElementById(deltaId);
+      if (!withSaloon.length) {
+        valueEl.textContent = '—';
+        applyDelta(deltaEl, null);
+        return;
+      }
+      const currAvg = avg(withSaloon.map(s => s[field] || 0));
+      valueEl.textContent = Math.round(currAvg).toLocaleString();
+      applyDelta(deltaEl, prevSaloon.length ? computeDeltaPct(currAvg, avg(prevSaloon.map(s => s[field] || 0))) : null);
+    }
+
+    setSaloonAvg('avgSaloonRounds', 'avgSaloonRoundsDelta', 'saloonRounds');
+    setSaloonAvg('avgSaloonPlayers', 'avgSaloonPlayersDelta', 'saloonPlayers');
+    setSaloonAvg('avgSaloonWagered', 'avgSaloonWageredDelta', 'saloonWageredTb');
+    setSaloonAvg('avgSaloonPaid', 'avgSaloonPaidDelta', 'saloonPaidTb');
+
+    stackedBarChart('saloonChart', 'saloonTooltip', 'saloonEmpty',
+      ['Roulette', 'Blackjack', 'Bartender tips'],
+      [
+        withSaloon.map(s => s.saloonRoulette || 0),
+        withSaloon.map(s => s.saloonBlackjack || 0),
+        withSaloon.map(s => s.saloonBartender || 0),
+      ],
+      withSaloon.map(s => s.date), 900, 180,
+      [styleOf('--cat-1'), styleOf('--cat-3'), styleOf('--cat-2')]);
+  }
+
   function renderCharts() {
     const slice = rangeSlice(currentRange);
     const dates = slice.map(s => s.date);
@@ -1673,6 +1738,7 @@
     renderDauSummary();
     renderPlatform();
     renderEngagement();
+    renderSaloon();
     renderRetention();
     renderInstalls();
     renderAdRevenue();
@@ -1760,7 +1826,7 @@
       : `Showing: ${start} – ${end}`;
   }
 
-  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderInstalls(); renderAdRevenue(); renderUnityAdStats(); renderMetaAdStats(); renderAllSourcesChart(); });
+  window.addEventListener('resize', () => { renderCharts(); renderEngagement(); renderSaloon(); renderInstalls(); renderAdRevenue(); renderUnityAdStats(); renderMetaAdStats(); renderAllSourcesChart(); });
 </script>
 
 </body>
