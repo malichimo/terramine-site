@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pioneer Pass — TerraMine</title>
-  <meta name="description" content="Pioneer Pass is TerraMine's membership: a wider check-in range, 12-hour boosts, a free custom referral code, premium Calculator access, merch discounts and more. $9.99/month or $100/year." />
+  <meta name="description" content="Pioneer Pass is TerraMine's membership: a wider check-in range, 12-hour boosts, a free custom referral code, premium Calculator access, merch discounts and more. Monthly and yearly plans." />
   <link rel="icon" type="image/png" href="/logo.png?v=2" />
   <meta property="og:title" content="TerraMine Pioneer Pass" />
   <meta property="og:description" content="A wider check-in range, 12-hour boosts, a free custom referral code, premium Calculator access, merch discounts and more." />
@@ -218,6 +218,8 @@
           <p class="code-error" id="pp-code-error" role="alert"></p>
           <div class="pp-buttons" id="paypal-button-container-P-8CC962547K512510DNK4ZCQQ"></div>
           <div class="pp-buttons" id="paypal-button-container-P-9HT11714771477122NLCYENI" hidden></div>
+          <div class="pp-buttons" id="paypal-button-container-P-4VS9251085760305YNMDW6IQ" hidden></div>
+          <div class="pp-buttons" id="paypal-button-container-P-2UH494067R1414738NMDW7YQ" hidden></div>
         </div>
         <div id="pp-success" class="pp-success" hidden>
           <div class="pp-success-icon">⭐</div>
@@ -318,7 +320,7 @@
       <h2 class="section-title">Pioneer Pass FAQ</h2>
       <details>
         <summary>How much does it cost?</summary>
-        <p>$9.99 a month, or $100 a year (about 17% less than paying monthly). Both are billed through PayPal.</p>
+        <p id="pp-faq-price">$9.99 a month, or $100 a year (about 17% less than paying monthly). Both are billed through PayPal.</p>
       </details>
       <details>
         <summary>When can I sign up?</summary>
@@ -378,10 +380,24 @@
     var PIONEER_LIVE = true;
 
     var CLIENT_ID = 'AfdNLRnjikLhxwPaT7OSiniiZWlJ_hGgVZdNO-A7qUr5nSm8KdQ4IX3KtPPRhqynahxlPh1c64pEItXi';
-    var PLANS = {
+    // Dec 1, 2026 00:00 ET (05:00 UTC): new members pay $14.99/mo or $149.99/yr on
+    // new PayPal plans. Existing subscribers stay on the old plans/prices.
+    var NEW_PRICING = Date.now() >= Date.parse('2026-12-01T05:00:00Z');
+    var ALL_PLAN_IDS = ['P-8CC962547K512510DNK4ZCQQ', 'P-9HT11714771477122NLCYENI',
+                        'P-4VS9251085760305YNMDW6IQ', 'P-2UH494067R1414738NMDW7YQ'];
+    var PLANS = NEW_PRICING ? {
+      monthly: { id: 'P-4VS9251085760305YNMDW6IQ', price: '$14.99<small>/month</small>', note: 'Cancel anytime.' },
+      yearly:  { id: 'P-2UH494067R1414738NMDW7YQ', price: '$149.99<small>/year</small>',  note: 'Renews yearly. Cancel anytime.' }
+    } : {
       monthly: { id: 'P-8CC962547K512510DNK4ZCQQ', price: '$9.99<small>/month</small>', note: 'Cancel anytime.' },
       yearly:  { id: 'P-9HT11714771477122NLCYENI', price: '$100<small>/year</small>',   note: 'Renews yearly. Cancel anytime.' }
     };
+    if (NEW_PRICING) {
+      document.querySelector('.plan-opt[data-plan="monthly"] span').textContent = '$14.99 / month';
+      document.querySelector('.plan-opt[data-plan="yearly"] span:not(.plan-save)').textContent = '$149.99 / year';
+      var faqPrice = document.getElementById('pp-faq-price');
+      if (faqPrice) faqPrice.textContent = '$14.99 a month, or $149.99 a year (about 17% less than paying monthly). Both are billed through PayPal.';
+    }
     var current = 'monthly';
 
     var input = document.getElementById('pp-ref-code');
@@ -396,10 +412,12 @@
       });
       priceEl.innerHTML = PLANS[key].price;
       noteEl.textContent = PIONEER_LIVE ? PLANS[key].note : 'Coming soon.';
-      Object.keys(PLANS).forEach(function (k) {
-        var el = document.getElementById('paypal-button-container-' + PLANS[k].id);
-        if (el) el.hidden = (k !== key);
+      ALL_PLAN_IDS.forEach(function (id) {
+        var el = document.getElementById('paypal-button-container-' + id);
+        if (el) el.hidden = true;
       });
+      var chosen = document.getElementById('paypal-button-container-' + PLANS[key].id);
+      if (chosen) chosen.hidden = false;
     }
     document.querySelectorAll('.plan-opt').forEach(function (b) {
       b.addEventListener('click', function () { selectPlan(b.getAttribute('data-plan')); });

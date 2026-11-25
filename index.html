@@ -370,8 +370,8 @@
     </div>
     <div class="referral-badge">
       <div class="tb-row">
-        <div class="tb-amount">$9.99</div>
-        <div class="tb-label">per month · or $100/year</div>
+        <div class="tb-amount" id="pp-home-amount">$9.99</div>
+        <div class="tb-label" id="pp-home-label">per month · or $100/year</div>
         <div class="tb-label" style="color: var(--gold); font-weight: 700; margin-top: 6px;">Available now</div>
       </div>
       <div class="tb-divider"></div>
@@ -461,5 +461,13 @@
 
   <button class="scroll-top-btn" id="scrollTopBtn" type="button" aria-label="Back to top" title="Back to top" onclick="scrollToTop()" style="position: fixed; right: 28px; bottom: 28px; width: 48px; height: 48px; border-radius: 999px; border: 1px solid rgba(91,229,208,0.35); background: rgba(15,22,32,0.92); color: #5BE5D0; display: none; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; cursor: pointer; z-index: 80; box-shadow: 0 12px 32px rgba(0,0,0,0.32); transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;">↑</button>
 
+<script>
+  // Pioneer Pass price from Dec 1, 2026 00:00 ET (05:00 UTC) for new members.
+  if (Date.now() >= Date.parse('2026-12-01T05:00:00Z')) {
+    var a = document.getElementById('pp-home-amount'), l = document.getElementById('pp-home-label');
+    if (a) a.textContent = '$14.99';
+    if (l) l.textContent = 'per month · or $149.99/year';
+  }
+</script>
 </body>
 </html>
